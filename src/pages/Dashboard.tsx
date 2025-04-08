@@ -7,7 +7,12 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart, LineChart } from "@/components/ui/chart";
+import { 
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent 
+} from "@/components/ui/chart";
+import { BarChart, LineChart } from "recharts";
 import { 
   ArrowRight, 
   FileText, 
@@ -129,10 +134,23 @@ const Dashboard = () => {
             <CardTitle>Monthly Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <BarChart
-              data={monthlyRevenueData}
+            <ChartContainer 
+              config={{}} 
               className="aspect-[4/3]"
-            />
+            >
+              <BarChart data={[
+                { name: 'Jan', value: 15000 },
+                { name: 'Feb', value: 22000 },
+                { name: 'Mar', value: 19000 },
+                { name: 'Apr', value: 25000 },
+                { name: 'May', value: 28000 },
+                { name: 'Jun', value: 32000 },
+              ]}>
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
         
@@ -141,10 +159,23 @@ const Dashboard = () => {
             <CardTitle>CO₂ Offset Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <LineChart
-              data={co2OffsetData}
+            <ChartContainer 
+              config={{}} 
               className="aspect-[4/3]"
-            />
+            >
+              <LineChart data={[
+                { name: 'Jan', value: 75 },
+                { name: 'Feb', value: 105 },
+                { name: 'Mar', value: 95 },
+                { name: 'Apr', value: 120 },
+                { name: 'May', value: 135 },
+                { name: 'Jun', value: 150 },
+              ]}>
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                />
+              </LineChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
