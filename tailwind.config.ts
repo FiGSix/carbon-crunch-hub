@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,47 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                // Crunch Carbon custom colors
+                'carbon-green': {
+                    50: '#f0f9f0',
+                    100: '#dcf1dc',
+                    200: '#bae3bc',
+                    300: '#8dce90',
+                    400: '#5cb45f',
+                    500: '#3a9c3e',
+                    600: '#2c7e31',
+                    700: '#25652a',
+                    800: '#215125',
+                    900: '#1d4321',
+                    950: '#0c240f',
+                },
+                'carbon-blue': {
+                    50: '#f0f7fe',
+                    100: '#deecfb',
+                    200: '#c3ddf8',
+                    300: '#9cc6f3',
+                    400: '#6fa7eb',
+                    500: '#4c88e3',
+                    600: '#386bd8',
+                    700: '#3057c7',
+                    800: '#2d49a2',
+                    900: '#284080',
+                    950: '#1c294f',
+                },
+                'carbon-gray': {
+                    50: '#f7f7f7',
+                    100: '#e3e3e3',
+                    200: '#c8c8c8',
+                    300: '#a4a4a4',
+                    400: '#818181',
+                    500: '#666666',
+                    600: '#515151',
+                    700: '#434343',
+                    800: '#383838',
+                    900: '#313131',
+                    950: '#1a1a1a',
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
