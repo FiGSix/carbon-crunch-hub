@@ -50,8 +50,8 @@ const Index = () => {
                 <div className="retro-card bg-white relative z-10">
                   <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full bg-carbon-green-500 rounded-lg"></div>
                   <img 
-                    src="/lovable-uploads/cb0836fd-ceac-48eb-9df7-ecec92541456.png" 
-                    alt="CrunchCarbon Logo" 
+                    src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" 
+                    alt="CrunchCarbon Pac-Man Style Logo" 
                     className="w-full h-auto rounded-md"
                   />
                 </div>
