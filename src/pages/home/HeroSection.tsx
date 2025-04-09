@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -33,8 +34,8 @@ export const HeroSection = () => {
               <span className="text-crunch-yellow drop-shadow-sm">Unlock Hidden Value</span>
             </h1>
             
-            <p className="text-xl text-crunch-black/70 max-w-xl">
-              Transform your solar system into a powerful income stream with carbon credits. Simple setup. Real results.
+            <p className="text-xl font-bold text-crunch-black max-w-xl">
+              Your Launchpad for Lightning-Fast Carbon Proposals
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
