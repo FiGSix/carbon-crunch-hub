@@ -25,8 +25,8 @@ export const HeroSection = () => {
           }} transition={{
             duration: 0.5,
             delay: 0.2
-          }} className="inline-block px-4 py-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-white/40">
-              <span className="text-sm font-medium text-crunch-black/70">Renewable Energy Monetization</span>
+          }} className="inline-block px-4 py-2 bg-white/60 backdrop-blur-md rounded-full shadow-md border border-white/40 shadow-black/20">
+              <span className="text-sm font-medium text-crunch-black/70">Renewable Energy Monetised</span>
             </motion.div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-crunch-black leading-tight tracking-tight">
