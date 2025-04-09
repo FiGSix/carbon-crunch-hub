@@ -1,7 +1,6 @@
-
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { ArrowRight, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
+import { ArrowRight, Instagram, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -358,24 +357,18 @@ export function Footer({ className }: { className?: string }) {
 }
 
 const socialLinks = [
-  { name: 'Twitter', icon: Twitter, href: '#' },
-  { name: 'Facebook', icon: Facebook, href: '#' },
-  { name: 'Instagram', icon: Instagram, href: '#' },
-  { name: 'LinkedIn', icon: Linkedin, href: '#' },
+  { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/crunch-carbon/' },
+  { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/crunch_carbon/' },
 ];
 
 const productLinks = [
   { label: 'How It Works', href: '/#how-it-works' },
   { label: 'Calculator', href: '/calculator' },
   { label: 'For Agents', href: '/agents' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'FAQ', href: '/faq' },
 ];
 
 const companyLinks = [
   { label: 'About Us', href: '/about' },
-  { label: 'Blog', href: '/blog' },
-  { label: 'Careers', href: '/careers' },
   { label: 'Contact', href: '/contact' },
 ];
 
