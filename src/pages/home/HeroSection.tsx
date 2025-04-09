@@ -62,7 +62,7 @@ export const HeroSection = () => {
             
             <div className="flex items-center text-crunch-black/70 pt-2">
               <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-              <span className="text-sm">Setup in under 5 minutes and your first proposals out quicker than ever before.</span>
+              <span className="text-sm">Get setup in minutes. Proposals out like lightning.</span>
             </div>
           </motion.div>
           
