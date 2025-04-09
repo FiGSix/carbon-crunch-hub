@@ -15,6 +15,7 @@ import CreateProposal from "./pages/CreateProposal";
 import NotFound from "./pages/NotFound";
 import Agents from "./pages/Agents";
 import About from "./pages/About";
+import Calculator from "./pages/Calculator";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/proposals/new" element={<CreateProposal />} />
           <Route path="/agents" element={<Agents />} />
           <Route path="/about" element={<About />} />
+          <Route path="/calculator" element={<Calculator />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
