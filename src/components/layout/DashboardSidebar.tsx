@@ -48,9 +48,8 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   return (
     <SidebarContent className="pt-4">
       <div className="px-3 mb-8">
-        <div className="flex items-center gap-2">
-          <img src="/lovable-uploads/850f8914-10c9-4eca-91e0-471bca63f70a.png" alt="CrunchCarbon Logo" className="h-8" />
-          <span className="text-lg font-bold uppercase text-crunch-black">CRUNCH CARBON</span>
+        <div className="flex items-center justify-center">
+          <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12" />
         </div>
       </div>
       

@@ -21,9 +21,12 @@ export function Header() {
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           
-          <a href="/" className="flex items-center gap-2">
-            <img src="/lovable-uploads/850f8914-10c9-4eca-91e0-471bca63f70a.png" alt="CrunchCarbon Logo" className="h-10" />
-            <span className="text-xl font-bold uppercase text-crunch-black">CRUNCH CARBON</span>
+          <a href="/" className="flex items-center">
+            <img 
+              src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
+              alt="CrunchCarbon Logo" 
+              className="h-12" 
+            />
           </a>
         </div>
         
