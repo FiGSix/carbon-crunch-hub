@@ -50,7 +50,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       <div className="px-3 mb-8">
         <div className="flex items-center gap-2">
           <img src="/lovable-uploads/850f8914-10c9-4eca-91e0-471bca63f70a.png" alt="CrunchCarbon Logo" className="h-8" />
-          <span className="text-lg font-golden-age font-bold text-crunch-black">CRUNCH CARBON</span>
+          <span className="text-lg font-bold uppercase text-crunch-black">CRUNCH CARBON</span>
         </div>
       </div>
       

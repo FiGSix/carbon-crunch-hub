@@ -3,14 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Golden Age';
-  src: url('/fonts/golden-age-regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -26,7 +18,7 @@
     --primary-foreground: 0 0% 10%;
 
     --secondary: 0 0% 13%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
@@ -103,7 +95,7 @@
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-golden-age;
+    @apply font-sans font-bold;
   }
 }
 
@@ -117,7 +109,7 @@
   }
   
   .section-title {
-    @apply text-3xl md:text-4xl lg:text-5xl font-golden-age mb-6 md:mb-10;
+    @apply text-3xl md:text-4xl lg:text-5xl font-sans font-bold mb-6 md:mb-10;
   }
   
   .section-description {

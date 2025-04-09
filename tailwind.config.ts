@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -98,8 +97,7 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out'
 			},
             fontFamily: {
-                'golden-age': ['Golden Age', 'sans-serif'],
-                'sans': ['Inter', 'sans-serif'],
+                'sans': ['Inter', 'system-ui', 'sans-serif'],
             }
 		}
 	},

@@ -23,7 +23,7 @@ export function Header() {
           
           <a href="/" className="flex items-center gap-2">
             <img src="/lovable-uploads/850f8914-10c9-4eca-91e0-471bca63f70a.png" alt="CrunchCarbon Logo" className="h-10" />
-            <span className="text-xl font-golden-age font-bold text-crunch-black">CRUNCH CARBON</span>
+            <span className="text-xl font-bold uppercase text-crunch-black">CRUNCH CARBON</span>
           </a>
         </div>
         
