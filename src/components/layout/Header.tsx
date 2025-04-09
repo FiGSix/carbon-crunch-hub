@@ -168,4 +168,9 @@ const navItems = [
     href: "/about",
     description: "Learn more about CrunchCarbon" 
   },
+  { 
+    label: "Contact", 
+    href: "/contact",
+    description: "Get in touch with us" 
+  },
 ];
