@@ -1,11 +1,16 @@
 
 import * as React from "react"
-import { motion } from "framer-motion"
+import { motion, HTMLMotionProps } from "framer-motion"
 import { cn } from "@/lib/utils"
+
+// Define the Card component props type by extending HTMLMotionProps
+type CardProps = HTMLMotionProps<"div"> & {
+  interactive?: boolean;
+}
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }
+  CardProps
 >(({ className, interactive = false, ...props }, ref) => {
   const baseClasses = "rounded-lg border bg-card/80 backdrop-blur-sm text-card-foreground transition-all duration-300"
   const interactiveClasses = interactive ? "hover:-translate-y-1 hover:shadow-md" : "shadow-sm"
