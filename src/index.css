@@ -97,6 +97,11 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans font-bold;
   }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 @layer components {
@@ -105,7 +110,7 @@
   }
   
   .section {
-    @apply py-12 md:py-20;
+    @apply py-16 md:py-24;
   }
   
   .section-title {
@@ -116,20 +121,21 @@
     @apply text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 md:mb-16;
   }
   
+  /* Enhanced retro shadows with smoother transitions */
   .retro-shadow {
-    @apply shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)];
+    @apply shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] transition-shadow duration-300;
   }
   
   .retro-shadow-sm {
-    @apply shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)];
+    @apply shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] transition-shadow duration-300;
   }
   
   .retro-shadow-lg {
-    @apply shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)];
+    @apply shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] transition-shadow duration-300;
   }
   
   .retro-card {
-    @apply bg-white border-2 border-crunch-black/10 rounded-lg retro-shadow p-6;
+    @apply bg-white border-2 border-crunch-black/10 rounded-lg retro-shadow p-6 transition-all duration-300 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)];
   }
   
   .retro-input {
@@ -139,4 +145,117 @@
   .retro-button {
     @apply px-4 py-2 font-medium rounded-md retro-shadow-sm transform transition-all active:translate-y-1 active:shadow-none;
   }
+  
+  /* Card hover effects */
+  .hover-card {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+  
+  /* Text highlight animation */
+  .text-highlight {
+    @apply relative;
+  }
+  
+  .text-highlight::after {
+    @apply content-[''] absolute bottom-0 left-0 w-0 h-1 bg-crunch-yellow opacity-70 transition-all duration-500;
+  }
+  
+  .text-highlight:hover::after {
+    @apply w-full;
+  }
+  
+  /* Button hover animation */
+  .btn-arrow {
+    @apply group-hover:translate-x-1 transition-transform duration-300;
+  }
+  
+  /* Underline animation for links */
+  .link-underline {
+    @apply relative;
+  }
+  
+  .link-underline::after {
+    @apply content-[''] absolute -bottom-1 left-0 w-0 h-0.5 bg-crunch-yellow transition-all duration-300 ease-in-out;
+  }
+  
+  .link-underline:hover::after {
+    @apply w-full;
+  }
+  
+  /* Counter animation */
+  .counter {
+    @apply transition-all duration-300 hover:scale-110;
+  }
+  
+  /* Animated gradient background */
+  .animated-gradient {
+    background: linear-gradient(-45deg, #FFCD03, #FFF5CC, #FFCD03);
+    background-size: 200% 200%;
+    animation: gradient 15s ease infinite;
+  }
+  
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  /* Animated dots for loading */
+  .loading-dots::after {
+    content: '.';
+    animation: dots 1.5s steps(5, end) infinite;
+  }
+  
+  @keyframes dots {
+    0%, 20% {
+      content: '.';
+    }
+    40% {
+      content: '..';
+    }
+    60% {
+      content: '...';
+    }
+    80%, 100% {
+      content: '';
+    }
+  }
+  
+  /* Parallax scrolling effect */
+  .parallax {
+    @apply relative overflow-hidden;
+  }
+  
+  .parallax-bg {
+    @apply absolute top-0 left-0 w-full h-full bg-fixed bg-center bg-cover -z-10;
+  }
+}
+
+/* Focus states for accessibility */
+:focus-visible {
+  @apply outline-none ring-2 ring-crunch-yellow;
+}
+
+/* Smooth transitions for all interactive elements */
+a, button, input, select, textarea {
+  @apply transition-all duration-300;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-crunch-black/5;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-crunch-yellow/50 rounded-full hover:bg-crunch-yellow;
 }

@@ -2,11 +2,14 @@
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { ArrowRight, BarChart3, CheckCircle2, Leaf, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, CheckCircle2, Leaf, Shield, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -14,126 +17,335 @@ const Index = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-carbon-green-50 to-carbon-blue-50 py-16 md:py-24">
+        <section className="bg-gradient-to-br from-white to-crunch-yellow/10 py-16 md:py-24 overflow-hidden">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <h1 className="text-4xl md:text-5xl font-bold mb-6 text-carbon-gray-900">
-                  Carbon Made Simple
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-crunch-black leading-tight">
+                  <span className="relative">
+                    Unlock <span className="text-crunch-yellow drop-shadow-sm relative">Hidden Value</span>
+                    <span className="absolute bottom-0 left-0 w-full h-1 bg-crunch-yellow opacity-30"></span>
+                  </span> <br className="hidden md:block" />
+                  in Your Renewable Energy
                 </h1>
-                <p className="text-xl md:text-2xl text-carbon-gray-700 mb-8">
-                  Generate carbon credits from your renewable energy system and maximize your revenue with CrunchCarbon's streamlined platform.
+                <p className="text-xl md:text-2xl text-crunch-black/80 mb-8 max-w-xl">
+                  Transform your solar system into a powerful income stream with carbon credits. Simple setup. Real results.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    onClick={() => navigate("/register")}
-                    className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button text-lg py-6 px-8"
-                    size="lg"
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                   >
-                    Get Started <ArrowRight className="ml-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate("/calculator")}
-                    className="border-2 border-carbon-gray-200 text-carbon-gray-700 hover:bg-carbon-gray-50 retro-button text-lg py-6 px-8"
-                    size="lg"
+                    <Button 
+                      onClick={() => navigate("/register")}
+                      className="bg-crunch-yellow text-crunch-black hover:bg-crunch-yellow/90 shadow-lg hover:shadow-xl transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto group"
+                      size="lg"
+                    >
+                      Get Started <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                   >
-                    Calculate Credits
-                  </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate("/calculator")}
+                      className="border-2 border-crunch-black/20 text-crunch-black hover:bg-crunch-black/5 hover:border-crunch-black/30 transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto"
+                      size="lg"
+                    >
+                      Calculate Your Potential
+                    </Button>
+                  </motion.div>
                 </div>
-                <div className="mt-8 flex items-center text-carbon-gray-600">
-                  <CheckCircle2 className="h-5 w-5 text-carbon-green-500 mr-2" />
-                  <span>No registration fees. Get started in minutes.</span>
+                <div className="mt-8 flex items-center text-crunch-black/70">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Setup in under 10 minutes. First results in 30 days.</span>
                 </div>
-              </div>
-              <div className="hidden lg:block">
-                <div className="retro-card bg-white relative z-10">
-                  <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full bg-carbon-green-500 rounded-lg"></div>
-                  <img 
-                    src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" 
-                    alt="CrunchCarbon Pac-Man Style Logo" 
-                    className="w-full h-auto rounded-md"
-                  />
+              </motion.div>
+              <motion.div 
+                className="hidden lg:block"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <div className="relative">
+                  <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full bg-crunch-yellow rounded-lg"></div>
+                  <div className="bg-white p-6 rounded-lg shadow-lg border border-crunch-black/10">
+                    <img 
+                      src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" 
+                      alt="CrunchCarbon Pac-Man Style Logo" 
+                      className="w-full h-auto rounded-md transition-all hover:scale-105 duration-500"
+                    />
+                  </div>
+                  {/* Floating elements */}
+                  <motion.div 
+                    className="absolute -top-10 -left-10 bg-white p-3 rounded-lg shadow-md border border-crunch-black/10 flex items-center gap-2"
+                    animate={{ 
+                      y: [0, -10, 0],
+                    }}
+                    transition={{ 
+                      repeat: Infinity,
+                      duration: 4,
+                      ease: "easeInOut" 
+                    }}
+                  >
+                    <Shield className="text-green-500 h-6 w-6" />
+                    <span className="font-medium text-crunch-black">Verified Green</span>
+                  </motion.div>
+                  <motion.div 
+                    className="absolute -bottom-5 -left-20 bg-white p-3 rounded-lg shadow-md border border-crunch-black/10 flex items-center gap-2"
+                    animate={{ 
+                      y: [0, 10, 0],
+                    }}
+                    transition={{ 
+                      repeat: Infinity,
+                      duration: 5,
+                      ease: "easeInOut",
+                      delay: 1,
+                    }}
+                  >
+                    <Zap className="text-crunch-yellow h-6 w-6" />
+                    <span className="font-medium text-crunch-black">Energy → Revenue</span>
+                  </motion.div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Social Proof */}
+        <section className="border-y border-crunch-black/10 bg-crunch-black/5 py-8">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-0 justify-between items-center">
+              <p className="text-crunch-black/80 font-medium">Trusted by homeowners across the country</p>
+              <div className="flex gap-8 items-center">
+                <div className="text-center">
+                  <motion.div 
+                    className="text-2xl font-bold text-crunch-black"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    3,500+
+                  </motion.div>
+                  <div className="text-sm text-crunch-black/70">Solar systems</div>
+                </div>
+                <div className="text-center">
+                  <motion.div 
+                    className="text-2xl font-bold text-crunch-black"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    $1.2M+
+                  </motion.div>
+                  <div className="text-sm text-crunch-black/70">Revenue generated</div>
+                </div>
+                <div className="text-center">
+                  <motion.div 
+                    className="text-2xl font-bold text-crunch-black"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    28,000+
+                  </motion.div>
+                  <div className="text-sm text-crunch-black/70">Tons CO₂ offset</div>
                 </div>
               </div>
             </div>
           </div>
         </section>
         
-        {/* Features Section */}
-        <section className="py-16 md:py-24">
+        {/* How It Works Section */}
+        <section className="py-20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-carbon-gray-900">
-                How CrunchCarbon Works
-              </h2>
-              <p className="text-xl text-carbon-gray-600 max-w-3xl mx-auto">
-                Our platform makes it easy to generate and monetize carbon credits from your renewable energy system.
-              </p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-crunch-black">
+                  Turn Your Energy Into Income
+                </h2>
+                <p className="text-xl text-crunch-black/70 max-w-3xl mx-auto">
+                  Our platform automates everything, so you can sit back and watch your green energy create green dollars.
+                </p>
+              </motion.div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="retro-card">
-                <div className="rounded-full bg-carbon-green-100 p-4 inline-block mb-4">
-                  <Leaf className="h-8 w-8 text-carbon-green-600" />
+              <motion.div 
+                className="group"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                <div className="bg-white p-8 rounded-lg shadow-md border border-crunch-black/10 h-full transition-all group-hover:shadow-lg">
+                  <div className="rounded-full bg-green-100 p-4 inline-block mb-6 group-hover:bg-green-200 transition-colors">
+                    <Leaf className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-crunch-black">
+                    1. Quick Registration
+                  </h3>
+                  <p className="text-crunch-black/70">
+                    Answer a few questions about your renewable energy system. We'll verify its eligibility in minutes, not weeks.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-carbon-gray-900">Register Your System</h3>
-                <p className="text-carbon-gray-600">
-                  Complete a simple eligibility check and provide details about your renewable energy system.
-                </p>
-              </div>
+              </motion.div>
               
-              <div className="retro-card">
-                <div className="rounded-full bg-carbon-blue-100 p-4 inline-block mb-4">
-                  <BarChart3 className="h-8 w-8 text-carbon-blue-600" />
+              <motion.div 
+                className="group"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                whileHover={{ y: -5 }}
+              >
+                <div className="bg-white p-8 rounded-lg shadow-md border border-crunch-black/10 h-full transition-all group-hover:shadow-lg">
+                  <div className="rounded-full bg-blue-100 p-4 inline-block mb-6 group-hover:bg-blue-200 transition-colors">
+                    <BarChart3 className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-crunch-black">
+                    2. Automatic Tracking
+                  </h3>
+                  <p className="text-crunch-black/70">
+                    Our system monitors your energy production and automatically converts it into verified carbon credits.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-carbon-gray-900">Generate Credits</h3>
-                <p className="text-carbon-gray-600">
-                  We calculate your carbon offset based on the energy your system produces and current carbon prices.
-                </p>
-              </div>
+              </motion.div>
               
-              <div className="retro-card">
-                <div className="rounded-full bg-carbon-green-100 p-4 inline-block mb-4">
-                  <Zap className="h-8 w-8 text-carbon-green-600" />
+              <motion.div 
+                className="group"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                whileHover={{ y: -5 }}
+              >
+                <div className="bg-white p-8 rounded-lg shadow-md border border-crunch-black/10 h-full transition-all group-hover:shadow-lg">
+                  <div className="rounded-full bg-yellow-100 p-4 inline-block mb-6 group-hover:bg-yellow-200 transition-colors">
+                    <Zap className="h-8 w-8 text-crunch-yellow" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-crunch-black">
+                    3. Regular Payouts
+                  </h3>
+                  <p className="text-crunch-black/70">
+                    Receive quarterly deposits directly to your bank account. No hassle, no complicated paperwork, just income.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-carbon-gray-900">Maximize Revenue</h3>
-                <p className="text-carbon-gray-600">
-                  Earn your share of carbon credit revenue with transparent pricing and no hidden fees.
+              </motion.div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Testimonials */}
+        <section className="py-20 bg-crunch-black/5">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-crunch-black">
+                  What Our Users Are Saying
+                </h2>
+                <p className="text-xl text-crunch-black/70 max-w-3xl mx-auto">
+                  Join thousands of system owners already monetizing their clean energy.
                 </p>
-              </div>
+              </motion.div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {testimonials.map((testimonial, index) => (
+                <motion.div 
+                  key={index}
+                  className="group"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.1 * index }}
+                  whileHover={{ y: -5 }}
+                >
+                  <div className="bg-white p-8 rounded-lg shadow-md border border-crunch-black/10 h-full transition-all group-hover:shadow-lg">
+                    <div className="flex items-center mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <svg key={i} className="w-5 h-5 text-crunch-yellow fill-current" viewBox="0 0 24 24">
+                          <path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z" />
+                        </svg>
+                      ))}
+                    </div>
+                    <p className="text-crunch-black/80 mb-6 italic">"{testimonial.quote}"</p>
+                    <div className="flex items-center">
+                      <div className="w-12 h-12 bg-crunch-black/10 rounded-full flex items-center justify-center text-crunch-black font-bold mr-4">
+                        {testimonial.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-crunch-black">{testimonial.name}</h4>
+                        <p className="text-sm text-crunch-black/70">{testimonial.location}</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
         
         {/* CTA Section */}
-        <section className="py-16 bg-carbon-gray-50">
+        <section className="py-20">
           <div className="container mx-auto px-4">
-            <div className="retro-card max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-bold mb-4 text-carbon-gray-900">
-                Ready to Start Earning from Your Solar System?
-              </h2>
-              <p className="text-xl text-carbon-gray-600 mb-8">
-                Join thousands of system owners already monetizing their carbon offsets.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  onClick={() => navigate("/register")}
-                  className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
-                  size="lg"
-                >
-                  Sign Up as Client
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/register?role=agent")}
-                  className="border-2 border-carbon-gray-200 text-carbon-gray-700 hover:bg-carbon-gray-50 retro-button"
-                  size="lg"
-                >
-                  Become an Agent
-                </Button>
+            <motion.div 
+              className="bg-gradient-to-br from-crunch-yellow/30 to-crunch-yellow/10 rounded-xl p-8 md:p-12 relative overflow-hidden"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="absolute top-0 right-0 w-64 h-64 bg-crunch-yellow/20 rounded-full -mr-32 -mt-32 z-0"></div>
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-crunch-yellow/10 rounded-full -ml-48 -mb-48 z-0"></div>
+              
+              <div className="relative z-10 max-w-3xl mx-auto text-center">
+                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-crunch-black">
+                  Ready to Earn From Your Clean Energy?
+                </h2>
+                <p className="text-xl text-crunch-black/80 mb-8">
+                  The average solar system owner earns an extra $400-$1,200 annually through our platform. Calculate your potential in seconds.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Button 
+                      onClick={() => navigate("/register")}
+                      className="bg-crunch-black hover:bg-crunch-black/90 text-white shadow-lg hover:shadow-xl transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto group"
+                      size="lg"
+                    >
+                      Start Earning Now <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate("/calculator")}
+                      className="border-2 border-crunch-black bg-white text-crunch-black hover:bg-crunch-black/5 transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto"
+                      size="lg"
+                    >
+                      Calculate Your Earnings
+                    </Button>
+                  </motion.div>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>
@@ -142,5 +354,24 @@ const Index = () => {
     </div>
   );
 };
+
+// Testimonial data
+const testimonials = [
+  {
+    name: "Michael R.",
+    location: "California",
+    quote: "I've been earning an extra $840 annually from my 10kW solar system. The setup took less than 10 minutes and CrunchCarbon handled everything else."
+  },
+  {
+    name: "Sarah T.",
+    location: "Colorado",
+    quote: "After 3 years of having solar panels, I finally found a way to make them even more valuable. The quarterly deposits feel like getting a bonus four times a year!"
+  },
+  {
+    name: "David K.",
+    location: "Texas",
+    quote: "My first thought was 'this sounds too good to be true.' Six months and two payments later, I'm glad I took the leap. Incredibly simple process."
+  }
+];
 
 export default Index;
