@@ -12,7 +12,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { Footer } from "@/components/layout/footer";
 import { ArrowLeft, CheckCircle, FileText, Link2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {

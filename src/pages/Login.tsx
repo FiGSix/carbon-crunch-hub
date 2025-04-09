@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { Footer } from "@/components/layout/footer";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 const Login = () => {

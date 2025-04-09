@@ -1,6 +1,6 @@
 
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { Footer } from "@/components/layout/footer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { HeroSection } from "./home/HeroSection";
 import { SocialProofSection } from "./home/SocialProofSection";

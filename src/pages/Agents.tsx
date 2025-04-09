@@ -1,6 +1,5 @@
-
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Briefcase, CheckCircle2, DollarSign, Handshake, Rocket, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -35,7 +34,7 @@ const Agents = () => {
                 </motion.div>
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-crunch-black leading-tight tracking-tight">
-                  <span className="text-crunch-black">Partner With </span>
+                  <span className="text-crunch-black">Partner With </span> 
                   <span className="text-crunch-yellow drop-shadow-sm">Crunch Carbon</span>
                 </h1>
                 

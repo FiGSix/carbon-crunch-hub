@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
-import { Footer } from "./Footer";
+import { Footer } from "./footer";
 import { motion } from "framer-motion";
 
 interface DashboardLayoutProps {
