@@ -8,6 +8,7 @@ import {
 import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { Footer } from "./Footer";
+import { motion } from "framer-motion";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -26,18 +27,28 @@ export function DashboardLayout({
         </Sidebar>
         
         <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b border-crunch-black/5 flex items-center px-4">
-            <SidebarTrigger />
-            <div className="ml-4 text-lg font-bold uppercase">
+          <motion.header 
+            className="h-16 border-b border-crunch-black/5 flex items-center px-4 backdrop-blur-md bg-white/90 shadow-sm"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <SidebarTrigger className="hover:bg-crunch-black/5 rounded-full p-2 transition-colors duration-200" />
+            <div className="ml-4 text-lg font-bold uppercase tracking-wide">
               {userRole === 'client' && 'CLIENT DASHBOARD'}
               {userRole === 'agent' && 'AGENT DASHBOARD'}
               {userRole === 'admin' && 'ADMIN DASHBOARD'}
             </div>
-          </header>
+          </motion.header>
           
-          <main className={cn("flex-1 p-4 md:p-6")}>
+          <motion.main 
+            className={cn("flex-1 p-4 md:p-6")}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
             {children}
-          </main>
+          </motion.main>
           
           <Footer />
         </div>
