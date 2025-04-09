@@ -12,8 +12,8 @@ const Card = React.forwardRef<
   HTMLDivElement,
   CardProps
 >(({ className, interactive = false, ...props }, ref) => {
-  const baseClasses = "rounded-lg border bg-card/80 backdrop-blur-sm text-card-foreground transition-all duration-300"
-  const interactiveClasses = interactive ? "hover:-translate-y-1 hover:shadow-md" : "shadow-sm"
+  const baseClasses = "rounded-2xl border bg-card/70 backdrop-blur-md text-card-foreground transition-all duration-300"
+  const interactiveClasses = interactive ? "hover:-translate-y-1 hover:shadow-lg" : "shadow-sm"
   
   return (
     <motion.div

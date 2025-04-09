@@ -22,9 +22,9 @@ const buttonVariants = cva(
         glass: "bg-white/80 backdrop-blur-md border border-white/20 text-foreground hover:bg-white/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
       },
       size: {
-        default: "h-10 px-4 py-2 rounded-md",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        default: "h-10 px-5 py-2 rounded-xl",
+        sm: "h-9 rounded-xl px-4",
+        lg: "h-11 rounded-xl px-8",
         icon: "h-10 w-10 rounded-full",
       },
     },

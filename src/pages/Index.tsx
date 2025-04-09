@@ -17,74 +17,87 @@ const Index = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-white to-crunch-yellow/10 py-16 md:py-24 overflow-hidden">
-          <div className="container mx-auto px-4">
+        <section className="bg-gradient-to-br from-white to-crunch-yellow/5 py-16 md:py-24 overflow-hidden">
+          <div className="container mx-auto px-4 max-w-6xl">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
+                className="space-y-8"
               >
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-crunch-black leading-tight">
-                  <span className="relative">
-                    Unlock <span className="text-crunch-yellow drop-shadow-sm relative">Hidden Value</span>
-                    <span className="absolute bottom-0 left-0 w-full h-1 bg-crunch-yellow opacity-30"></span>
-                  </span> <br className="hidden md:block" />
-                  in Your Renewable Energy
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="inline-block px-4 py-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-white/40"
+                >
+                  <span className="text-sm font-medium text-crunch-black/70">Renewable Energy Monetization</span>
+                </motion.div>
+
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-crunch-black leading-tight tracking-tight">
+                  <span className="block">Carbon Made Simple</span>
+                  <span className="text-crunch-yellow drop-shadow-sm">Unlock Hidden Value</span>
                 </h1>
-                <p className="text-xl md:text-2xl text-crunch-black/80 mb-8 max-w-xl">
+                
+                <p className="text-xl text-crunch-black/70 max-w-xl">
                   Transform your solar system into a powerful income stream with carbon credits. Simple setup. Real results.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4">
+                
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <Button 
                       onClick={() => navigate("/register")}
-                      className="bg-crunch-yellow text-crunch-black hover:bg-crunch-yellow/90 shadow-lg hover:shadow-xl transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto group"
+                      className="bg-crunch-yellow text-crunch-black hover:bg-crunch-yellow/90 text-lg py-6 px-8 w-full sm:w-auto rounded-2xl shadow-sm hover:shadow-lg group transition-all duration-300"
                       size="lg"
                     >
-                      Get Started <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                      <span>Get Started</span> 
+                      <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </motion.div>
                   <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <Button 
-                      variant="outline" 
+                      variant="glass" 
                       onClick={() => navigate("/calculator")}
-                      className="border-2 border-crunch-black/20 text-crunch-black hover:bg-crunch-black/5 hover:border-crunch-black/30 transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto"
+                      className="text-crunch-black text-lg py-6 px-8 w-full sm:w-auto rounded-2xl transition-all duration-300"
                       size="lg"
                     >
                       Calculate Your Potential
                     </Button>
                   </motion.div>
                 </div>
-                <div className="mt-8 flex items-center text-crunch-black/70">
+                
+                <div className="flex items-center text-crunch-black/70 pt-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">Setup in under 10 minutes. First results in 30 days.</span>
+                  <span className="text-sm">Setup in under 10 minutes. First results in 30 days.</span>
                 </div>
               </motion.div>
+              
               <motion.div 
-                className="hidden lg:block"
+                className="hidden lg:block relative"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <div className="relative">
-                  <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full bg-crunch-yellow rounded-lg"></div>
-                  <div className="bg-white p-6 rounded-lg shadow-lg border border-crunch-black/10">
+                  <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full rounded-3xl bg-gradient-to-br from-crunch-yellow/30 to-crunch-yellow/10"></div>
+                  <div className="meta-card rounded-3xl p-6">
                     <img 
                       src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" 
                       alt="CrunchCarbon Pac-Man Style Logo" 
-                      className="w-full h-auto rounded-md transition-all hover:scale-105 duration-500"
+                      className="w-full h-auto rounded-2xl transition-all hover:scale-105 duration-500"
                     />
                   </div>
+                  
                   {/* Floating elements */}
                   <motion.div 
-                    className="absolute -top-10 -left-10 bg-white p-3 rounded-lg shadow-md border border-crunch-black/10 flex items-center gap-2"
+                    className="absolute -top-10 -left-10 meta-card p-3 rounded-2xl flex items-center gap-2"
                     animate={{ 
                       y: [0, -10, 0],
                     }}
@@ -98,7 +111,7 @@ const Index = () => {
                     <span className="font-medium text-crunch-black">Verified Green</span>
                   </motion.div>
                   <motion.div 
-                    className="absolute -bottom-5 -left-20 bg-white p-3 rounded-lg shadow-md border border-crunch-black/10 flex items-center gap-2"
+                    className="absolute -bottom-5 -left-20 meta-card p-3 rounded-2xl flex items-center gap-2"
                     animate={{ 
                       y: [0, 10, 0],
                     }}
@@ -301,7 +314,7 @@ const Index = () => {
         <section className="py-20">
           <div className="container mx-auto px-4">
             <motion.div 
-              className="bg-gradient-to-br from-crunch-yellow/30 to-crunch-yellow/10 rounded-xl p-8 md:p-12 relative overflow-hidden"
+              className="meta-card rounded-3xl p-8 md:p-12 relative overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -319,25 +332,26 @@ const Index = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <Button 
                       onClick={() => navigate("/register")}
-                      className="bg-crunch-black hover:bg-crunch-black/90 text-white shadow-lg hover:shadow-xl transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto group"
+                      className="bg-crunch-black hover:bg-crunch-black/90 text-white text-lg py-6 px-8 w-full sm:w-auto rounded-2xl shadow-sm hover:shadow-lg group transition-all duration-300"
                       size="lg"
                     >
-                      Start Earning Now <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                      <span>Start Earning Now</span>
+                      <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </motion.div>
                   <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <Button 
-                      variant="outline" 
+                      variant="glass" 
                       onClick={() => navigate("/calculator")}
-                      className="border-2 border-crunch-black bg-white text-crunch-black hover:bg-crunch-black/5 transition-all retro-button text-lg py-6 px-8 w-full sm:w-auto"
+                      className="text-crunch-black text-lg py-6 px-8 w-full sm:w-auto rounded-2xl transition-all duration-300"
                       size="lg"
                     >
                       Calculate Your Earnings
