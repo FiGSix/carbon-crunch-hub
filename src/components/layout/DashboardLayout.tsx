@@ -26,12 +26,12 @@ export function DashboardLayout({
         </Sidebar>
         
         <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b flex items-center px-4">
+          <header className="h-16 border-b border-crunch-black/5 flex items-center px-4">
             <SidebarTrigger />
-            <div className="ml-4 text-lg font-medium">
-              {userRole === 'client' && 'Client Dashboard'}
-              {userRole === 'agent' && 'Agent Dashboard'}
-              {userRole === 'admin' && 'Admin Dashboard'}
+            <div className="ml-4 text-lg font-golden-age">
+              {userRole === 'client' && 'CLIENT DASHBOARD'}
+              {userRole === 'agent' && 'AGENT DASHBOARD'}
+              {userRole === 'admin' && 'ADMIN DASHBOARD'}
             </div>
           </header>
           

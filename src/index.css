@@ -3,85 +3,93 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Golden Age';
+  src: url('/fonts/golden-age-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
-    --background: 140 33% 98%;
-    --foreground: 220 10% 15%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 15%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 15%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 142 47% 35%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 10%;
 
-    --secondary: 210 65% 60%;
+    --secondary: 0 0% 13%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 220 10% 40%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 142 30% 94%;
-    --accent-foreground: 142 47% 25%;
+    --accent: 45 100% 96%;
+    --accent-foreground: 45 100% 30%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
-    --ring: 142 47% 35%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 45 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.25rem;
 
-    --sidebar-background: 142 47% 97%;
-    --sidebar-foreground: 220 10% 25%;
-    --sidebar-primary: 142 47% 35%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 140 30% 94%;
-    --sidebar-accent-foreground: 142 47% 25%;
-    --sidebar-border: 140 20% 90%;
-    --sidebar-ring: 142 47% 35%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 45 100% 50%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 45 100% 96%;
+    --sidebar-accent-foreground: 45 100% 30%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 45 100% 50%;
   }
 
   .dark {
-    --background: 220 25% 10%;
-    --foreground: 210 20% 98%;
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
 
-    --card: 220 25% 13%;
-    --card-foreground: 210 20% 98%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 25% 13%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 142 47% 35%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 10%;
 
-    --secondary: 210 65% 50%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 25% 18%;
-    --muted-foreground: 220 10% 70%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 142 25% 18%;
-    --accent-foreground: 142 80% 86%;
+    --accent: 45 100% 15%;
+    --accent-foreground: 45 100% 70%;
 
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 25% 20%;
-    --input: 220 25% 20%;
-    --ring: 142 47% 35%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 45 100% 50%;
 
-    --sidebar-background: 220 25% 12%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 142 47% 35%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 142 25% 18%;
-    --sidebar-accent-foreground: 142 80% 86%;
-    --sidebar-border: 220 25% 18%;
-    --sidebar-ring: 142 47% 35%;
+    --sidebar-background: 0 0% 13%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 45 100% 50%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 45 100% 15%;
+    --sidebar-accent-foreground: 45 100% 70%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 45 100% 50%;
   }
 }
 
@@ -91,11 +99,31 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-golden-age;
   }
 }
 
 @layer components {
+  .grid-container {
+    @apply container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl;
+  }
+  
+  .section {
+    @apply py-12 md:py-20;
+  }
+  
+  .section-title {
+    @apply text-3xl md:text-4xl lg:text-5xl font-golden-age mb-6 md:mb-10;
+  }
+  
+  .section-description {
+    @apply text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 md:mb-16;
+  }
+  
   .retro-shadow {
     @apply shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)];
   }
@@ -109,11 +137,11 @@
   }
   
   .retro-card {
-    @apply bg-white border-2 border-carbon-gray-200 rounded-lg retro-shadow p-6;
+    @apply bg-white border-2 border-crunch-black/10 rounded-lg retro-shadow p-6;
   }
   
   .retro-input {
-    @apply border-2 border-carbon-gray-200 rounded-md px-3 py-2 focus:border-carbon-green-400 focus:ring-carbon-green-400 transition-all;
+    @apply border-2 border-crunch-black/10 rounded-md px-3 py-2 focus:border-crunch-yellow focus:ring-crunch-yellow transition-all;
   }
   
   .retro-button {

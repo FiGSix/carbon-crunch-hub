@@ -10,33 +10,34 @@ export function Header() {
   const navigate = useNavigate();
   
   return (
-    <header className="bg-white border-b border-carbon-gray-100 sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <header className="bg-white border-b border-crunch-black/5 sticky top-0 z-50">
+      <div className="grid-container py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="lg:hidden p-2 rounded-md hover:bg-carbon-gray-100"
+            className="lg:hidden p-2 rounded-md hover:bg-crunch-black/5"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
           >
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           
           <a href="/" className="flex items-center gap-2">
-            <div className="bg-carbon-green-500 text-white font-bold p-2 rounded-md">CC</div>
-            <span className="text-xl font-bold text-carbon-gray-900">CrunchCarbon</span>
+            <img src="/lovable-uploads/850f8914-10c9-4eca-91e0-471bca63f70a.png" alt="CrunchCarbon Logo" className="h-10" />
+            <span className="text-xl font-golden-age font-bold text-crunch-black">CRUNCH CARBON</span>
           </a>
         </div>
         
-        <nav className="hidden lg:flex items-center gap-6">
-          <a href="/dashboard" className="font-medium text-carbon-gray-700 hover:text-carbon-green-600">
+        <nav className="hidden lg:flex items-center gap-8">
+          <a href="/dashboard" className="font-medium text-crunch-black hover:text-crunch-yellow transition-colors">
             Dashboard
           </a>
-          <a href="/proposals" className="font-medium text-carbon-gray-700 hover:text-carbon-green-600">
+          <a href="/proposals" className="font-medium text-crunch-black hover:text-crunch-yellow transition-colors">
             Proposals
           </a>
-          <a href="/calculator" className="font-medium text-carbon-gray-700 hover:text-carbon-green-600">
+          <a href="/calculator" className="font-medium text-crunch-black hover:text-crunch-yellow transition-colors">
             Calculator
           </a>
-          <a href="/about" className="font-medium text-carbon-gray-700 hover:text-carbon-green-600">
+          <a href="/about" className="font-medium text-crunch-black hover:text-crunch-yellow transition-colors">
             About
           </a>
         </nav>
@@ -45,13 +46,13 @@ export function Header() {
           <Button 
             variant="ghost" 
             onClick={() => navigate("/login")}
-            className="hidden sm:inline-flex text-carbon-gray-700 hover:text-carbon-green-600 hover:bg-carbon-green-50"
+            className="hidden sm:inline-flex text-crunch-black hover:text-crunch-black hover:bg-crunch-yellow/10"
           >
             Log in
           </Button>
           <Button 
             onClick={() => navigate("/register")}
-            className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
+            className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium"
           >
             Sign up
           </Button>
@@ -66,28 +67,28 @@ export function Header() {
         <nav className="flex flex-col gap-6">
           <a 
             href="/dashboard" 
-            className="py-3 border-b border-carbon-gray-100 font-medium text-carbon-gray-800"
+            className="py-3 border-b border-crunch-black/10 font-medium text-crunch-black"
             onClick={() => setMenuOpen(false)}
           >
             Dashboard
           </a>
           <a 
             href="/proposals" 
-            className="py-3 border-b border-carbon-gray-100 font-medium text-carbon-gray-800"
+            className="py-3 border-b border-crunch-black/10 font-medium text-crunch-black"
             onClick={() => setMenuOpen(false)}
           >
             Proposals
           </a>
           <a 
             href="/calculator" 
-            className="py-3 border-b border-carbon-gray-100 font-medium text-carbon-gray-800"
+            className="py-3 border-b border-crunch-black/10 font-medium text-crunch-black"
             onClick={() => setMenuOpen(false)}
           >
             Calculator
           </a>
           <a 
             href="/about" 
-            className="py-3 border-b border-carbon-gray-100 font-medium text-carbon-gray-800"
+            className="py-3 border-b border-crunch-black/10 font-medium text-crunch-black"
             onClick={() => setMenuOpen(false)}
           >
             About
@@ -99,7 +100,7 @@ export function Header() {
                 navigate("/login");
                 setMenuOpen(false);
               }}
-              className="w-full"
+              className="w-full border-crunch-black/10"
             >
               Log in
             </Button>
@@ -108,7 +109,7 @@ export function Header() {
                 navigate("/register");
                 setMenuOpen(false);
               }}
-              className="w-full bg-carbon-green-500 hover:bg-carbon-green-600"
+              className="w-full bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black"
             >
               Sign up
             </Button>

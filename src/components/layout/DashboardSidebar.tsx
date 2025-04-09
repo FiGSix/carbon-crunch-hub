@@ -49,8 +49,8 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     <SidebarContent className="pt-4">
       <div className="px-3 mb-8">
         <div className="flex items-center gap-2">
-          <div className="bg-carbon-green-500 text-white font-bold p-2 rounded-md">CC</div>
-          <span className="text-lg font-bold text-carbon-gray-900">CrunchCarbon</span>
+          <img src="/lovable-uploads/850f8914-10c9-4eca-91e0-471bca63f70a.png" alt="CrunchCarbon Logo" className="h-8" />
+          <span className="text-lg font-golden-age font-bold text-crunch-black">CRUNCH CARBON</span>
         </div>
       </div>
       
@@ -59,7 +59,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
           <SidebarMenuItem key={item.path}>
             <SidebarMenuButton
               onClick={() => navigate(item.path)}
-              className="w-full flex gap-2 items-center py-2 px-3"
+              className="w-full flex gap-2 items-center py-2 px-3 hover:bg-crunch-yellow/10 hover:text-crunch-black"
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
