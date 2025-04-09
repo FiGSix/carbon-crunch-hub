@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Proposals from "./pages/Proposals";
 import CreateProposal from "./pages/CreateProposal";
 import NotFound from "./pages/NotFound";
+import Agents from "./pages/Agents";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/proposals" element={<Proposals />} />
           <Route path="/proposals/new" element={<CreateProposal />} />
+          <Route path="/agents" element={<Agents />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
