@@ -30,8 +30,8 @@ export const HeroSection = () => {
             </motion.div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-crunch-black leading-tight tracking-tight">
-              <span className="block text-[#ffcd03]">Carbon Made Simple</span>
-              <span className="text-crunch-yellow drop-shadow-sm">Carbon Made Simple</span>
+              <span className="text-crunch-black">Carbon Made</span>{" "}
+              <span className="text-crunch-yellow drop-shadow-sm">Simple</span>
             </h1>
             
             <p className="text-xl font-bold text-crunch-black max-w-xl">
