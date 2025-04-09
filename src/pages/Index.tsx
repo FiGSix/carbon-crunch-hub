@@ -50,20 +50,10 @@ const Index = () => {
                 <div className="retro-card bg-white relative z-10">
                   <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full bg-carbon-green-500 rounded-lg"></div>
                   <img 
-                    src="/placeholder.svg" 
-                    alt="Solar panels generating carbon credits" 
+                    src="/lovable-uploads/cb0836fd-ceac-48eb-9df7-ecec92541456.png" 
+                    alt="CrunchCarbon Logo" 
                     className="w-full h-auto rounded-md"
                   />
-                  <div className="mt-6 flex justify-between">
-                    <div>
-                      <p className="text-carbon-gray-500 text-sm">Estimated Annual Credits</p>
-                      <p className="text-2xl font-bold text-carbon-gray-900">437 tCO₂</p>
-                    </div>
-                    <div>
-                      <p className="text-carbon-gray-500 text-sm">Potential Revenue</p>
-                      <p className="text-2xl font-bold text-carbon-green-600">R34,245</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
