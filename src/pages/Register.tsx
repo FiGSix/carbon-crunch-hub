@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
-import { ArrowLeft, CheckCircle, FileText, Link2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, FileText, Link2, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -23,10 +22,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { signUp } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Register = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const { refreshUser } = useAuth();
   const initialRole = searchParams.get('role') === 'agent' ? 'agent' : 'client';
   
   const [formData, setFormData] = useState({
@@ -42,6 +46,7 @@ const Register = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -54,27 +59,69 @@ const Register = () => {
     setFormData((prev) => ({ ...prev, role: value as "client" | "agent" }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if terms need to be accepted for agents
-    if (formData.role === "agent" && !termsAccepted) {
-      alert("You must accept the Agent Referral Agreement to continue.");
+    // Check if passwords match
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match",
+        variant: "destructive",
+      });
       return;
     }
     
-    // In a real app, this would register the user and store the terms acceptance
-    if (formData.role === "agent" && termsAccepted) {
-      // Here we would store in a database:
-      // - User ID
-      // - Timestamp
-      // - IP address (would need to be captured from server)
-      // - Agreement version
-      // - Full text of agreement
-      console.log("Terms & Conditions accepted at:", new Date().toISOString());
+    // Check if terms need to be accepted for agents
+    if (formData.role === "agent" && !termsAccepted) {
+      toast({
+        title: "Terms & Conditions Required",
+        description: "You must accept the Agent Referral Agreement to continue",
+        variant: "destructive",
+      });
+      return;
     }
     
-    navigate("/dashboard");
+    setIsLoading(true);
+    
+    try {
+      // Register the user with Supabase
+      const { data, error } = await signUp(
+        formData.email,
+        formData.password,
+        formData.role as 'client' | 'agent' | 'admin',
+        {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          company_name: formData.companyName || null,
+          terms_accepted: formData.role === 'agent' ? termsAccepted : null,
+          terms_accepted_at: formData.role === 'agent' && termsAccepted ? new Date().toISOString() : null,
+        }
+      );
+      
+      if (error) {
+        throw error;
+      }
+      
+      await refreshUser();
+      
+      toast({
+        title: "Registration successful!",
+        description: "Welcome to CrunchCarbon!",
+      });
+      
+      // Redirect to dashboard
+      navigate("/dashboard");
+      
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Please check your information and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -103,6 +150,7 @@ const Register = () => {
                   <Select 
                     value={formData.role} 
                     onValueChange={handleRoleChange}
+                    disabled={isLoading}
                   >
                     <SelectTrigger className="retro-input mt-1">
                       <SelectValue placeholder="Select your role" />
@@ -124,6 +172,7 @@ const Register = () => {
                       onChange={handleChange}
                       className="retro-input mt-1"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   
@@ -136,6 +185,7 @@ const Register = () => {
                       onChange={handleChange}
                       className="retro-input mt-1"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -149,6 +199,7 @@ const Register = () => {
                       value={formData.companyName}
                       onChange={handleChange}
                       className="retro-input mt-1"
+                      disabled={isLoading}
                     />
                   </div>
                 )}
@@ -164,6 +215,7 @@ const Register = () => {
                     className="retro-input mt-1"
                     placeholder="you@example.com"
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 
@@ -177,6 +229,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="retro-input mt-1"
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 
@@ -190,6 +243,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="retro-input mt-1"
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 
@@ -202,6 +256,7 @@ const Register = () => {
                         onCheckedChange={(checked) => {
                           setTermsAccepted(checked === true);
                         }}
+                        disabled={isLoading}
                       />
                       <div className="grid gap-1.5 leading-none">
                         <label
@@ -215,6 +270,7 @@ const Register = () => {
                                 type="button" 
                                 variant="link" 
                                 className="h-auto p-0 text-carbon-green-600 hover:underline"
+                                disabled={isLoading}
                               >
                                 Agent Referral Agreement
                               </Button>
@@ -324,6 +380,7 @@ const Register = () => {
                           type="button" 
                           variant="link" 
                           className="h-auto p-0 text-carbon-green-600 hover:underline"
+                          disabled={isLoading}
                         >
                           Terms and Privacy Policy
                         </Button>
@@ -386,8 +443,16 @@ const Register = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
+                  disabled={isLoading}
                 >
-                  Create Account
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
               </div>
             </form>

@@ -6,18 +6,47 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { signIn } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would authenticate the user
-    navigate("/dashboard");
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await signIn(email, password);
+      
+      if (error) {
+        throw error;
+      }
+      
+      await refreshUser();
+      toast({
+        title: "Success",
+        description: "You have successfully logged in",
+      });
+      
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Please check your credentials and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const togglePasswordVisibility = () => {
@@ -55,6 +84,7 @@ const Login = () => {
                     className="retro-input mt-1"
                     placeholder="you@example.com"
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 
@@ -73,12 +103,14 @@ const Login = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="retro-input mt-1 pr-10"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none mt-1"
                       onClick={togglePasswordVisibility}
                       aria-label={showPassword ? "Hide password" : "Show password"}
+                      disabled={isLoading}
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -92,8 +124,16 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
+                  disabled={isLoading}
                 >
-                  Log in
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    "Log in"
+                  )}
                 </Button>
               </div>
             </form>
