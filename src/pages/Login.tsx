@@ -84,16 +84,16 @@ const Login = () => {
       <main className="flex-1 flex items-center justify-center py-12">
         <div className="w-full max-w-md px-4">
           <div className="mb-6">
-            <Link to="/" className="flex items-center text-carbon-gray-600 hover:text-carbon-green-600">
+            <Link to="/" className="flex items-center text-crunch-black/70 hover:text-crunch-yellow">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to home
             </Link>
           </div>
           
-          <div className="retro-card">
+          <div className="bg-white p-8 rounded-xl shadow-lg border border-crunch-black/10">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-carbon-gray-900">Welcome back</h1>
-              <p className="text-carbon-gray-600 mt-2">Log in to your CrunchCarbon account</p>
+              <h1 className="text-2xl font-bold text-crunch-black">Welcome back</h1>
+              <p className="text-crunch-black/70 mt-2">Log in to your CrunchCarbon account</p>
             </div>
             
             {loginAttempts >= 2 && (
@@ -116,7 +116,7 @@ const Login = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="retro-input mt-1"
+                    className="mt-1 border-2 border-crunch-black/10 focus:border-crunch-yellow"
                     placeholder="you@example.com"
                     required
                     disabled={isSubmitting}
@@ -126,7 +126,7 @@ const Login = () => {
                 <div>
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
-                    <a href="#" className="text-sm text-carbon-green-600 hover:underline">
+                    <a href="#" className="text-sm text-crunch-yellow hover:underline">
                       Forgot password?
                     </a>
                   </div>
@@ -136,13 +136,13 @@ const Login = () => {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="retro-input mt-1 pr-10"
+                      className="mt-1 pr-10 border-2 border-crunch-black/10 focus:border-crunch-yellow"
                       required
                       disabled={isSubmitting}
                     />
                     <button
                       type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none mt-1"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-crunch-black/50 hover:text-crunch-black focus:outline-none mt-1"
                       onClick={togglePasswordVisibility}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       disabled={isSubmitting}
@@ -158,7 +158,7 @@ const Login = () => {
                 
                 <Button 
                   type="submit" 
-                  className="w-full bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
+                  className="w-full"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -174,9 +174,9 @@ const Login = () => {
             </form>
             
             <div className="mt-6 text-center">
-              <p className="text-carbon-gray-600">
+              <p className="text-crunch-black/70">
                 Don't have an account?{" "}
-                <Link to="/register" className="text-carbon-green-600 hover:underline">
+                <Link to="/register" className="text-crunch-yellow hover:underline">
                   Sign up
                 </Link>
               </p>

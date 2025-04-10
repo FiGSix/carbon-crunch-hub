@@ -10,7 +10,7 @@ export function RegisterSubmitButton({ isLoading }: RegisterSubmitButtonProps) {
   return (
     <Button 
       type="submit" 
-      className="w-full bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
+      className="w-full"
       disabled={isLoading}
     >
       {isLoading ? (

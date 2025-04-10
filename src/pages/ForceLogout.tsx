@@ -76,26 +76,27 @@ const ForceLogout = () => {
           </AlertDescription>
         </Alert>
         
-        <p className="mb-6 text-carbon-gray-600">
+        <p className="mb-6 text-crunch-black">
           Your browser storage has already been cleared automatically.
           Click below to complete the logout process for all devices.
         </p>
         
         <Button 
           onClick={handleForceLogout} 
-          className="w-full bg-carbon-green-500 hover:bg-carbon-green-600"
+          className="w-full"
           disabled={isProcessing}
+          variant="secondary"
         >
           {isProcessing ? "Processing..." : "Complete Force Logout"}
         </Button>
         
         <div className="mt-4 text-center">
-          <p className="text-sm text-carbon-gray-500 mb-2">
+          <p className="text-sm text-crunch-black/70 mb-2">
             After logging out, try to log in again with correct credentials.
           </p>
           <a 
             href="/login" 
-            className="text-carbon-green-600 hover:underline"
+            className="text-crunch-yellow hover:underline"
           >
             Return to login
           </a>
