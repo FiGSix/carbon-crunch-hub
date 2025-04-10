@@ -6,32 +6,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
-import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
 import { signIn, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { refreshUser, user, userRole } = useAuth();
+  const { refreshUser, user, userRole, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
   
   // If user is already authenticated, redirect to dashboard
   useEffect(() => {
-    if (user) {
+    if (user && !isLoading) {
       console.log("User already logged in, redirecting to dashboard. User role:", userRole);
-      navigate("/dashboard");
+      const from = location.state?.from || "/dashboard";
+      navigate(from);
     }
-  }, [user, navigate, userRole]);
+  }, [user, navigate, userRole, isLoading, location.state]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     
     try {
       console.log(`Attempting to sign in with email: ${email}`);
@@ -59,13 +62,14 @@ const Login = () => {
       navigate(from);
     } catch (error: any) {
       console.error("Login error:", error);
+      setLoginAttempts(prev => prev + 1);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
   
@@ -92,6 +96,17 @@ const Login = () => {
               <p className="text-carbon-gray-600 mt-2">Log in to your CrunchCarbon account</p>
             </div>
             
+            {loginAttempts >= 2 && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Having trouble logging in? Try our <Link to="/force-logout" className="font-medium underline">
+                    force logout
+                  </Link> tool to fix session issues.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
@@ -104,7 +119,7 @@ const Login = () => {
                     className="retro-input mt-1"
                     placeholder="you@example.com"
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -123,14 +138,14 @@ const Login = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="retro-input mt-1 pr-10"
                       required
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                     />
                     <button
                       type="button"
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none mt-1"
                       onClick={togglePasswordVisibility}
                       aria-label={showPassword ? "Hide password" : "Show password"}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -144,9 +159,9 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 >
-                  {isLoading ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Logging in...

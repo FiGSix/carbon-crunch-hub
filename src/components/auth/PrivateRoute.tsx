@@ -4,6 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -45,21 +48,43 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
+  // Special case: if we know there should be a role but it's missing, show force-logout option
+  if (allowedRoles && !userRole) {
+    console.log("Role required but missing, showing force-logout option");
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center p-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertTitle>Authentication Issue Detected</AlertTitle>
+          <AlertDescription className="mt-2">
+            <p className="mb-4">
+              Your session appears to be corrupted. Your user account exists, but your role information is missing.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => refreshUser()}
+                className="flex-1"
+              >
+                Try Again
+              </Button>
+              <Button 
+                variant="destructive"
+                className="flex-1"
+                asChild
+              >
+                <Link to="/force-logout">Force Logout</Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   // If role-specific route and user doesn't have permission
   if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
     console.log(`User role ${userRole} not allowed, redirecting to dashboard`);
     return <Navigate to="/dashboard" replace />;
-  }
-
-  // Special case: if we know there should be a role but it's missing
-  if (allowedRoles && !userRole) {
-    console.log("Role required but missing, refreshing and showing loading");
-    refreshUser();
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-carbon-green-500" />
-      </div>
-    );
   }
 
   // Render children if authenticated and authorized

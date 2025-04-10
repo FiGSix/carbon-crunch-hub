@@ -19,6 +19,7 @@ import Agents from "./pages/Agents";
 import About from "./pages/About";
 import Calculator from "./pages/Calculator";
 import Contact from "./pages/Contact";
+import ForceLogout from "./pages/ForceLogout";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/force-logout" element={<ForceLogout />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={
