@@ -54,10 +54,35 @@ export async function getCurrentUser() {
 export async function getUserRole() {
   const { user, error } = await getCurrentUser()
   if (error || !user) {
+    console.log("Error getting user or user is null:", error)
     return { role: null, error }
   }
   
-  const role = user.user_metadata?.role as UserRole
+  // First check user_metadata which is the primary location
+  let role = user.user_metadata?.role as UserRole
+  
+  // If not found in user_metadata, try to fetch from the profiles table
+  if (!role) {
+    console.log("Role not found in user_metadata, checking profiles table")
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError) {
+      console.log("Error fetching profile:", profileError)
+      return { role: null, error: profileError }
+    }
+    
+    if (profile && profile.role) {
+      role = profile.role as UserRole
+      console.log("Found role in profiles table:", role)
+    }
+  } else {
+    console.log("Found role in user_metadata:", role)
+  }
+  
   return { role, error: null }
 }
 

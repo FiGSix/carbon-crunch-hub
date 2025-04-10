@@ -1,44 +1,64 @@
 
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
-import { signIn } from "@/lib/supabase";
+import { signIn, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user, userRole } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // If user is already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      console.log("User already logged in, redirecting to dashboard. User role:", userRole);
+      navigate("/dashboard");
+    }
+  }, [user, navigate, userRole]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      console.log(`Attempting to sign in with email: ${email}`);
       const { data, error } = await signIn(email, password);
       
       if (error) {
         throw error;
       }
       
+      console.log("Sign in successful, refreshing user data");
       await refreshUser();
+      
+      // Check auth state after login
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Session after login:", sessionData.session ? "Session exists" : "No session");
+      
       toast({
         title: "Success",
         description: "You have successfully logged in",
       });
       
-      navigate("/dashboard");
+      // Get the intended destination from location state, or default to dashboard
+      const from = location.state?.from || "/dashboard";
+      console.log(`Redirecting to: ${from}`);
+      navigate(from);
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again",
