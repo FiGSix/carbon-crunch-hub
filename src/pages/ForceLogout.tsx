@@ -1,13 +1,17 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const ForceLogout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [email, setEmail] = useState("");
 
   const clearBrowserStorage = () => {
     // Clear any Supabase-related items from localStorage
@@ -29,6 +33,7 @@ const ForceLogout = () => {
 
   const handleForceLogout = async () => {
     try {
+      setIsProcessing(true);
       await supabase.auth.signOut({ scope: 'global' });
       clearBrowserStorage();
       
@@ -37,8 +42,11 @@ const ForceLogout = () => {
         description: "You have been forcefully logged out of all devices."
       });
       
-      // Redirect to login page
-      navigate("/login");
+      // Short delay to ensure all cleanup is complete
+      setTimeout(() => {
+        // Redirect to login page
+        navigate("/login");
+      }, 500);
     } catch (error) {
       console.error("Error during force logout:", error);
       toast({
@@ -46,6 +54,8 @@ const ForceLogout = () => {
         description: "There was a problem logging you out. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -58,17 +68,31 @@ const ForceLogout = () => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold mb-6 text-center">Force Logout</h1>
+        <Alert variant="warning" className="mb-6">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            This utility will clear all authentication data and force a complete logout.
+            Use this if you're experiencing login problems or role issues.
+          </AlertDescription>
+        </Alert>
+        
         <p className="mb-6 text-carbon-gray-600">
-          This page helps resolve authentication issues by clearing all active sessions.
           Your browser storage has already been cleared automatically.
+          Click below to complete the logout process for all devices.
         </p>
+        
         <Button 
           onClick={handleForceLogout} 
           className="w-full bg-carbon-green-500 hover:bg-carbon-green-600"
+          disabled={isProcessing}
         >
-          Complete Force Logout
+          {isProcessing ? "Processing..." : "Complete Force Logout"}
         </Button>
+        
         <div className="mt-4 text-center">
+          <p className="text-sm text-carbon-gray-500 mb-2">
+            After logging out, try to log in again with correct credentials.
+          </p>
           <a 
             href="/login" 
             className="text-carbon-green-600 hover:underline"
