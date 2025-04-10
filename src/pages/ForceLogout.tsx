@@ -68,9 +68,9 @@ const ForceLogout = () => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold mb-6 text-center">Force Logout</h1>
-        <Alert variant="warning" className="mb-6">
-          <AlertCircle className="h-4 w-4 mr-2" />
-          <AlertDescription>
+        <Alert className="mb-6 border-yellow-400 bg-yellow-50">
+          <AlertCircle className="h-4 w-4 mr-2 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
             This utility will clear all authentication data and force a complete logout.
             Use this if you're experiencing login problems or role issues.
           </AlertDescription>
