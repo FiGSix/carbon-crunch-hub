@@ -17,7 +17,7 @@ const ForceLogout = () => {
 
   // Progress animation for better user feedback
   useEffect(() => {
-    let interval: number | undefined;
+    let interval: ReturnType<typeof setInterval> | undefined;
     
     if (isProcessing) {
       setProgressValue(0);

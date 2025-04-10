@@ -37,7 +37,7 @@ const Login = () => {
   
   // Progress bar animation for login process
   useEffect(() => {
-    let interval: number | undefined;
+    let interval: ReturnType<typeof setInterval> | undefined;
     
     if (isSubmitting) {
       setProgressValue(0);
