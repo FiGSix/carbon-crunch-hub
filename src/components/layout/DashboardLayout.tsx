@@ -9,21 +9,40 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { Footer } from "./footer";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  userRole?: 'client' | 'agent' | 'admin';
+  requiredRole?: 'client' | 'agent' | 'admin';
 }
 
 export function DashboardLayout({ 
   children, 
-  userRole = 'client'
+  requiredRole 
 }: DashboardLayoutProps) {
+  const { userRole, isLoading } = useAuth();
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-carbon-green-500" />
+      </div>
+    );
+  }
+
+  // Redirect if user doesn't have the required role
+  if (requiredRole && userRole !== requiredRole) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <Sidebar>
-          <DashboardSidebar userRole={userRole} />
+          <DashboardSidebar userRole={userRole || 'client'} />
         </Sidebar>
         
         <div className="flex-1 flex flex-col">

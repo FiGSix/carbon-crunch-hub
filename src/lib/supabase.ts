@@ -2,36 +2,22 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/supabase'
 
-// These environment variables are set automatically in Lovable
-// when you connect to Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+// Use the environment variables or direct values from the client.ts file if needed
+const supabaseUrl = "https://uyjryuopuqgmsvayiccl.supabase.co"
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5anJ5dW9wdXFnbXN2YXlpY2NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyNzU2MzgsImV4cCI6MjA1OTg1MTYzOH0.M828t6sJxh4lZAVACqpRosoRvW_VibHDAMSXV-3WrLo"
 
-// Create a dummy client when environment variables are not available
-// This happens before the Supabase integration is connected
-const isMissingCredentials = !supabaseUrl || !supabaseAnonKey
-
-// Show a helpful error message in development
-if (isMissingCredentials && import.meta.env.DEV) {
-  console.warn(
-    '⚠️ Supabase credentials are missing. Please connect to Supabase in Lovable by clicking the green Supabase button in the top right corner.'
-  )
-}
-
-export const supabase = isMissingCredentials
-  ? createClient('https://placeholder-url.supabase.co', 'placeholder-key')
-  : createClient<Database>(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+})
 
 // Types for our user roles
 export type UserRole = 'client' | 'agent' | 'admin'
 
 // Auth related functions
 export async function signUp(email: string, password: string, role: UserRole, metadata: Record<string, any> = {}) {
-  if (isMissingCredentials) {
-    console.warn('⚠️ Cannot sign up: Supabase is not connected')
-    return { data: null, error: new Error('Supabase is not connected') }
-  }
-
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -47,11 +33,6 @@ export async function signUp(email: string, password: string, role: UserRole, me
 }
 
 export async function signIn(email: string, password: string) {
-  if (isMissingCredentials) {
-    console.warn('⚠️ Cannot sign in: Supabase is not connected')
-    return { data: null, error: new Error('Supabase is not connected') }
-  }
-
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -61,31 +42,16 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
-  if (isMissingCredentials) {
-    console.warn('⚠️ Cannot sign out: Supabase is not connected')
-    return { error: new Error('Supabase is not connected') }
-  }
-
   const { error } = await supabase.auth.signOut()
   return { error }
 }
 
 export async function getCurrentUser() {
-  if (isMissingCredentials) {
-    console.warn('⚠️ Cannot get current user: Supabase is not connected')
-    return { user: null, error: new Error('Supabase is not connected') }
-  }
-
   const { data, error } = await supabase.auth.getUser()
   return { user: data.user, error }
 }
 
 export async function getUserRole() {
-  if (isMissingCredentials) {
-    console.warn('⚠️ Cannot get user role: Supabase is not connected')
-    return { role: null, error: new Error('Supabase is not connected') }
-  }
-
   const { user, error } = await getCurrentUser()
   if (error || !user) {
     return { role: null, error }
@@ -93,4 +59,42 @@ export async function getUserRole() {
   
   const role = user.user_metadata?.role as UserRole
   return { role, error: null }
+}
+
+// Profile related functions
+export async function getProfile() {
+  const { user, error: userError } = await getCurrentUser()
+  if (userError || !user) {
+    return { profile: null, error: userError }
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  return { profile: data, error }
+}
+
+export async function updateProfile(updates: Partial<{
+  first_name: string;
+  last_name: string;
+  company_name: string;
+  email: string;
+  terms_accepted_at: string | null;
+}>) {
+  const { user, error: userError } = await getCurrentUser()
+  if (userError || !user) {
+    return { error: userError }
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', user.id)
+    .select()
+    .single()
+
+  return { data, error }
 }

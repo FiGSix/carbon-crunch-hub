@@ -2,6 +2,8 @@
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Home, FileText, BarChart, Users, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { signOut } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardSidebarProps {
   userRole: 'client' | 'agent' | 'admin';
@@ -9,6 +11,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -45,6 +48,24 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       menuItems = clientMenuItems;
   }
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      navigate("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem logging out",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <SidebarContent className="pt-4">
       <div className="px-3 mb-8">
@@ -69,7 +90,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         <div className="mt-8 px-3">
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => navigate("/")}
+              onClick={handleLogout}
               className="w-full flex gap-2 items-center py-2 px-3 text-destructive"
             >
               <LogOut className="h-5 w-5" />

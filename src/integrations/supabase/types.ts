@@ -9,7 +9,87 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          role: string
+          terms_accepted_at: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          role: string
+          terms_accepted_at?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          role?: string
+          terms_accepted_at?: string | null
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          agent_id: string | null
+          client_id: string
+          content: Json
+          created_at: string
+          id: string
+          signed_at: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          agent_id?: string | null
+          client_id: string
+          content?: Json
+          created_at?: string
+          id?: string
+          signed_at?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          agent_id?: string | null
+          client_id?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          signed_at?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
