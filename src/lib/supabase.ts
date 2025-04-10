@@ -10,8 +10,16 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: localStorage
   }
 })
+
+// Cache for frequently accessed data
+const cache = {
+  userRole: new Map<string, UserRole>(),
+  profiles: new Map<string, any>()
+};
 
 // Types for our user roles
 export type UserRole = 'client' | 'agent' | 'admin'
@@ -33,6 +41,10 @@ export async function signUp(email: string, password: string, role: UserRole, me
 }
 
 export async function signIn(email: string, password: string) {
+  // Clear cache on sign in
+  cache.userRole.clear();
+  cache.profiles.clear();
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -42,6 +54,10 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
+  // Clear cache on sign out
+  cache.userRole.clear();
+  cache.profiles.clear();
+  
   const { error } = await supabase.auth.signOut()
   return { error }
 }
@@ -56,6 +72,12 @@ export async function getUserRole() {
   if (error || !user) {
     console.log("Error getting user or user is null:", error)
     return { role: null, error }
+  }
+  
+  // Check cache first
+  if (cache.userRole.has(user.id)) {
+    console.log("Using cached role for user:", user.id);
+    return { role: cache.userRole.get(user.id), error: null };
   }
   
   // First check user_metadata which is the primary location
@@ -83,6 +105,11 @@ export async function getUserRole() {
     console.log("Found role in user_metadata:", role)
   }
   
+  // Cache the role for future calls
+  if (role) {
+    cache.userRole.set(user.id, role);
+  }
+  
   return { role, error: null }
 }
 
@@ -93,11 +120,22 @@ export async function getProfile() {
     return { profile: null, error: userError }
   }
 
+  // Check cache first
+  if (cache.profiles.has(user.id)) {
+    console.log("Using cached profile for user:", user.id);
+    return { profile: cache.profiles.get(user.id), error: null };
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
+    
+  // Cache the profile for future calls
+  if (data && !error) {
+    cache.profiles.set(user.id, data);
+  }
 
   return { profile: data, error }
 }
@@ -114,12 +152,20 @@ export async function updateProfile(updates: Partial<{
     return { error: userError }
   }
 
+  // Clear profile cache for this user
+  cache.profiles.delete(user.id);
+
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
     .select()
     .single()
+
+  // Update cache with new profile data
+  if (data && !error) {
+    cache.profiles.set(user.id, data);
+  }
 
   return { data, error }
 }

@@ -16,7 +16,7 @@ export function RegisterSubmitButton({ isLoading }: RegisterSubmitButtonProps) {
       {isLoading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Creating Account...
+          <span className="animate-pulse">Creating Account...</span>
         </>
       ) : (
         "Create Account"

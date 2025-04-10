@@ -5,15 +5,43 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const ForceLogout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [email, setEmail] = useState("");
+  const [clearingStatus, setClearingStatus] = useState<"idle" | "clearing" | "completed">("idle");
+  const [progressValue, setProgressValue] = useState(0);
+
+  // Progress animation for better user feedback
+  useEffect(() => {
+    let interval: number | undefined;
+    
+    if (isProcessing) {
+      setProgressValue(0);
+      interval = setInterval(() => {
+        setProgressValue(prev => {
+          if (clearingStatus === "clearing" && prev < 90) return prev + 10;
+          if (prev >= 90) return 90;
+          return prev;
+        });
+      }, 100);
+    } else if (clearingStatus === "completed") {
+      setProgressValue(100);
+    } else {
+      setProgressValue(0);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing, clearingStatus]);
 
   const clearBrowserStorage = () => {
+    setClearingStatus("clearing");
+    
     // Clear any Supabase-related items from localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -25,6 +53,8 @@ const ForceLogout = () => {
     // Clear session storage as well
     sessionStorage.clear();
     
+    setClearingStatus("completed");
+    
     toast({
       title: "Storage cleared",
       description: "All browser storage related to authentication has been cleared."
@@ -34,7 +64,12 @@ const ForceLogout = () => {
   const handleForceLogout = async () => {
     try {
       setIsProcessing(true);
+      setClearingStatus("clearing");
+      
+      // Sign out from all devices
       await supabase.auth.signOut({ scope: 'global' });
+      
+      // Clear browser storage
       clearBrowserStorage();
       
       toast({
@@ -42,11 +77,11 @@ const ForceLogout = () => {
         description: "You have been forcefully logged out of all devices."
       });
       
-      // Short delay to ensure all cleanup is complete
+      // Short delay to ensure all cleanup is complete and to show success state
       setTimeout(() => {
         // Redirect to login page
         navigate("/login");
-      }, 500);
+      }, 1000);
     } catch (error) {
       console.error("Error during force logout:", error);
       toast({
@@ -68,6 +103,19 @@ const ForceLogout = () => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold mb-6 text-center">Force Logout</h1>
+        
+        {clearingStatus !== "idle" && (
+          <div className="mb-6">
+            <div className="flex justify-between mb-1 text-sm">
+              <span className="text-crunch-black/60">
+                {clearingStatus === "clearing" ? "Clearing session data..." : "Session data cleared"}
+              </span>
+              <span className="text-crunch-black/60">{Math.round(progressValue)}%</span>
+            </div>
+            <Progress value={progressValue} className="h-2 mb-4" />
+          </div>
+        )}
+        
         <Alert className="mb-6 border-yellow-400 bg-yellow-50">
           <AlertCircle className="h-4 w-4 mr-2 text-yellow-600" />
           <AlertDescription className="text-yellow-800">
@@ -87,7 +135,14 @@ const ForceLogout = () => {
           disabled={isProcessing}
           variant="secondary"
         >
-          {isProcessing ? "Processing..." : "Complete Force Logout"}
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Completing Logout...
+            </>
+          ) : (
+            "Complete Force Logout"
+          )}
         </Button>
         
         <div className="mt-4 text-center">

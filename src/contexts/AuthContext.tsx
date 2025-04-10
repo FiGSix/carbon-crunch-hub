@@ -34,33 +34,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
+  // Function to fetch user profile data efficiently
+  const fetchUserData = async (currentUser: User) => {
+    try {
+      // Fetch user role and profile in parallel
+      const [roleResult, profileResult] = await Promise.all([
+        getUserRole(),
+        getProfile()
+      ]);
+      
+      setUserRole(roleResult.role);
+      
+      if (profileResult.error) {
+        console.error("Error fetching user profile:", profileResult.error);
+      } else {
+        setProfile(profileResult.profile);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
   useEffect(() => {
     // Set up initial session and user
     async function fetchUserSession() {
       setIsLoading(true)
       try {
+        // Listen for auth changes before getting session to avoid race conditions
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, currentSession) => {
+            console.log('Auth state changed:', event, 'User ID:', currentSession?.user?.id)
+            
+            if (currentSession?.user) {
+              setSession(currentSession)
+              setUser(currentSession.user)
+              
+              // Only fetch profile and role data if they haven't been loaded
+              if (!userRole || !profile) {
+                await fetchUserData(currentSession.user);
+              }
+            } else {
+              setSession(null)
+              setUser(null)
+              setUserRole(null)
+              setProfile(null)
+            }
+            
+            // Only set loading to false after initial session check
+            setIsLoading(false)
+          }
+        )
+        
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession()
         console.log("Initial session check:", currentSession ? "Session exists" : "No session")
-        setSession(currentSession)
-
+        
         if (currentSession?.user) {
           console.log("User found in session, user ID:", currentSession.user.id)
+          setSession(currentSession)
           setUser(currentSession.user)
-          
-          // Get user role from metadata and/or profile
-          const { role } = await getUserRole()
-          console.log("User role from getUserRole:", role)
-          setUserRole(role)
-          
-          // Get user profile from database
-          const { profile: userProfile, error: profileError } = await getProfile()
-          if (profileError) {
-            console.error("Error fetching user profile:", profileError)
-          } else {
-            console.log("Profile fetched successfully:", userProfile ? "Profile exists" : "No profile")
-            setProfile(userProfile)
-          }
+          await fetchUserData(currentSession.user);
+        }
+        
+        setIsLoading(false)
+
+        return () => {
+          subscription.unsubscribe()
         }
       } catch (error) {
         console.error('Error fetching session:', error)
@@ -69,42 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           description: 'Failed to fetch user session',
           variant: 'destructive',
         })
-      } finally {
         setIsLoading(false)
       }
     }
 
     fetchUserSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('Auth state changed:', event, 'User ID:', currentSession?.user?.id)
-        setSession(currentSession)
-        setUser(currentSession?.user ?? null)
-        
-        if (currentSession?.user) {
-          // Fetch in sequence to prevent race conditions
-          const { role } = await getUserRole()
-          console.log('Role after auth state change:', role)
-          setUserRole(role)
-          
-          // Small delay to ensure profile is created in the database
-          setTimeout(async () => {
-            const { profile: userProfile } = await getProfile()
-            console.log('Profile after auth state change:', userProfile)
-            setProfile(userProfile)
-          }, 500)
-        } else {
-          setUserRole(null)
-          setProfile(null)
-        }
-      }
-    )
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [toast])
 
   const refreshUser = async () => {
@@ -112,16 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log("Refreshing user data...")
       const { user: currentUser } = await getCurrentUser()
-      setUser(currentUser)
       
       if (currentUser) {
-        const { role } = await getUserRole()
-        console.log("Refreshed role:", role)
-        setUserRole(role)
-        
-        const { profile: userProfile } = await getProfile()
-        console.log("Refreshed profile:", userProfile)
-        setProfile(userProfile)
+        setUser(currentUser)
+        await fetchUserData(currentUser);
       }
     } catch (error) {
       console.error('Error refreshing user:', error)
