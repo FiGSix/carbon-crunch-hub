@@ -15,3 +15,4 @@ export {
 
 // Re-export types using the proper 'export type' syntax
 export type { UserRole } from './supabase/types'
+

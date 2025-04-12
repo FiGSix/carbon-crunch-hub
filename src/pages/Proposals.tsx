@@ -37,7 +37,7 @@ const Proposals = () => {
             annual_energy,
             carbon_credits,
             client_share_percentage,
-            profiles:profiles(first_name, last_name, email)
+            profiles(first_name, last_name, email)
           `)
           .order('created_at', { ascending: false });
         
@@ -47,10 +47,13 @@ const Proposals = () => {
         
         // Transform the data to match the Proposal interface
         const formattedProposals: Proposal[] = data.map(item => {
-          // Handle profiles data correctly - it returns as an object with an array property
-          const profileData = item.profiles;
-          const clientName = profileData && profileData.first_name && profileData.last_name
-            ? `${profileData.first_name} ${profileData.last_name}`.trim()
+          // Handle profiles data correctly - profiles returns as an array
+          const profileData = Array.isArray(item.profiles) && item.profiles.length > 0 
+            ? item.profiles[0] 
+            : null;
+            
+          const clientName = profileData 
+            ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() 
             : 'Unknown Client';
             
           return {
