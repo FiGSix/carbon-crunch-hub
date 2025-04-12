@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 
 export interface Proposal {
-  id: number;
+  id: string; // Changed from number to string to match Supabase UUID
   name: string;
   client: string;
   date: string;

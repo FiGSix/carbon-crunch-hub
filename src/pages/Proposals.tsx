@@ -59,12 +59,22 @@ const Proposals = () => {
             ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() 
             : 'Unknown Client';
             
+          // Parse size safely from content
+          let size = 0;
+          if (typeof item.content === 'object' && item.content !== null) {
+            // Try to access projectInfo if it exists
+            const projectInfo = item.content.projectInfo;
+            if (projectInfo && typeof projectInfo === 'object' && 'size' in projectInfo) {
+              size = parseFloat(projectInfo.size || '0');
+            }
+          }
+            
           return {
             id: item.id,
             name: item.title,
             client: clientName,
             date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
-            size: parseFloat(item.content.projectInfo?.size || "0"),
+            size: size,
             status: item.status,
             revenue: item.carbon_credits * 100 // Simplified revenue calculation
           };
