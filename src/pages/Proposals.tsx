@@ -59,13 +59,19 @@ const Proposals = () => {
             ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() 
             : 'Unknown Client';
             
-          // Parse size safely from content
+          // Parse size safely from content - making sure to check types properly for TypeScript
           let size = 0;
-          if (typeof item.content === 'object' && item.content !== null) {
-            // Try to access projectInfo if it exists
-            const projectInfo = item.content.projectInfo;
-            if (projectInfo && typeof projectInfo === 'object' && 'size' in projectInfo) {
-              size = parseFloat(projectInfo.size || '0');
+          if (item.content && typeof item.content === 'object' && !Array.isArray(item.content)) {
+            // Now TypeScript knows content is an object, not an array
+            const contentObj = item.content as Record<string, any>;
+            
+            // Check if projectInfo exists and is an object
+            if (contentObj.projectInfo && typeof contentObj.projectInfo === 'object') {
+              // Access size property safely
+              if ('size' in contentObj.projectInfo) {
+                const sizeValue = contentObj.projectInfo.size;
+                size = parseFloat(String(sizeValue) || '0');
+              }
             }
           }
             
