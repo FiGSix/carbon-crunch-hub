@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -47,7 +48,7 @@ const Proposals = () => {
         // Transform the data to match the Proposal interface
         const formattedProposals: Proposal[] = data.map(item => {
           // Access client profile data through the explicit foreign key reference
-          const profileData = item.profiles_client_id_fkey;
+          const profileData = item.profiles ? item.profiles : null;
             
           const clientName = profileData 
             ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() 
