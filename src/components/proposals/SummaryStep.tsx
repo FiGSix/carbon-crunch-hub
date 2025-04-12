@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { 
   Card, 
   CardContent, 
@@ -9,7 +9,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
 import { 
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
@@ -18,8 +18,12 @@ import {
   getAgentCommissionPercentage,
   getCarbonPriceForYear
 } from "./utils/proposalCalculations";
+import { createProposal } from "@/services/proposalService";
+import { EligibilityCriteria } from "./types";
+import { useToast } from "@/hooks/use-toast";
 
 interface SummaryStepProps {
+  eligibility: EligibilityCriteria;
   clientInfo: {
     name: string;
     email: string;
@@ -39,15 +43,55 @@ interface SummaryStepProps {
 }
 
 export function SummaryStep({ 
+  eligibility,
   clientInfo, 
   projectInfo, 
   nextStep, 
   prevStep 
 }: SummaryStepProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const revenue = calculateRevenue(projectInfo.size);
   const clientSharePercentage = getClientSharePercentage(projectInfo.size);
   const agentCommissionPercentage = getAgentCommissionPercentage(projectInfo.size);
   const crunchCarbonSharePercentage = 100 - clientSharePercentage - agentCommissionPercentage;
+
+  const handleSubmitProposal = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      const result = await createProposal(
+        eligibility,
+        clientInfo,
+        projectInfo
+      );
+      
+      if (result.success) {
+        toast({
+          title: "Proposal Created",
+          description: "Your proposal has been successfully created.",
+          variant: "default",
+        });
+        nextStep(); // Navigate to the next step or proposals list
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create proposal",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error submitting proposal:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while creating the proposal.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Card className="retro-card">
@@ -170,14 +214,20 @@ export function SummaryStep({
           variant="outline" 
           onClick={prevStep}
           className="retro-button"
+          disabled={isSubmitting}
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Previous
         </Button>
         <Button 
-          onClick={nextStep}
+          onClick={handleSubmitProposal}
+          disabled={isSubmitting}
           className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
         >
-          Generate Proposal <ArrowRight className="ml-2 h-4 w-4" />
+          {isSubmitting ? (
+            <>Generating Proposal...</>
+          ) : (
+            <>Generate Proposal <ArrowRight className="ml-2 h-4 w-4" /></>
+          )}
         </Button>
       </CardFooter>
     </Card>

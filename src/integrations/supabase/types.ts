@@ -17,6 +17,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          phone: string | null
           role: string
           terms_accepted_at: string | null
         }
@@ -27,6 +28,7 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          phone?: string | null
           role: string
           terms_accepted_at?: string | null
         }
@@ -37,6 +39,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          phone?: string | null
           role?: string
           terms_accepted_at?: string | null
         }
@@ -44,31 +47,49 @@ export type Database = {
       }
       proposals: {
         Row: {
+          agent_commission_percentage: number | null
           agent_id: string | null
+          annual_energy: number | null
+          carbon_credits: number | null
           client_id: string
+          client_share_percentage: number | null
           content: Json
           created_at: string
+          eligibility_criteria: Json
           id: string
+          project_info: Json
           signed_at: string | null
           status: string
           title: string
         }
         Insert: {
+          agent_commission_percentage?: number | null
           agent_id?: string | null
+          annual_energy?: number | null
+          carbon_credits?: number | null
           client_id: string
+          client_share_percentage?: number | null
           content?: Json
           created_at?: string
+          eligibility_criteria?: Json
           id?: string
+          project_info?: Json
           signed_at?: string | null
           status?: string
           title: string
         }
         Update: {
+          agent_commission_percentage?: number | null
           agent_id?: string | null
+          annual_energy?: number | null
+          carbon_credits?: number | null
           client_id?: string
+          client_share_percentage?: number | null
           content?: Json
           created_at?: string
+          eligibility_criteria?: Json
           id?: string
+          project_info?: Json
           signed_at?: string | null
           status?: string
           title?: string

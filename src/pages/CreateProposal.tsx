@@ -8,9 +8,11 @@ import { ClientInfoStep } from "@/components/proposals/ClientInfoStep";
 import { ProjectInfoStep } from "@/components/proposals/ProjectInfoStep";
 import { SummaryStep } from "@/components/proposals/SummaryStep";
 import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation } from "@/components/proposals/types";
+import { useToast } from "@/hooks/use-toast";
 
 const CreateProposal = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState<FormStep>("eligibility");
   
   // Form state
@@ -54,8 +56,13 @@ const CreateProposal = () => {
         setStep("summary");
         break;
       case "summary":
-        // Submit proposal
+        // Submission is now handled in the SummaryStep component
+        // Navigate to proposals list after successful submission
         navigate("/proposals");
+        toast({
+          title: "Success",
+          description: "Proposal has been created and saved to the database.",
+        });
         break;
     }
   };
@@ -145,6 +152,7 @@ const CreateProposal = () => {
       {/* Summary Step */}
       {step === "summary" && (
         <SummaryStep
+          eligibility={eligibility}
           clientInfo={clientInfo}
           projectInfo={projectInfo}
           nextStep={nextStep}

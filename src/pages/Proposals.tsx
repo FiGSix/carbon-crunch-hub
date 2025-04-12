@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { 
@@ -12,65 +12,65 @@ import { FileText } from "lucide-react";
 import { ProposalList, Proposal } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/components/proposals/ProposalFilters";
 import { ProposalActions } from "@/components/proposals/ProposalActions";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 const Proposals = () => {
-  // Mock proposals data
-  const proposals: Proposal[] = [
-    { 
-      id: 1, 
-      name: "Sunnydale Solar Farm", 
-      client: "John Smith", 
-      date: "2024-03-15", 
-      size: 4.2, 
-      status: "approved", 
-      revenue: 123450 
-    },
-    { 
-      id: 2, 
-      name: "Greenfield Energy", 
-      client: "Sarah Johnson", 
-      date: "2024-03-03", 
-      size: 2.8, 
-      status: "pending", 
-      revenue: 86000 
-    },
-    { 
-      id: 3, 
-      name: "Eastside Power Plant", 
-      client: "Michael Brown", 
-      date: "2024-02-22", 
-      size: 3.5, 
-      status: "approved", 
-      revenue: 107500 
-    },
-    { 
-      id: 4, 
-      name: "Clearwater Solar", 
-      client: "Emily Davis", 
-      date: "2024-02-15", 
-      size: 2.0, 
-      status: "rejected", 
-      revenue: 61000 
-    },
-    { 
-      id: 5, 
-      name: "Northern Lights Energy", 
-      client: "Robert Wilson", 
-      date: "2024-02-10", 
-      size: 5.5, 
-      status: "approved", 
-      revenue: 165000 
-    },
-    { 
-      id: 6, 
-      name: "Hillside Renewables", 
-      client: "James Taylor", 
-      date: "2024-01-28", 
-      size: 3.2, 
-      status: "approved", 
-      revenue: 92800 
-    },
-  ];
+  const { toast } = useToast();
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function fetchProposals() {
+      try {
+        setLoading(true);
+        
+        const { data, error } = await supabase
+          .from('proposals')
+          .select(`
+            id, 
+            title, 
+            created_at, 
+            status, 
+            content, 
+            client_id,
+            annual_energy,
+            carbon_credits,
+            client_share_percentage,
+            profiles:client_id (first_name, last_name, email)
+          `)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Transform the data to match the Proposal interface
+        const formattedProposals: Proposal[] = data.map(item => ({
+          id: item.id,
+          name: item.title,
+          client: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() : 'Unknown Client',
+          date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
+          size: parseFloat(item.content.projectInfo?.size || "0"),
+          status: item.status,
+          revenue: item.carbon_credits * 100 // Simplified revenue calculation
+        }));
+        
+        setProposals(formattedProposals);
+      } catch (error) {
+        console.error("Error fetching proposals:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load proposals. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchProposals();
+  }, [toast]);
   
   return (
     <DashboardLayout>
@@ -89,7 +89,13 @@ const Proposals = () => {
         <CardContent>
           <ProposalActions />
           <ProposalFilters />
-          <ProposalList proposals={proposals} />
+          {loading ? (
+            <div className="text-center py-6">
+              <p className="text-carbon-gray-500">Loading proposals...</p>
+            </div>
+          ) : (
+            <ProposalList proposals={proposals} />
+          )}
         </CardContent>
       </Card>
     </DashboardLayout>
