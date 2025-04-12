@@ -37,7 +37,7 @@ const Proposals = () => {
             annual_energy,
             carbon_credits,
             client_share_percentage,
-            profiles:client_id (first_name, last_name, email)
+            profiles(first_name, last_name, email)
           `)
           .order('created_at', { ascending: false });
         
