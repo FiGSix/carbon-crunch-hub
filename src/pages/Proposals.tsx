@@ -12,7 +12,7 @@ import { FileText } from "lucide-react";
 import { ProposalList, Proposal } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/components/proposals/ProposalFilters";
 import { ProposalActions } from "@/components/proposals/ProposalActions";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Proposals = () => {
@@ -25,6 +25,7 @@ const Proposals = () => {
       try {
         setLoading(true);
         
+        // Using the integrations client instead to avoid RLS issues
         const { data, error } = await supabase
           .from('proposals')
           .select(`
@@ -37,32 +38,25 @@ const Proposals = () => {
             annual_energy,
             carbon_credits,
             client_share_percentage,
-            profiles!proposals_client_id_fkey(first_name, last_name, email)
+            client:profiles!proposals_client_id_fkey(first_name, last_name, email)
           `)
           .order('created_at', { ascending: false });
         
         if (error) {
+          console.error("Supabase query error:", error);
           throw error;
         }
         
+        console.log("Proposals data:", data);
+        
         // Transform the data to match the Proposal interface
         const formattedProposals: Proposal[] = data.map(item => {
-          // Access client profile data - the `profiles` field contains the client profile data 
-          // It might be returned as a single object OR as an array with one object
-          const profile = item.profiles;
-          let profileData = null;
+          // Access client profile data using the renamed foreign key reference
+          const clientProfile = item.client;
           
           // Handle different return types from Supabase
-          if (Array.isArray(profile)) {
-            // If it's an array, take the first element
-            profileData = profile.length > 0 ? profile[0] : null;
-          } else {
-            // If it's already an object, use it directly
-            profileData = profile;
-          }
-            
-          const clientName = profileData 
-            ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() 
+          const clientName = clientProfile 
+            ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() 
             : 'Unknown Client';
             
           return {
