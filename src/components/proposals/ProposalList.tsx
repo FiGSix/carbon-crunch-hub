@@ -37,9 +37,15 @@ export function ProposalList({ proposals }: ProposalListProps) {
         return <Badge className="bg-carbon-blue-100 text-carbon-blue-700 hover:bg-carbon-blue-200">Pending</Badge>;
       case "rejected":
         return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20">Rejected</Badge>;
+      case "draft":
+        return <Badge className="bg-carbon-gray-100 text-carbon-gray-700 hover:bg-carbon-gray-200">Draft</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
+  };
+  
+  const handleViewProposal = (id: string) => {
+    navigate(`/proposals/${id}`);
   };
   
   return (
@@ -62,11 +68,16 @@ export function ProposalList({ proposals }: ProposalListProps) {
               <TableCell className="font-medium">{proposal.name}</TableCell>
               <TableCell>{proposal.client}</TableCell>
               <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
-              <TableCell>{proposal.size} MWp</TableCell>
+              <TableCell>{proposal.size.toFixed(2)} MWp</TableCell>
               <TableCell>{getStatusBadge(proposal.status)}</TableCell>
               <TableCell className="text-right">R {proposal.revenue.toLocaleString()}</TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="sm" className="text-carbon-blue-600">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-carbon-blue-600"
+                  onClick={() => handleViewProposal(proposal.id)}
+                >
                   View <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </TableCell>

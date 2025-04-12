@@ -19,14 +19,25 @@ const Proposals = () => {
   const { toast } = useToast();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all',
+    sort: 'newest'
+  });
+  
+  // Function to apply filtering based on user input
+  const handleFilterChange = (filter: string, value: string) => {
+    setFilters(prev => ({ ...prev, [filter]: value }));
+  };
   
   useEffect(() => {
     async function fetchProposals() {
       try {
         setLoading(true);
+        console.log("Fetching proposals with filters:", filters);
         
-        // Using the integrations client instead to avoid RLS issues
-        const { data, error } = await supabase
+        // Start building the query
+        let query = supabase
           .from('proposals')
           .select(`
             id, 
@@ -37,22 +48,81 @@ const Proposals = () => {
             client_id,
             annual_energy,
             carbon_credits,
-            client_share_percentage,
-            client:profiles!proposals_client_id_fkey(first_name, last_name, email)
-          `)
-          .order('created_at', { ascending: false });
+            client_share_percentage
+          `);
+        
+        // Apply status filter if not 'all'
+        if (filters.status !== 'all') {
+          query = query.eq('status', filters.status);
+        }
+        
+        // Apply search filter if provided
+        if (filters.search) {
+          query = query.ilike('title', `%${filters.search}%`);
+        }
+        
+        // Apply sorting
+        switch (filters.sort) {
+          case 'oldest':
+            query = query.order('created_at', { ascending: true });
+            break;
+          case 'size-high':
+            // Note: We can't directly sort by content->projectInfo->size as it's in JSON
+            // We'll sort this after fetching
+            query = query.order('created_at', { ascending: false });
+            break;
+          case 'size-low':
+            query = query.order('created_at', { ascending: false });
+            break;
+          case 'revenue-high':
+            query = query.order('carbon_credits', { ascending: false, nullsFirst: false });
+            break;
+          case 'revenue-low':
+            query = query.order('carbon_credits', { ascending: true, nullsFirst: true });
+            break;
+          case 'newest':
+          default:
+            query = query.order('created_at', { ascending: false });
+            break;
+        }
+        
+        // Execute the query
+        const { data: proposalsData, error } = await query;
         
         if (error) {
           console.error("Supabase query error:", error);
           throw error;
         }
         
-        console.log("Proposals data:", data);
+        // Fetch client profiles in a separate query to avoid RLS issues
+        const clientIds = proposalsData?.map(p => p.client_id) || [];
+        let clientProfiles: Record<string, any> = {};
+        
+        if (clientIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, email')
+            .in('id', clientIds);
+            
+          if (profilesError) {
+            console.error("Error fetching client profiles:", profilesError);
+            // Continue with partial data rather than failing completely
+          } else if (profilesData) {
+            // Convert to a map for easy lookup
+            clientProfiles = profilesData.reduce((acc, profile) => {
+              acc[profile.id] = profile;
+              return acc;
+            }, {} as Record<string, any>);
+          }
+        }
+        
+        console.log("Proposals data:", proposalsData);
+        console.log("Client profiles:", clientProfiles);
         
         // Transform the data to match the Proposal interface
-        const formattedProposals: Proposal[] = data.map(item => {
-          // Access client profile data using the renamed foreign key reference
-          const clientProfile = item.client;
+        let formattedProposals: Proposal[] = (proposalsData || []).map(item => {
+          // Get client profile from our map
+          const clientProfile = clientProfiles[item.client_id];
           
           // Handle different return types from Supabase
           const clientName = clientProfile 
@@ -82,9 +152,16 @@ const Proposals = () => {
             date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
             size: size,
             status: item.status,
-            revenue: item.carbon_credits * 100 // Simplified revenue calculation
+            revenue: item.carbon_credits ? item.carbon_credits * 100 : 0 // Simplified revenue calculation
           };
         });
+        
+        // Apply client-side sorting for JSON fields if needed
+        if (filters.sort === 'size-high') {
+          formattedProposals.sort((a, b) => b.size - a.size);
+        } else if (filters.sort === 'size-low') {
+          formattedProposals.sort((a, b) => a.size - b.size);
+        }
         
         setProposals(formattedProposals);
       } catch (error) {
@@ -100,7 +177,7 @@ const Proposals = () => {
     }
     
     fetchProposals();
-  }, [toast]);
+  }, [toast, filters]); // Re-fetch when filters change
   
   return (
     <DashboardLayout>
@@ -118,10 +195,18 @@ const Proposals = () => {
         </CardHeader>
         <CardContent>
           <ProposalActions />
-          <ProposalFilters />
+          <ProposalFilters 
+            onSearchChange={(value) => handleFilterChange('search', value)}
+            onStatusChange={(value) => handleFilterChange('status', value)}
+            onSortChange={(value) => handleFilterChange('sort', value)}
+          />
           {loading ? (
             <div className="text-center py-6">
               <p className="text-carbon-gray-500">Loading proposals...</p>
+            </div>
+          ) : proposals.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-carbon-gray-500">No proposals found matching your criteria.</p>
             </div>
           ) : (
             <ProposalList proposals={proposals} />
