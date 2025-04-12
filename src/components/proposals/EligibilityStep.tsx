@@ -13,16 +13,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { EligibilityCriteria } from "./types";
 
 interface EligibilityStepProps {
-  eligibility: {
-    inSouthAfrica: boolean;
-    notRegistered: boolean;
-    under15MWp: boolean;
-    commissionedAfter2022: boolean;
-    legalOwnership: boolean;
-  };
-  toggleEligibility: (field: keyof typeof eligibility) => void;
+  eligibility: EligibilityCriteria;
+  toggleEligibility: (field: keyof EligibilityCriteria) => void;
   isEligible: boolean;
   nextStep: () => void;
 }
