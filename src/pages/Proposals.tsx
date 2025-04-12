@@ -37,7 +37,7 @@ const Proposals = () => {
             annual_energy,
             carbon_credits,
             client_share_percentage,
-            profiles(first_name, last_name, email)
+            profiles:profiles(first_name, last_name, email)
           `)
           .order('created_at', { ascending: false });
         
@@ -46,15 +46,23 @@ const Proposals = () => {
         }
         
         // Transform the data to match the Proposal interface
-        const formattedProposals: Proposal[] = data.map(item => ({
-          id: item.id,
-          name: item.title,
-          client: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() : 'Unknown Client',
-          date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
-          size: parseFloat(item.content.projectInfo?.size || "0"),
-          status: item.status,
-          revenue: item.carbon_credits * 100 // Simplified revenue calculation
-        }));
+        const formattedProposals: Proposal[] = data.map(item => {
+          // Handle profiles data correctly - it returns as an object with an array property
+          const profileData = item.profiles;
+          const clientName = profileData && profileData.first_name && profileData.last_name
+            ? `${profileData.first_name} ${profileData.last_name}`.trim()
+            : 'Unknown Client';
+            
+          return {
+            id: item.id,
+            name: item.title,
+            client: clientName,
+            date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
+            size: parseFloat(item.content.projectInfo?.size || "0"),
+            status: item.status,
+            revenue: item.carbon_credits * 100 // Simplified revenue calculation
+          };
+        });
         
         setProposals(formattedProposals);
       } catch (error) {
