@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -37,7 +36,7 @@ const Proposals = () => {
             annual_energy,
             carbon_credits,
             client_share_percentage,
-            profiles(first_name, last_name, email)
+            profiles!proposals_client_id_fkey(first_name, last_name, email)
           `)
           .order('created_at', { ascending: false });
         
@@ -47,10 +46,8 @@ const Proposals = () => {
         
         // Transform the data to match the Proposal interface
         const formattedProposals: Proposal[] = data.map(item => {
-          // Handle profiles data correctly - profiles returns as an array
-          const profileData = Array.isArray(item.profiles) && item.profiles.length > 0 
-            ? item.profiles[0] 
-            : null;
+          // Access client profile data through the explicit foreign key reference
+          const profileData = item.profiles_client_id_fkey;
             
           const clientName = profileData 
             ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() 
