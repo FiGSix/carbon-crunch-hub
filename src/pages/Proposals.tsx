@@ -47,8 +47,19 @@ const Proposals = () => {
         
         // Transform the data to match the Proposal interface
         const formattedProposals: Proposal[] = data.map(item => {
-          // Access client profile data through the explicit foreign key reference
-          const profileData = item.profiles ? item.profiles : null;
+          // Access client profile data - the `profiles` field contains the client profile data 
+          // It might be returned as a single object OR as an array with one object
+          const profile = item.profiles;
+          let profileData = null;
+          
+          // Handle different return types from Supabase
+          if (Array.isArray(profile)) {
+            // If it's an array, take the first element
+            profileData = profile.length > 0 ? profile[0] : null;
+          } else {
+            // If it's already an object, use it directly
+            profileData = profile;
+          }
             
           const clientName = profileData 
             ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() 
