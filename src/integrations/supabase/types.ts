@@ -50,6 +50,8 @@ export type Database = {
           agent_commission_percentage: number | null
           agent_id: string | null
           annual_energy: number | null
+          archived_at: string | null
+          archived_by: string | null
           carbon_credits: number | null
           client_id: string
           client_share_percentage: number | null
@@ -70,6 +72,8 @@ export type Database = {
           agent_commission_percentage?: number | null
           agent_id?: string | null
           annual_energy?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
           carbon_credits?: number | null
           client_id: string
           client_share_percentage?: number | null
@@ -90,6 +94,8 @@ export type Database = {
           agent_commission_percentage?: number | null
           agent_id?: string | null
           annual_energy?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
           carbon_credits?: number | null
           client_id?: string
           client_share_percentage?: number | null
@@ -128,6 +134,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_proposal: {
+        Args: { proposal_id: string; user_id: string }
+        Returns: boolean
+      }
       can_access_profile: {
         Args: { profile_id: string }
         Returns: boolean

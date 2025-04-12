@@ -6,18 +6,25 @@ import { ProposalHeader } from "@/components/proposals/view/ProposalHeader";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalDetails } from "@/components/proposals/view/ProposalDetails";
 import { useViewProposal } from "@/hooks/useViewProposal";
+import { ProposalArchiveDialog } from "@/components/proposals/view/ProposalArchiveDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  const { user } = useAuth();
   
   const {
     proposal,
     loading,
     error,
     handleApprove,
-    handleReject
+    handleReject,
+    handleArchive,
+    archiveDialogOpen,
+    setArchiveDialogOpen,
+    canArchive
   } = useViewProposal(id, token);
   
   if (loading) {
@@ -44,6 +51,7 @@ const ViewProposal = () => {
   
   // Extract project info from the proposal content for the header
   const projectInfo = proposal.content?.projectInfo || {};
+  const isClient = user?.id === proposal.client_id;
   
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
@@ -52,6 +60,9 @@ const ViewProposal = () => {
         showInvitationBadge={!!token}
         projectSize={projectInfo.size}
         projectName={projectInfo.name}
+        canArchive={canArchive}
+        isArchived={!!proposal.archived_at}
+        onArchiveClick={() => setArchiveDialogOpen(true)}
       />
       
       <div className="space-y-8">
@@ -62,6 +73,14 @@ const ViewProposal = () => {
           onReject={handleReject}
         />
       </div>
+
+      {/* Archive Dialog */}
+      <ProposalArchiveDialog
+        open={archiveDialogOpen}
+        onOpenChange={setArchiveDialogOpen}
+        onArchive={handleArchive}
+        isClient={isClient}
+      />
     </div>
   );
 };

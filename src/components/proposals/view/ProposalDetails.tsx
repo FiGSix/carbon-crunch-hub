@@ -8,6 +8,7 @@ import { CarbonCreditSection } from "@/components/proposals/summary/CarbonCredit
 import { RevenueDistributionSection } from "@/components/proposals/summary/RevenueDistributionSection";
 import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
+import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProposalDetailsProps {
@@ -17,6 +18,8 @@ interface ProposalDetailsProps {
     status: string;
     content: any;
     signed_at: string | null;
+    archived_at: string | null;
+    archived_by: string | null;
   };
   token?: string | null;
   onApprove: () => Promise<void>;
@@ -33,7 +36,8 @@ export function ProposalDetails({
   const clientInfo = proposal.content?.clientInfo || {};
   const projectInfo = proposal.content?.projectInfo || {};
   
-  const showActions = token && proposal.status === 'pending';
+  // Only show actions if not archived, token is present, and status is pending
+  const showActions = token && proposal.status === 'pending' && !proposal.archived_at;
   
   return (
     <Card className="retro-card">
@@ -60,10 +64,18 @@ export function ProposalDetails({
         </div>
       </CardContent>
       
-      <ProposalStatusFooter 
-        status={proposal.status} 
-        signedAt={proposal.signed_at} 
-      />
+      {/* Show archived banner if archived */}
+      {proposal.archived_at && (
+        <ProposalArchivedBanner archivedAt={proposal.archived_at} />
+      )}
+      
+      {/* Show status footer if not archived */}
+      {!proposal.archived_at && (
+        <ProposalStatusFooter 
+          status={proposal.status} 
+          signedAt={proposal.signed_at} 
+        />
+      )}
       
       <ProposalActionFooter 
         onApprove={onApprove}

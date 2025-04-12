@@ -6,6 +6,7 @@ interface ClientInfo {
   email?: string;
   phone?: string;
   companyName?: string;
+  address?: string;
 }
 
 interface ClientInfoSectionProps {
@@ -33,6 +34,12 @@ export function ClientInfoSection({ clientInfo }: ClientInfoSectionProps) {
           <p className="text-sm text-carbon-gray-500">Company</p>
           <p className="font-medium">{clientInfo.companyName || "—"}</p>
         </div>
+        {clientInfo.address && (
+          <div className="col-span-2">
+            <p className="text-sm text-carbon-gray-500">Address</p>
+            <p className="font-medium">{clientInfo.address}</p>
+          </div>
+        )}
       </div>
     </div>
   );
