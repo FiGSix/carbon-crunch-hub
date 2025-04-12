@@ -58,6 +58,18 @@ export async function signOut() {
   cache.userRole.clear();
   cache.profiles.clear();
   
+  // Clear all Supabase-related items from localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.includes('supabase') || key.includes('sb-'))) {
+      localStorage.removeItem(key);
+    }
+  }
+  
+  // Clear session storage as well
+  sessionStorage.clear();
+  
+  // Finally, call the official sign out method
   const { error } = await supabase.auth.signOut()
   return { error }
 }

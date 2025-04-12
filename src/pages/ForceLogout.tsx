@@ -100,9 +100,9 @@ const ForceLogout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
-        <h1 className="text-2xl font-bold mb-6 text-center">Force Logout</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-white to-gray-50">
+      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg border border-gray-100">
+        <h1 className="text-2xl font-bold mb-6 text-center text-crunch-black">Force Logout</h1>
         
         {clearingStatus !== "idle" && (
           <div className="mb-6">
@@ -151,7 +151,7 @@ const ForceLogout = () => {
           </p>
           <a 
             href="/login" 
-            className="text-crunch-yellow hover:underline"
+            className="text-crunch-yellow hover:underline font-medium"
           >
             Return to login
           </a>

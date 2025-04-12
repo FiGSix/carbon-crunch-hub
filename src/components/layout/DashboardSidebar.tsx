@@ -4,6 +4,8 @@ import { Home, FileText, BarChart, Users, Settings, LogOut } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface DashboardSidebarProps {
   userRole: 'client' | 'agent' | 'admin';
@@ -12,6 +14,7 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -50,19 +53,26 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await signOut();
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      navigate("/login");
+      
+      // Add a short delay before redirecting to ensure everything is cleared
+      setTimeout(() => {
+        navigate("/login");
+      }, 100);
     } catch (error) {
       console.error("Error logging out:", error);
       toast({
         title: "Error",
-        description: "There was a problem logging out",
+        description: "There was a problem logging out. Try using Force Logout.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -91,10 +101,15 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className="w-full flex gap-2 items-center py-2 px-3 text-destructive"
             >
-              <LogOut className="h-5 w-5" />
-              <span>Logout</span>
+              {isLoggingOut ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <LogOut className="h-5 w-5" />
+              )}
+              <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </div>

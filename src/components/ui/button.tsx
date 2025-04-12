@@ -10,16 +10,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-crunch-yellow text-crunch-black hover:bg-crunch-yellow/90 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0",
+        default: "bg-crunch-yellow text-crunch-black hover:bg-crunch-yellow/90 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 font-semibold",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 font-semibold",
         outline:
-          "border-2 border-crunch-black/20 bg-white hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0",
+          "border-2 border-crunch-black/20 bg-white hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 font-medium",
         secondary:
-          "bg-crunch-black text-white hover:bg-crunch-black/90 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0",
+          "bg-crunch-black text-white hover:bg-crunch-black/90 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 font-semibold",
         ghost: "hover:bg-accent hover:text-accent-foreground hover:-translate-y-0.5 active:translate-y-0",
         link: "text-crunch-yellow underline-offset-4 hover:underline",
-        glass: "bg-white/90 backdrop-blur-md border border-white/20 text-crunch-black hover:bg-white/95 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
+        glass: "bg-white/90 backdrop-blur-md border border-white/20 text-crunch-black hover:bg-white/95 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 font-medium",
       },
       size: {
         default: "h-10 px-5 py-2 rounded-xl",

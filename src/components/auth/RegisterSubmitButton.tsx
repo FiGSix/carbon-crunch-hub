@@ -12,6 +12,7 @@ export function RegisterSubmitButton({ isLoading }: RegisterSubmitButtonProps) {
       type="submit" 
       className="w-full"
       disabled={isLoading}
+      variant="default"
     >
       {isLoading ? (
         <>
