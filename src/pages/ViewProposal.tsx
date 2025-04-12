@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, ArrowLeft, FileText, X } from "lucide-react";
+import { CheckCircle2, ArrowLeft, FileText, X, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
+import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
 import { 
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
@@ -160,9 +163,7 @@ const ViewProposal = () => {
   if (loading) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
-        <div className="text-center">
-          <p className="text-carbon-gray-500">Loading proposal...</p>
-        </div>
+        <ProposalSkeleton />
       </div>
     );
   }
@@ -215,17 +216,25 @@ const ViewProposal = () => {
   
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-carbon-gray-900">{proposal.title}</h1>
           <p className="text-carbon-gray-600">Carbon Credit Proposal</p>
         </div>
-        {token && (
-          <div className="flex items-center bg-carbon-green-50 text-carbon-green-700 px-4 py-2 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 mr-2" />
-            <span>Viewing invitation</span>
-          </div>
-        )}
+        <div className="flex items-center">
+          {token && (
+            <div className="flex items-center bg-carbon-green-50 text-carbon-green-700 px-4 py-2 rounded-lg mr-3">
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              <span>Viewing invitation</span>
+            </div>
+          )}
+          {projectInfo.size && projectInfo.name && (
+            <ProposalExportButton 
+              systemSize={projectInfo.size} 
+              projectName={projectInfo.name}
+            />
+          )}
+        </div>
       </div>
       
       <div className="space-y-8">
@@ -290,7 +299,21 @@ const ViewProposal = () => {
               </div>
               
               <div>
-                <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Carbon Credit Projection</h3>
+                <h3 className="text-lg font-semibold mb-3 flex items-center text-carbon-gray-900">
+                  Carbon Credit Projection
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 ml-2 text-carbon-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="w-64">
+                          Projected values based on current carbon market prices and South African grid emission factors. Actual values may vary.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-sm text-carbon-gray-500">Estimated Annual Energy</p>
@@ -298,7 +321,18 @@ const ViewProposal = () => {
                   </div>
                   <div>
                     <p className="text-sm text-carbon-gray-500">Estimated Annual Carbon Credits</p>
-                    <p className="font-medium">{calculateCarbonCredits(projectInfo.size).toFixed(2)} tCO₂</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger className="text-left">
+                          <p className="font-medium">{calculateCarbonCredits(projectInfo.size).toFixed(2)} tCO₂</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-64">
+                            Based on South Africa's grid emission factor of 1.02 tCO₂/MWh.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
                 
@@ -333,7 +367,18 @@ const ViewProposal = () => {
                   <div className="p-4 bg-carbon-green-50 rounded-lg border border-carbon-green-200">
                     <p className="text-sm text-carbon-gray-500">Client Share</p>
                     <p className="text-xl font-bold text-carbon-green-600">{clientSharePercentage}%</p>
-                    <p className="text-xs text-carbon-gray-500 mt-1">Based on portfolio size</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger className="w-full text-left">
+                          <p className="text-xs text-carbon-gray-500 mt-1">Based on portfolio size</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-64">
+                            Client share increases with larger portfolio sizes. Current rate is based on a {projectInfo.size || '0'} MWp system.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <div className="p-4 bg-carbon-blue-50 rounded-lg border border-carbon-blue-200">
                     <p className="text-sm text-carbon-gray-500">Agent Commission</p>
