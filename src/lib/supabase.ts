@@ -15,17 +15,24 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 })
 
-// Cache for frequently accessed data
+// Optimized cache for frequently accessed data
 const cache = {
   userRole: new Map<string, UserRole>(),
-  profiles: new Map<string, any>()
+  profiles: new Map<string, any>(),
+  sessionExpiry: new Map<string, number>()
 };
+
+// Time to live for cache items (10 minutes)
+const CACHE_TTL = 10 * 60 * 1000;
 
 // Types for our user roles
 export type UserRole = 'client' | 'agent' | 'admin'
 
 // Auth related functions
 export async function signUp(email: string, password: string, role: UserRole, metadata: Record<string, any> = {}) {
+  // Clear cache on sign up
+  clearCache();
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -42,8 +49,7 @@ export async function signUp(email: string, password: string, role: UserRole, me
 
 export async function signIn(email: string, password: string) {
   // Clear cache on sign in
-  cache.userRole.clear();
-  cache.profiles.clear();
+  clearCache();
   
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -55,8 +61,7 @@ export async function signIn(email: string, password: string) {
 
 export async function signOut() {
   // Clear cache on sign out
-  cache.userRole.clear();
-  cache.profiles.clear();
+  clearCache();
   
   // Clear all Supabase-related items from localStorage
   for (let i = 0; i < localStorage.length; i++) {
@@ -74,6 +79,33 @@ export async function signOut() {
   return { error }
 }
 
+// Clear all cache data
+function clearCache() {
+  cache.userRole.clear();
+  cache.profiles.clear();
+  cache.sessionExpiry.clear();
+}
+
+// Check if a cache entry is still valid
+function isCacheValid(userId: string) {
+  const expiry = cache.sessionExpiry.get(userId);
+  return expiry && expiry > Date.now();
+}
+
+// Set cache with expiry
+function setCacheWithExpiry(userId: string, roleCache?: UserRole, profileCache?: any) {
+  const expiry = Date.now() + CACHE_TTL;
+  cache.sessionExpiry.set(userId, expiry);
+  
+  if (roleCache) {
+    cache.userRole.set(userId, roleCache);
+  }
+  
+  if (profileCache) {
+    cache.profiles.set(userId, profileCache);
+  }
+}
+
 export async function getCurrentUser() {
   const { data, error } = await supabase.auth.getUser()
   return { user: data.user, error }
@@ -86,8 +118,8 @@ export async function getUserRole() {
     return { role: null, error }
   }
   
-  // Check cache first
-  if (cache.userRole.has(user.id)) {
+  // Check cache first with expiry check
+  if (cache.userRole.has(user.id) && isCacheValid(user.id)) {
     console.log("Using cached role for user:", user.id);
     return { role: cache.userRole.get(user.id), error: null };
   }
@@ -117,9 +149,9 @@ export async function getUserRole() {
     console.log("Found role in user_metadata:", role)
   }
   
-  // Cache the role for future calls
+  // Cache the role with expiry
   if (role) {
-    cache.userRole.set(user.id, role);
+    setCacheWithExpiry(user.id, role);
   }
   
   return { role, error: null }
@@ -132,8 +164,8 @@ export async function getProfile() {
     return { profile: null, error: userError }
   }
 
-  // Check cache first
-  if (cache.profiles.has(user.id)) {
+  // Check cache first with expiry check
+  if (cache.profiles.has(user.id) && isCacheValid(user.id)) {
     console.log("Using cached profile for user:", user.id);
     return { profile: cache.profiles.get(user.id), error: null };
   }
@@ -144,9 +176,9 @@ export async function getProfile() {
     .eq('id', user.id)
     .single()
     
-  // Cache the profile for future calls
+  // Cache the profile with expiry
   if (data && !error) {
-    cache.profiles.set(user.id, data);
+    setCacheWithExpiry(user.id, undefined, data);
   }
 
   return { profile: data, error }
@@ -166,6 +198,7 @@ export async function updateProfile(updates: Partial<{
 
   // Clear profile cache for this user
   cache.profiles.delete(user.id);
+  cache.sessionExpiry.delete(user.id);
 
   const { data, error } = await supabase
     .from('profiles')
@@ -176,7 +209,7 @@ export async function updateProfile(updates: Partial<{
 
   // Update cache with new profile data
   if (data && !error) {
-    cache.profiles.set(user.id, data);
+    setCacheWithExpiry(user.id, undefined, data);
   }
 
   return { data, error }

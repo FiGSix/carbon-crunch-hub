@@ -34,103 +34,119 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
-  // Function to fetch user profile data efficiently
-  const fetchUserData = async (currentUser: User) => {
+  // Optimized function to fetch user profile data
+  const fetchUserData = async (currentUser: User, skipLoading = false) => {
+    if (!skipLoading) {
+      setIsLoading(true)
+    }
+    
     try {
-      // Fetch user role and profile in parallel
+      // Run both requests in parallel with Promise.all for better performance
       const [roleResult, profileResult] = await Promise.all([
         getUserRole(),
         getProfile()
       ]);
       
-      setUserRole(roleResult.role);
+      if (roleResult.role) {
+        setUserRole(roleResult.role);
+      }
       
-      if (profileResult.error) {
-        console.error("Error fetching user profile:", profileResult.error);
-      } else {
+      if (!profileResult.error && profileResult.profile) {
         setProfile(profileResult.profile);
+      } else if (profileResult.error) {
+        console.error("Error fetching user profile:", profileResult.error);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+    } finally {
+      if (!skipLoading) {
+        setIsLoading(false)
+      }
     }
   };
 
   useEffect(() => {
-    // Set up initial session and user
-    async function fetchUserSession() {
+    let subscription: { unsubscribe: () => void } | null = null;
+    
+    async function initAuth() {
       setIsLoading(true)
+      
       try {
-        // Listen for auth changes before getting session to avoid race conditions
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, currentSession) => {
-            console.log('Auth state changed:', event, 'User ID:', currentSession?.user?.id)
+        // First check if there's an existing session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        // Set up auth state listener
+        const { data } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            console.log('Auth state changed:', event, 'User ID:', newSession?.user?.id);
             
-            if (currentSession?.user) {
-              setSession(currentSession)
-              setUser(currentSession.user)
+            if (newSession?.user) {
+              // Update session and user immediately
+              setSession(newSession);
+              setUser(newSession.user);
               
-              // Only fetch profile and role data if they haven't been loaded
-              if (!userRole || !profile) {
-                await fetchUserData(currentSession.user);
+              // Fetch profile data without updating loading state
+              if (event === 'SIGNED_IN') {
+                // Only fetch on sign in to avoid race conditions
+                setTimeout(() => {
+                  fetchUserData(newSession.user, true);
+                }, 0);
               }
             } else {
-              setSession(null)
-              setUser(null)
-              setUserRole(null)
-              setProfile(null)
+              setSession(null);
+              setUser(null);
+              setUserRole(null);
+              setProfile(null);
             }
-            
-            // Only set loading to false after initial session check
-            setIsLoading(false)
           }
-        )
+        );
         
-        // Get current session
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-        console.log("Initial session check:", currentSession ? "Session exists" : "No session")
+        subscription = data.subscription;
         
+        // Handle initial session if it exists
         if (currentSession?.user) {
-          console.log("User found in session, user ID:", currentSession.user.id)
-          setSession(currentSession)
-          setUser(currentSession.user)
-          await fetchUserData(currentSession.user);
-        }
-        
-        setIsLoading(false)
-
-        return () => {
-          subscription.unsubscribe()
+          console.log("Initial session found, user ID:", currentSession.user.id);
+          setSession(currentSession);
+          setUser(currentSession.user);
+          await fetchUserData(currentSession.user, true);
         }
       } catch (error) {
-        console.error('Error fetching session:', error)
+        console.error('Error initializing auth:', error);
         toast({
           title: 'Error',
-          description: 'Failed to fetch user session',
+          description: 'Failed to initialize authentication',
           variant: 'destructive',
-        })
-        setIsLoading(false)
+        });
+      } finally {
+        setIsLoading(false);
       }
     }
-
-    fetchUserSession()
-  }, [toast])
+    
+    initAuth();
+    
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }, [toast]);
 
   const refreshUser = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      console.log("Refreshing user data...")
-      const { user: currentUser } = await getCurrentUser()
+      console.log("Refreshing user data...");
+      const { user: currentUser } = await getCurrentUser();
       
       if (currentUser) {
-        setUser(currentUser)
-        await fetchUserData(currentUser);
+        setUser(currentUser);
+        await fetchUserData(currentUser, true);
       }
     } catch (error) {
-      console.error('Error refreshing user:', error)
+      console.error('Error refreshing user:', error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <AuthContext.Provider value={{ 
@@ -143,13 +159,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }

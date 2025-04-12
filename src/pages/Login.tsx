@@ -11,7 +11,6 @@ import { signIn, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -23,8 +22,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
-  const [loginStage, setLoginStage] = useState<"idle" | "authenticating" | "verifying">("idle");
-  const [progressValue, setProgressValue] = useState(0);
   
   // If user is already authenticated, redirect to dashboard
   useEffect(() => {
@@ -35,33 +32,9 @@ const Login = () => {
     }
   }, [user, navigate, userRole, authLoading, location.state]);
   
-  // Progress bar animation for login process
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    
-    if (isSubmitting) {
-      setProgressValue(0);
-      interval = setInterval(() => {
-        setProgressValue(prev => {
-          if (loginStage === "authenticating" && prev < 40) return prev + 5;
-          if (loginStage === "verifying" && prev < 90) return prev + 10;
-          if (prev >= 90) return 90;
-          return prev;
-        });
-      }, 150);
-    } else {
-      setProgressValue(0);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isSubmitting, loginStage]);
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setLoginStage("authenticating");
     
     try {
       console.log(`Attempting to sign in with email: ${email}`);
@@ -71,11 +44,8 @@ const Login = () => {
         throw error;
       }
       
-      setLoginStage("verifying");
       console.log("Sign in successful, refreshing user data");
       await refreshUser();
-      
-      setProgressValue(100);
       
       toast({
         title: "Success",
@@ -96,7 +66,6 @@ const Login = () => {
       });
     } finally {
       setIsSubmitting(false);
-      setLoginStage("idle");
     }
   };
   
@@ -122,18 +91,6 @@ const Login = () => {
               <h1 className="text-2xl font-bold text-crunch-black">Welcome back</h1>
               <p className="text-crunch-black/70 mt-2">Log in to your CrunchCarbon account</p>
             </div>
-            
-            {isSubmitting && (
-              <div className="mb-6">
-                <div className="flex justify-between mb-1 text-sm">
-                  <span className="text-crunch-black/60">
-                    {loginStage === "authenticating" ? "Authenticating..." : "Verifying account..."}
-                  </span>
-                  <span className="text-crunch-black/60">{Math.round(progressValue)}%</span>
-                </div>
-                <Progress value={progressValue} className="h-2" />
-              </div>
-            )}
             
             {loginAttempts >= 2 && (
               <Alert variant="destructive" className="mb-6">
@@ -203,7 +160,7 @@ const Login = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {loginStage === "authenticating" ? "Authenticating..." : "Verifying..."}
+                      Logging in...
                     </>
                   ) : (
                     "Log in"
