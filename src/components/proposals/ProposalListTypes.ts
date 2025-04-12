@@ -16,3 +16,11 @@ export interface ProposalListProps {
   proposals: Proposal[];
   onProposalUpdate?: () => void;
 }
+
+export interface ClientInformation {
+  name: string;
+  email: string;
+  phone: string;
+  companyName: string;
+  existingClient: boolean;
+}
