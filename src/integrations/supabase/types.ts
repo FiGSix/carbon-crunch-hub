@@ -57,6 +57,10 @@ export type Database = {
           created_at: string
           eligibility_criteria: Json
           id: string
+          invitation_expires_at: string | null
+          invitation_sent_at: string | null
+          invitation_token: string | null
+          invitation_viewed_at: string | null
           project_info: Json
           signed_at: string | null
           status: string
@@ -73,6 +77,10 @@ export type Database = {
           created_at?: string
           eligibility_criteria?: Json
           id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          invitation_viewed_at?: string | null
           project_info?: Json
           signed_at?: string | null
           status?: string
@@ -89,6 +97,10 @@ export type Database = {
           created_at?: string
           eligibility_criteria?: Json
           id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          invitation_viewed_at?: string | null
           project_info?: Json
           signed_at?: string | null
           status?: string
@@ -124,8 +136,16 @@ export type Database = {
         Args: { proposal_id: string }
         Returns: boolean
       }
+      generate_secure_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_role: {
         Args: { user_id: string }
+        Returns: string
+      }
+      validate_invitation_token: {
+        Args: { token: string }
         Returns: string
       }
     }

@@ -14,6 +14,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Proposals from "./pages/Proposals";
 import CreateProposal from "./pages/CreateProposal";
+import ViewProposal from "./pages/ViewProposal";
 import NotFound from "./pages/NotFound";
 import Agents from "./pages/Agents";
 import About from "./pages/About";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/force-logout" element={<ForceLogout />} />
+            <Route path="/proposals/view" element={<ViewProposal />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={
@@ -55,6 +57,11 @@ const App = () => (
             <Route path="/proposals/new" element={
               <PrivateRoute>
                 <CreateProposal />
+              </PrivateRoute>
+            } />
+            <Route path="/proposals/:id" element={
+              <PrivateRoute>
+                <ViewProposal />
               </PrivateRoute>
             } />
             
