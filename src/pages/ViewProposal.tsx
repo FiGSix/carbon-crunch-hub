@@ -9,14 +9,18 @@ import { CheckCircle2, ArrowLeft, FileText, X, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
+import { RevenueDistributionSection } from "@/components/proposals/summary/RevenueDistributionSection";
+import { CarbonCreditSection } from "@/components/proposals/summary/CarbonCreditSection";
 import { 
-  calculateAnnualEnergy, 
-  calculateCarbonCredits, 
-  calculateRevenue,
-  getClientSharePercentage,
-  getAgentCommissionPercentage,
-  getCarbonPriceForYear
-} from "@/components/proposals/utils/proposalCalculations";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProposalData {
   id: string;
@@ -40,6 +44,8 @@ const ViewProposal = () => {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
   
   useEffect(() => {
     const fetchProposal = async () => {
@@ -122,6 +128,7 @@ const ViewProposal = () => {
       
       // Refresh the proposal data
       setProposal(prev => prev ? {...prev, status: 'approved', signed_at: new Date().toISOString()} : null);
+      setShowApproveDialog(false);
     } catch (error) {
       console.error("Error approving proposal:", error);
       toast({
@@ -150,6 +157,7 @@ const ViewProposal = () => {
       
       // Refresh the proposal data
       setProposal(prev => prev ? {...prev, status: 'rejected'} : null);
+      setShowRejectDialog(false);
     } catch (error) {
       console.error("Error rejecting proposal:", error);
       toast({
@@ -206,13 +214,6 @@ const ViewProposal = () => {
   // Extract client and project info from the proposal content
   const clientInfo = proposal.content?.clientInfo || {};
   const projectInfo = proposal.content?.projectInfo || {};
-  
-  // Calculate metrics based on project size
-  const projectSize = parseFloat(projectInfo.size || '0');
-  const revenue = calculateRevenue(projectInfo.size);
-  const clientSharePercentage = getClientSharePercentage(projectInfo.size);
-  const agentCommissionPercentage = getAgentCommissionPercentage(projectInfo.size);
-  const crunchCarbonSharePercentage = 100 - clientSharePercentage - agentCommissionPercentage;
   
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
@@ -298,102 +299,12 @@ const ViewProposal = () => {
                 </div>
               </div>
               
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center text-carbon-gray-900">
-                  Carbon Credit Projection
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 ml-2 text-carbon-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-64">
-                          Projected values based on current carbon market prices and South African grid emission factors. Actual values may vary.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-carbon-gray-500">Estimated Annual Energy</p>
-                    <p className="font-medium">{calculateAnnualEnergy(projectInfo.size).toLocaleString()} kWh</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-carbon-gray-500">Estimated Annual Carbon Credits</p>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger className="text-left">
-                          <p className="font-medium">{calculateCarbonCredits(projectInfo.size).toFixed(2)} tCO₂</p>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="w-64">
-                            Based on South Africa's grid emission factor of 1.02 tCO₂/MWh.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-                
-                <h4 className="font-medium text-carbon-gray-700 mb-2">Projected Revenue by Year</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-carbon-gray-50">
-                        <th className="px-4 py-2 text-left text-sm font-medium text-carbon-gray-700 border border-carbon-gray-200">Year</th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-carbon-gray-700 border border-carbon-gray-200">Carbon Price (R/tCO₂)</th>
-                        <th className="px-4 py-2 text-right text-sm font-medium text-carbon-gray-700 border border-carbon-gray-200">Estimated Revenue (R)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {revenue && Object.entries(revenue).map(([year, amount]) => (
-                        <tr key={year}>
-                          <td className="px-4 py-2 text-sm border border-carbon-gray-200">{year}</td>
-                          <td className="px-4 py-2 text-sm border border-carbon-gray-200">
-                            {getCarbonPriceForYear(year)}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-right border border-carbon-gray-200">R {amount.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Revenue Distribution</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-carbon-green-50 rounded-lg border border-carbon-green-200">
-                    <p className="text-sm text-carbon-gray-500">Client Share</p>
-                    <p className="text-xl font-bold text-carbon-green-600">{clientSharePercentage}%</p>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger className="w-full text-left">
-                          <p className="text-xs text-carbon-gray-500 mt-1">Based on portfolio size</p>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="w-64">
-                            Client share increases with larger portfolio sizes. Current rate is based on a {projectInfo.size || '0'} MWp system.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="p-4 bg-carbon-blue-50 rounded-lg border border-carbon-blue-200">
-                    <p className="text-sm text-carbon-gray-500">Agent Commission</p>
-                    <p className="text-xl font-bold text-carbon-blue-600">{agentCommissionPercentage}%</p>
-                    <p className="text-xs text-carbon-gray-500 mt-1">Based on portfolio size</p>
-                  </div>
-                  <div className="p-4 bg-carbon-gray-50 rounded-lg border border-carbon-gray-200">
-                    <p className="text-sm text-carbon-gray-500">Crunch Carbon Share</p>
-                    <p className="text-xl font-bold text-carbon-gray-900">
-                      {crunchCarbonSharePercentage.toFixed(1)}%
-                    </p>
-                    <p className="text-xs text-carbon-gray-500 mt-1">Platform fee</p>
-                  </div>
-                </div>
-              </div>
+              {projectInfo.size && (
+                <>
+                  <CarbonCreditSection systemSize={projectInfo.size} />
+                  <RevenueDistributionSection systemSize={projectInfo.size} />
+                </>
+              )}
             </div>
           </CardContent>
           
@@ -402,13 +313,13 @@ const ViewProposal = () => {
               <Button 
                 variant="outline" 
                 className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive/10"
-                onClick={handleReject}
+                onClick={() => setShowRejectDialog(true)}
               >
                 <X className="mr-2 h-4 w-4" /> Reject Proposal
               </Button>
               <Button 
                 className="w-full sm:w-auto bg-carbon-green-500 hover:bg-carbon-green-600 text-white"
-                onClick={handleApprove}
+                onClick={() => setShowApproveDialog(true)}
               >
                 <CheckCircle2 className="mr-2 h-4 w-4" /> Approve Proposal
               </Button>
@@ -438,6 +349,48 @@ const ViewProposal = () => {
           )}
         </Card>
       </div>
+      
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Proposal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this proposal? This action indicates your acceptance of the terms and conditions outlined in the proposal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleApprove}
+              className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white"
+            >
+              Yes, Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Proposal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this proposal? If you have any questions or would like to discuss modifications, please contact the agent directly.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReject}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
