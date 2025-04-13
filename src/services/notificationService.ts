@@ -85,7 +85,7 @@ export async function getNotifications(limit = 10): Promise<{notifications: Noti
     
     if (error) throw error;
     
-    return { notifications: data || [] };
+    return { notifications: data as Notification[] || [] };
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return { notifications: [], error: error instanceof Error ? error.message : 'Unknown error' };
