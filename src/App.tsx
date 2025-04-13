@@ -21,6 +21,7 @@ import About from "./pages/About";
 import Calculator from "./pages/Calculator";
 import Contact from "./pages/Contact";
 import ForceLogout from "./pages/ForceLogout";
+import TestInvitations from "./pages/TestInvitations";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,11 @@ const App = () => (
             <Route path="/proposals/:id" element={
               <PrivateRoute>
                 <ViewProposal />
+              </PrivateRoute>
+            } />
+            <Route path="/test-invitations" element={
+              <PrivateRoute>
+                <TestInvitations />
               </PrivateRoute>
             } />
             

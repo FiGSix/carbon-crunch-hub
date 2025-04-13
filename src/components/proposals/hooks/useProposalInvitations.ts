@@ -9,13 +9,23 @@ interface ProposalContent {
   projectInfo?: ProjectInformation;
 }
 
+interface InvitationResponse {
+  success: boolean;
+  error?: string;
+  details?: string;
+  data?: any;
+}
+
 export function useProposalInvitations(onProposalUpdate?: () => void) {
   const { toast } = useToast();
   const [sending, setSending] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastSentProposalId, setLastSentProposalId] = useState<string | null>(null);
   
   const handleSendInvitation = async (id: string) => {
     try {
       setSending(true);
+      setError(null);
       
       // Generate token and set expiration date (48 hours from now)
       const expirationDate = new Date();
@@ -43,7 +53,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       }
       
       // Call the edge function to send email
-      const emailResponse = await supabase.functions.invoke('send-proposal-invitation', {
+      const response = await supabase.functions.invoke('send-proposal-invitation', {
         body: JSON.stringify({
           proposalId: id,
           clientEmail: clientInfo.email,
@@ -53,8 +63,12 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         })
       });
       
-      if (emailResponse.error) {
-        throw new Error(`Email service error: ${emailResponse.error.message}`);
+      // Parse the response
+      const emailResponse = response.data as InvitationResponse;
+      
+      if (!emailResponse.success) {
+        const errorMessage = emailResponse.details || emailResponse.error || "Email service error";
+        throw new Error(errorMessage);
       }
       
       // Update the proposal with invitation details
@@ -72,6 +86,9 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         throw error;
       }
       
+      // Set the last sent proposal ID for testing reference
+      setLastSentProposalId(id);
+      
       toast({
         title: "Invitation Sent",
         description: "An email invitation has been sent to the client.",
@@ -81,25 +98,35 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       if (onProposalUpdate) {
         onProposalUpdate();
       }
+      
+      return { success: true, proposalId: id, token };
     } catch (error) {
       console.error("Error sending invitation:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Failed to send invitation";
+      setError(errorMessage);
+      
       toast({
         title: "Error",
         description: "Failed to send invitation. Please try again.",
         variant: "destructive",
       });
+      
+      return { success: false, error: errorMessage };
     } finally {
       setSending(false);
     }
   };
   
   const handleResendInvitation = async (id: string) => {
-    await handleSendInvitation(id);
+    return await handleSendInvitation(id);
   };
   
   return {
     handleSendInvitation,
     handleResendInvitation,
-    sending
+    sending,
+    error,
+    lastSentProposalId
   };
 }
