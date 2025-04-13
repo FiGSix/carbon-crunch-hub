@@ -11,14 +11,19 @@ interface ProposalContent {
 
 export function useProposalInvitations(onProposalUpdate?: () => void) {
   const { toast } = useToast();
+  const [sending, setSending] = useState<boolean>(false);
   
   const handleSendInvitation = async (id: string) => {
     try {
+      setSending(true);
+      
       // Generate token and set expiration date (48 hours from now)
       const expirationDate = new Date();
       expirationDate.setHours(expirationDate.getHours() + 48);
       
-      const { data: token } = await supabase.rpc('generate_secure_token');
+      const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
+      
+      if (tokenError) throw tokenError;
       
       // Update the proposal with invitation details
       const { data: proposalData, error: proposalError } = await supabase
@@ -34,7 +39,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       const clientInfo = content?.clientInfo;
       
       if (!clientInfo?.email) {
-        throw new Error("No client email found");
+        throw new Error("No client email found in the proposal");
       }
       
       // Call the edge function to send email
@@ -42,11 +47,15 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         body: JSON.stringify({
           proposalId: id,
           clientEmail: clientInfo.email,
-          clientName: clientInfo.name,
+          clientName: clientInfo.name || 'Client',
           invitationToken: token,
           projectName: content?.projectInfo?.name || 'Carbon Credit Project'
         })
       });
+      
+      if (emailResponse.error) {
+        throw new Error(`Email service error: ${emailResponse.error.message}`);
+      }
       
       // Update the proposal with invitation details
       const { error } = await supabase
@@ -79,6 +88,8 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         description: "Failed to send invitation. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setSending(false);
     }
   };
   
@@ -88,6 +99,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
   
   return {
     handleSendInvitation,
-    handleResendInvitation
+    handleResendInvitation,
+    sending
   };
 }

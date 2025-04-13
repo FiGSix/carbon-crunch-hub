@@ -32,11 +32,17 @@ const handler = async (req: Request): Promise<Response> => {
       projectName 
     }: InvitationRequest = await req.json();
 
+    // Get site URL from environment variable, with fallback
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
+
     // Construct invitation link
-    const invitationLink = `${Deno.env.get('SITE_URL') || 'https://your-app-domain.com'}/proposals/view?token=${invitationToken}`;
+    const invitationLink = `${siteUrl}/proposals/view?token=${invitationToken}`;
+
+    console.log(`Sending invitation email to ${clientEmail} for project ${projectName}`);
+    console.log(`Invitation link: ${invitationLink}`);
 
     const emailResponse = await resend.emails.send({
-      from: "Carbon Credit Proposals <proposals@yourcompany.com>",
+      from: "Carbon Credit Proposals <proposals@crunchcarbon.app>",
       to: [clientEmail],
       subject: `Proposal Invitation for ${projectName}`,
       html: `
