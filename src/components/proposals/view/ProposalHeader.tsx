@@ -1,10 +1,10 @@
-
 import React from "react";
-import { CheckCircle2, Archive, Clock } from "lucide-react";
+import { CheckCircle2, Archive, ChevronLeft } from "lucide-react";
 import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
+import { useNavigate } from "react-router-dom";
 
 interface ProposalHeaderProps {
   title: string;
@@ -16,6 +16,7 @@ interface ProposalHeaderProps {
   isReviewLater?: boolean;
   onArchiveClick?: () => void;
   onReviewLaterClick?: () => void;
+  showBackButton?: boolean;
 }
 
 export function ProposalHeader({ 
@@ -27,13 +28,32 @@ export function ProposalHeader({
   isArchived,
   isReviewLater,
   onArchiveClick,
-  onReviewLaterClick
+  onReviewLaterClick,
+  showBackButton = true
 }: ProposalHeaderProps) {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate('/proposals');
+  };
+
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-      <div>
-        <h1 className="text-3xl font-bold text-carbon-gray-900">{title}</h1>
-        <p className="text-carbon-gray-600">Carbon Credit Proposal</p>
+      <div className="flex items-center space-x-4">
+        {showBackButton && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBack}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" /> Back
+          </Button>
+        )}
+        <div>
+          <h1 className="text-3xl font-bold text-carbon-gray-900">{title}</h1>
+          <p className="text-carbon-gray-600">Carbon Credit Proposal</p>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         {showInvitationBadge && (
