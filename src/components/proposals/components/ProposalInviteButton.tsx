@@ -4,6 +4,7 @@ import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Proposal } from "../ProposalListTypes";
 import { useProposalInvitations } from "../hooks/useProposalInvitations";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProposalInviteButtonProps {
   proposal: Proposal;
@@ -12,6 +13,12 @@ interface ProposalInviteButtonProps {
 
 export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInviteButtonProps) {
   const { handleSendInvitation, handleResendInvitation } = useProposalInvitations(onProposalUpdate);
+  const { userRole } = useAuth();
+  
+  // Only agents can send invitations
+  if (userRole !== "agent") {
+    return null;
+  }
   
   // Don't render anything for draft proposals
   if (proposal.status === "draft") {

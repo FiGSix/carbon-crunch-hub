@@ -26,6 +26,7 @@ interface ProposalDetailsProps {
   onApprove: () => Promise<void>;
   onReject: () => Promise<void>;
   isReviewLater?: boolean;
+  showActions?: boolean;
 }
 
 export function ProposalDetails({ 
@@ -33,14 +34,19 @@ export function ProposalDetails({
   token, 
   onApprove, 
   onReject,
-  isReviewLater
+  isReviewLater,
+  showActions
 }: ProposalDetailsProps) {
   // Extract client and project info from the proposal content
   const clientInfo = proposal.content?.clientInfo || {};
   const projectInfo = proposal.content?.projectInfo || {};
+  const { userRole } = useAuth();
   
-  // Only show actions if not archived, token is present, and status is pending
-  const showActions = token && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
+  // Calculate whether to show actions based on explicit prop or role/status
+  const shouldShowActions = 
+    showActions !== undefined ? 
+    showActions : 
+    (token && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater && userRole === "client");
   
   return (
     <Card className="retro-card">
@@ -84,7 +90,7 @@ export function ProposalDetails({
       <ProposalActionFooter 
         onApprove={onApprove}
         onReject={onReject}
-        showActions={showActions}
+        showActions={shouldShowActions}
       />
     </Card>
   );

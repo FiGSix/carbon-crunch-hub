@@ -13,7 +13,7 @@ const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   
   const {
     proposal,
@@ -55,6 +55,9 @@ const ViewProposal = () => {
   const projectInfo = proposal.content?.projectInfo || {};
   const isClient = user?.id === proposal.client_id;
   
+  // Determine if the user can take actions on this proposal
+  const canTakeAction = isClient && token && proposal.status === 'pending' && !proposal.archived_at;
+  
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
       <ProposalHeader
@@ -76,6 +79,7 @@ const ViewProposal = () => {
           onApprove={handleApprove}
           onReject={handleReject}
           isReviewLater={isReviewLater}
+          showActions={canTakeAction}
         />
       </div>
 
@@ -88,6 +92,6 @@ const ViewProposal = () => {
       />
     </div>
   );
-};
+}
 
 export default ViewProposal;

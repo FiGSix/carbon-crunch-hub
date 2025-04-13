@@ -11,10 +11,13 @@ import { ProposalStatusBadge } from "./components/ProposalStatusBadge";
 import { InvitationStatus } from "./components/InvitationStatus";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ProposalListProps } from "./ProposalListTypes";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type { Proposal } from "./ProposalListTypes";
 
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
+  const { userRole } = useAuth();
+  
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -25,7 +28,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Date</TableHead>
             <TableHead>Size (MWp)</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Invitation</TableHead>
+            {userRole === "agent" && <TableHead>Invitation</TableHead>}
             <TableHead className="text-right">Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -43,9 +46,11 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
                   reviewLater={!!proposal.review_later_until}
                 />
               </TableCell>
-              <TableCell>
-                <InvitationStatus proposal={proposal} />
-              </TableCell>
+              {userRole === "agent" && (
+                <TableCell>
+                  <InvitationStatus proposal={proposal} />
+                </TableCell>
+              )}
               <TableCell className="text-right">R {proposal.revenue.toLocaleString()}</TableCell>
               <TableCell className="text-right">
                 <ProposalActionButtons 

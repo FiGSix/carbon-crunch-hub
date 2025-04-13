@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Proposal } from "../ProposalListTypes";
 import { ProposalInviteButton } from "./ProposalInviteButton";
 import { SubmitForReviewButton } from "./SubmitForReviewButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProposalActionButtonsProps {
   proposal: Proposal;
@@ -14,6 +15,7 @@ interface ProposalActionButtonsProps {
 
 export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalActionButtonsProps) {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   
   const handleViewProposal = (id: string) => {
     navigate(`/proposals/${id}`);
@@ -30,7 +32,8 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
         View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
       
-      {proposal.status === "draft" && (
+      {/* Only show Submit button for agents with draft proposals */}
+      {proposal.status === "draft" && userRole === "agent" && (
         <SubmitForReviewButton 
           proposalId={proposal.id}
           proposalTitle={proposal.name}
@@ -38,6 +41,7 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
         />
       )}
       
+      {/* Show invite button based on role and status */}
       <ProposalInviteButton 
         proposal={proposal} 
         onProposalUpdate={onProposalUpdate} 

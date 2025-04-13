@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CheckCircle2, Archive, ChevronLeft } from "lucide-react";
 import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProposalHeaderProps {
   title: string;
@@ -32,6 +34,7 @@ export function ProposalHeader({
   showBackButton = true
 }: ProposalHeaderProps) {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
 
   const handleBack = () => {
     navigate('/proposals');
@@ -63,7 +66,8 @@ export function ProposalHeader({
           </div>
         )}
         
-        {!isArchived && onReviewLaterClick && (
+        {/* Only clients can use "Review Later" feature for pending proposals */}
+        {!isArchived && userRole === "client" && onReviewLaterClick && (
           <ProposalReviewLaterButton 
             onClick={onReviewLaterClick} 
             isReviewLater={isReviewLater}
@@ -90,7 +94,8 @@ export function ProposalHeader({
           </TooltipProvider>
         )}
         
-        {projectSize && projectName && (
+        {/* Only show export button for agents */}
+        {userRole === "agent" && projectSize && projectName && (
           <ProposalExportButton 
             systemSize={projectSize} 
             projectName={projectName}
