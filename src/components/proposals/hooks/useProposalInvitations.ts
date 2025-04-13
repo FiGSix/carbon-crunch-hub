@@ -15,6 +15,33 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       const { data: token } = await supabase.rpc('generate_secure_token');
       
       // Update the proposal with invitation details
+      const { data: proposalData, error: proposalError } = await supabase
+        .from('proposals')
+        .select('content')
+        .eq('id', id)
+        .single();
+      
+      if (proposalError) throw proposalError;
+      
+      // Extract client info from proposal content
+      const clientInfo = proposalData.content?.clientInfo;
+      
+      if (!clientInfo?.email) {
+        throw new Error("No client email found");
+      }
+      
+      // Call the edge function to send email
+      const emailResponse = await supabase.functions.invoke('send-proposal-invitation', {
+        body: JSON.stringify({
+          proposalId: id,
+          clientEmail: clientInfo.email,
+          clientName: clientInfo.name,
+          invitationToken: token,
+          projectName: proposalData.content?.projectInfo?.name || 'Carbon Credit Project'
+        })
+      });
+      
+      // Update the proposal with invitation details
       const { error } = await supabase
         .from('proposals')
         .update({
@@ -29,11 +56,9 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         throw error;
       }
       
-      // In a real app, this would trigger an email to the client
-      // For now, we'll just show a success message
       toast({
         title: "Invitation Sent",
-        description: "Client will receive an email to view this proposal.",
+        description: "An email invitation has been sent to the client.",
       });
       
       // Refresh the proposal list
@@ -51,43 +76,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
   };
   
   const handleResendInvitation = async (id: string) => {
-    try {
-      // Reset the invitation with a new token and expiration date
-      const expirationDate = new Date();
-      expirationDate.setHours(expirationDate.getHours() + 48);
-      
-      const { data: token } = await supabase.rpc('generate_secure_token');
-      
-      const { error } = await supabase
-        .from('proposals')
-        .update({
-          invitation_token: token,
-          invitation_sent_at: new Date().toISOString(),
-          invitation_expires_at: expirationDate.toISOString(),
-          invitation_viewed_at: null
-        })
-        .eq('id', id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Invitation Resent",
-        description: "Client will receive a new email with updated link.",
-      });
-      
-      if (onProposalUpdate) {
-        onProposalUpdate();
-      }
-    } catch (error) {
-      console.error("Error resending invitation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to resend invitation. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await handleSendInvitation(id);
   };
   
   return {
