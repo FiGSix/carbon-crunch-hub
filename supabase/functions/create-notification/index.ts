@@ -1,12 +1,14 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { supabase } from "../_shared/supabase-client.ts";
+import { serve } from "https://deno.land/std@0.198.0/http/server.ts"
+import { supabase } from "../_shared/supabase-client.ts"
 
+// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
+// Interface for the notification request body
 interface NotificationRequest {
   userId: string;
   title: string;
@@ -16,75 +18,54 @@ interface NotificationRequest {
   relatedType?: string;
 }
 
-const handler = async (req: Request): Promise<Response> => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const requestData = await req.json();
+    // Get the request body
+    const requestData: NotificationRequest = await req.json()
     
     // Validate required fields
-    const requiredFields = ['userId', 'title', 'message', 'type'];
-    const missingFields = requiredFields.filter(field => !requestData[field]);
-    
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    if (!requestData.userId || !requestData.title || !requestData.message || !requestData.type) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
     
-    const { 
-      userId, 
-      title, 
-      message, 
-      type, 
-      relatedId, 
-      relatedType 
-    }: NotificationRequest = requestData;
-
     // Create the notification in the database
     const { data, error } = await supabase
       .from('notifications')
       .insert({
-        user_id: userId,
-        title,
-        message,
-        type,
-        related_id: relatedId,
-        related_type: relatedType,
+        user_id: requestData.userId,
+        title: requestData.title,
+        message: requestData.message,
+        type: requestData.type,
+        related_id: requestData.relatedId,
+        related_type: requestData.relatedType,
         read: false,
         created_at: new Date().toISOString()
       })
       .select('id')
-      .single();
-
+    
     if (error) {
-      throw error;
+      console.error('Error creating notification:', error)
+      throw error
     }
-
-    return new Response(JSON.stringify({
-      success: true,
-      data
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders,
-      },
-    });
-  } catch (error: any) {
-    console.error("Error in create-notification function:", error);
+    
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      }
-    );
+      JSON.stringify({ success: true, id: data[0]?.id }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    console.error('Unexpected error in create-notification function:', error)
+    
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-};
-
-serve(handler);
+})

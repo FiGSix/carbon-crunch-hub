@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Proposal } from "../ProposalListTypes";
 import { ProposalInviteButton } from "./ProposalInviteButton";
+import { SubmitForReviewButton } from "./SubmitForReviewButton";
 
 interface ProposalActionButtonsProps {
   proposal: Proposal;
@@ -28,6 +29,14 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
       >
         View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
+      
+      {proposal.status === "draft" && (
+        <SubmitForReviewButton 
+          proposalId={proposal.id}
+          proposalTitle={proposal.name}
+          onProposalUpdate={onProposalUpdate} 
+        />
+      )}
       
       <ProposalInviteButton 
         proposal={proposal} 

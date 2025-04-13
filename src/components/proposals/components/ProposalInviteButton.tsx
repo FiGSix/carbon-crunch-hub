@@ -13,24 +13,13 @@ interface ProposalInviteButtonProps {
 export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInviteButtonProps) {
   const { handleSendInvitation, handleResendInvitation } = useProposalInvitations(onProposalUpdate);
   
+  // Don't render anything for draft proposals
   if (proposal.status === "draft") {
     return null;
   }
   
-  if (proposal.invitation_sent_at && !proposal.invitation_viewed_at) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleResendInvitation(proposal.id)}
-        className="text-carbon-blue-600"
-      >
-        Resend <Mail className="h-4 w-4 ml-1" />
-      </Button>
-    );
-  } 
-  
-  if (!proposal.invitation_viewed_at) {
+  // For pending proposals that haven't been sent yet
+  if (proposal.status === "pending" && !proposal.invitation_sent_at) {
     return (
       <Button
         variant="outline"
@@ -43,5 +32,20 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     );
   }
   
+  // For pending proposals that have been sent but not viewed
+  if (proposal.invitation_sent_at && !proposal.invitation_viewed_at) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleResendInvitation(proposal.id)}
+        className="text-carbon-blue-600"
+      >
+        Resend <Mail className="h-4 w-4 ml-1" />
+      </Button>
+    );
+  }
+  
+  // Don't show invitation buttons for proposals that have been viewed
   return null;
 }
