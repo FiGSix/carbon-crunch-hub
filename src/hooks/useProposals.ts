@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Proposal } from "@/components/proposals/ProposalList";
@@ -44,7 +44,8 @@ export const useProposals = () => {
           client_share_percentage,
           invitation_sent_at,
           invitation_viewed_at,
-          invitation_expires_at
+          invitation_expires_at,
+          review_later_until
         `);
       
       // Apply status filter if not 'all'
@@ -90,8 +91,17 @@ export const useProposals = () => {
         throw error;
       }
       
+      console.log("Raw proposals data:", proposalsData);
+      
+      if (!proposalsData || proposalsData.length === 0) {
+        console.log("No proposals found with the current filters");
+        setProposals([]);
+        setLoading(false);
+        return;
+      }
+      
       // Fetch client profiles in a separate query to avoid RLS issues
-      const clientIds = proposalsData?.map(p => p.client_id) || [];
+      const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
       let clientProfiles: Record<string, any> = {};
       
       if (clientIds.length > 0) {
@@ -112,11 +122,10 @@ export const useProposals = () => {
         }
       }
       
-      console.log("Proposals data:", proposalsData);
       console.log("Client profiles:", clientProfiles);
       
       // Transform the data to match the Proposal interface
-      let formattedProposals: Proposal[] = (proposalsData || []).map(item => {
+      let formattedProposals: Proposal[] = proposalsData.map(item => {
         // Get client profile from our map
         const clientProfile = clientProfiles[item.client_id];
         
@@ -151,7 +160,8 @@ export const useProposals = () => {
           revenue: item.carbon_credits ? item.carbon_credits * 100 : 0, // Simplified revenue calculation
           invitation_sent_at: item.invitation_sent_at,
           invitation_viewed_at: item.invitation_viewed_at,
-          invitation_expires_at: item.invitation_expires_at
+          invitation_expires_at: item.invitation_expires_at,
+          review_later_until: item.review_later_until
         };
       });
       
@@ -162,6 +172,7 @@ export const useProposals = () => {
         formattedProposals.sort((a, b) => a.size - b.size);
       }
       
+      console.log("Formatted proposals:", formattedProposals);
       setProposals(formattedProposals);
     } catch (error) {
       console.error("Error fetching proposals:", error);
@@ -170,10 +181,16 @@ export const useProposals = () => {
         description: "Failed to load proposals. Please try again.",
         variant: "destructive",
       });
+      setProposals([]);
     } finally {
       setLoading(false);
     }
   }, [toast, filters]); // Re-fetch when filters change
+
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchProposals();
+  }, [fetchProposals]);
 
   return {
     proposals,

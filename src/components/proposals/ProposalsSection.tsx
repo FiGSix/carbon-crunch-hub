@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { ProposalList } from "@/components/proposals/ProposalList";
@@ -16,9 +16,10 @@ export function ProposalsSection() {
     fetchProposals 
   } = useProposals();
   
-  useEffect(() => {
+  const handleProposalUpdate = () => {
+    console.log("Proposal update triggered - refreshing proposals list");
     fetchProposals();
-  }, [fetchProposals]);
+  };
   
   return (
     <Card className="retro-card mb-8">
@@ -42,7 +43,7 @@ export function ProposalsSection() {
         {!loading && proposals.length > 0 && (
           <ProposalList 
             proposals={proposals} 
-            onProposalUpdate={fetchProposals}
+            onProposalUpdate={handleProposalUpdate}
           />
         )}
       </CardContent>

@@ -51,16 +51,37 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       
       console.log("Current user ID:", user.id);
       
+      // First, check if the proposal exists before updating
+      console.log("Verifying proposal exists...", proposalId);
+      const { data: existingProposal, error: checkError } = await supabase
+        .from('proposals')
+        .select('id, title, client_id')
+        .eq('id', proposalId)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error("Error checking proposal:", checkError);
+        setErrorDetails(`Error verifying proposal: ${checkError.message}`);
+        throw new Error(`Error verifying proposal: ${checkError.message}`);
+      }
+      
+      if (!existingProposal) {
+        console.error("No proposal found with ID:", proposalId);
+        setErrorDetails(`Proposal not found with ID: ${proposalId}`);
+        throw new Error(`Proposal not found with ID: ${proposalId}`);
+      }
+      
+      console.log("Found proposal to update:", existingProposal);
+      
       // Update the proposal status to "pending" and set the agent_id
       console.log("Updating proposal status...");
-      const { data: proposals, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('proposals')
         .update({ 
           status: 'pending',
           agent_id: user.id
         })
-        .eq('id', proposalId)
-        .select('client_id, title');
+        .eq('id', proposalId);
       
       if (updateError) {
         console.error("Update error:", updateError);
@@ -68,18 +89,10 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
         throw updateError;
       }
       
-      if (!proposals || proposals.length === 0) {
-        console.error("No proposal found after update");
-        setErrorDetails("No proposal found after update");
-        throw new Error("No proposal found after update");
-      }
+      console.log("Proposal updated successfully. Creating notification...");
       
-      const proposal = proposals[0];
-      console.log("Proposal updated successfully:", proposal);
-      
-      // Create a notification for admins (in a real app, you'd target specific admins)
+      // Create a notification for admins
       try {
-        console.log("Creating notification...");
         await createNotification({
           userId: user.id,
           title: "Proposal Submitted",
@@ -103,6 +116,7 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       
       // Refresh the proposals list
       if (onProposalUpdate) {
+        console.log("Triggering proposal list refresh");
         onProposalUpdate();
       }
     } catch (error) {
