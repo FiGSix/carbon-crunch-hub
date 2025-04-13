@@ -40,7 +40,13 @@ export function useProposalData(id?: string, token?: string | null) {
             throw fetchError;
           }
           
-          setProposal(data as ProposalData);
+          // Ensure the data is properly typed with all required ProposalData fields
+          const typedData: ProposalData = {
+            ...data as any,
+            review_later_until: data.review_later_until || null
+          };
+          
+          setProposal(typedData);
         } else if (id) {
           // Regular fetch by ID (for authenticated users)
           const { data, error: fetchError } = await supabase
@@ -53,7 +59,13 @@ export function useProposalData(id?: string, token?: string | null) {
             throw fetchError;
           }
           
-          setProposal(data as ProposalData);
+          // Ensure the data is properly typed with all required ProposalData fields
+          const typedData: ProposalData = {
+            ...data as any,
+            review_later_until: data.review_later_until || null
+          };
+          
+          setProposal(typedData);
         } else {
           setError("No proposal ID or invitation token provided.");
         }
