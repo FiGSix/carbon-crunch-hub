@@ -24,13 +24,18 @@ export function useProposalOperations() {
       setLoading(prev => ({ ...prev, approve: true }));
       
       // Fetch the proposal to get agent_id for notification
-      const { data: proposal, error: fetchError } = await supabase
+      const { data: proposals, error: fetchError } = await supabase
         .from('proposals')
         .select('agent_id, title')
-        .eq('id', proposalId)
-        .single();
+        .eq('id', proposalId);
         
       if (fetchError) throw fetchError;
+      
+      if (!proposals || proposals.length === 0) {
+        throw new Error("Proposal not found");
+      }
+      
+      const proposal = proposals[0];
       
       // Update proposal status
       const { error } = await supabase
@@ -80,13 +85,18 @@ export function useProposalOperations() {
       setLoading(prev => ({ ...prev, reject: true }));
       
       // Fetch the proposal to get agent_id for notification
-      const { data: proposal, error: fetchError } = await supabase
+      const { data: proposals, error: fetchError } = await supabase
         .from('proposals')
         .select('agent_id, title')
-        .eq('id', proposalId)
-        .single();
+        .eq('id', proposalId);
         
       if (fetchError) throw fetchError;
+      
+      if (!proposals || proposals.length === 0) {
+        throw new Error("Proposal not found");
+      }
+      
+      const proposal = proposals[0];
       
       const { error } = await supabase
         .from('proposals')
@@ -134,13 +144,18 @@ export function useProposalOperations() {
       setLoading(prev => ({ ...prev, archive: true }));
       
       // Fetch the proposal for notification
-      const { data: proposal, error: fetchError } = await supabase
+      const { data: proposals, error: fetchError } = await supabase
         .from('proposals')
         .select('client_id, agent_id, title')
-        .eq('id', proposalId)
-        .single();
+        .eq('id', proposalId);
         
       if (fetchError) throw fetchError;
+      
+      if (!proposals || proposals.length === 0) {
+        throw new Error("Proposal not found");
+      }
+      
+      const proposal = proposals[0];
       
       const { data, error } = await supabase
         .rpc('archive_proposal', { 

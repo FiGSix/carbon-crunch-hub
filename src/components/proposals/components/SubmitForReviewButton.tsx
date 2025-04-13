@@ -53,15 +53,14 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       
       // Update the proposal status to "pending" and set the agent_id
       console.log("Updating proposal status...");
-      const { data: proposal, error: updateError } = await supabase
+      const { data: proposals, error: updateError } = await supabase
         .from('proposals')
         .update({ 
           status: 'pending',
           agent_id: user.id
         })
         .eq('id', proposalId)
-        .select('client_id, title')
-        .single();
+        .select('client_id, title');
       
       if (updateError) {
         console.error("Update error:", updateError);
@@ -69,6 +68,13 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
         throw updateError;
       }
       
+      if (!proposals || proposals.length === 0) {
+        console.error("No proposal found after update");
+        setErrorDetails("No proposal found after update");
+        throw new Error("No proposal found after update");
+      }
+      
+      const proposal = proposals[0];
       console.log("Proposal updated successfully:", proposal);
       
       // Create a notification for admins (in a real app, you'd target specific admins)

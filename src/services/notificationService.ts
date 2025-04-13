@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface NotificationData {
@@ -94,8 +95,7 @@ export async function getNotifications(limit = 10): Promise<{notifications: Noti
       throw new Error("User not authenticated");
     }
     
-    // Use a type cast to any to bypass the TypeScript error
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', user.user.id)
@@ -116,8 +116,7 @@ export async function getNotifications(limit = 10): Promise<{notifications: Noti
  */
 export async function markNotificationAsRead(notificationId: string): Promise<{success: boolean, error?: string}> {
   try {
-    // Use a type cast to any to bypass the TypeScript error
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('notifications')
       .update({ read: true })
       .eq('id', notificationId);
@@ -142,8 +141,7 @@ export async function markAllNotificationsAsRead(): Promise<{success: boolean, e
       throw new Error("User not authenticated");
     }
     
-    // Use a type cast to any to bypass the TypeScript error
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('notifications')
       .update({ read: true })
       .eq('user_id', user.user.id)
@@ -163,8 +161,7 @@ export async function markAllNotificationsAsRead(): Promise<{success: boolean, e
  */
 export async function deleteNotification(notificationId: string): Promise<{success: boolean, error?: string}> {
   try {
-    // Use a type cast to any to bypass the TypeScript error
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', notificationId);
