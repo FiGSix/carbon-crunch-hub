@@ -1,245 +1,88 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface ProposalData {
-  id: string;
-  title: string;
-  status: string;
-  content: any;
-  client_id: string;
-  agent_id: string | null;
-  created_at: string;
-  signed_at: string | null;
-  invitation_viewed_at: string | null;
-  archived_at: string | null;
-  archived_by: string | null;
-  review_later_until: string | null;
-}
+import { useProposalData } from "./proposal/useProposalData";
+import { useProposalOperations } from "./proposal/useProposalOperations";
+import { ProposalData } from "@/components/proposals/view/types";
 
 export function useViewProposal(id?: string, token?: string | null) {
-  const { toast } = useToast();
   const { user } = useAuth();
-  const [proposal, setProposal] = useState<ProposalData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { proposal, loading, error } = useProposalData(id, token);
+  const { loading: operationLoading, approveProposal, rejectProposal, archiveProposal, toggleReviewLater } = useProposalOperations();
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [archiveLoading, setArchiveLoading] = useState(false);
   
-  useEffect(() => {
-    const fetchProposal = async () => {
-      try {
-        setLoading(true);
-        
-        if (token) {
-          // Validate the token and get the proposal ID
-          const { data: proposalId, error: validationError } = await supabase.rpc('validate_invitation_token', { token });
-          
-          if (validationError || !proposalId) {
-            setError("This invitation link is invalid or has expired.");
-            setLoading(false);
-            return;
-          }
-          
-          // Mark the invitation as viewed
-          await supabase
-            .from('proposals')
-            .update({ invitation_viewed_at: new Date().toISOString() })
-            .eq('invitation_token', token);
-          
-          // Now fetch the proposal with the validated ID
-          const { data, error: fetchError } = await supabase
-            .from('proposals')
-            .select('*')
-            .eq('id', proposalId)
-            .single();
-          
-          if (fetchError) {
-            throw fetchError;
-          }
-          
-          setProposal(data);
-        } else if (id) {
-          // Regular fetch by ID (for authenticated users)
-          const { data, error: fetchError } = await supabase
-            .from('proposals')
-            .select('*')
-            .eq('id', id)
-            .single();
-          
-          if (fetchError) {
-            throw fetchError;
-          }
-          
-          setProposal(data);
-        } else {
-          setError("No proposal ID or invitation token provided.");
-        }
-      } catch (err) {
-        console.error("Error fetching proposal:", err);
-        setError("Failed to load the proposal. It may have been deleted or you don't have permission to view it.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchProposal();
-  }, [id, token]);
-  
+  // Handle operations on the proposal
   const handleApprove = async () => {
-    try {
-      if (!proposal?.id) return;
-      
-      const { error } = await supabase
-        .from('proposals')
-        .update({ 
-          status: 'approved',
-          signed_at: new Date().toISOString(),
-          review_later_until: null // Clear review later if approved
-        })
-        .eq('id', proposal.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Proposal Approved",
-        description: "Thank you for approving this proposal.",
-      });
-      
-      // Refresh the proposal data
-      setProposal(prev => prev ? {
+    if (!proposal?.id) return;
+    
+    const result = await approveProposal(proposal.id);
+    if (result.success) {
+      // Update local state
+      setLocalProposal(prev => prev ? {
         ...prev, 
         status: 'approved', 
         signed_at: new Date().toISOString(),
         review_later_until: null
       } : null);
-    } catch (error) {
-      console.error("Error approving proposal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve proposal. Please try again.",
-        variant: "destructive",
-      });
     }
   };
   
   const handleReject = async () => {
-    try {
-      if (!proposal?.id) return;
-      
-      const { error } = await supabase
-        .from('proposals')
-        .update({ 
-          status: 'rejected',
-          review_later_until: null // Clear review later if rejected
-        })
-        .eq('id', proposal.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Proposal Rejected",
-        description: "The proposal has been rejected.",
-      });
-      
-      // Refresh the proposal data
-      setProposal(prev => prev ? {
+    if (!proposal?.id) return;
+    
+    const result = await rejectProposal(proposal.id);
+    if (result.success) {
+      // Update local state
+      setLocalProposal(prev => prev ? {
         ...prev, 
         status: 'rejected',
         review_later_until: null
       } : null);
-    } catch (error) {
-      console.error("Error rejecting proposal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject proposal. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
   const handleArchive = async () => {
-    try {
-      if (!proposal?.id || !user?.id) return;
-      
-      setArchiveLoading(true);
-      
-      // Call our archive function
-      const { data, error } = await supabase
-        .rpc('archive_proposal', { 
-          proposal_id: proposal.id, 
-          user_id: user.id 
-        });
-      
-      if (error) throw error;
-      
-      if (!data) {
-        throw new Error("Failed to archive proposal. You may not have permission to archive this proposal.");
-      }
-      
-      toast({
-        title: "Proposal Archived",
-        description: "The proposal has been successfully archived.",
-      });
-      
-      // Update the proposal data locally
-      setProposal(prev => prev ? {
+    if (!proposal?.id || !user?.id) return;
+    
+    const result = await archiveProposal(proposal.id, user.id);
+    if (result.success) {
+      // Update local state
+      setLocalProposal(prev => prev ? {
         ...prev, 
         archived_at: new Date().toISOString(),
         archived_by: user.id,
-        review_later_until: null // Clear review later if archived
+        review_later_until: null
       } : null);
       
       setArchiveDialogOpen(false);
-    } catch (error) {
-      console.error("Error archiving proposal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to archive proposal. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setArchiveLoading(false);
     }
   };
 
   const handleReviewLater = async () => {
-    try {
-      if (!proposal?.id) return;
-      
-      // Toggle review later status
-      const isCurrentlyMarkedForReviewLater = !!proposal.review_later_until;
-      
-      // Set review later date to 30 days from now, or null if removing
-      const reviewLaterUntil = isCurrentlyMarkedForReviewLater 
-        ? null 
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      
-      const { error } = await supabase
-        .from('proposals')
-        .update({ review_later_until: reviewLaterUntil })
-        .eq('id', proposal.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: isCurrentlyMarkedForReviewLater ? "Removed from Review Later" : "Marked for Review Later",
-        description: isCurrentlyMarkedForReviewLater 
-          ? "This proposal has been removed from your Review Later list." 
-          : "This proposal has been added to your Review Later list."
-      });
-      
-      // Update the proposal data locally
-      setProposal(prev => prev ? {...prev, review_later_until: reviewLaterUntil} : null);
-    } catch (error) {
-      console.error("Error updating review later status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update review status. Please try again.",
-        variant: "destructive",
-      });
+    if (!proposal?.id) return;
+    
+    // Toggle review later status
+    const isCurrentlyMarkedForReviewLater = !!proposal.review_later_until;
+    const result = await toggleReviewLater(proposal.id, isCurrentlyMarkedForReviewLater);
+    
+    if (result.success) {
+      // Update local state with the new review_later_until value
+      setLocalProposal(prev => prev ? {
+        ...prev, 
+        review_later_until: result.reviewLaterUntil || null
+      } : null);
+    }
+  };
+
+  // Helper function to update local proposal state
+  const setLocalProposal = (updater: React.SetStateAction<ProposalData | null>) => {
+    if (typeof updater === 'function') {
+      const result = updater(proposal);
+      if (result) {
+        window.dispatchEvent(new CustomEvent('proposal-updated', { detail: result }));
+      }
+    } else if (updater) {
+      window.dispatchEvent(new CustomEvent('proposal-updated', { detail: updater }));
     }
   };
 
@@ -260,7 +103,7 @@ export function useViewProposal(id?: string, token?: string | null) {
     handleReviewLater,
     archiveDialogOpen,
     setArchiveDialogOpen,
-    archiveLoading,
+    archiveLoading: operationLoading.archive,
     canArchive,
     isReviewLater
   };
