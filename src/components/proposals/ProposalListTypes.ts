@@ -10,6 +10,7 @@ export interface Proposal {
   invitation_sent_at?: string;
   invitation_viewed_at?: string;
   invitation_expires_at?: string;
+  review_later_until?: string;
 }
 
 export interface ProposalListProps {

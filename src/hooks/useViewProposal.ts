@@ -16,6 +16,7 @@ interface ProposalData {
   invitation_viewed_at: string | null;
   archived_at: string | null;
   archived_by: string | null;
+  review_later_until: string | null;
 }
 
 export function useViewProposal(id?: string, token?: string | null) {
@@ -95,7 +96,8 @@ export function useViewProposal(id?: string, token?: string | null) {
         .from('proposals')
         .update({ 
           status: 'approved',
-          signed_at: new Date().toISOString()
+          signed_at: new Date().toISOString(),
+          review_later_until: null // Clear review later if approved
         })
         .eq('id', proposal.id);
       
@@ -107,7 +109,12 @@ export function useViewProposal(id?: string, token?: string | null) {
       });
       
       // Refresh the proposal data
-      setProposal(prev => prev ? {...prev, status: 'approved', signed_at: new Date().toISOString()} : null);
+      setProposal(prev => prev ? {
+        ...prev, 
+        status: 'approved', 
+        signed_at: new Date().toISOString(),
+        review_later_until: null
+      } : null);
     } catch (error) {
       console.error("Error approving proposal:", error);
       toast({
@@ -124,7 +131,10 @@ export function useViewProposal(id?: string, token?: string | null) {
       
       const { error } = await supabase
         .from('proposals')
-        .update({ status: 'rejected' })
+        .update({ 
+          status: 'rejected',
+          review_later_until: null // Clear review later if rejected
+        })
         .eq('id', proposal.id);
       
       if (error) throw error;
@@ -135,7 +145,11 @@ export function useViewProposal(id?: string, token?: string | null) {
       });
       
       // Refresh the proposal data
-      setProposal(prev => prev ? {...prev, status: 'rejected'} : null);
+      setProposal(prev => prev ? {
+        ...prev, 
+        status: 'rejected',
+        review_later_until: null
+      } : null);
     } catch (error) {
       console.error("Error rejecting proposal:", error);
       toast({
@@ -174,7 +188,8 @@ export function useViewProposal(id?: string, token?: string | null) {
       setProposal(prev => prev ? {
         ...prev, 
         archived_at: new Date().toISOString(),
-        archived_by: user.id
+        archived_by: user.id,
+        review_later_until: null // Clear review later if archived
       } : null);
       
       setArchiveDialogOpen(false);
@@ -190,9 +205,50 @@ export function useViewProposal(id?: string, token?: string | null) {
     }
   };
 
+  const handleReviewLater = async () => {
+    try {
+      if (!proposal?.id) return;
+      
+      // Toggle review later status
+      const isCurrentlyMarkedForReviewLater = !!proposal.review_later_until;
+      
+      // Set review later date to 30 days from now, or null if removing
+      const reviewLaterUntil = isCurrentlyMarkedForReviewLater 
+        ? null 
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { error } = await supabase
+        .from('proposals')
+        .update({ review_later_until: reviewLaterUntil })
+        .eq('id', proposal.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: isCurrentlyMarkedForReviewLater ? "Removed from Review Later" : "Marked for Review Later",
+        description: isCurrentlyMarkedForReviewLater 
+          ? "This proposal has been removed from your Review Later list." 
+          : "This proposal has been added to your Review Later list."
+      });
+      
+      // Update the proposal data locally
+      setProposal(prev => prev ? {...prev, review_later_until: reviewLaterUntil} : null);
+    } catch (error) {
+      console.error("Error updating review later status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update review status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Check if the current user can archive this proposal
   const canArchive = !!user && !!proposal && !proposal.archived_at && 
     (user.id === proposal.client_id || user.id === proposal.agent_id);
+  
+  // Check if the proposal is marked for review later
+  const isReviewLater = !!proposal?.review_later_until;
   
   return {
     proposal,
@@ -201,9 +257,11 @@ export function useViewProposal(id?: string, token?: string | null) {
     handleApprove,
     handleReject,
     handleArchive,
+    handleReviewLater,
     archiveDialogOpen,
     setArchiveDialogOpen,
     archiveLoading,
-    canArchive
+    canArchive,
+    isReviewLater
   };
 }

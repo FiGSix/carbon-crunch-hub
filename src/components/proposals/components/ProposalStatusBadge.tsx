@@ -1,18 +1,27 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Archive } from "lucide-react";
+import { Archive, Clock } from "lucide-react";
 
 interface ProposalStatusBadgeProps {
   status: string;
   isArchived?: boolean;
+  reviewLater?: boolean;
 }
 
-export function ProposalStatusBadge({ status, isArchived }: ProposalStatusBadgeProps) {
+export function ProposalStatusBadge({ status, isArchived, reviewLater }: ProposalStatusBadgeProps) {
   if (isArchived) {
     return (
       <Badge className="bg-carbon-gray-100 text-carbon-gray-700 hover:bg-carbon-gray-200 flex items-center gap-1">
         <Archive className="h-3 w-3" /> Archived
+      </Badge>
+    );
+  }
+
+  if (reviewLater) {
+    return (
+      <Badge className="bg-carbon-blue-50 text-carbon-blue-700 hover:bg-carbon-blue-100 flex items-center gap-1">
+        <Clock className="h-3 w-3" /> Review Later
       </Badge>
     );
   }

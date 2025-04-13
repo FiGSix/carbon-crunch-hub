@@ -38,7 +38,10 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
               <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
               <TableCell>{proposal.size.toFixed(2)} MWp</TableCell>
               <TableCell>
-                <ProposalStatusBadge status={proposal.status} />
+                <ProposalStatusBadge 
+                  status={proposal.status} 
+                  reviewLater={!!proposal.review_later_until}
+                />
               </TableCell>
               <TableCell>
                 <InvitationStatus proposal={proposal} />

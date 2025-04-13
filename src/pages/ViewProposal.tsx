@@ -22,9 +22,11 @@ const ViewProposal = () => {
     handleApprove,
     handleReject,
     handleArchive,
+    handleReviewLater,
     archiveDialogOpen,
     setArchiveDialogOpen,
-    canArchive
+    canArchive,
+    isReviewLater
   } = useViewProposal(id, token);
   
   if (loading) {
@@ -62,7 +64,9 @@ const ViewProposal = () => {
         projectName={projectInfo.name}
         canArchive={canArchive}
         isArchived={!!proposal.archived_at}
+        isReviewLater={isReviewLater}
         onArchiveClick={() => setArchiveDialogOpen(true)}
+        onReviewLaterClick={handleReviewLater}
       />
       
       <div className="space-y-8">
@@ -71,6 +75,7 @@ const ViewProposal = () => {
           token={token}
           onApprove={handleApprove}
           onReject={handleReject}
+          isReviewLater={isReviewLater}
         />
       </div>
 

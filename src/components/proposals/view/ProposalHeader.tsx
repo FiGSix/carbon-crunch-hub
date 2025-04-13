@@ -1,9 +1,10 @@
 
 import React from "react";
-import { CheckCircle2, Archive } from "lucide-react";
+import { CheckCircle2, Archive, Clock } from "lucide-react";
 import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
 
 interface ProposalHeaderProps {
   title: string;
@@ -12,7 +13,9 @@ interface ProposalHeaderProps {
   projectName?: string;
   canArchive?: boolean;
   isArchived?: boolean;
+  isReviewLater?: boolean;
   onArchiveClick?: () => void;
+  onReviewLaterClick?: () => void;
 }
 
 export function ProposalHeader({ 
@@ -22,7 +25,9 @@ export function ProposalHeader({
   projectName,
   canArchive,
   isArchived,
-  onArchiveClick
+  isReviewLater,
+  onArchiveClick,
+  onReviewLaterClick
 }: ProposalHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -36,6 +41,13 @@ export function ProposalHeader({
             <CheckCircle2 className="h-5 w-5 mr-2" />
             <span>Viewing invitation</span>
           </div>
+        )}
+        
+        {!isArchived && onReviewLaterClick && (
+          <ProposalReviewLaterButton 
+            onClick={onReviewLaterClick} 
+            isReviewLater={isReviewLater}
+          />
         )}
         
         {canArchive && !isArchived && (

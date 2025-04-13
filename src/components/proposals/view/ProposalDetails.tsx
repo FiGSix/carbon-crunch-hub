@@ -20,24 +20,27 @@ interface ProposalDetailsProps {
     signed_at: string | null;
     archived_at: string | null;
     archived_by: string | null;
+    review_later_until: string | null;
   };
   token?: string | null;
   onApprove: () => Promise<void>;
   onReject: () => Promise<void>;
+  isReviewLater?: boolean;
 }
 
 export function ProposalDetails({ 
   proposal, 
   token, 
   onApprove, 
-  onReject 
+  onReject,
+  isReviewLater
 }: ProposalDetailsProps) {
   // Extract client and project info from the proposal content
   const clientInfo = proposal.content?.clientInfo || {};
   const projectInfo = proposal.content?.projectInfo || {};
   
   // Only show actions if not archived, token is present, and status is pending
-  const showActions = token && proposal.status === 'pending' && !proposal.archived_at;
+  const showActions = token && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
   
   return (
     <Card className="retro-card">
@@ -64,13 +67,14 @@ export function ProposalDetails({
         </div>
       </CardContent>
       
-      {/* Show archived banner if archived */}
-      {proposal.archived_at && (
-        <ProposalArchivedBanner archivedAt={proposal.archived_at} />
-      )}
+      {/* Show archived or review later banner if applicable */}
+      <ProposalArchivedBanner 
+        archivedAt={proposal.archived_at} 
+        reviewLaterUntil={proposal.review_later_until}
+      />
       
-      {/* Show status footer if not archived */}
-      {!proposal.archived_at && (
+      {/* Show status footer if not archived and not in review later state */}
+      {!proposal.archived_at && !isReviewLater && (
         <ProposalStatusFooter 
           status={proposal.status} 
           signedAt={proposal.signed_at} 
