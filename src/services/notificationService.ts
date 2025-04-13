@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface NotificationData {
@@ -27,24 +26,34 @@ export interface Notification {
  */
 export async function createNotification(data: NotificationData): Promise<{success: boolean, error?: string}> {
   try {
+    console.log("Creating notification with data:", {
+      userId: data.userId,
+      title: data.title,
+      type: data.type,
+      relatedId: data.relatedId,
+      relatedType: data.relatedType
+    });
+    
     // First try to create via the edge function (preferred method)
     try {
+      console.log("Attempting to create notification via edge function...");
       const response = await supabase.functions.invoke('create-notification', {
         body: data
       });
       
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error("Edge function error:", response.error);
+        throw new Error(response.error.message || "Edge function error");
       }
       
+      console.log("Notification created successfully via edge function");
       return { success: true };
     } catch (edgeFunctionError) {
       console.error("Edge function error:", edgeFunctionError);
+      console.log("Falling back to direct database insert...");
       
       // Fallback to direct database insert if edge function fails
-      // Use a type cast to any to bypass the TypeScript error
-      // This is a temporary solution until the types are properly updated
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('notifications')
         .insert({
           user_id: data.userId,
@@ -57,13 +66,20 @@ export async function createNotification(data: NotificationData): Promise<{succe
           created_at: new Date().toISOString()
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Database insert error:", error);
+        throw error;
+      }
       
+      console.log("Notification created successfully via direct insert");
       return { success: true };
     }
   } catch (error) {
     console.error("Error creating notification:", error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 

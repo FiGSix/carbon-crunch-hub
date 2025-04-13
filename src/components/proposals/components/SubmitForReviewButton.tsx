@@ -26,20 +26,34 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const handleSubmitForReview = async () => {
     try {
       setIsSubmitting(true);
+      setErrorDetails(null);
       
       // Get the current user to set as the agent
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log("Getting current user...");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Auth error:", userError);
+        setErrorDetails(`Authentication error: ${userError.message}`);
+        throw new Error(`User not authenticated: ${userError.message}`);
+      }
       
       if (!user) {
+        console.error("No user found");
+        setErrorDetails("No authenticated user found");
         throw new Error("User not authenticated");
       }
       
+      console.log("Current user ID:", user.id);
+      
       // Update the proposal status to "pending" and set the agent_id
-      const { data: proposal, error } = await supabase
+      console.log("Updating proposal status...");
+      const { data: proposal, error: updateError } = await supabase
         .from('proposals')
         .update({ 
           status: 'pending',
@@ -49,18 +63,31 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
         .select('client_id, title')
         .single();
       
-      if (error) throw error;
+      if (updateError) {
+        console.error("Update error:", updateError);
+        setErrorDetails(`Database update error: ${updateError.message}`);
+        throw updateError;
+      }
+      
+      console.log("Proposal updated successfully:", proposal);
       
       // Create a notification for admins (in a real app, you'd target specific admins)
-      // For demo purposes, we'll create a notification for the agent themselves
-      await createNotification({
-        userId: user.id,
-        title: "Proposal Submitted",
-        message: `Proposal "${proposalTitle}" has been submitted for review.`,
-        type: "info",
-        relatedId: proposalId,
-        relatedType: "proposal"
-      });
+      try {
+        console.log("Creating notification...");
+        await createNotification({
+          userId: user.id,
+          title: "Proposal Submitted",
+          message: `Proposal "${proposalTitle}" has been submitted for review.`,
+          type: "info",
+          relatedId: proposalId,
+          relatedType: "proposal"
+        });
+        console.log("Notification created successfully");
+      } catch (notificationError) {
+        // Don't throw here, just log the error - we don't want notification failure to block the submission
+        console.error("Error creating notification:", notificationError);
+        // Continue execution - the proposal was updated successfully
+      }
       
       toast({
         title: "Success",
@@ -74,9 +101,12 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       }
     } catch (error) {
       console.error("Error submitting proposal for review:", error);
+      
+      // Show more detailed error info to the user
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast({
         title: "Error",
-        description: "Failed to submit proposal for review.",
+        description: `Failed to submit proposal for review: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
@@ -104,6 +134,11 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
             <AlertDialogDescription>
               This will change the proposal status to "Pending" and make it available for client invitation.
               Are you sure you want to submit this proposal for review?
+              {errorDetails && (
+                <div className="mt-2 text-red-500 text-sm border border-red-200 bg-red-50 p-2 rounded">
+                  <strong>Previous error: </strong>{errorDetails}
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
