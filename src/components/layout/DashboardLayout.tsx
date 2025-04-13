@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -57,6 +58,9 @@ export function DashboardLayout({
               {userRole === 'client' && 'CLIENT DASHBOARD'}
               {userRole === 'agent' && 'AGENT DASHBOARD'}
               {userRole === 'admin' && 'ADMIN DASHBOARD'}
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <NotificationBell />
             </div>
           </motion.header>
           

@@ -38,7 +38,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       // Update the proposal with invitation details
       const { data: proposalData, error: proposalError } = await supabase
         .from('proposals')
-        .select('content')
+        .select('content, client_id')
         .eq('id', id)
         .single();
       
@@ -47,6 +47,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       // Extract client info from proposal content
       const content = proposalData.content as ProposalContent;
       const clientInfo = content?.clientInfo;
+      const clientId = proposalData.client_id;
       
       if (!clientInfo?.email) {
         throw new Error("No client email found in the proposal");
@@ -59,7 +60,8 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           clientEmail: clientInfo.email,
           clientName: clientInfo.name || 'Client',
           invitationToken: token,
-          projectName: content?.projectInfo?.name || 'Carbon Credit Project'
+          projectName: content?.projectInfo?.name || 'Carbon Credit Project',
+          clientId: clientId
         })
       });
       

@@ -22,6 +22,7 @@ import Calculator from "./pages/Calculator";
 import Contact from "./pages/Contact";
 import ForceLogout from "./pages/ForceLogout";
 import TestInvitations from "./pages/TestInvitations";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,11 @@ const App = () => (
             <Route path="/test-invitations" element={
               <PrivateRoute>
                 <TestInvitations />
+              </PrivateRoute>
+            } />
+            <Route path="/notifications" element={
+              <PrivateRoute>
+                <Notifications />
               </PrivateRoute>
             } />
             

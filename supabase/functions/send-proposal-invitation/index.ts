@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { supabase } from "../_shared/supabase-client.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -15,6 +16,7 @@ interface InvitationRequest {
   clientName: string;
   invitationToken: string;
   projectName: string;
+  clientId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -40,7 +42,8 @@ const handler = async (req: Request): Promise<Response> => {
       clientEmail, 
       clientName, 
       invitationToken,
-      projectName 
+      projectName,
+      clientId 
     }: InvitationRequest = requestData;
 
     // Validate email format
@@ -78,6 +81,27 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
         `,
       });
+
+      // Create a notification for the client if we have their ID
+      if (clientId) {
+        try {
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: clientId,
+              title: "New Proposal Invitation",
+              message: `You have been invited to review a proposal for project: ${projectName}`,
+              type: "info",
+              related_id: proposalId,
+              related_type: "proposal",
+              read: false,
+              created_at: new Date().toISOString()
+            });
+        } catch (notificationError) {
+          console.error("Failed to create client notification:", notificationError);
+          // We don't want to fail the whole request if just the notification fails
+        }
+      }
 
       console.log("Invitation email sent successfully:", emailResponse);
 

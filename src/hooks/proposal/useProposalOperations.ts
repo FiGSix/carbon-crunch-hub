@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
+import { createNotification } from "@/services/notificationService";
 
 export function useProposalOperations() {
   const { toast } = useToast();
@@ -22,6 +23,16 @@ export function useProposalOperations() {
     try {
       setLoading(prev => ({ ...prev, approve: true }));
       
+      // Fetch the proposal to get agent_id for notification
+      const { data: proposal, error: fetchError } = await supabase
+        .from('proposals')
+        .select('agent_id, title')
+        .eq('id', proposalId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Update proposal status
       const { error } = await supabase
         .from('proposals')
         .update({ 
@@ -32,6 +43,18 @@ export function useProposalOperations() {
         .eq('id', proposalId);
       
       if (error) throw error;
+      
+      // Create notification for the agent
+      if (proposal?.agent_id) {
+        await createNotification({
+          userId: proposal.agent_id,
+          title: "Proposal Approved",
+          message: `The proposal "${proposal.title}" has been approved by the client.`,
+          type: "success",
+          relatedId: proposalId,
+          relatedType: "proposal"
+        });
+      }
       
       toast({
         title: "Proposal Approved",
@@ -56,6 +79,15 @@ export function useProposalOperations() {
     try {
       setLoading(prev => ({ ...prev, reject: true }));
       
+      // Fetch the proposal to get agent_id for notification
+      const { data: proposal, error: fetchError } = await supabase
+        .from('proposals')
+        .select('agent_id, title')
+        .eq('id', proposalId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
       const { error } = await supabase
         .from('proposals')
         .update({ 
@@ -65,6 +97,18 @@ export function useProposalOperations() {
         .eq('id', proposalId);
       
       if (error) throw error;
+      
+      // Create notification for the agent
+      if (proposal?.agent_id) {
+        await createNotification({
+          userId: proposal.agent_id,
+          title: "Proposal Rejected",
+          message: `The proposal "${proposal.title}" has been rejected by the client.`,
+          type: "warning",
+          relatedId: proposalId,
+          relatedType: "proposal"
+        });
+      }
       
       toast({
         title: "Proposal Rejected",
@@ -89,6 +133,15 @@ export function useProposalOperations() {
     try {
       setLoading(prev => ({ ...prev, archive: true }));
       
+      // Fetch the proposal for notification
+      const { data: proposal, error: fetchError } = await supabase
+        .from('proposals')
+        .select('client_id, agent_id, title')
+        .eq('id', proposalId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
       const { data, error } = await supabase
         .rpc('archive_proposal', { 
           proposal_id: proposalId, 
@@ -106,6 +159,21 @@ export function useProposalOperations() {
         .from('proposals')
         .update({ review_later_until: null })
         .eq('id', proposalId);
+      
+      // Create notification for the relevant party
+      // If agent archived, notify client; if client archived, notify agent
+      const recipientId = userId === proposal?.client_id ? proposal?.agent_id : proposal?.client_id;
+      
+      if (recipientId) {
+        await createNotification({
+          userId: recipientId,
+          title: "Proposal Archived",
+          message: `The proposal "${proposal?.title}" has been archived.`,
+          type: "info",
+          relatedId: proposalId,
+          relatedType: "proposal"
+        });
+      }
       
       toast({
         title: "Proposal Archived",

@@ -1,15 +1,48 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProposalData } from "./proposal/useProposalData";
 import { useProposalOperations } from "./proposal/useProposalOperations";
 import { ProposalData } from "@/components/proposals/view/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useViewProposal(id?: string, token?: string | null) {
   const { user } = useAuth();
   const { proposal, loading, error } = useProposalData(id, token);
   const { loading: operationLoading, approveProposal, rejectProposal, archiveProposal, toggleReviewLater } = useProposalOperations();
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  
+  // Mark invitation as viewed when opening with token
+  useEffect(() => {
+    const markInvitationViewed = async () => {
+      if (token && proposal?.id && !proposal.invitation_viewed_at) {
+        // Update the invitation_viewed_at timestamp
+        await supabase
+          .from('proposals')
+          .update({ invitation_viewed_at: new Date().toISOString() })
+          .eq('id', proposal.id)
+          .eq('invitation_token', token);
+          
+        // Create notification for the agent that client viewed the proposal
+        if (proposal.agent_id) {
+          await supabase.functions.invoke('create-notification', {
+            body: {
+              userId: proposal.agent_id,
+              title: "Proposal Viewed",
+              message: `The client has viewed your proposal: ${proposal.title}`,
+              type: "info",
+              relatedId: proposal.id,
+              relatedType: "proposal"
+            }
+          });
+        }
+      }
+    };
+    
+    if (!loading && proposal) {
+      markInvitationViewed();
+    }
+  }, [token, proposal, loading]);
   
   // Handle operations on the proposal
   const handleApprove = async () => {
