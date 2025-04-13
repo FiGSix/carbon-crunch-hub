@@ -26,7 +26,7 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
       <Button 
         variant="ghost" 
         size="sm" 
-        className="text-carbon-blue-600"
+        className="retro-button"
         onClick={() => handleViewProposal(proposal.id)}
       >
         View <ArrowRight className="h-4 w-4 ml-1" />

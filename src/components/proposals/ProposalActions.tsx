@@ -13,7 +13,7 @@ export function ProposalActions() {
       {/* Only agents can create new proposals */}
       {userRole === "agent" && (
         <Button 
-          className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium"
+          className="retro-button"
           onClick={() => navigate("/proposals/new")}
         >
           <Plus className="h-5 w-5 mr-2" />
@@ -22,7 +22,7 @@ export function ProposalActions() {
       )}
       <Button 
         variant="outline" 
-        className="border-2 border-crunch-black/10 hover:bg-crunch-yellow/10"
+        className="retro-button"
       >
         <Download className="h-5 w-5 mr-2" />
         Export Proposals

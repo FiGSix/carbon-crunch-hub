@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Card, 
@@ -170,7 +169,7 @@ export function EligibilityStep({
         <Button 
           onClick={nextStep} 
           disabled={!isEligible}
-          className={`retro-button ${isEligible ? "bg-carbon-green-500 hover:bg-carbon-green-600 text-white" : "bg-carbon-gray-200 text-carbon-gray-500 cursor-not-allowed"}`}
+          className="retro-button"
         >
           Next Step <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

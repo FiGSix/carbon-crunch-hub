@@ -91,7 +91,7 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
         variant="outline"
         size="sm"
         onClick={() => setDialogOpen(true)}
-        className="text-carbon-blue-600"
+        className="retro-button"
         disabled={isSubmitting}
       >
         Submit <Send className="h-4 w-4 ml-1" />
@@ -110,7 +110,7 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleSubmitForReview}
-              className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white"
+              className="retro-button"
             >
               Submit
             </AlertDialogAction>

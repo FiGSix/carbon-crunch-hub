@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Card, 
@@ -141,7 +140,7 @@ export function ProjectInfoStep({
         <Button 
           onClick={nextStep} 
           disabled={!projectInfo.name || !projectInfo.address || !projectInfo.size || !projectInfo.commissionDate}
-          className={`retro-button ${projectInfo.name && projectInfo.address && projectInfo.size && projectInfo.commissionDate ? "bg-carbon-green-500 hover:bg-carbon-green-600 text-white" : "bg-carbon-gray-200 text-carbon-gray-500 cursor-not-allowed"}`}
+          className="retro-button"
         >
           Next Step <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

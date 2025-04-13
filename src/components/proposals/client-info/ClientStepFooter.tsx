@@ -22,7 +22,7 @@ export function ClientStepFooter({ nextStep, prevStep, isValid }: ClientStepFoot
       <Button 
         onClick={nextStep} 
         disabled={!isValid}
-        className={`retro-button ${isValid ? "bg-carbon-green-500 hover:bg-carbon-green-600 text-white" : "bg-carbon-gray-200 text-carbon-gray-500 cursor-not-allowed"}`}
+        className="retro-button"
       >
         Next Step <ArrowRight className="ml-2 h-4 w-4" />
       </Button>

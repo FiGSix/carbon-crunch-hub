@@ -73,7 +73,7 @@ export function ProposalSubmitForm({
       <Button 
         onClick={handleSubmitProposal}
         disabled={isSubmitting}
-        className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white retro-button"
+        className="retro-button"
       >
         {isSubmitting ? (
           <>Generating Proposal...</>
