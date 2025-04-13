@@ -17,4 +17,5 @@ export interface ProposalData {
 export interface ProposalOperationResult {
   success: boolean;
   error?: string;
+  reviewLaterUntil?: string | null;
 }

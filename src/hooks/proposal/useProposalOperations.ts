@@ -101,6 +101,12 @@ export function useProposalOperations() {
         throw new Error("Failed to archive proposal. You may not have permission to archive this proposal.");
       }
       
+      // Also update review_later_until to null when archiving
+      await supabase
+        .from('proposals')
+        .update({ review_later_until: null })
+        .eq('id', proposalId);
+      
       toast({
         title: "Proposal Archived",
         description: "The proposal has been successfully archived.",
