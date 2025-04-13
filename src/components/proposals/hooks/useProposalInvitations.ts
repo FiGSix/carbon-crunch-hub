@@ -2,6 +2,12 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ClientInformation, ProjectInformation } from "../types";
+
+interface ProposalContent {
+  clientInfo?: ClientInformation;
+  projectInfo?: ProjectInformation;
+}
 
 export function useProposalInvitations(onProposalUpdate?: () => void) {
   const { toast } = useToast();
@@ -24,7 +30,8 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       if (proposalError) throw proposalError;
       
       // Extract client info from proposal content
-      const clientInfo = proposalData.content?.clientInfo;
+      const content = proposalData.content as ProposalContent;
+      const clientInfo = content?.clientInfo;
       
       if (!clientInfo?.email) {
         throw new Error("No client email found");
@@ -37,7 +44,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           clientEmail: clientInfo.email,
           clientName: clientInfo.name,
           invitationToken: token,
-          projectName: proposalData.content?.projectInfo?.name || 'Carbon Credit Project'
+          projectName: content?.projectInfo?.name || 'Carbon Credit Project'
         })
       });
       
