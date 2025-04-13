@@ -40,13 +40,7 @@ export function useProposalData(id?: string, token?: string | null) {
             throw fetchError;
           }
           
-          // Cast data to ProposalData and ensure review_later_until is defined
-          const proposalData: ProposalData = {
-            ...(data as any),
-            review_later_until: data.review_later_until || null
-          };
-          
-          setProposal(proposalData);
+          setProposal(data as ProposalData);
         } else if (id) {
           // Regular fetch by ID (for authenticated users)
           const { data, error: fetchError } = await supabase
@@ -59,13 +53,7 @@ export function useProposalData(id?: string, token?: string | null) {
             throw fetchError;
           }
           
-          // Cast data to ProposalData and ensure review_later_until is defined
-          const proposalData: ProposalData = {
-            ...(data as any),
-            review_later_until: data.review_later_until || null
-          };
-          
-          setProposal(proposalData);
+          setProposal(data as ProposalData);
         } else {
           setError("No proposal ID or invitation token provided.");
         }

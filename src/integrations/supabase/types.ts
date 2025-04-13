@@ -64,6 +64,7 @@ export type Database = {
           invitation_token: string | null
           invitation_viewed_at: string | null
           project_info: Json
+          review_later_until: string | null
           signed_at: string | null
           status: string
           title: string
@@ -86,6 +87,7 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           project_info?: Json
+          review_later_until?: string | null
           signed_at?: string | null
           status?: string
           title: string
@@ -108,6 +110,7 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           project_info?: Json
+          review_later_until?: string | null
           signed_at?: string | null
           status?: string
           title?: string
