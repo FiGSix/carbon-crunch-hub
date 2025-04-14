@@ -55,10 +55,10 @@ const ViewProposal = () => {
   const projectInfo = proposal.content?.projectInfo || {};
   const isClient = user?.id === proposal.client_id;
   
-  // Modified logic: Client can take action if they're authenticated and proposal is pending (regardless of token)
+  // Client can take action if they're authenticated and proposal is pending (regardless of token)
   const canTakeAction = isClient && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
   
-  console.log("Showing proposal action buttons:", {
+  console.log("ViewProposal - Show action buttons:", {
     isClient,
     status: proposal.status,
     isArchived: !!proposal.archived_at,
