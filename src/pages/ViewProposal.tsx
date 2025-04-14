@@ -55,8 +55,16 @@ const ViewProposal = () => {
   const projectInfo = proposal.content?.projectInfo || {};
   const isClient = user?.id === proposal.client_id;
   
-  // Determine if the user can take actions on this proposal
-  const canTakeAction = isClient && token && proposal.status === 'pending' && !proposal.archived_at;
+  // Modified logic: Client can take action if they're authenticated and proposal is pending (regardless of token)
+  const canTakeAction = isClient && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
+  
+  console.log("Showing proposal action buttons:", {
+    isClient,
+    status: proposal.status,
+    isArchived: !!proposal.archived_at,
+    isReviewLater,
+    canTakeAction
+  });
   
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">

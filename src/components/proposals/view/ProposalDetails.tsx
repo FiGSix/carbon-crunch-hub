@@ -42,11 +42,7 @@ export function ProposalDetails({
   const projectInfo = proposal.content?.projectInfo || {};
   const { userRole } = useAuth();
   
-  // Calculate whether to show actions based on explicit prop or role/status
-  const shouldShowActions = 
-    showActions !== undefined ? 
-    showActions : 
-    (token && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater && userRole === "client");
+  console.log("ProposalDetails - showActions:", showActions);
   
   return (
     <Card className="retro-card">
@@ -90,7 +86,7 @@ export function ProposalDetails({
       <ProposalActionFooter 
         onApprove={onApprove}
         onReject={onReject}
-        showActions={shouldShowActions}
+        showActions={showActions}
       />
     </Card>
   );
