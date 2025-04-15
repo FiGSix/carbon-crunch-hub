@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Send, AlertTriangle } from "lucide-react";
+import { Send, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useProposalSubmission } from "./hooks/useProposalSubmission";
@@ -19,6 +19,7 @@ export function SubmitForReviewButton({
 }: SubmitForReviewButtonProps) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [processing, setProcessing] = useState(false);
   
   const {
     submitProposal,
@@ -35,9 +36,27 @@ export function SubmitForReviewButton({
   });
 
   const handleSubmitForReview = async () => {
-    const result = await submitProposal();
-    if (result.success) {
-      setDialogOpen(false);
+    setProcessing(true);
+    try {
+      const result = await submitProposal();
+      if (result.success) {
+        setDialogOpen(false);
+        toast({
+          title: "Success",
+          description: "Proposal has been submitted for review. You can now send an invitation to the client.",
+        });
+      } else {
+        // Error is already handled in the submitProposal function
+      }
+    } catch (error) {
+      console.error("Unexpected error during submission:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during submission.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -84,16 +103,24 @@ export function SubmitForReviewButton({
         size="sm"
         onClick={() => setDialogOpen(true)}
         className="retro-button"
-        disabled={isSubmitting}
+        disabled={isSubmitting || processing}
       >
-        Submit <Send className="h-4 w-4 ml-1" />
+        {isSubmitting || processing ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Submitting...
+          </>
+        ) : (
+          <>
+            Submit <Send className="h-4 w-4 ml-1" />
+          </>
+        )}
       </Button>
       
       <SubmitForReviewDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmitForReview}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || processing}
         errorDetails={errorDetails}
       />
     </>

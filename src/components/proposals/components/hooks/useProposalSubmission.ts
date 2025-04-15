@@ -104,7 +104,7 @@ export function useProposalSubmission({
         return { success: false };
       }
       
-      console.log("Update result:", updateResult);
+      console.log("Proposal successfully updated to pending status:", updateResult);
       
       // Create a notification for proposal submission
       try {

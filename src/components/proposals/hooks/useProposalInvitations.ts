@@ -27,13 +27,20 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       setSending(true);
       setError(null);
       
+      console.log("Starting invitation process for proposal:", id);
+      
       // Generate token and set expiration date (48 hours from now)
       const expirationDate = new Date();
       expirationDate.setHours(expirationDate.getHours() + 48);
       
       const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
       
-      if (tokenError) throw tokenError;
+      if (tokenError) {
+        console.error("Token generation error:", tokenError);
+        throw tokenError;
+      }
+      
+      console.log("Token generated successfully");
       
       // Update the proposal with invitation details
       const { data: proposalData, error: proposalError } = await supabase
@@ -42,16 +49,48 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         .eq('id', id)
         .single();
       
-      if (proposalError) throw proposalError;
+      if (proposalError) {
+        console.error("Error fetching proposal data:", proposalError);
+        throw proposalError;
+      }
+      
+      if (!proposalData) {
+        throw new Error("No proposal data found");
+      }
       
       // Extract client info from proposal content
       const content = proposalData.content as ProposalContent;
       const clientInfo = content?.clientInfo;
       const clientId = proposalData.client_id;
       
+      console.log("Proposal data retrieved:", { 
+        clientInfo, 
+        clientId,
+        hasClientEmail: !!clientInfo?.email 
+      });
+      
       if (!clientInfo?.email) {
         throw new Error("No client email found in the proposal");
       }
+      
+      // First update the proposal with invitation details before sending email
+      // This prevents issues where the email is sent but the database isn't updated
+      const { error: updateError } = await supabase
+        .from('proposals')
+        .update({
+          invitation_token: token,
+          invitation_sent_at: new Date().toISOString(),
+          invitation_expires_at: expirationDate.toISOString(),
+          invitation_viewed_at: null
+        })
+        .eq('id', id);
+      
+      if (updateError) {
+        console.error("Error updating proposal with invitation details:", updateError);
+        throw updateError;
+      }
+      
+      console.log("Proposal updated with invitation details. Now sending email...");
       
       // Call the edge function to send email
       const response = await supabase.functions.invoke('send-proposal-invitation', {
@@ -67,25 +106,11 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       // Parse the response
       const emailResponse = response.data as InvitationResponse;
+      console.log("Email function response:", emailResponse);
       
       if (!emailResponse.success) {
         const errorMessage = emailResponse.details || emailResponse.error || "Email service error";
         throw new Error(errorMessage);
-      }
-      
-      // Update the proposal with invitation details
-      const { error } = await supabase
-        .from('proposals')
-        .update({
-          invitation_token: token,
-          invitation_sent_at: new Date().toISOString(),
-          invitation_expires_at: expirationDate.toISOString(),
-          invitation_viewed_at: null
-        })
-        .eq('id', id);
-      
-      if (error) {
-        throw error;
       }
       
       // Set the last sent proposal ID for testing reference
@@ -110,7 +135,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       toast({
         title: "Error",
-        description: "Failed to send invitation. Please try again.",
+        description: "Failed to send invitation. Please try again: " + errorMessage,
         variant: "destructive",
       });
       

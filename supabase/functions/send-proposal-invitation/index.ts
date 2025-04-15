@@ -26,8 +26,15 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Log the API key presence (not the actual key) for debugging
+    console.log(`RESEND_API_KEY is ${Deno.env.get("RESEND_API_KEY") ? "set" : "not set"}`);
+    
     // Parse and validate request
     const requestData = await req.json();
+    console.log("Received invitation request data:", JSON.stringify({
+      ...requestData,
+      invitationToken: requestData.invitationToken ? "[REDACTED]" : undefined,
+    }));
     
     // Validate required fields
     const requiredFields = ['proposalId', 'clientEmail', 'invitationToken'];
@@ -117,11 +124,14 @@ const handler = async (req: Request): Promise<Response> => {
       });
     } catch (emailError: any) {
       console.error("Email service error:", emailError);
+      console.error("Error details:", JSON.stringify(emailError));
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: "Email sending failed", 
-          details: emailError.message 
+          details: emailError.message,
+          stack: emailError.stack
         }),
         {
           status: 500,
@@ -131,10 +141,16 @@ const handler = async (req: Request): Promise<Response> => {
     }
   } catch (error: any) {
     console.error("Error in send-proposal-invitation function:", error);
+    console.error("Error details:", JSON.stringify({
+      message: error.message,
+      stack: error.stack
+    }));
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message,
+        stack: error.stack
       }),
       {
         status: 400,
