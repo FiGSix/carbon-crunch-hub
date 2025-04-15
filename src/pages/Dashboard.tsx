@@ -9,7 +9,7 @@ import { FileText, TrendingUp, Wind } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { profile, userRole } = useAuth();
   
   // Mock data for stats
   const portfolioSize = 12.5; // MWp
@@ -24,11 +24,29 @@ const Dashboard = () => {
     return 'Welcome back!';
   };
   
+  const getUserDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    } else if (profile?.first_name) {
+      return profile.first_name;
+    } else if (profile?.company_name) {
+      return profile.company_name;
+    }
+    return 'User';
+  };
+  
+  const formatUserRole = (role: string | null): string => {
+    if (!role) return '';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+  
   return (
     <DashboardLayout>
       <DashboardHeader 
         title="Dashboard" 
         description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}
+        userName={getUserDisplayName()}
+        userRole={formatUserRole(userRole)}
       />
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

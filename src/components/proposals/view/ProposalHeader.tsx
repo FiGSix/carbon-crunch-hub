@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CheckCircle2, Archive, ChevronLeft } from "lucide-react";
 import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
@@ -34,10 +33,26 @@ export function ProposalHeader({
   showBackButton = true
 }: ProposalHeaderProps) {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
+  const { userRole, profile } = useAuth();
 
   const handleBack = () => {
     navigate('/proposals');
+  };
+
+  const getUserDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    } else if (profile?.first_name) {
+      return profile.first_name;
+    } else if (profile?.company_name) {
+      return profile.company_name;
+    }
+    return 'User';
+  };
+
+  const formatUserRole = (role: string | null): string => {
+    if (!role) return '';
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   return (
@@ -55,7 +70,14 @@ export function ProposalHeader({
         )}
         <div>
           <h1 className="text-3xl font-bold text-carbon-gray-900">{title}</h1>
-          <p className="text-carbon-gray-600">Carbon Credit Proposal</p>
+          <div className="flex flex-col">
+            <p className="text-carbon-gray-600">Carbon Credit Proposal</p>
+            {userRole === "agent" && (
+              <p className="text-sm text-carbon-gray-500">
+                Logged in as <span className="font-semibold">{getUserDisplayName()}</span> ({formatUserRole(userRole)})
+              </p>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-3">
