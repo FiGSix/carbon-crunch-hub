@@ -60,6 +60,3 @@ backend = "postgres"
 # Edge Functions configuration
 [functions.send-proposal-invitation]
 verify_jwt = true
-
-[functions.create-notification]
-verify_jwt = true
