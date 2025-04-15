@@ -39,6 +39,7 @@ export const useProposals = () => {
           status, 
           content, 
           client_id,
+          agent_id,
           annual_energy,
           carbon_credits,
           client_share_percentage,
@@ -100,7 +101,7 @@ export const useProposals = () => {
         return;
       }
       
-      // Fetch client profiles in a separate query to avoid RLS issues
+      // Fetch client profiles in a separate query
       const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
       let clientProfiles: Record<string, any> = {};
       
@@ -122,17 +123,50 @@ export const useProposals = () => {
         }
       }
       
+      // Fetch agent profiles in a separate query
+      const agentIds = proposalsData
+        .map(p => p.agent_id)
+        .filter((id): id is string => id !== null && id !== undefined);
+      
+      let agentProfiles: Record<string, any> = {};
+      
+      if (agentIds.length > 0) {
+        const { data: agentsData, error: agentsError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', agentIds);
+          
+        if (agentsError) {
+          console.error("Error fetching agent profiles:", agentsError);
+          // Continue with partial data rather than failing completely
+        } else if (agentsData) {
+          // Convert to a map for easy lookup
+          agentProfiles = agentsData.reduce((acc, profile) => {
+            acc[profile.id] = profile;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+      
       console.log("Client profiles:", clientProfiles);
+      console.log("Agent profiles:", agentProfiles);
       
       // Transform the data to match the Proposal interface
       let formattedProposals: Proposal[] = proposalsData.map(item => {
         // Get client profile from our map
         const clientProfile = clientProfiles[item.client_id];
         
+        // Get agent profile from our map
+        const agentProfile = item.agent_id ? agentProfiles[item.agent_id] : null;
+        
         // Handle different return types from Supabase
         const clientName = clientProfile 
           ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() 
           : 'Unknown Client';
+          
+        const agentName = agentProfile 
+          ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() 
+          : null;
           
         // Parse size safely from content - making sure to check types properly for TypeScript
         let size = 0;
@@ -161,7 +195,9 @@ export const useProposals = () => {
           invitation_sent_at: item.invitation_sent_at,
           invitation_viewed_at: item.invitation_viewed_at,
           invitation_expires_at: item.invitation_expires_at,
-          review_later_until: item.review_later_until
+          review_later_until: item.review_later_until,
+          agent_id: item.agent_id,
+          agent: agentName || 'Unassigned'
         };
       });
       

@@ -84,14 +84,25 @@ export function useProposalSubmission({
         return { success: false, error: "Invalid proposal status" };
       }
       
-      // Update the proposal status and set the agent_id
+      // Verify that the agent is assigned to this proposal
+      if (existingProposal.agent_id !== user.id) {
+        console.error("Agent mismatch:", { proposalAgentId: existingProposal.agent_id, userId: user.id });
+        toast({
+          title: "Permission Denied",
+          description: "You are not assigned to this proposal.",
+          variant: "destructive"
+        });
+        return { success: false, error: "You are not assigned to this proposal" };
+      }
+      
+      // Update only the proposal status to 'pending'
       const { data: updateResult, error: updateError } = await supabase
         .from('proposals')
         .update({ 
-          status: 'pending',
-          agent_id: user.id
+          status: 'pending'
         })
         .eq('id', proposalId)
+        .eq('status', 'draft') // Extra safety check
         .select();
       
       if (updateError) {

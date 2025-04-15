@@ -11,6 +11,8 @@ export interface Proposal {
   invitation_viewed_at?: string;
   invitation_expires_at?: string;
   review_later_until?: string;
+  agent_id?: string | null;
+  agent?: string;
 }
 
 export interface ProposalListProps {

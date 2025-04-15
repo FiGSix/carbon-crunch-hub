@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export type { Proposal } from "./ProposalListTypes";
 
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
-  const { userRole } = useAuth();
+  const { userRole, user } = useAuth();
   
   return (
     <div className="overflow-x-auto">
@@ -29,13 +29,14 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Size (MWp)</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "agent" && <TableHead>Invitation</TableHead>}
+            {userRole === "admin" && <TableHead>Agent</TableHead>}
             <TableHead className="text-right">Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {proposals.map((proposal) => (
-            <TableRow key={proposal.id}>
+            <TableRow key={proposal.id} className={proposal.agent_id === user?.id ? "bg-carbon-green-50" : ""}>
               <TableCell className="font-medium">{proposal.name}</TableCell>
               <TableCell>{proposal.client}</TableCell>
               <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
@@ -49,6 +50,11 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
               {userRole === "agent" && (
                 <TableCell>
                   <InvitationStatus proposal={proposal} />
+                </TableCell>
+              )}
+              {userRole === "admin" && (
+                <TableCell>
+                  {proposal.agent || "Unassigned"}
                 </TableCell>
               )}
               <TableCell className="text-right">R {proposal.revenue.toLocaleString()}</TableCell>

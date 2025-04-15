@@ -16,6 +16,7 @@ import {
 export interface ProposalData {
   title: string;
   client_id: string;
+  agent_id: string | null;
   eligibility_criteria: EligibilityCriteria;
   project_info: ProjectInformation;
   annual_energy: number;
@@ -119,10 +120,11 @@ export async function createProposal(
     const clientSharePercentage = getClientSharePercentage(projectInfo.size);
     const agentCommissionPercentage = getAgentCommissionPercentage(projectInfo.size);
     
-    // Create the proposal data
+    // Create the proposal data with agent_id assigned at creation
     const proposalData: ProposalData = {
       title: projectInfo.name,
       client_id: clientId,
+      agent_id: user.id, // Assign the agent_id when creating the proposal
       eligibility_criteria: eligibility,
       project_info: projectInfo,
       annual_energy: annualEnergy,

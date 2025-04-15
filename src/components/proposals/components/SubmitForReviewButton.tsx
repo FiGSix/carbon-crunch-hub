@@ -44,7 +44,7 @@ export function SubmitForReviewButton({
         setDialogOpen(false);
         toast({
           title: "Proposal Submitted",
-          description: "Proposal has been submitted for review. You can now send an invitation to the client.",
+          description: "Proposal has been submitted for review. Status changed to 'Pending'. You can now send an invitation to the client.",
         });
         // Trigger parent component's update function if provided
         if (onProposalUpdate) {
