@@ -45,9 +45,11 @@ export async function fetchProposalsData(
   } else if (userRole === 'admin') {
     console.log("Admin user - no user-specific filtering applied");
     // Admins can see all proposals, no filter needed
-  } else {
+  } else if (userRole === 'agent') {
     // For agents, the RLS policy handles the filtering automatically
     console.log("Agent user - RLS will handle filtering");
+  } else {
+    console.warn("Unknown or missing user role:", userRole);
   }
   
   // Apply status filter if not 'all'
@@ -103,7 +105,11 @@ export async function fetchProposalsData(
     
     if (error) {
       console.error("Supabase query error:", error);
-      throw error;
+      if (error.code === 'PGRST116') {
+        throw new Error("Access denied: You don't have permission to view these proposals");
+      } else {
+        throw error;
+      }
     }
     
     console.log("Supabase returned proposals count:", proposalsData?.length || 0);
