@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,9 +22,13 @@ interface SubmitForReviewButtonProps {
   onProposalUpdate?: () => void;
 }
 
-export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpdate }: SubmitForReviewButtonProps) {
+export function SubmitForReviewButton({ 
+  proposalId, 
+  proposalTitle, 
+  onProposalUpdate 
+}: SubmitForReviewButtonProps) {
   const { toast } = useToast();
-  const { user, userRole, refreshUser } = useAuth(); // Get auth context for more reliable user info
+  const { user, userRole, refreshUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
@@ -35,45 +38,52 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       setIsSubmitting(true);
       setErrorDetails(null);
       
-      // Use user from Auth context instead of fetching it again
+      // Robust logging for debugging
+      console.log("Submitting proposal for review", { 
+        proposalId, 
+        userId: user?.id, 
+        userRole 
+      });
+      
+      // Validate user and role prerequisites
       if (!user) {
-        console.error("No authenticated user found in context");
-        setErrorDetails("No authenticated user found. Please try logging out and back in.");
-        throw new Error("User not authenticated");
+        console.error("No authenticated user found");
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again.",
+          variant: "destructive"
+        });
+        return;
       }
       
       if (userRole !== 'agent') {
         console.error("User does not have agent role:", userRole);
-        setErrorDetails(`User does not have agent role. Current role: ${userRole || 'none'}`);
-        throw new Error("User must be an agent to submit proposals");
+        toast({
+          title: "Permission Denied",
+          description: `Current role (${userRole}) cannot submit proposals`,
+          variant: "destructive"
+        });
+        return;
       }
       
-      console.log("Current user ID:", user.id, "Role:", userRole);
-      
-      // First, check if the proposal exists before updating
-      console.log("Verifying proposal exists...", proposalId);
+      // First, check if the proposal exists and belongs to this agent
       const { data: existingProposal, error: checkError } = await supabase
         .from('proposals')
-        .select('id, title, client_id')
+        .select('id, title, client_id, agent_id')
         .eq('id', proposalId)
-        .maybeSingle();
+        .single();
       
-      if (checkError) {
-        console.error("Error checking proposal:", checkError);
-        setErrorDetails(`Error verifying proposal: ${checkError.message}`);
-        throw new Error(`Error verifying proposal: ${checkError.message}`);
+      if (checkError || !existingProposal) {
+        console.error("Proposal check error:", checkError);
+        toast({
+          title: "Proposal Error",
+          description: "Could not find the specified proposal.",
+          variant: "destructive"
+        });
+        return;
       }
       
-      if (!existingProposal) {
-        console.error("No proposal found with ID:", proposalId);
-        setErrorDetails(`Proposal not found with ID: ${proposalId}`);
-        throw new Error(`Proposal not found with ID: ${proposalId}`);
-      }
-      
-      console.log("Found proposal to update:", existingProposal);
-      
-      // Update the proposal status to "pending" and set the agent_id
-      console.log("Updating proposal status...");
+      // Update the proposal status and set the agent_id
       const { error: updateError } = await supabase
         .from('proposals')
         .update({ 
@@ -83,61 +93,48 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
         .eq('id', proposalId);
       
       if (updateError) {
-        console.error("Update error:", updateError);
-        
-        // Detailed error information for RLS or other database issues
-        if (updateError.code === "42501" || updateError.message.includes("permission denied")) {
-          setErrorDetails(`Database permission error: You don't have permission to update this proposal. This may be due to Row Level Security issues.`);
-        } else {
-          setErrorDetails(`Database update error: ${updateError.message}`);
-        }
-        
-        throw updateError;
-      }
-      
-      console.log("Proposal updated successfully. Creating notification...");
-      
-      // Create a notification for admins
-      try {
-        await createNotification({
-          userId: user.id,
-          title: "Proposal Submitted",
-          message: `Proposal "${proposalTitle}" has been submitted for review.`,
-          type: "info",
-          relatedId: proposalId,
-          relatedType: "proposal"
+        console.error("Proposal update error:", updateError);
+        toast({
+          title: "Update Failed",
+          description: updateError.message,
+          variant: "destructive"
         });
-        console.log("Notification created successfully");
-      } catch (notificationError) {
-        // Don't throw here, just log the error - we don't want notification failure to block the submission
-        console.error("Error creating notification:", notificationError);
-        // Continue execution - the proposal was updated successfully
+        return;
       }
       
-      toast({
-        title: "Success",
-        description: "Proposal has been submitted for review.",
-        variant: "default",
+      // Create a notification for proposal submission
+      await createNotification({
+        userId: user.id,
+        title: "Proposal Submitted",
+        message: `Proposal "${proposalTitle}" has been submitted for review.`,
+        type: "info",
+        relatedId: proposalId,
+        relatedType: "proposal"
       });
       
-      // Refresh the proposals list
+      // Trigger proposal list refresh if callback provided
       if (onProposalUpdate) {
-        console.log("Triggering proposal list refresh");
         onProposalUpdate();
       }
-    } catch (error) {
-      console.error("Error submitting proposal for review:", error);
       
-      // Show more detailed error info to the user
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      // Show success toast
       toast({
-        title: "Error",
-        description: `Failed to submit proposal for review: ${errorMessage}`,
-        variant: "destructive",
+        title: "Success",
+        description: "Proposal submitted for review successfully.",
+        variant: "default"
+      });
+      
+      // Close dialog
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Unexpected error in proposal submission:", error);
+      toast({
+        title: "Unexpected Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
-      setDialogOpen(false);
     }
   };
 
