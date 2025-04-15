@@ -12,18 +12,44 @@ import { InvitationStatus } from "./components/InvitationStatus";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ProposalListProps } from "./ProposalListTypes";
 import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useEffect } from "react";
 
 export type { Proposal } from "./ProposalListTypes";
 
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
   const { userRole, user } = useAuth();
   
-  console.log("ProposalList - userRole:", userRole, "userId:", user?.id);
-  console.log("ProposalList - received proposals count:", proposals.length);
+  // Enhanced logging for debugging
+  useEffect(() => {
+    console.log("ProposalList - userRole:", userRole, "userId:", user?.id);
+    console.log("ProposalList - received proposals count:", proposals.length);
+    
+    // Log the first proposal for debugging if available
+    if (proposals.length > 0) {
+      console.log("ProposalList - first proposal sample:", {
+        id: proposals[0].id,
+        name: proposals[0].name,
+        agent_id: proposals[0].agent_id,
+        status: proposals[0].status
+      });
+    }
+  }, [proposals, userRole, user]);
   
-  // Server-side filtering is already happening in useProposalFetcher, so we don't need
-  // to filter again on the client side. This was causing the issue with agents not seeing proposals.
-  
+  // No proposals found state
+  if (proposals.length === 0) {
+    return (
+      <Alert className="my-4">
+        <AlertTitle>No proposals found</AlertTitle>
+        <AlertDescription>
+          {userRole === "agent" 
+            ? "You don't have any proposals yet. Create a new proposal to get started."
+            : "No proposals found matching your criteria. Try changing the filters."}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <Table>

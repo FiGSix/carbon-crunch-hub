@@ -1,20 +1,35 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { FileText, RefreshCw } from "lucide-react";
 import { ProposalList } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/components/proposals/ProposalFilters";
 import { ProposalActions } from "@/components/proposals/ProposalActions";
 import { ProposalLoadingState } from "@/components/proposals/ProposalLoadingState";
 import { useProposals } from "@/hooks/useProposals";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function ProposalsSection() {
   const { 
     proposals, 
     loading, 
+    error,
     handleFilterChange, 
     fetchProposals 
   } = useProposals();
+  
+  const { user, userRole } = useAuth();
+  
+  // Log auth state on mount for debugging
+  useEffect(() => {
+    console.log("ProposalsSection - Auth state:", { 
+      isAuthenticated: !!user,
+      userId: user?.id, 
+      userRole 
+    });
+  }, [user, userRole]);
   
   const handleProposalUpdate = () => {
     console.log("Proposal update triggered - refreshing proposals list");
@@ -36,10 +51,30 @@ export function ProposalsSection() {
           onStatusChange={(value) => handleFilterChange('status', value)}
           onSortChange={(value) => handleFilterChange('sort', value)}
         />
+        
+        {error && (
+          <Alert variant="destructive" className="my-4">
+            <AlertTitle>Error Loading Proposals</AlertTitle>
+            <AlertDescription className="flex flex-col gap-2">
+              <p>{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="self-start"
+                onClick={() => fetchProposals()}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <ProposalLoadingState 
           loading={loading} 
           hasProposals={proposals.length > 0} 
         />
+        
         {!loading && proposals.length > 0 && (
           <ProposalList 
             proposals={proposals} 

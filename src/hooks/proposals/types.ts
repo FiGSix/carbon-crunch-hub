@@ -10,26 +10,10 @@ export interface ProposalFilters {
 export interface UseProposalsResult {
   proposals: Proposal[];
   loading: boolean;
+  error?: string | null;
   filters: ProposalFilters;
   handleFilterChange: (filter: string, value: string) => void;
   fetchProposals: () => Promise<void>;
-}
-
-export interface RawProposalData {
-  id: string;
-  title: string;
-  created_at: string;
-  status: string;
-  content: any;
-  client_id: string;
-  agent_id: string;
-  annual_energy: number;
-  carbon_credits: number;
-  client_share_percentage: number;
-  invitation_sent_at: string | null;
-  invitation_viewed_at: string | null;
-  invitation_expires_at: string | null;
-  review_later_until: string | null;
 }
 
 export interface ProfileData {
@@ -37,4 +21,21 @@ export interface ProfileData {
   first_name: string | null;
   last_name: string | null;
   email: string;
+}
+
+export interface RawProposalData {
+  id: string;
+  title: string;
+  content: any;
+  status: string;
+  created_at: string;
+  client_id: string;
+  agent_id: string | null;
+  annual_energy: number | null;
+  carbon_credits: number | null;
+  client_share_percentage: number | null;
+  invitation_sent_at: string | null;
+  invitation_viewed_at: string | null;
+  invitation_expires_at: string | null;
+  review_later_until: string | null;
 }
