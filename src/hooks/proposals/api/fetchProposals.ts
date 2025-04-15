@@ -37,20 +37,17 @@ export async function fetchProposalsData(
       review_later_until
     `);
   
-  // Add role-based filtering
-  if (userRole === 'agent' && userId) {
-    console.log("Filtering proposals for agent:", userId);
-    // Agents can only see their own proposals
-    query = query.eq('agent_id', userId);
-  } else if (userRole === 'client' && userId) {
+  // Add role-based filtering - only needed for clients
+  // Agents will automatically be restricted by RLS
+  if (userRole === 'client' && userId) {
     console.log("Filtering proposals for client:", userId);
-    // Clients can only see their own proposals
     query = query.eq('client_id', userId);
   } else if (userRole === 'admin') {
     console.log("Admin user - no user-specific filtering applied");
     // Admins can see all proposals, no filter needed
   } else {
-    console.warn("Unknown user role or missing ID:", userRole, userId);
+    // For agents, the RLS policy handles the filtering automatically
+    console.log("Agent user - RLS will handle filtering");
   }
   
   // Apply status filter if not 'all'
