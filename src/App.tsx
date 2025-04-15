@@ -24,6 +24,7 @@ import ForceLogout from "./pages/ForceLogout";
 import TestInvitations from "./pages/TestInvitations";
 import Notifications from "./pages/Notifications";
 import ButtonShowcase from "./pages/ButtonShowcase";
+import TestAgent from "./pages/TestAgent";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,11 @@ const App = () => (
             <Route path="/notifications" element={
               <PrivateRoute>
                 <Notifications />
+              </PrivateRoute>
+            } />
+            <Route path="/test-agent" element={
+              <PrivateRoute>
+                <TestAgent />
               </PrivateRoute>
             } />
             
