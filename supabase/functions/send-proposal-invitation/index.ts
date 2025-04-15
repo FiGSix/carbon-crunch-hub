@@ -27,7 +27,12 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     // Log the API key presence (not the actual key) for debugging
-    console.log(`RESEND_API_KEY is ${Deno.env.get("RESEND_API_KEY") ? "set" : "not set"}`);
+    const hasApiKey = !!Deno.env.get("RESEND_API_KEY");
+    console.log(`RESEND_API_KEY is ${hasApiKey ? "set" : "not set"}`);
+    
+    if (!hasApiKey) {
+      throw new Error("RESEND_API_KEY is not configured. Please set this environment variable.");
+    }
     
     // Parse and validate request
     const requestData = await req.json();
@@ -47,9 +52,9 @@ const handler = async (req: Request): Promise<Response> => {
     const { 
       proposalId, 
       clientEmail, 
-      clientName, 
+      clientName = 'Client', 
       invitationToken,
-      projectName,
+      projectName = 'Carbon Credit Project',
       clientId 
     }: InvitationRequest = requestData;
 
@@ -104,6 +109,8 @@ const handler = async (req: Request): Promise<Response> => {
               read: false,
               created_at: new Date().toISOString()
             });
+            
+          console.log("Client notification created successfully");
         } catch (notificationError) {
           console.error("Failed to create client notification:", notificationError);
           // We don't want to fail the whole request if just the notification fails
@@ -124,14 +131,18 @@ const handler = async (req: Request): Promise<Response> => {
       });
     } catch (emailError: any) {
       console.error("Email service error:", emailError);
-      console.error("Error details:", JSON.stringify(emailError));
+      console.error("Error details:", JSON.stringify({
+        message: emailError.message,
+        code: emailError.statusCode,
+        name: emailError.name
+      }));
       
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: "Email sending failed", 
           details: emailError.message,
-          stack: emailError.stack
+          code: emailError.statusCode
         }),
         {
           status: 500,

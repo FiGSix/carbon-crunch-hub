@@ -41,7 +41,7 @@ export function useProposalSubmission({
           description: "Please log in again.",
           variant: "destructive"
         });
-        return { success: false };
+        return { success: false, error: "Authentication error" };
       }
       
       if (userRole !== 'agent') {
@@ -51,7 +51,7 @@ export function useProposalSubmission({
           description: `Current role (${userRole}) cannot submit proposals`,
           variant: "destructive"
         });
-        return { success: false };
+        return { success: false, error: "Permission denied" };
       }
       
       // First, check if the proposal exists and belongs to this agent
@@ -68,7 +68,7 @@ export function useProposalSubmission({
           description: "Could not find the specified proposal.",
           variant: "destructive"
         });
-        return { success: false };
+        return { success: false, error: checkError?.message || "Proposal not found" };
       }
       
       // Log the existing proposal for debugging
@@ -81,7 +81,7 @@ export function useProposalSubmission({
           description: "Only draft proposals can be submitted for review.",
           variant: "destructive"
         });
-        return { success: false };
+        return { success: false, error: "Invalid proposal status" };
       }
       
       // Update the proposal status and set the agent_id
@@ -101,7 +101,7 @@ export function useProposalSubmission({
           description: updateError.message,
           variant: "destructive"
         });
-        return { success: false };
+        return { success: false, error: updateError.message };
       }
       
       console.log("Proposal successfully updated to pending status:", updateResult);
@@ -127,22 +127,11 @@ export function useProposalSubmission({
         onProposalUpdate();
       }
       
-      // Show success toast
-      toast({
-        title: "Success",
-        description: "Proposal submitted for review successfully.",
-        variant: "default"
-      });
-      
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Unexpected error in proposal submission:", error);
-      toast({
-        title: "Unexpected Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
-      });
-      return { success: false };
+      setErrorDetails(error.message || "An unexpected error occurred");
+      return { success: false, error: error.message || "An unexpected error occurred" };
     } finally {
       setIsSubmitting(false);
     }

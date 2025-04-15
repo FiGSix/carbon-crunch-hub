@@ -29,6 +29,25 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       console.log("Starting invitation process for proposal:", id);
       
+      // First verify the proposal is in the correct status
+      const { data: proposalData, error: proposalError } = await supabase
+        .from('proposals')
+        .select('status, content, client_id')
+        .eq('id', id)
+        .single();
+      
+      if (proposalError) {
+        console.error("Error fetching proposal data:", proposalError);
+        return { success: false, error: proposalError.message };
+      }
+      
+      // Verify proposal is in the pending status
+      if (proposalData.status !== 'pending') {
+        const errorMsg = `Proposal must be in 'pending' status to send invitations. Current status: ${proposalData.status}`;
+        console.error(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      
       // Generate token and set expiration date (48 hours from now)
       const expirationDate = new Date();
       expirationDate.setHours(expirationDate.getHours() + 48);
@@ -37,25 +56,14 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       if (tokenError) {
         console.error("Token generation error:", tokenError);
-        throw tokenError;
+        return { success: false, error: tokenError.message };
       }
       
       console.log("Token generated successfully");
       
       // Update the proposal with invitation details
-      const { data: proposalData, error: proposalError } = await supabase
-        .from('proposals')
-        .select('content, client_id')
-        .eq('id', id)
-        .single();
-      
-      if (proposalError) {
-        console.error("Error fetching proposal data:", proposalError);
-        throw proposalError;
-      }
-      
       if (!proposalData) {
-        throw new Error("No proposal data found");
+        return { success: false, error: "No proposal data found" };
       }
       
       // Extract client info from proposal content
@@ -70,7 +78,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       });
       
       if (!clientInfo?.email) {
-        throw new Error("No client email found in the proposal");
+        return { success: false, error: "No client email found in the proposal" };
       }
       
       // First update the proposal with invitation details before sending email
@@ -87,7 +95,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       if (updateError) {
         console.error("Error updating proposal with invitation details:", updateError);
-        throw updateError;
+        return { success: false, error: updateError.message };
       }
       
       console.log("Proposal updated with invitation details. Now sending email...");
@@ -110,16 +118,23 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       if (!emailResponse.success) {
         const errorMessage = emailResponse.details || emailResponse.error || "Email service error";
-        throw new Error(errorMessage);
+        console.error("Email sending failed:", errorMessage);
+        
+        // If email sending fails, we should revert the invitation token update
+        await supabase
+          .from('proposals')
+          .update({
+            invitation_token: null,
+            invitation_sent_at: null,
+            invitation_expires_at: null
+          })
+          .eq('id', id);
+          
+        return { success: false, error: errorMessage };
       }
       
       // Set the last sent proposal ID for testing reference
       setLastSentProposalId(id);
-      
-      toast({
-        title: "Invitation Sent",
-        description: "An email invitation has been sent to the client.",
-      });
       
       // Refresh the proposal list
       if (onProposalUpdate) {
@@ -127,17 +142,11 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       }
       
       return { success: true, proposalId: id, token };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending invitation:", error);
       
       const errorMessage = error instanceof Error ? error.message : "Failed to send invitation";
       setError(errorMessage);
-      
-      toast({
-        title: "Error",
-        description: "Failed to send invitation. Please try again: " + errorMessage,
-        variant: "destructive",
-      });
       
       return { success: false, error: errorMessage };
     } finally {

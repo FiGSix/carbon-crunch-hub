@@ -38,15 +38,25 @@ export function SubmitForReviewButton({
   const handleSubmitForReview = async () => {
     setProcessing(true);
     try {
+      console.log("Submitting proposal for review", { proposalId });
       const result = await submitProposal();
       if (result.success) {
         setDialogOpen(false);
         toast({
-          title: "Success",
+          title: "Proposal Submitted",
           description: "Proposal has been submitted for review. You can now send an invitation to the client.",
         });
+        // Trigger parent component's update function if provided
+        if (onProposalUpdate) {
+          onProposalUpdate();
+        }
       } else {
-        // Error is already handled in the submitProposal function
+        console.error("Submission failed:", result.error || "Unknown error");
+        toast({
+          title: "Submission Failed",
+          description: result.error || "There was an error submitting the proposal. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Unexpected error during submission:", error);
