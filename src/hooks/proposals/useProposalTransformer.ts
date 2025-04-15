@@ -11,9 +11,9 @@ import { fetchProfilesByIds } from "./api/fetchProfiles";
 export function useProposalTransformer() {
   const transformProposalDataWithProfiles = async (
     proposalsData: RawProposalData[]
-  ): Promise<Proposal[]> {
+  ) => {
     if (!proposalsData || proposalsData.length === 0) {
-      return [];
+      return [] as Proposal[];
     }
     
     // Extract unique client and agent IDs
