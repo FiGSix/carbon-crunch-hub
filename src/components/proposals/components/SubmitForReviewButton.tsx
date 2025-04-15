@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export function SubmitForReviewButton({
       // First, check if the proposal exists and belongs to this agent
       const { data: existingProposal, error: checkError } = await supabase
         .from('proposals')
-        .select('id, title, client_id, agent_id')
+        .select('id, title, client_id, agent_id, status')
         .eq('id', proposalId)
         .single();
       
@@ -83,14 +84,28 @@ export function SubmitForReviewButton({
         return;
       }
       
+      // Log the existing proposal for debugging
+      console.log("Existing proposal:", existingProposal);
+      
+      if (existingProposal.status !== 'draft') {
+        console.error("Proposal is not in draft status:", existingProposal.status);
+        toast({
+          title: "Invalid Status",
+          description: "Only draft proposals can be submitted for review.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Update the proposal status and set the agent_id
-      const { error: updateError } = await supabase
+      const { data: updateResult, error: updateError } = await supabase
         .from('proposals')
         .update({ 
           status: 'pending',
           agent_id: user.id
         })
-        .eq('id', proposalId);
+        .eq('id', proposalId)
+        .select();
       
       if (updateError) {
         console.error("Proposal update error:", updateError);
@@ -102,15 +117,23 @@ export function SubmitForReviewButton({
         return;
       }
       
+      console.log("Update result:", updateResult);
+      
       // Create a notification for proposal submission
-      await createNotification({
-        userId: user.id,
-        title: "Proposal Submitted",
-        message: `Proposal "${proposalTitle}" has been submitted for review.`,
-        type: "info",
-        relatedId: proposalId,
-        relatedType: "proposal"
-      });
+      try {
+        await createNotification({
+          userId: user.id,
+          title: "Proposal Submitted",
+          message: `Proposal "${proposalTitle}" has been submitted for review.`,
+          type: "info",
+          relatedId: proposalId,
+          relatedType: "proposal"
+        });
+        console.log("Notification created successfully");
+      } catch (notificationError) {
+        console.error("Failed to create notification:", notificationError);
+        // Continue even if notification fails
+      }
       
       // Trigger proposal list refresh if callback provided
       if (onProposalUpdate) {
