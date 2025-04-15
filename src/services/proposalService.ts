@@ -16,7 +16,7 @@ import {
 export interface ProposalData {
   title: string;
   client_id: string;
-  agent_id: string | null;
+  agent_id: string; // Changed to not nullable
   eligibility_criteria: EligibilityCriteria;
   project_info: ProjectInformation;
   annual_energy: number;
@@ -124,7 +124,7 @@ export async function createProposal(
     const proposalData: ProposalData = {
       title: projectInfo.name,
       client_id: clientId,
-      agent_id: user.id, // Assign the agent_id when creating the proposal
+      agent_id: user.id, // Always assign the current user as the agent
       eligibility_criteria: eligibility,
       project_info: projectInfo,
       annual_energy: annualEnergy,

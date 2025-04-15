@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Proposal } from "@/components/proposals/ProposalList";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ProposalFilters {
   search: string;
@@ -12,6 +13,7 @@ export interface ProposalFilters {
 
 export const useProposals = () => {
   const { toast } = useToast();
+  const { userRole, user } = useAuth();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProposalFilters>({
@@ -48,6 +50,12 @@ export const useProposals = () => {
           invitation_expires_at,
           review_later_until
         `);
+      
+      // Filter by role
+      if (userRole === 'agent' && user?.id) {
+        // Agents can only see their own proposals
+        query = query.eq('agent_id', user.id);
+      }
       
       // Apply status filter if not 'all'
       if (filters.status !== 'all') {
@@ -166,7 +174,7 @@ export const useProposals = () => {
           
         const agentName = agentProfile 
           ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() 
-          : null;
+          : 'Unassigned';
           
         // Parse size safely from content - making sure to check types properly for TypeScript
         let size = 0;
@@ -197,7 +205,7 @@ export const useProposals = () => {
           invitation_expires_at: item.invitation_expires_at,
           review_later_until: item.review_later_until,
           agent_id: item.agent_id,
-          agent: agentName || 'Unassigned'
+          agent: agentName
         };
       });
       
@@ -221,7 +229,7 @@ export const useProposals = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast, filters]); // Re-fetch when filters change
+  }, [toast, filters, userRole, user]); // Add userRole and user to dependencies
 
   // Initial fetch on component mount
   useEffect(() => {

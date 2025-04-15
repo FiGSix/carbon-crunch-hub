@@ -18,6 +18,11 @@ export type { Proposal } from "./ProposalListTypes";
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
   const { userRole, user } = useAuth();
   
+  // Filter proposals based on user role
+  const filteredProposals = userRole === "agent" 
+    ? proposals.filter(proposal => proposal.agent_id === user?.id)
+    : proposals;
+  
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -35,7 +40,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
           </TableRow>
         </TableHeader>
         <TableBody>
-          {proposals.map((proposal) => (
+          {filteredProposals.map((proposal) => (
             <TableRow key={proposal.id} className={proposal.agent_id === user?.id ? "bg-carbon-green-50" : ""}>
               <TableCell className="font-medium">{proposal.name}</TableCell>
               <TableCell>{proposal.client}</TableCell>
