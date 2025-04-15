@@ -1,10 +1,11 @@
 
 import React, { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,7 @@ interface SubmitForReviewButtonProps {
 
 export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpdate }: SubmitForReviewButtonProps) {
   const { toast } = useToast();
+  const { user, userRole, refreshUser } = useAuth(); // Get auth context for more reliable user info
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
@@ -33,23 +35,20 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       setIsSubmitting(true);
       setErrorDetails(null);
       
-      // Get the current user to set as the agent
-      console.log("Getting current user...");
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Auth error:", userError);
-        setErrorDetails(`Authentication error: ${userError.message}`);
-        throw new Error(`User not authenticated: ${userError.message}`);
-      }
-      
+      // Use user from Auth context instead of fetching it again
       if (!user) {
-        console.error("No user found");
-        setErrorDetails("No authenticated user found");
+        console.error("No authenticated user found in context");
+        setErrorDetails("No authenticated user found. Please try logging out and back in.");
         throw new Error("User not authenticated");
       }
       
-      console.log("Current user ID:", user.id);
+      if (userRole !== 'agent') {
+        console.error("User does not have agent role:", userRole);
+        setErrorDetails(`User does not have agent role. Current role: ${userRole || 'none'}`);
+        throw new Error("User must be an agent to submit proposals");
+      }
+      
+      console.log("Current user ID:", user.id, "Role:", userRole);
       
       // First, check if the proposal exists before updating
       console.log("Verifying proposal exists...", proposalId);
@@ -85,7 +84,14 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       
       if (updateError) {
         console.error("Update error:", updateError);
-        setErrorDetails(`Database update error: ${updateError.message}`);
+        
+        // Detailed error information for RLS or other database issues
+        if (updateError.code === "42501" || updateError.message.includes("permission denied")) {
+          setErrorDetails(`Database permission error: You don't have permission to update this proposal. This may be due to Row Level Security issues.`);
+        } else {
+          setErrorDetails(`Database update error: ${updateError.message}`);
+        }
+        
         throw updateError;
       }
       
@@ -134,6 +140,42 @@ export function SubmitForReviewButton({ proposalId, proposalTitle, onProposalUpd
       setDialogOpen(false);
     }
   };
+
+  // Show a special error if no user is found
+  if (!user) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => toast({
+          title: "Authentication Error",
+          description: "You are not properly authenticated. Please try logging out and back in.",
+          variant: "destructive",
+        })}
+        className="retro-button"
+      >
+        <AlertTriangle className="h-4 w-4 mr-1" /> Auth Issue
+      </Button>
+    );
+  }
+
+  // Show a special error if user is not an agent
+  if (userRole !== 'agent') {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => toast({
+          title: "Permission Error",
+          description: `You must have agent role to submit proposals. Current role: ${userRole || 'none'}`,
+          variant: "destructive",
+        })}
+        className="retro-button"
+      >
+        <AlertTriangle className="h-4 w-4 mr-1" /> Role Issue
+      </Button>
+    );
+  }
 
   return (
     <>

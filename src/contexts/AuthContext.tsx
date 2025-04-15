@@ -22,6 +22,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   isLoading: boolean;
   refreshUser: () => Promise<void>;
+  debugAuthState: () => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -140,11 +141,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentUser) {
         setUser(currentUser);
         await fetchUserData(currentUser, true);
+        console.log("User data refreshed successfully. User ID:", currentUser.id, "Role:", userRole);
+        return;
+      }
+
+      // If we couldn't get a user, try refreshing the session
+      const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+      if (refreshedSession?.user) {
+        setSession(refreshedSession);
+        setUser(refreshedSession.user);
+        await fetchUserData(refreshedSession.user, true);
+        console.log("Session refreshed successfully. User ID:", refreshedSession.user.id);
+      } else {
+        console.warn("No session could be refreshed");
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Debug function to get auth state information
+  const debugAuthState = async () => {
+    try {
+      // Check session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // Check user
+      const { user: currentUser, error: userError } = await getCurrentUser();
+      
+      // Check profile
+      const { profile: currentProfile, error: profileError } = await getProfile();
+      
+      // Check role
+      const { role: currentRole, error: roleError } = await getUserRole();
+      
+      // Compile all information
+      const debugInfo = {
+        sessionExists: !!currentSession,
+        sessionExpires: currentSession?.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'N/A',
+        userExists: !!currentUser,
+        userId: currentUser?.id || 'none',
+        userEmail: currentUser?.email || 'none',
+        userError: userError?.message || 'none',
+        profileExists: !!currentProfile,
+        profileEmail: currentProfile?.email || 'none',
+        profileRole: currentProfile?.role || 'none',
+        profileError: profileError?.message || 'none',
+        roleFromFunction: currentRole || 'none',
+        roleError: roleError?.message || 'none',
+        contextUser: !!user,
+        contextUserRole: userRole || 'none',
+        contextProfile: !!profile,
+      };
+      
+      console.log("Auth debug information:", debugInfo);
+      
+      return JSON.stringify(debugInfo, null, 2);
+    } catch (error) {
+      console.error("Error gathering debug information:", error);
+      return `Error gathering debug info: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   };
 
@@ -155,7 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userRole, 
       profile, 
       isLoading, 
-      refreshUser 
+      refreshUser,
+      debugAuthState
     }}>
       {children}
     </AuthContext.Provider>
