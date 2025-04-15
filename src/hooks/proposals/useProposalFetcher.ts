@@ -22,6 +22,7 @@ export function useProposalFetcher() {
     try {
       setLoading(true);
       console.log("Fetching proposals with filters:", filters);
+      console.log("Current user role:", userRole, "User ID:", user?.id);
       
       // Fetch raw proposal data from API
       const proposalsData = await fetchProposalsData(filters, user?.id, userRole);
@@ -33,7 +34,7 @@ export function useProposalFetcher() {
         return [];
       }
       
-      console.log("Raw proposals data:", proposalsData);
+      console.log("Raw proposals data count:", proposalsData.length);
       
       // Transform raw data into Proposal objects
       const transformedProposals = await transformProposalDataWithProfiles(proposalsData);
@@ -41,7 +42,7 @@ export function useProposalFetcher() {
       // Apply client-side sorting if needed
       const sortedProposals = applyClientSideSorting(transformedProposals, filters.sort);
       
-      console.log("Formatted proposals:", sortedProposals);
+      console.log("Formatted proposals count:", sortedProposals.length);
       setProposals(sortedProposals);
       setLoading(false);
       return sortedProposals;

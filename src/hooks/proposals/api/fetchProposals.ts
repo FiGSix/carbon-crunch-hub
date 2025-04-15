@@ -10,6 +10,8 @@ export async function fetchProposalsData(
   userId?: string,
   userRole?: string
 ): Promise<RawProposalData[]> {
+  console.log("fetchProposalsData called with userRole:", userRole, "userId:", userId);
+  
   // Start building the query
   let query = supabase
     .from('proposals')
@@ -32,6 +34,7 @@ export async function fetchProposalsData(
   
   // Filter by role
   if (userRole === 'agent' && userId) {
+    console.log("Filtering proposals for agent:", userId);
     // Agents can only see their own proposals
     query = query.eq('agent_id', userId);
   }
@@ -78,6 +81,8 @@ export async function fetchProposalsData(
     console.error("Supabase query error:", error);
     throw error;
   }
+  
+  console.log("Supabase returned proposals count:", proposalsData?.length || 0);
   
   return proposalsData as RawProposalData[] || [];
 }

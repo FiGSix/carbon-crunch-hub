@@ -18,10 +18,11 @@ export type { Proposal } from "./ProposalListTypes";
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
   const { userRole, user } = useAuth();
   
-  // Filter proposals based on user role
-  const filteredProposals = userRole === "agent" 
-    ? proposals.filter(proposal => proposal.agent_id === user?.id)
-    : proposals;
+  console.log("ProposalList - userRole:", userRole, "userId:", user?.id);
+  console.log("ProposalList - received proposals count:", proposals.length);
+  
+  // Server-side filtering is already happening in useProposalFetcher, so we don't need
+  // to filter again on the client side. This was causing the issue with agents not seeing proposals.
   
   return (
     <div className="overflow-x-auto">
@@ -40,7 +41,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredProposals.map((proposal) => (
+          {proposals.map((proposal) => (
             <TableRow key={proposal.id} className={proposal.agent_id === user?.id ? "bg-carbon-green-50" : ""}>
               <TableCell className="font-medium">{proposal.name}</TableCell>
               <TableCell>{proposal.client}</TableCell>
