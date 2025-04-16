@@ -19,9 +19,10 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   const [refreshAttempted, setRefreshAttempted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // More focused effect for handling user role refresh
   useEffect(() => {
-    // Refresh user data when mounting a protected route if we have a user but no role
-    if (user && !userRole && !refreshAttempted) {
+    // Only attempt refresh if we have a user but no role and haven't tried refreshing yet
+    if (user && !userRole && !refreshAttempted && !isLoading) {
       console.log("User exists but role is missing, refreshing user data");
       setIsRefreshing(true);
       refreshUser().finally(() => {
@@ -29,47 +30,53 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
         setIsRefreshing(false);
       });
     }
-  }, [user, userRole, refreshUser, refreshAttempted]);
+  }, [user, userRole, refreshUser, refreshAttempted, isLoading]);
 
-  // Debug logging
+  // Debug logging with enhanced context information
   useEffect(() => {
+    console.log("PrivateRoute - Current path:", location.pathname);
     console.log("PrivateRoute - Current user:", user?.id);
     console.log("PrivateRoute - Current role:", userRole);
     console.log("PrivateRoute - Allowed roles:", allowedRoles);
     console.log("PrivateRoute - Is loading:", isLoading);
     console.log("PrivateRoute - Refresh attempted:", refreshAttempted);
-  }, [user, userRole, allowedRoles, isLoading, refreshAttempted]);
+  }, [user, userRole, allowedRoles, isLoading, refreshAttempted, location.pathname]);
 
-  // Handle retry for refresh
+  // Handle retry for refresh with better error handling
   const handleRetryRefresh = async () => {
     setIsRefreshing(true);
     try {
       await refreshUser();
       setRefreshAttempted(true);
+    } catch (error) {
+      console.error("Error during refresh retry:", error);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // Show loading state while checking authentication
+  // Show loading state while checking authentication with a more informative message
   if (isLoading || isRefreshing) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-carbon-green-500 mx-auto mb-4" />
-          <p className="text-carbon-gray-600">Verifying authentication...</p>
+          <p className="text-carbon-gray-600">
+            {isRefreshing ? "Refreshing authentication..." : "Verifying authentication..."}
+          </p>
         </div>
       </div>
     );
   }
 
-  // If not authenticated, redirect to login
+  // If not authenticated, redirect to login with the current path for redirect after login
   if (!user) {
     console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Special case: if we know there should be a role but it's missing, show force-logout option
+  // This handles corrupted auth states more gracefully
   if (allowedRoles && !userRole && refreshAttempted) {
     console.log("Role required but missing, showing force-logout option");
     return (
@@ -109,9 +116,9 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     );
   }
 
-  // If role-specific route and user doesn't have permission
+  // If role-specific route and user doesn't have permission, redirect to dashboard
   if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
-    console.log(`User role ${userRole} not allowed, redirecting to dashboard`);
+    console.log(`User role ${userRole} not allowed (needs ${allowedRoles.join(' or ')}), redirecting to dashboard`);
     return <Navigate to="/dashboard" replace />;
   }
 
