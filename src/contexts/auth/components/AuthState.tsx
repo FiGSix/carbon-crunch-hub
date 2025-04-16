@@ -17,6 +17,7 @@ export function AuthState({ children }: AuthStateProps) {
     userRole,
     profile,
     isLoading,
+    authInitialized,
     setUser,
     setSession,
     setUserRole,
@@ -24,7 +25,7 @@ export function AuthState({ children }: AuthStateProps) {
     setIsLoading
   } = useAuthInitialization();
 
-  const { refreshUser } = useAuthRefresh({
+  const { refreshUser, isRefreshing, refreshAttemptCount } = useAuthRefresh({
     setUser,
     setUserRole,
     setProfile,
@@ -45,6 +46,9 @@ export function AuthState({ children }: AuthStateProps) {
     userRole, 
     profile, 
     isLoading, 
+    isRefreshing,
+    refreshAttemptCount,
+    authInitialized,
     refreshUser,
     debugAuthState
   };

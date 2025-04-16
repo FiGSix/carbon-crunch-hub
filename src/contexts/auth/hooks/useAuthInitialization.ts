@@ -13,6 +13,7 @@ export function useAuthInitialization() {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const { toast } = useToast();
 
   // Function to fetch user profile data
@@ -53,6 +54,14 @@ export function useAuthInitialization() {
     }
   };
 
+  // Helper function to clear auth state
+  const clearAuthState = () => {
+    setUser(null);
+    setUserRole(null);
+    setProfile(null);
+    setSession(null);
+  };
+
   useEffect(() => {
     console.log("Initializing auth context");
     let subscription: { unsubscribe: () => void } | null = null;
@@ -69,21 +78,21 @@ export function useAuthInitialization() {
           (event, newSession) => {
             console.log('Auth state changed:', event, 'User ID:', newSession?.user?.id);
             
+            // Update basic session and user data immediately
             setSession(newSession);
             setUser(newSession?.user || null);
             
             if (newSession?.user) {
               // For SIGNED_IN events, fetch role and profile
-              if (event === 'SIGNED_IN') {
+              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 // Use setTimeout to avoid recursive auth state changes
                 setTimeout(() => {
                   fetchUserData(newSession.user, true);
                 }, 0);
               }
-            } else {
+            } else if (event === 'SIGNED_OUT') {
               // Clear all state when signed out
-              setUserRole(null);
-              setProfile(null);
+              clearAuthState();
             }
           }
         ).data.subscription;
@@ -96,6 +105,9 @@ export function useAuthInitialization() {
           
           await fetchUserData(currentSession.user, true);
         }
+
+        // Mark auth as initialized to prevent duplicate initialization
+        setAuthInitialized(true);
       } catch (error) {
         console.error('Error initializing auth:', error);
         toast({
@@ -108,14 +120,16 @@ export function useAuthInitialization() {
       }
     }
     
-    initAuth();
+    if (!authInitialized) {
+      initAuth();
+    }
     
     return () => {
       if (subscription) {
         subscription.unsubscribe();
       }
     };
-  }, [toast]);
+  }, [toast, authInitialized]);
 
   return {
     session,
@@ -127,6 +141,7 @@ export function useAuthInitialization() {
     setSession,
     setUserRole,
     setProfile,
-    setIsLoading
+    setIsLoading,
+    authInitialized
   };
 }

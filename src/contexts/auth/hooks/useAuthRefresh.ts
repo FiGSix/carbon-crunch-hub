@@ -22,13 +22,17 @@ export function useAuthRefresh({
   setIsLoading
 }: UseAuthRefreshProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshAttemptCount, setRefreshAttemptCount] = useState(0);
 
   const refreshUser = async () => {
+    if (isRefreshing) return; // Prevent multiple concurrent refreshes
+    
     setIsLoading(true);
     setIsRefreshing(true);
+    setRefreshAttemptCount(prev => prev + 1);
     
     try {
-      console.log("Refreshing user data...");
+      console.log("Refreshing user data... (Attempt #" + (refreshAttemptCount + 1) + ")");
       
       // Try refreshing the session first
       const { session: refreshedSession, error: refreshError } = await refreshSession();
@@ -43,9 +47,7 @@ export function useAuthRefresh({
           console.log("User data refreshed via getCurrentUser");
         } else {
           console.log("Could not get current user, user may be signed out");
-          setUser(null);
-          setUserRole(null);
-          setProfile(null);
+          clearAuthState();
         }
       } else if (refreshedSession) {
         setSession(refreshedSession);
@@ -54,20 +56,24 @@ export function useAuthRefresh({
         console.log("User data refreshed via session refresh");
       } else {
         // No session or error, likely user is signed out
-        setUser(null);
-        setUserRole(null);
-        setProfile(null);
+        clearAuthState();
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
       // On critical errors, clear state to avoid confusion
-      setUser(null);
-      setUserRole(null);
-      setProfile(null);
+      clearAuthState();
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
+  };
+
+  // Helper function to clear all auth state
+  const clearAuthState = () => {
+    setUser(null);
+    setUserRole(null);
+    setProfile(null);
+    setSession(null);
   };
 
   // Helper function to fetch user data during refresh
@@ -81,13 +87,17 @@ export function useAuthRefresh({
       
       if (roleResult.role) {
         setUserRole(roleResult.role);
+        console.log("User role set:", roleResult.role);
       } else {
+        console.warn("No role found for user", currentUser.id);
         setUserRole(null);
       }
       
       if (!profileResult.error && profileResult.profile) {
         setProfile(profileResult.profile);
+        console.log("User profile set for", currentUser.id);
       } else {
+        console.warn("No profile found for user", currentUser.id);
         setProfile(null);
       }
     } catch (error) {
@@ -97,5 +107,5 @@ export function useAuthRefresh({
     }
   };
 
-  return { refreshUser, isRefreshing };
+  return { refreshUser, isRefreshing, refreshAttemptCount };
 }

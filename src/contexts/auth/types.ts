@@ -21,6 +21,9 @@ export interface AuthContextType {
   userRole: UserRole | null;
   profile: UserProfile | null;
   isLoading: boolean;
+  isRefreshing: boolean;
+  refreshAttemptCount: number;
+  authInitialized: boolean;
   refreshUser: () => Promise<void>;
   debugAuthState: () => Promise<string>;
 }

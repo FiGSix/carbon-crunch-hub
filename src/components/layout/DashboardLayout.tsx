@@ -9,7 +9,7 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { Footer } from "./footer";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
