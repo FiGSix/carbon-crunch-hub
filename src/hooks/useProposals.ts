@@ -76,8 +76,9 @@ export const useProposals = (): UseProposalsResult => {
         console.log("Admin user - no user-specific filtering applied");
         // Admins can see all proposals, no filter needed
       } else if (userRole === 'agent') {
-        // For agents, the RLS policy handles the filtering automatically
-        console.log("Agent user - RLS will handle filtering");
+        // For agents, the RLS policy now handles the filtering automatically
+        // Only proposals where agent_id = auth.uid() will be returned
+        console.log("Agent user - RLS will restrict to assigned proposals only");
       } else {
         console.warn("Unknown or missing user role:", userRole);
       }

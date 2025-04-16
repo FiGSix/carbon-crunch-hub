@@ -27,9 +27,10 @@ export function ProposalsSection() {
     console.log("ProposalsSection - Auth state:", { 
       isAuthenticated: !!user,
       userId: user?.id, 
-      userRole 
+      userRole,
+      proposalsCount: proposals.length
     });
-  }, [user, userRole]);
+  }, [user, userRole, proposals.length]);
   
   const handleProposalUpdate = () => {
     console.log("Proposal update triggered - refreshing proposals list");
@@ -41,7 +42,7 @@ export function ProposalsSection() {
       <CardHeader>
         <CardTitle className="flex items-center">
           <FileText className="h-5 w-5 mr-2" />
-          Proposal Management
+          {userRole === 'agent' ? 'My Assigned Proposals' : 'Proposal Management'}
         </CardTitle>
       </CardHeader>
       <CardContent>
