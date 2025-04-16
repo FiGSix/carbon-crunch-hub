@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, LogIn } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
+import { signIn } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 interface ClientLoginFormProps {
@@ -26,16 +26,13 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
     setError(null);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: clientEmail,
-        password: password,
-      });
+      const { data, error: signInError } = await signIn(clientEmail, password);
 
       if (signInError) {
         throw signInError;
       }
 
-      if (data?.user) {
+      if (data?.session) {
         toast({
           title: "Login successful",
           description: "You are now logged in and can view the proposal.",
@@ -43,6 +40,8 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
         
         // Notify the parent component that login is complete
         onComplete();
+      } else {
+        throw new Error("Login successful but no session was created");
       }
     } catch (error: any) {
       console.error("Login error:", error);

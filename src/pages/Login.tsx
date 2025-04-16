@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
-import { signIn, supabase } from "@/lib/supabase";
+import { signIn } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";

@@ -35,15 +35,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("Role from API:", roleResult.role);
       } else {
         console.log("No role found from API");
+        setUserRole(null);
       }
       
       if (!profileResult.error && profileResult.profile) {
         setProfile(profileResult.profile);
       } else if (profileResult.error) {
         console.error("Error fetching user profile:", profileResult.error);
+        setProfile(null);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setUserRole(null);
+      setProfile(null);
     } finally {
       if (!skipLoading) {
         setIsLoading(false)
@@ -133,15 +137,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("User data refreshed via getCurrentUser");
         } else {
           console.log("Could not get current user, user may be signed out");
+          setUser(null);
+          setUserRole(null);
+          setProfile(null);
         }
       } else if (refreshedSession) {
         setSession(refreshedSession);
         setUser(refreshedSession.user);
         await fetchUserData(refreshedSession.user, true);
         console.log("User data refreshed via session refresh");
+      } else {
+        // No session or error, likely user is signed out
+        setUser(null);
+        setUserRole(null);
+        setProfile(null);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
+      // On critical errors, clear state to avoid confusion
+      setUser(null);
+      setUserRole(null);
+      setProfile(null);
     } finally {
       setIsLoading(false);
     }

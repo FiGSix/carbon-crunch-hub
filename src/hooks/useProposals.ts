@@ -33,13 +33,24 @@ export const useProposals = (): UseProposalsResult => {
     setFilters(prev => ({ ...prev, [filter]: value }));
   }, []);
 
+  const handleAuthError = useCallback(async () => {
+    console.log("Authentication error detected, refreshing session");
+    try {
+      await refreshUser();
+      return !!user?.id; // Return true if user is still authenticated after refresh
+    } catch (refreshError) {
+      console.error("Failed to refresh user:", refreshError);
+      return false; // Authentication refresh failed
+    }
+  }, [refreshUser, user]);
+
   const fetchProposals = useCallback(async () => {
     if (!user?.id) {
       console.log("No user ID found, attempting to refresh user session");
       try {
-        await refreshUser();
-        if (!user?.id) {
-          setError("Authentication issue detected. Please try refreshing your session.");
+        const isAuthenticated = await handleAuthError();
+        if (!isAuthenticated) {
+          setError("Authentication issue detected. Please try logging in again.");
           setLoading(false);
           return;
         }
@@ -93,11 +104,17 @@ export const useProposals = (): UseProposalsResult => {
           break;
         case 'size-high':
         case 'size-low':
-        case 'revenue-high':
-          query = query.order('carbon_credits', { ascending: false, nullsFirst: false });
+          query = query.order('annual_energy', { 
+            ascending: filters.sort === 'size-low', 
+            nullsFirst: filters.sort === 'size-low'
+          });
           break;
+        case 'revenue-high':
         case 'revenue-low':
-          query = query.order('carbon_credits', { ascending: true, nullsFirst: true });
+          query = query.order('carbon_credits', { 
+            ascending: filters.sort === 'revenue-low', 
+            nullsFirst: filters.sort === 'revenue-low'
+          });
           break;
         case 'newest':
         default:
@@ -113,8 +130,12 @@ export const useProposals = (): UseProposalsResult => {
         // Handle permission errors by refreshing session
         if (queryError.code === 'PGRST116' || queryError.code === '42501') {
           console.log("Permission error detected, trying to refresh session");
-          await refreshUser();
-          throw new Error("Permission error. Please try again after refreshing.");
+          const isAuthenticated = await handleAuthError();
+          if (!isAuthenticated) {
+            throw new Error("Permission error. Please try logging in again.");
+          } else {
+            throw new Error("Permission error. Please try again after refreshing.");
+          }
         } else {
           throw queryError;
         }
@@ -175,7 +196,7 @@ export const useProposals = (): UseProposalsResult => {
     } finally {
       setLoading(false);
     }
-  }, [filters, user, userRole, toast, refreshUser]);
+  }, [filters, user, userRole, toast, refreshUser, handleAuthError]);
 
   useEffect(() => {
     console.log("Initial fetch triggered");

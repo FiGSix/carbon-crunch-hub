@@ -10,6 +10,7 @@ export interface UserProfile {
   role: UserRole;
   terms_accepted_at: string | null;
   created_at: string;
+  phone: string | null;
 }
 
 export type UserRole = 'client' | 'agent' | 'admin';
