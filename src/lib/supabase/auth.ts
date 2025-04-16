@@ -3,6 +3,9 @@ import { supabase } from './client'
 import { UserRole } from './types'
 import { clearCache, isCacheValid, setCacheWithExpiry, cache } from './cache'
 
+/**
+ * Sign up a new user with email and password
+ */
 export async function signUp(email: string, password: string, role: UserRole, metadata: Record<string, any> = {}) {
   // Clear cache on sign up
   clearCache();
@@ -21,6 +24,9 @@ export async function signUp(email: string, password: string, role: UserRole, me
   return { data, error }
 }
 
+/**
+ * Sign in a user with email and password
+ */
 export async function signIn(email: string, password: string) {
   // Clear cache on sign in
   clearCache();
@@ -33,6 +39,9 @@ export async function signIn(email: string, password: string) {
   return { data, error }
 }
 
+/**
+ * Sign out the current user
+ */
 export async function signOut() {
   // Clear cache on sign out
   clearCache();
@@ -53,11 +62,17 @@ export async function signOut() {
   return { error }
 }
 
+/**
+ * Get the current authenticated user
+ */
 export async function getCurrentUser() {
   const { data, error } = await supabase.auth.getUser()
   return { user: data.user, error }
 }
 
+/**
+ * Get the role of the current user
+ */
 export async function getUserRole() {
   const { user, error } = await getCurrentUser()
   if (error || !user) {

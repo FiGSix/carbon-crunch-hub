@@ -3,7 +3,9 @@ import { supabase } from './client'
 import { getCurrentUser } from './auth'
 import { isCacheValid, setCacheWithExpiry, cache } from './cache'
 
-// Profile related functions
+/**
+ * Get the current user's profile data
+ */
 export async function getProfile() {
   const { user, error: userError } = await getCurrentUser()
   if (userError || !user) {
@@ -30,6 +32,9 @@ export async function getProfile() {
   return { profile: data, error }
 }
 
+/**
+ * Update the current user's profile data
+ */
 export async function updateProfile(updates: Partial<{
   first_name: string;
   last_name: string;

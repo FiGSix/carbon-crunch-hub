@@ -1,5 +1,5 @@
 
-// Re-export everything for backwards compatibility
+// Re-export all Supabase functionality from respective files
 export { supabase } from './client'
 export { clearCache } from './cache'
 export type { UserRole } from './types'
