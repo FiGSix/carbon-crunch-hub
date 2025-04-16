@@ -2,7 +2,11 @@
 import { getCurrentUser } from './getCurrentUser'
 import { UserRole } from '../types'
 import { supabase } from '../client'
-import { cache, isCacheValid, setCacheWithExpiry } from '../cache'
+import { 
+  getCachedUserRole, 
+  isCacheValid, 
+  setCacheWithExpiry 
+} from '../cache'
 
 /**
  * Get the role of the current user
@@ -17,9 +21,9 @@ export async function getUserRole() {
     }
     
     // Check cache first with expiry check
-    if (user.id && cache.userRole.has(user.id) && isCacheValid(user.id)) {
+    if (user.id && isCacheValid(user.id, 'role')) {
       console.log("Using cached role for user:", user.id);
-      return { role: cache.userRole.get(user.id), error: null };
+      return { role: getCachedUserRole(user.id), error: null };
     }
     
     // First check app_metadata which should contain role from JWT

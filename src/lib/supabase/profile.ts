@@ -1,7 +1,12 @@
 
 import { supabase } from './client'
 import { getCurrentUser } from './auth'
-import { isCacheValid, setCacheWithExpiry, cache, invalidateCache } from './cache'
+import { 
+  isCacheValid, 
+  setCacheWithExpiry, 
+  getCachedProfile, 
+  invalidateCache 
+} from './cache'
 
 /**
  * Get the current user's profile data with improved caching
@@ -14,9 +19,9 @@ export async function getProfile() {
   }
 
   // Check cache first with expiry check
-  if (user.id && cache.profiles.has(user.id) && isCacheValid(user.id)) {
+  if (user.id && isCacheValid(user.id, 'profile')) {
     console.log("Using cached profile for user:", user.id);
-    return { profile: cache.profiles.get(user.id), error: null };
+    return { profile: getCachedProfile(user.id), error: null };
   }
 
   console.log("Fetching profile from database for user:", user.id);
@@ -58,7 +63,7 @@ export async function updateProfile(updates: Partial<{
 
   // Invalidate profile cache for this user
   if (user.id) {
-    invalidateCache(user.id);
+    invalidateCache(user.id, 'profile');
   }
 
   const { data, error } = await supabase
