@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalHeader } from "@/components/proposals/view/ProposalHeader";
@@ -8,17 +8,20 @@ import { ProposalDetails } from "@/components/proposals/view/ProposalDetails";
 import { useViewProposal } from "@/hooks/useViewProposal";
 import { ProposalArchiveDialog } from "@/components/proposals/view/ProposalArchiveDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
 
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const { user, userRole } = useAuth();
+  const navigate = useNavigate();
   
   const {
     proposal,
     loading,
     error,
+    clientEmail,
     handleApprove,
     handleReject,
     handleArchive,
@@ -28,6 +31,24 @@ const ViewProposal = () => {
     canArchive,
     isReviewLater
   } = useViewProposal(id, token);
+  
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  
+  // Determine if we need to show auth form based on token and user state
+  useEffect(() => {
+    if (!loading && token && clientEmail && !user) {
+      setShowAuthForm(true);
+    } else {
+      setShowAuthForm(false);
+    }
+  }, [loading, token, clientEmail, user]);
+  
+  // Handler for when auth is complete
+  const handleAuthComplete = () => {
+    setShowAuthForm(false);
+    // Force refresh the component to get latest auth state
+    window.location.reload();
+  };
   
   if (loading) {
     return (
@@ -39,6 +60,23 @@ const ViewProposal = () => {
   
   if (error) {
     return <ProposalError errorMessage={error} />;
+  }
+  
+  // If we need to show the auth form
+  if (showAuthForm && clientEmail && proposal) {
+    return (
+      <div className="container max-w-5xl mx-auto px-4 py-12">
+        <h1 className="text-2xl font-bold text-center mb-6">Authenticate to View Proposal</h1>
+        <p className="text-center mb-8">
+          To view the proposal "{proposal.title}", please sign in or create an account.
+        </p>
+        <ClientAuthWrapper 
+          proposalId={proposal.id} 
+          clientEmail={clientEmail} 
+          onAuthComplete={handleAuthComplete}
+        />
+      </div>
+    );
   }
   
   if (!proposal) {

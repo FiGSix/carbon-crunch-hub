@@ -7,6 +7,7 @@ export function useProposalData(id?: string, token?: string | null) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProposal = async () => {
@@ -15,17 +16,21 @@ export function useProposalData(id?: string, token?: string | null) {
         console.log("Fetching proposal with:", { id, token });
         
         if (token) {
-          // Validate the token and get the proposal ID
-          const { data: proposalId, error: validationError } = await supabase.rpc('validate_invitation_token', { token });
+          // Validate the token and get the proposal ID and client email
+          const { data, error: validationError } = await supabase.rpc('validate_invitation_token', { token });
           
-          if (validationError || !proposalId) {
-            console.error("Token validation failed:", validationError);
+          if (validationError || !data || !data.length || !data[0].proposal_id) {
+            console.error("Token validation failed:", validationError || "No valid proposal ID returned");
             setError("This invitation link is invalid or has expired.");
             setLoading(false);
             return;
           }
           
-          console.log("Token validated, proposal ID:", proposalId);
+          const proposalId = data[0].proposal_id;
+          const invitedEmail = data[0].client_email;
+          
+          console.log("Token validated, proposal ID:", proposalId, "Client email:", invitedEmail);
+          setClientEmail(invitedEmail);
           
           // Mark the invitation as viewed
           await supabase
@@ -34,7 +39,7 @@ export function useProposalData(id?: string, token?: string | null) {
             .eq('invitation_token', token);
           
           // Now fetch the proposal with the validated ID
-          const { data, error: fetchError } = await supabase
+          const { data: proposalData, error: fetchError } = await supabase
             .from('proposals')
             .select('*')
             .eq('id', proposalId)
@@ -46,8 +51,8 @@ export function useProposalData(id?: string, token?: string | null) {
           
           // Ensure the data is properly typed with all required ProposalData fields
           const typedData: ProposalData = {
-            ...data as any,
-            review_later_until: data.review_later_until || null
+            ...proposalData as any,
+            review_later_until: proposalData.review_later_until || null
           };
           
           setProposal(typedData);
@@ -91,5 +96,6 @@ export function useProposalData(id?: string, token?: string | null) {
     proposal,
     loading,
     error,
+    clientEmail
   };
 }

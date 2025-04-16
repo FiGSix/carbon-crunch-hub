@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useViewProposal(id?: string, token?: string | null) {
   const { user } = useAuth();
-  const { proposal, loading, error } = useProposalData(id, token);
+  const { proposal, loading, error, clientEmail } = useProposalData(id, token);
   const { loading: operationLoading, approveProposal, rejectProposal, archiveProposal, toggleReviewLater } = useProposalOperations();
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   
@@ -130,6 +130,7 @@ export function useViewProposal(id?: string, token?: string | null) {
     proposal,
     loading,
     error,
+    clientEmail,
     handleApprove,
     handleReject,
     handleArchive,

@@ -189,13 +189,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_client_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
       }
       validate_invitation_token: {
         Args: { token: string }
-        Returns: string
+        Returns: {
+          proposal_id: string
+          client_email: string
+        }[]
       }
     }
     Enums: {
