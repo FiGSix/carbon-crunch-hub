@@ -19,7 +19,7 @@ export interface UseProposalsResult {
 
 export const useProposals = (): UseProposalsResult => {
   const { toast } = useToast();
-  const { userRole, user } = useAuth();
+  const { userRole, user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -35,9 +35,20 @@ export const useProposals = (): UseProposalsResult => {
 
   const fetchProposals = useCallback(async () => {
     if (!user?.id) {
-      setError("Authentication issue detected. Please try refreshing your session.");
-      setLoading(false);
-      return;
+      console.log("No user ID found, attempting to refresh user session");
+      try {
+        await refreshUser();
+        if (!user?.id) {
+          setError("Authentication issue detected. Please try refreshing your session.");
+          setLoading(false);
+          return;
+        }
+      } catch (refreshError) {
+        console.error("Failed to refresh user:", refreshError);
+        setError("Authentication issue detected. Please try logging out and back in.");
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -45,7 +56,7 @@ export const useProposals = (): UseProposalsResult => {
       setError(null);
       
       console.log("Fetching proposals with filters:", filters);
-      console.log("Current user role:", userRole, "User ID:", user.id);
+      console.log("Current user role:", userRole, "User ID:", user?.id);
       
       let query = supabase
         .from('proposals')
@@ -104,6 +115,11 @@ export const useProposals = (): UseProposalsResult => {
         console.error("Supabase query error:", queryError);
         if (queryError.code === 'PGRST116') {
           throw new Error("Access denied: You don't have permission to view these proposals");
+        } else if (queryError.code === '42501') {
+          // Permissions error, try refreshing the user session
+          console.log("Permission error detected, trying to refresh session");
+          await refreshUser();
+          throw new Error("Permission error. Please try again after refreshing your session.");
         } else {
           throw queryError;
         }
@@ -139,15 +155,29 @@ export const useProposals = (): UseProposalsResult => {
     } catch (error) {
       console.error("Error fetching proposals:", error);
       setError(error instanceof Error ? error.message : "Failed to load proposals");
-      toast({
-        title: "Error",
-        description: "Failed to load proposals. Please try again.",
-        variant: "destructive",
-      });
+      
+      if (error instanceof Error && 
+          (error.message.includes("JWT") || 
+           error.message.includes("token") || 
+           error.message.includes("auth") || 
+           error.message.includes("permission"))) {
+        // Specific handling for auth-related errors
+        toast({
+          title: "Authentication Error",
+          description: "Your session may have expired. Try refreshing your authentication.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load proposals. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
-  }, [filters, user, userRole, toast]);
+  }, [filters, user, userRole, toast, refreshUser]);
 
   useEffect(() => {
     console.log("Initial fetch triggered");
