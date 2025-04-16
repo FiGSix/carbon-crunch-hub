@@ -177,14 +177,6 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
-      can_access_profile: {
-        Args: { profile_id: string }
-        Returns: boolean
-      }
-      can_access_proposal: {
-        Args: { proposal_id: string }
-        Returns: boolean
-      }
       generate_secure_token: {
         Args: Record<PropertyKey, never>
         Returns: string

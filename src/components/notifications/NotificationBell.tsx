@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { NotificationList } from "./NotificationList";
 import { getNotifications, Notification } from "@/services/notificationService";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 
 export function NotificationBell() {

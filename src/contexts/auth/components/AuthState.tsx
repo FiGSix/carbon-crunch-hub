@@ -39,6 +39,9 @@ export function AuthState({ children }: AuthStateProps) {
     profile
   });
 
+  // Determine if user is admin
+  const isAdmin = userRole === 'admin';
+
   // Compile the auth state to be provided by the context
   const authState = {
     session, 
@@ -50,7 +53,8 @@ export function AuthState({ children }: AuthStateProps) {
     refreshAttemptCount,
     authInitialized,
     refreshUser,
-    debugAuthState
+    debugAuthState,
+    isAdmin
   };
 
   return (

@@ -26,4 +26,5 @@ export interface AuthContextType {
   authInitialized: boolean;
   refreshUser: () => Promise<void>;
   debugAuthState: () => Promise<string>;
+  isAdmin: boolean;
 }

@@ -23,7 +23,7 @@ export function DashboardLayout({
   children, 
   requiredRole 
 }: DashboardLayoutProps) {
-  const { userRole, isLoading } = useAuth();
+  const { userRole, isLoading, isAdmin } = useAuth();
 
   // Show loading state
   if (isLoading) {
@@ -35,8 +35,11 @@ export function DashboardLayout({
   }
 
   // Redirect if user doesn't have the required role
-  if (requiredRole && userRole !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+  if (requiredRole) {
+    // Admin can access any page regardless of required role
+    if (!isAdmin && userRole !== requiredRole) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return (
