@@ -36,14 +36,15 @@ export function ProposalActionFooter({
     <>
       <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between border-t pt-6">
         <Button 
-          variant="outline" 
-          className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive/10"
+          variant="destructive" 
+          className="w-full sm:w-auto"
           onClick={() => setShowRejectDialog(true)}
         >
           <X className="mr-2 h-4 w-4" /> Reject Proposal
         </Button>
         <Button 
-          className="w-full sm:w-auto bg-carbon-green-500 hover:bg-carbon-green-600 text-white"
+          variant="default" 
+          className="w-full sm:w-auto bg-green-500 hover:bg-green-600"
           onClick={() => setShowApproveDialog(true)}
         >
           <CheckCircle2 className="mr-2 h-4 w-4" /> Approve Proposal
@@ -66,7 +67,7 @@ export function ProposalActionFooter({
                 await onApprove();
                 setShowApproveDialog(false);
               }}
-              className="bg-carbon-green-500 hover:bg-carbon-green-600 text-white"
+              className="bg-green-500 hover:bg-green-600"
             >
               Yes, Approve
             </AlertDialogAction>
