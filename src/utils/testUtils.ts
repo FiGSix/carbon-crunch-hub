@@ -50,15 +50,20 @@ export async function verifyInvitationSent(proposalId: string): Promise<{success
  * @param token The invitation token to test
  * @returns Object containing validity status and proposal ID if valid
  */
-export async function testInvitationToken(token: string): Promise<{valid: boolean, proposalId?: string}> {
+export async function testInvitationToken(token: string): Promise<{valid: boolean, proposalId?: string, clientEmail?: string}> {
   try {
-    const { data: proposalId, error } = await supabase.rpc('validate_invitation_token', { token });
+    // Updated to handle the new return type from validate_invitation_token function
+    const { data, error } = await supabase.rpc('validate_invitation_token', { token });
     
-    if (error || !proposalId) {
+    if (error || !data || !data.length || !data[0].proposal_id) {
       return { valid: false };
     }
     
-    return { valid: true, proposalId };
+    return { 
+      valid: true, 
+      proposalId: data[0].proposal_id, 
+      clientEmail: data[0].client_email 
+    };
   } catch (error) {
     console.error("Error testing invitation token:", error);
     return { valid: false };
