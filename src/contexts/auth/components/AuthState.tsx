@@ -1,0 +1,57 @@
+
+import { ReactNode } from 'react';
+import { useAuthInitialization } from '../hooks/useAuthInitialization';
+import { useAuthRefresh } from '../hooks/useAuthRefresh';
+import { useAuthDebug } from '../hooks/useAuthDebug';
+import { AuthContextProvider } from './AuthContextProvider';
+
+interface AuthStateProps {
+  children: ReactNode;
+}
+
+export function AuthState({ children }: AuthStateProps) {
+  // Use our custom hooks for different aspects of auth functionality
+  const {
+    session,
+    user,
+    userRole,
+    profile,
+    isLoading,
+    setUser,
+    setSession,
+    setUserRole,
+    setProfile,
+    setIsLoading
+  } = useAuthInitialization();
+
+  const { refreshUser } = useAuthRefresh({
+    setUser,
+    setUserRole,
+    setProfile,
+    setSession,
+    setIsLoading
+  });
+
+  const { debugAuthState } = useAuthDebug({
+    user,
+    userRole,
+    profile
+  });
+
+  // Compile the auth state to be provided by the context
+  const authState = {
+    session, 
+    user, 
+    userRole, 
+    profile, 
+    isLoading, 
+    refreshUser,
+    debugAuthState
+  };
+
+  return (
+    <AuthContextProvider value={authState}>
+      {children}
+    </AuthContextProvider>
+  );
+}
