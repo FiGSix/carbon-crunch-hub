@@ -9,7 +9,7 @@ import { ProposalLoadingState } from "@/components/proposals/ProposalLoadingStat
 import { useProposals } from "@/hooks/useProposals";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 export function ProposalsSection() {
   const { 
