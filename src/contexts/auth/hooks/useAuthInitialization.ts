@@ -1,0 +1,132 @@
+
+import { useState, useEffect } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
+import { getUserRole, getCurrentUser } from '@/lib/supabase/auth';
+import { getProfile } from '@/lib/supabase/profile';
+import { UserRole, UserProfile } from '../types';
+import { useToast } from '@/hooks/use-toast';
+
+export function useAuthInitialization() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Function to fetch user profile data
+  const fetchUserData = async (currentUser: User, skipLoading = false) => {
+    if (!skipLoading) {
+      setIsLoading(true);
+    }
+    
+    try {
+      // Run both requests in parallel with Promise.all for better performance
+      const [roleResult, profileResult] = await Promise.all([
+        getUserRole(),
+        getProfile()
+      ]);
+      
+      if (roleResult.role) {
+        setUserRole(roleResult.role);
+        console.log("Role from API:", roleResult.role);
+      } else {
+        console.log("No role found from API");
+        setUserRole(null);
+      }
+      
+      if (!profileResult.error && profileResult.profile) {
+        setProfile(profileResult.profile);
+      } else if (profileResult.error) {
+        console.error("Error fetching user profile:", profileResult.error);
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setUserRole(null);
+      setProfile(null);
+    } finally {
+      if (!skipLoading) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    console.log("Initializing auth context");
+    let subscription: { unsubscribe: () => void } | null = null;
+    
+    async function initAuth() {
+      setIsLoading(true);
+      
+      try {
+        // First check if there's an existing session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        // Set up auth state listener
+        subscription = supabase.auth.onAuthStateChange(
+          (event, newSession) => {
+            console.log('Auth state changed:', event, 'User ID:', newSession?.user?.id);
+            
+            setSession(newSession);
+            setUser(newSession?.user || null);
+            
+            if (newSession?.user) {
+              // For SIGNED_IN events, fetch role and profile
+              if (event === 'SIGNED_IN') {
+                // Use setTimeout to avoid recursive auth state changes
+                setTimeout(() => {
+                  fetchUserData(newSession.user, true);
+                }, 0);
+              }
+            } else {
+              // Clear all state when signed out
+              setUserRole(null);
+              setProfile(null);
+            }
+          }
+        ).data.subscription;
+        
+        // Handle initial session if it exists
+        if (currentSession?.user) {
+          console.log("Initial session found, user ID:", currentSession.user.id);
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
+          await fetchUserData(currentSession.user, true);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to initialize authentication',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    initAuth();
+    
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }, [toast]);
+
+  return {
+    session,
+    user,
+    userRole,
+    profile,
+    isLoading,
+    setUser,
+    setSession,
+    setUserRole,
+    setProfile,
+    setIsLoading
+  };
+}
