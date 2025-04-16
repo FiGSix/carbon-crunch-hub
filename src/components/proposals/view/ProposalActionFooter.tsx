@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { X, CheckCircle2 } from "lucide-react";
+import { X, CheckCircle2, Loader2 } from "lucide-react";
 import { CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -27,10 +27,32 @@ export function ProposalActionFooter({
 }: ProposalActionFooterProps) {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   
   if (!showActions) {
     return null;
   }
+  
+  const handleApprove = async () => {
+    try {
+      setIsApproving(true);
+      await onApprove();
+    } finally {
+      setIsApproving(false);
+      setShowApproveDialog(false);
+    }
+  };
+  
+  const handleReject = async () => {
+    try {
+      setIsRejecting(true);
+      await onReject();
+    } finally {
+      setIsRejecting(false);
+      setShowRejectDialog(false);
+    }
+  };
   
   return (
     <>
@@ -61,15 +83,20 @@ export function ProposalActionFooter({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isApproving}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={async () => {
-                await onApprove();
-                setShowApproveDialog(false);
-              }}
+              onClick={handleApprove}
               className="bg-green-500 hover:bg-green-600"
+              disabled={isApproving}
             >
-              Yes, Approve
+              {isApproving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                  Processing...
+                </>
+              ) : (
+                "Yes, Approve"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -85,15 +112,20 @@ export function ProposalActionFooter({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isRejecting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={async () => {
-                await onReject();
-                setShowRejectDialog(false);
-              }}
+              onClick={handleReject}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isRejecting}
             >
-              Yes, Reject
+              {isRejecting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                  Processing...
+                </>
+              ) : (
+                "Yes, Reject"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -25,7 +25,7 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
       
       const proposal = proposals[0];
       
-      // Update proposal status
+      // Update proposal status - ensuring we include the proposal ID in the query
       const { error } = await supabase
         .from('proposals')
         .update({ 
@@ -35,7 +35,12 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         })
         .eq('id', proposalId);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating proposal status:", error);
+        throw error;
+      }
+      
+      console.log("Proposal approved successfully:", proposalId);
       
       // Create notification for the agent
       if (proposal?.agent_id) {
