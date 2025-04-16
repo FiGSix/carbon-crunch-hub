@@ -1,7 +1,7 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/lib/supabase';
+import { useAuth } from '@/contexts/auth';
+import { UserRole } from '@/contexts/auth/types';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";

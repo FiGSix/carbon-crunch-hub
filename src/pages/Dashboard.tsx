@@ -6,7 +6,7 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
 import { FileText, TrendingUp, Wind } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 const Dashboard = () => {
   const { profile, userRole } = useAuth();

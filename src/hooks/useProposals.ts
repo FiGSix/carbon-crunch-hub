@@ -1,9 +1,8 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { Proposal } from "@/components/proposals/ProposalList";
 import { ProfileData, ProposalFilters, RawProposalData } from "./proposals/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { transformProposalData } from "./proposals/proposalUtils";
 import { fetchProfilesByIds } from "./proposals/api/fetchProfiles";
@@ -29,7 +28,6 @@ export const useProposals = (): UseProposalsResult => {
     sort: 'newest'
   });
 
-  // Memoized handler to prevent unnecessary re-renders
   const handleFilterChange = useCallback((filter: string, value: string) => {
     setFilters(prev => ({ ...prev, [filter]: value }));
   }, []);
@@ -48,7 +46,6 @@ export const useProposals = (): UseProposalsResult => {
       console.log("Fetching proposals with filters:", filters);
       console.log("Current user role:", userRole, "User ID:", user.id);
       
-      // Start building the query - RLS will handle access control
       let query = supabase
         .from('proposals')
         .select(`
@@ -70,19 +67,16 @@ export const useProposals = (): UseProposalsResult => {
       
       console.log(`User role: ${userRole} - RLS policies will automatically filter accessible proposals`);
       
-      // Apply status filter if not 'all'
       if (filters.status !== 'all') {
         query = query.eq('status', filters.status);
         console.log("Applied status filter:", filters.status);
       }
       
-      // Apply search filter if provided
       if (filters.search) {
         query = query.ilike('title', `%${filters.search}%`);
         console.log("Applied search filter:", filters.search);
       }
       
-      // Apply sorting
       switch (filters.sort) {
         case 'oldest':
           query = query.order('created_at', { ascending: true });
@@ -103,7 +97,6 @@ export const useProposals = (): UseProposalsResult => {
       
       console.log("Applied sorting:", filters.sort);
       
-      // Execute the query - our RLS policies will handle access control
       const { data: proposalsData, error: queryError } = await query;
       
       if (queryError) {
@@ -124,19 +117,16 @@ export const useProposals = (): UseProposalsResult => {
         return;
       }
       
-      // Extract unique client and agent IDs
       const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
       const agentIds = proposalsData
         .map(p => p.agent_id)
         .filter((id): id is string => id !== null && id !== undefined);
       
-      // Fetch profiles in parallel
       const [clientProfiles, agentProfiles] = await Promise.all([
         fetchProfilesByIds(clientIds),
         fetchProfilesByIds(agentIds)
       ]);
       
-      // Transform the data
       const transformedProposals = transformProposalData(
         proposalsData as RawProposalData[], 
         clientProfiles,
@@ -158,13 +148,9 @@ export const useProposals = (): UseProposalsResult => {
     }
   }, [filters, user, userRole, toast]);
 
-  // Initial fetch on component mount
   useEffect(() => {
     console.log("Initial fetch triggered");
     fetchProposals();
-    
-    // No need to include fetchProposals in the dependency array as it would cause infinite loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

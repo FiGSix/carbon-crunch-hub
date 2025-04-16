@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Footer } from "@/components/layout/footer";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
 import { signIn, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
@@ -23,7 +22,6 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // If user is already authenticated, redirect to dashboard
   useEffect(() => {
     if (user && !authLoading) {
       console.log("User already logged in, redirecting to dashboard. User role:", userRole);
@@ -52,7 +50,6 @@ const Login = () => {
         description: "You have successfully logged in",
       });
       
-      // Get the intended destination from location state, or default to dashboard
       const from = location.state?.from || "/dashboard";
       console.log(`Redirecting to: ${from}`);
       navigate(from);

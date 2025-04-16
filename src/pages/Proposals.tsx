@@ -5,7 +5,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ProposalsSection } from "@/components/proposals/ProposalsSection";
 import { RefreshCcw, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 
 const Proposals = () => {
