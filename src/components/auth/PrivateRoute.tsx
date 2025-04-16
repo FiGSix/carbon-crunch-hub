@@ -18,7 +18,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   const location = useLocation();
 
   useEffect(() => {
-    // Refresh user data when mounting a protected route
+    // Refresh user data when mounting a protected route if we have a user but no role
     if (user && !userRole) {
       console.log("User exists but role is missing, refreshing user data");
       refreshUser();

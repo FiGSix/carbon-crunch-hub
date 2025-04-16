@@ -48,7 +48,7 @@ export const useProposals = (): UseProposalsResult => {
       console.log("Fetching proposals with filters:", filters);
       console.log("Current user role:", userRole, "User ID:", user.id);
       
-      // Start building the query
+      // Start building the query - RLS will handle access control
       let query = supabase
         .from('proposals')
         .select(`
@@ -68,20 +68,7 @@ export const useProposals = (): UseProposalsResult => {
           review_later_until
         `);
       
-      // Add role-based filtering
-      if (userRole === 'client' && user.id) {
-        console.log("Filtering proposals for client:", user.id);
-        query = query.eq('client_id', user.id);
-      } else if (userRole === 'admin') {
-        console.log("Admin user - no user-specific filtering applied");
-        // Admins can see all proposals, no filter needed
-      } else if (userRole === 'agent') {
-        // For agents, the RLS policy now handles the filtering automatically
-        // Only proposals where agent_id = auth.uid() will be returned
-        console.log("Agent user - RLS will restrict to assigned proposals only");
-      } else {
-        console.warn("Unknown or missing user role:", userRole);
-      }
+      console.log(`User role: ${userRole} - RLS policies will automatically filter accessible proposals`);
       
       // Apply status filter if not 'all'
       if (filters.status !== 'all') {
@@ -116,7 +103,7 @@ export const useProposals = (): UseProposalsResult => {
       
       console.log("Applied sorting:", filters.sort);
       
-      // Execute the query
+      // Execute the query - our RLS policies will handle access control
       const { data: proposalsData, error: queryError } = await query;
       
       if (queryError) {
@@ -137,7 +124,6 @@ export const useProposals = (): UseProposalsResult => {
         return;
       }
       
-      // Transform raw data into Proposal objects
       // Extract unique client and agent IDs
       const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
       const agentIds = proposalsData
