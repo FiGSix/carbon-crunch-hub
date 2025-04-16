@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientRegistrationForm } from './ClientRegistrationForm';
 import { ClientLoginForm } from './ClientLoginForm';
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface ClientAuthWrapperProps {
   proposalId: string;

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useProposalData } from "./proposal/useProposalData";
 import { useProposalOperations } from "./proposal/useProposalOperations";
 import { ProposalData } from "@/components/proposals/view/types";

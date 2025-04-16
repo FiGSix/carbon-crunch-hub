@@ -9,7 +9,7 @@ import { RevenueDistributionSection } from "@/components/proposals/summary/Reven
 import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface ProposalDetailsProps {
   proposal: {

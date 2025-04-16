@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CheckCircle2, Archive, ChevronLeft } from "lucide-react";
 import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface ProposalHeaderProps {
   title: string;

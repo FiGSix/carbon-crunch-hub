@@ -4,7 +4,7 @@ import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Proposal } from "../ProposalListTypes";
 import { useProposalInvitations } from "../hooks/useProposalInvitations";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProposalInviteButtonProps {

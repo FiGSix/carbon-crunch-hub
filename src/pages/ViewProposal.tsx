@@ -7,7 +7,7 @@ import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalDetails } from "@/components/proposals/view/ProposalDetails";
 import { useViewProposal } from "@/hooks/useViewProposal";
 import { ProposalArchiveDialog } from "@/components/proposals/view/ProposalArchiveDialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
 
 const ViewProposal = () => {
