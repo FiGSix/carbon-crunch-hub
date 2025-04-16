@@ -5,7 +5,8 @@ import { supabase } from '../client'
 import { 
   getCachedUserRole, 
   isCacheValid, 
-  setCacheWithExpiry 
+  setCacheWithExpiry,
+  CACHE_TTL_MEDIUM
 } from '../cache'
 
 /**
@@ -31,8 +32,9 @@ export async function getUserRole() {
     if (role) {
       console.log("Found role in app_metadata:", role);
       // Cache the role with expiry if we have a user id
+      // Roles from JWT are more stable, so use a longer TTL
       if (user.id) {
-        setCacheWithExpiry(user.id, role);
+        setCacheWithExpiry(user.id, role, undefined, CACHE_TTL_MEDIUM);
       }
       return { role, error: null };
     }

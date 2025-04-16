@@ -5,7 +5,8 @@ import {
   isCacheValid, 
   setCacheWithExpiry, 
   getCachedProfile, 
-  invalidateCache 
+  invalidateCache,
+  CACHE_TTL_MEDIUM
 } from './cache'
 
 /**
@@ -25,23 +26,31 @@ export async function getProfile() {
   }
 
   console.log("Fetching profile from database for user:", user.id);
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-    
-  if (error) {
-    console.error("Error fetching profile:", error);
-    return { profile: null, error }
-  }
-    
-  // Cache the profile with expiry
-  if (data && user.id) {
-    setCacheWithExpiry(user.id, undefined, data);
-  }
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+      
+    if (error) {
+      console.error("Error fetching profile:", error);
+      return { profile: null, error }
+    }
+      
+    // Cache the profile with medium TTL since profiles don't change often
+    if (data && user.id) {
+      setCacheWithExpiry(user.id, undefined, data, CACHE_TTL_MEDIUM);
+    }
 
-  return { profile: data, error: null }
+    return { profile: data, error: null }
+  } catch (fetchError) {
+    console.error("Exception fetching profile:", fetchError);
+    return { 
+      profile: null, 
+      error: fetchError instanceof Error ? fetchError : new Error("Unknown error fetching profile")
+    }
+  }
 }
 
 /**
@@ -66,19 +75,27 @@ export async function updateProfile(updates: Partial<{
     invalidateCache(user.id, 'profile');
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', user.id)
-    .select()
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single()
 
-  // Update cache with new profile data
-  if (data && !error && user.id) {
-    setCacheWithExpiry(user.id, undefined, data);
+    // Update cache with new profile data
+    if (data && !error && user.id) {
+      setCacheWithExpiry(user.id, undefined, data, CACHE_TTL_MEDIUM);
+    }
+
+    return { data, error }
+  } catch (updateError) {
+    console.error("Exception updating profile:", updateError);
+    return { 
+      data: null, 
+      error: updateError instanceof Error ? updateError : new Error("Unknown error updating profile")
+    }
   }
-
-  return { data, error }
 }
 
 /**
@@ -90,15 +107,23 @@ export async function getProfileById(profileId: string) {
     return { profile: null, error: new Error("No profile ID provided") }
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', profileId)
-    .maybeSingle()
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', profileId)
+      .maybeSingle()
 
-  if (error) {
-    console.error(`Error fetching profile ${profileId}:`, error);
+    if (error) {
+      console.error(`Error fetching profile ${profileId}:`, error);
+    }
+
+    return { profile: data, error }
+  } catch (fetchError) {
+    console.error(`Exception fetching profile ${profileId}:`, fetchError);
+    return { 
+      profile: null, 
+      error: fetchError instanceof Error ? fetchError : new Error("Unknown error fetching profile by ID")
+    }
   }
-
-  return { profile: data, error }
 }

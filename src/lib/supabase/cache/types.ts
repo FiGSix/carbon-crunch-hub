@@ -21,3 +21,8 @@ export interface CacheEntry<T> {
  * Cache configuration
  */
 export const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+// Additional TTL presets
+export const CACHE_TTL_SHORT = 30 * 1000; // 30 seconds
+export const CACHE_TTL_MEDIUM = 5 * 60 * 1000; // 5 minutes
+export const CACHE_TTL_LONG = 30 * 60 * 1000; // 30 minutes
