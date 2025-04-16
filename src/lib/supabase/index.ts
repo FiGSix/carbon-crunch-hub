@@ -8,8 +8,9 @@ export {
   signIn, 
   signOut, 
   getCurrentUser, 
-  getUserRole 
-} from './auth'
+  getUserRole,
+  refreshSession
+} from './auth/index'
 export { 
   getProfile, 
   updateProfile 

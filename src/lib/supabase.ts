@@ -9,6 +9,7 @@ export {
   signOut,
   getCurrentUser,
   getUserRole,
+  refreshSession,
   getProfile,
   updateProfile,
 } from './supabase/index'
