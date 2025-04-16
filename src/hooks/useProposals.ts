@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Proposal } from "@/components/proposals/ProposalList";
 import { ProfileData, ProposalFilters, RawProposalData } from "./proposals/types";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { transformProposalData } from "./proposals/proposalUtils";
@@ -77,18 +77,16 @@ export const useProposals = (): UseProposalsResult => {
           review_later_until
         `);
       
-      console.log(`User role: ${userRole} - RLS policies will automatically filter accessible proposals`);
-      
+      // Apply filters
       if (filters.status !== 'all') {
         query = query.eq('status', filters.status);
-        console.log("Applied status filter:", filters.status);
       }
       
       if (filters.search) {
         query = query.ilike('title', `%${filters.search}%`);
-        console.log("Applied search filter:", filters.search);
       }
       
+      // Apply sorting
       switch (filters.sort) {
         case 'oldest':
           query = query.order('created_at', { ascending: true });
@@ -107,19 +105,16 @@ export const useProposals = (): UseProposalsResult => {
           break;
       }
       
-      console.log("Applied sorting:", filters.sort);
-      
       const { data: proposalsData, error: queryError } = await query;
       
       if (queryError) {
         console.error("Supabase query error:", queryError);
-        if (queryError.code === 'PGRST116') {
-          throw new Error("Access denied: You don't have permission to view these proposals");
-        } else if (queryError.code === '42501') {
-          // Permissions error, try refreshing the user session
+        
+        // Handle permission errors by refreshing session
+        if (queryError.code === 'PGRST116' || queryError.code === '42501') {
           console.log("Permission error detected, trying to refresh session");
           await refreshUser();
-          throw new Error("Permission error. Please try again after refreshing your session.");
+          throw new Error("Permission error. Please try again after refreshing.");
         } else {
           throw queryError;
         }
@@ -134,16 +129,19 @@ export const useProposals = (): UseProposalsResult => {
         return;
       }
       
+      // Extract IDs for related data
       const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
       const agentIds = proposalsData
         .map(p => p.agent_id)
         .filter((id): id is string => id !== null && id !== undefined);
       
+      // Fetch related profiles
       const [clientProfiles, agentProfiles] = await Promise.all([
         fetchProfilesByIds(clientIds),
         fetchProfilesByIds(agentIds)
       ]);
       
+      // Transform the data
       const transformedProposals = transformProposalData(
         proposalsData as RawProposalData[], 
         clientProfiles,
@@ -156,15 +154,15 @@ export const useProposals = (): UseProposalsResult => {
       console.error("Error fetching proposals:", error);
       setError(error instanceof Error ? error.message : "Failed to load proposals");
       
+      // Show auth-specific errors with recovery options
       if (error instanceof Error && 
           (error.message.includes("JWT") || 
            error.message.includes("token") || 
            error.message.includes("auth") || 
            error.message.includes("permission"))) {
-        // Specific handling for auth-related errors
         toast({
           title: "Authentication Error",
-          description: "Your session may have expired. Try refreshing your authentication.",
+          description: "Your session may have expired. Try refreshing the page or logging out and back in.",
           variant: "destructive",
         });
       } else {

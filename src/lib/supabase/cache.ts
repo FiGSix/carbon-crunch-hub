@@ -10,8 +10,8 @@ export const cache = {
   sessionExpiry: new Map<string, number>()
 };
 
-// Time to live for cache items (5 minutes - reduced from 10 to ensure fresher data)
-export const CACHE_TTL = 5 * 60 * 1000;
+// Time to live for cache items (2 minutes - reduced to ensure fresher data)
+export const CACHE_TTL = 2 * 60 * 1000;
 
 /**
  * Clear all cache data
@@ -27,9 +27,13 @@ export function clearCache() {
  * Check if a cache entry is still valid
  */
 export function isCacheValid(userId: string) {
+  if (!userId) return false;
+  
   const expiry = cache.sessionExpiry.get(userId);
   const isValid = expiry !== undefined && expiry > Date.now();
+  
   console.log(`Cache validity check for ${userId}: ${isValid ? 'valid' : 'expired'} (expires at ${expiry ? new Date(expiry).toISOString() : 'N/A'})`);
+  
   return isValid;
 }
 
@@ -37,6 +41,8 @@ export function isCacheValid(userId: string) {
  * Set cache with expiry
  */
 export function setCacheWithExpiry(userId: string, roleCache?: UserRole, profileCache?: any) {
+  if (!userId) return;
+  
   const expiry = Date.now() + CACHE_TTL;
   cache.sessionExpiry.set(userId, expiry);
   
@@ -55,6 +61,8 @@ export function setCacheWithExpiry(userId: string, roleCache?: UserRole, profile
  * Invalidate cache for a specific user
  */
 export function invalidateCache(userId: string) {
+  if (!userId) return;
+  
   console.log(`Invalidating cache for user ${userId}`);
   cache.userRole.delete(userId);
   cache.profiles.delete(userId);

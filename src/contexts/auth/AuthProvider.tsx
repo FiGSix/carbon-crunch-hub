@@ -1,8 +1,9 @@
 
 import { createContext, useState, useEffect, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { getCurrentUser, getUserRole, getProfile } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase/client'
+import { getCurrentUser, getUserRole, refreshSession } from '@/lib/supabase/auth'
+import { getProfile } from '@/lib/supabase/profile'
 import { useToast } from '@/hooks/use-toast'
 import { AuthContextType, UserProfile, UserRole } from './types'
 
@@ -33,17 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(roleResult.role);
         console.log("Role from API:", roleResult.role);
       } else {
-        // Try to extract role from JWT claims as a fallback
-        try {
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          const claimRole = currentSession?.user?.app_metadata?.role as UserRole | undefined;
-          if (claimRole) {
-            console.log("Role from JWT claims:", claimRole);
-            setUserRole(claimRole);
-          }
-        } catch (err) {
-          console.error("Error getting role from claims:", err);
-        }
+        console.log("No role found from API");
       }
       
       if (!profileResult.error && profileResult.profile) {
@@ -61,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log("Initializing auth context");
     let subscription: { unsubscribe: () => void } | null = null;
     
     async function initAuth() {
@@ -71,52 +63,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         // Set up auth state listener
-        const { data } = supabase.auth.onAuthStateChange(
-          async (event, newSession) => {
+        subscription = supabase.auth.onAuthStateChange(
+          (event, newSession) => {
             console.log('Auth state changed:', event, 'User ID:', newSession?.user?.id);
             
+            setSession(newSession);
+            setUser(newSession?.user || null);
+            
             if (newSession?.user) {
-              // Update session and user immediately
-              setSession(newSession);
-              setUser(newSession.user);
-              
-              // Extract role from JWT claims if available
-              const claimRole = newSession.user.app_metadata?.role as UserRole | undefined;
-              if (claimRole) {
-                console.log("Role from JWT claims (auth change):", claimRole);
-                setUserRole(claimRole);
-              }
-              
-              // Fetch profile data without updating loading state
+              // For SIGNED_IN events, fetch role and profile
               if (event === 'SIGNED_IN') {
-                // Only fetch on sign in to avoid race conditions
+                // Use setTimeout to avoid recursive auth state changes
                 setTimeout(() => {
                   fetchUserData(newSession.user, true);
                 }, 0);
               }
             } else {
-              setSession(null);
-              setUser(null);
+              // Clear all state when signed out
               setUserRole(null);
               setProfile(null);
             }
           }
-        );
-        
-        subscription = data.subscription;
+        ).data.subscription;
         
         // Handle initial session if it exists
         if (currentSession?.user) {
           console.log("Initial session found, user ID:", currentSession.user.id);
           setSession(currentSession);
           setUser(currentSession.user);
-          
-          // Try to get role from JWT claims
-          const claimRole = currentSession.user.app_metadata?.role as UserRole | undefined;
-          if (claimRole) {
-            console.log("Role from JWT claims (initial):", claimRole);
-            setUserRole(claimRole);
-          }
           
           await fetchUserData(currentSession.user, true);
         }
@@ -145,40 +119,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       console.log("Refreshing user data...");
-      const { user: currentUser } = await getCurrentUser();
       
-      if (currentUser) {
-        setUser(currentUser);
+      // Try refreshing the session first
+      const { session: refreshedSession, error: refreshError } = await refreshSession();
+      
+      if (refreshError) {
+        console.log("Session refresh failed, trying getCurrentUser");
+        const { user: currentUser } = await getCurrentUser();
         
-        // Try to extract role from JWT claims first
-        const claimRole = currentUser.app_metadata?.role as UserRole | undefined;
-        if (claimRole) {
-          console.log("Role from JWT claims (refresh):", claimRole);
-          setUserRole(claimRole);
+        if (currentUser) {
+          setUser(currentUser);
+          await fetchUserData(currentUser, true);
+          console.log("User data refreshed via getCurrentUser");
+        } else {
+          console.log("Could not get current user, user may be signed out");
         }
-        
-        await fetchUserData(currentUser, true);
-        console.log("User data refreshed successfully. User ID:", currentUser.id, "Role:", userRole);
-        return;
-      }
-
-      // If we couldn't get a user, try refreshing the session
-      const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-      if (refreshedSession?.user) {
+      } else if (refreshedSession) {
         setSession(refreshedSession);
         setUser(refreshedSession.user);
-        
-        // Try to extract role from JWT claims
-        const claimRole = refreshedSession.user.app_metadata?.role as UserRole | undefined;
-        if (claimRole) {
-          console.log("Role from JWT claims (refresh session):", claimRole);
-          setUserRole(claimRole);
-        }
-        
         await fetchUserData(refreshedSession.user, true);
-        console.log("Session refreshed successfully. User ID:", refreshedSession.user.id);
-      } else {
-        console.warn("No session could be refreshed");
+        console.log("User data refreshed via session refresh");
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -202,9 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check role
       const { role: currentRole, error: roleError } = await getUserRole();
       
-      // Extract role from JWT claims
-      const jwtRole = currentUser?.app_metadata?.role || 'none';
-      
       // Compile all information
       const debugInfo = {
         sessionExists: !!currentSession,
@@ -218,13 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileRole: currentProfile?.role || 'none',
         profileError: profileError?.message || 'none',
         roleFromFunction: currentRole || 'none',
-        roleFromJWT: jwtRole,
-        roleError: roleError?.message || 'none',
         contextUser: !!user,
         contextUserRole: userRole || 'none',
-        contextProfile: !!profile,
-        appMetadata: currentUser?.app_metadata || {},
-        userMetadata: currentUser?.user_metadata || {}
+        contextProfile: !!profile
       };
       
       console.log("Auth debug information:", debugInfo);

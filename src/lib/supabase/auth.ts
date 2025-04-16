@@ -7,36 +7,50 @@ import { clearCache, isCacheValid, setCacheWithExpiry, cache, invalidateCache } 
  * Sign up a new user with email and password
  */
 export async function signUp(email: string, password: string, role: UserRole, metadata: Record<string, any> = {}) {
+  console.log(`Signing up new user with email: ${email}, role: ${role}`);
+  
   // Clear cache on sign up
   clearCache();
   
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        role,
-        ...metadata,
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          role,
+          ...metadata,
+        },
       },
-    },
-  })
-  
-  return { data, error }
+    });
+    
+    return { data, error };
+  } catch (e) {
+    console.error("Exception during signup:", e);
+    return { data: null, error: e instanceof Error ? e : new Error("Unknown error during signup") };
+  }
 }
 
 /**
  * Sign in a user with email and password
  */
 export async function signIn(email: string, password: string) {
+  console.log(`Signing in user with email: ${email}`);
+  
   // Clear cache on sign in
   clearCache();
   
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-  
-  return { data, error }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    return { data, error };
+  } catch (e) {
+    console.error("Exception during signin:", e);
+    return { data: null, error: e instanceof Error ? e : new Error("Unknown error during signin") };
+  }
 }
 
 /**
@@ -64,10 +78,7 @@ export async function signOut() {
   try {
     // Finally, call the official sign out method
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error during Supabase signOut:", error);
-    }
-    return { error }
+    return { error };
   } catch (e) {
     console.error("Exception during signOut:", e);
     return { error: e instanceof Error ? e : new Error("Unknown error during signOut") };
@@ -80,6 +91,7 @@ export async function signOut() {
 export async function getCurrentUser() {
   try {
     const { data, error } = await supabase.auth.getUser();
+    
     if (error) {
       console.error("Error getting current user:", error);
     } else if (data.user) {
@@ -87,6 +99,7 @@ export async function getCurrentUser() {
     } else {
       console.log("No current user found");
     }
+    
     return { user: data.user, error };
   } catch (e) {
     console.error("Exception getting current user:", e);
@@ -107,8 +120,14 @@ export async function refreshSession() {
       return { session: null, error };
     }
     
-    if (data && data.session) {
+    if (data.session) {
       console.log("Session refreshed successfully for user:", data.session.user.id);
+      
+      // Clear any existing role cache for this user
+      if (data.session.user.id) {
+        invalidateCache(data.session.user.id);
+      }
+      
       return { session: data.session, error: null };
     } else {
       console.log("No session returned from refresh");
@@ -129,11 +148,11 @@ export async function getUserRole() {
     const { user, error } = await getCurrentUser();
     if (error || !user) {
       console.log("Error getting user or user is null:", error);
-      return { role: null, error };
+      return { role: null, error: error || new Error("No authenticated user found") };
     }
     
     // Check cache first with expiry check
-    if (cache.userRole.has(user.id) && isCacheValid(user.id)) {
+    if (user.id && cache.userRole.has(user.id) && isCacheValid(user.id)) {
       console.log("Using cached role for user:", user.id);
       return { role: cache.userRole.get(user.id), error: null };
     }
@@ -142,8 +161,10 @@ export async function getUserRole() {
     let role = user.app_metadata?.role as UserRole;
     if (role) {
       console.log("Found role in app_metadata:", role);
-      // Cache the role with expiry
-      setCacheWithExpiry(user.id, role);
+      // Cache the role with expiry if we have a user id
+      if (user.id) {
+        setCacheWithExpiry(user.id, role);
+      }
       return { role, error: null };
     }
     
@@ -165,12 +186,15 @@ export async function getUserRole() {
       console.log("Found role in profiles table:", role);
       
       // Cache the role with expiry
-      setCacheWithExpiry(user.id, role);
+      if (user.id) {
+        setCacheWithExpiry(user.id, role);
+      }
+      
+      return { role, error: null };
     } else {
       console.log("Role not found in profiles table for user:", user.id);
+      return { role: null, error: new Error("Role not found") };
     }
-    
-    return { role, error: null };
   } catch (e) {
     console.error("Exception getting user role:", e);
     return { role: null, error: e instanceof Error ? e : new Error("Unknown error getting role") };
