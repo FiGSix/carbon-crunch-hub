@@ -72,6 +72,7 @@ export async function getCurrentUser() {
 
 /**
  * Get the role of the current user
+ * First tries to get role from JWT claims, falls back to profiles table
  */
 export async function getUserRole() {
   const { user, error } = await getCurrentUser()
@@ -86,33 +87,33 @@ export async function getUserRole() {
     return { role: cache.userRole.get(user.id), error: null };
   }
   
-  // First check user_metadata which is the primary location
-  let role = user.user_metadata?.role as UserRole
-  
-  // If not found in user_metadata, try to fetch from the profiles table
-  if (!role) {
-    console.log("Role not found in user_metadata, checking profiles table")
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    
-    if (profileError) {
-      console.log("Error fetching profile:", profileError)
-      return { role: null, error: profileError }
-    }
-    
-    if (profile && profile.role) {
-      role = profile.role as UserRole
-      console.log("Found role in profiles table:", role)
-    }
-  } else {
-    console.log("Found role in user_metadata:", role)
+  // First check app_metadata which should contain role from JWT
+  let role = user.app_metadata?.role as UserRole
+  if (role) {
+    console.log("Found role in app_metadata:", role);
+    // Cache the role with expiry
+    setCacheWithExpiry(user.id, role);
+    return { role, error: null };
   }
   
-  // Cache the role with expiry
-  if (role) {
+  // If not found in app_metadata, try to fetch from the profiles table
+  console.log("Role not found in app_metadata, checking profiles table")
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  
+  if (profileError) {
+    console.log("Error fetching profile:", profileError)
+    return { role: null, error: profileError }
+  }
+  
+  if (profile && profile.role) {
+    role = profile.role as UserRole
+    console.log("Found role in profiles table:", role)
+    
+    // Cache the role with expiry
     setCacheWithExpiry(user.id, role);
   }
   

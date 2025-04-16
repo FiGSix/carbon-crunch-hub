@@ -31,6 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (roleResult.role) {
         setUserRole(roleResult.role);
+        console.log("Role from API:", roleResult.role);
+      } else {
+        // Try to extract role from JWT claims as a fallback
+        try {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          const claimRole = currentSession?.user?.app_metadata?.role as UserRole | undefined;
+          if (claimRole) {
+            console.log("Role from JWT claims:", claimRole);
+            setUserRole(claimRole);
+          }
+        } catch (err) {
+          console.error("Error getting role from claims:", err);
+        }
       }
       
       if (!profileResult.error && profileResult.profile) {
@@ -67,6 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setSession(newSession);
               setUser(newSession.user);
               
+              // Extract role from JWT claims if available
+              const claimRole = newSession.user.app_metadata?.role as UserRole | undefined;
+              if (claimRole) {
+                console.log("Role from JWT claims (auth change):", claimRole);
+                setUserRole(claimRole);
+              }
+              
               // Fetch profile data without updating loading state
               if (event === 'SIGNED_IN') {
                 // Only fetch on sign in to avoid race conditions
@@ -90,6 +110,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("Initial session found, user ID:", currentSession.user.id);
           setSession(currentSession);
           setUser(currentSession.user);
+          
+          // Try to get role from JWT claims
+          const claimRole = currentSession.user.app_metadata?.role as UserRole | undefined;
+          if (claimRole) {
+            console.log("Role from JWT claims (initial):", claimRole);
+            setUserRole(claimRole);
+          }
+          
           await fetchUserData(currentSession.user, true);
         }
       } catch (error) {
@@ -121,6 +149,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (currentUser) {
         setUser(currentUser);
+        
+        // Try to extract role from JWT claims first
+        const claimRole = currentUser.app_metadata?.role as UserRole | undefined;
+        if (claimRole) {
+          console.log("Role from JWT claims (refresh):", claimRole);
+          setUserRole(claimRole);
+        }
+        
         await fetchUserData(currentUser, true);
         console.log("User data refreshed successfully. User ID:", currentUser.id, "Role:", userRole);
         return;
@@ -131,6 +167,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (refreshedSession?.user) {
         setSession(refreshedSession);
         setUser(refreshedSession.user);
+        
+        // Try to extract role from JWT claims
+        const claimRole = refreshedSession.user.app_metadata?.role as UserRole | undefined;
+        if (claimRole) {
+          console.log("Role from JWT claims (refresh session):", claimRole);
+          setUserRole(claimRole);
+        }
+        
         await fetchUserData(refreshedSession.user, true);
         console.log("Session refreshed successfully. User ID:", refreshedSession.user.id);
       } else {
@@ -158,6 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check role
       const { role: currentRole, error: roleError } = await getUserRole();
       
+      // Extract role from JWT claims
+      const jwtRole = currentUser?.app_metadata?.role || 'none';
+      
       // Compile all information
       const debugInfo = {
         sessionExists: !!currentSession,
@@ -171,10 +218,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileRole: currentProfile?.role || 'none',
         profileError: profileError?.message || 'none',
         roleFromFunction: currentRole || 'none',
+        roleFromJWT: jwtRole,
         roleError: roleError?.message || 'none',
         contextUser: !!user,
         contextUserRole: userRole || 'none',
         contextProfile: !!profile,
+        appMetadata: currentUser?.app_metadata || {},
+        userMetadata: currentUser?.user_metadata || {}
       };
       
       console.log("Auth debug information:", debugInfo);
