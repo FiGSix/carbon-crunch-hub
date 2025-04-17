@@ -1,42 +1,42 @@
-import { motion } from "framer-motion";
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart, Users, Settings, LogOut, User } from "lucide-react";
+import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
-import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
-interface DashboardSidebarProps {
+interface DashboardSidebarNewProps {
   userRole: 'client' | 'agent' | 'admin';
 }
 
-export const DashboardSidebarNew = ({ userRole }: DashboardSidebarProps) => {
+export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { refreshUser } = useAuth();
 
   const clientMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard-preview" },
+    { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "My Proposals", path: "/proposals" },
-    { icon: User, label: "My Profile", path: "/profile" }
+    { icon: BarChart, label: "Carbon Reports", path: "/reports" },
+    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   const agentMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard-preview" },
+    { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
-    { icon: User, label: "My Profile", path: "/profile" }
+    { icon: Users, label: "My Clients", path: "/clients" },
   ];
 
   const adminMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard-preview" },
+    { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "All Proposals", path: "/proposals" },
     { icon: Users, label: "User Management", path: "/users" },
     { icon: BarChart, label: "Reports", path: "/reports" },
     { icon: Settings, label: "System Settings", path: "/settings" },
-    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   let menuItems;
