@@ -19,4 +19,27 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    minify: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+    terserOptions: {
+      compress: {
+        // Keep console.error for debugging critical issues in production
+        // but remove other console methods
+        drop_console: true,
+        pure_funcs: [
+          'console.log', 
+          'console.info', 
+          'console.debug', 
+          'console.warn'
+        ],
+      },
+    },
+  },
 }));
