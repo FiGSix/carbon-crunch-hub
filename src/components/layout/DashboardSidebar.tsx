@@ -1,6 +1,5 @@
-
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart, Users, Settings, LogOut } from "lucide-react";
+import { Home, FileText, BarChart, Users, Settings, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -22,11 +21,13 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "My Proposals", path: "/proposals" },
+    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   const agentMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
+    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   const adminMenuItems = [
@@ -35,6 +36,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     { icon: Users, label: "User Management", path: "/users" },
     { icon: BarChart, label: "Reports", path: "/reports" },
     { icon: Settings, label: "System Settings", path: "/settings" },
+    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   let menuItems;

@@ -1,12 +1,11 @@
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack } from "lucide-react";
+import { Home, FileText, BarChart, Users, Settings, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
-import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 
 interface DashboardSidebarNewProps {
   userRole: 'client' | 'agent' | 'admin';
@@ -19,24 +18,24 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
   const { refreshUser } = useAuth();
 
   const clientMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Home, label: "Dashboard", path: "/dashboard-preview" },
     { icon: FileText, label: "My Proposals", path: "/proposals" },
-    { icon: BarChart, label: "Carbon Reports", path: "/reports" },
-    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   const agentMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Home, label: "Dashboard", path: "/dashboard-preview" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
-    { icon: Users, label: "My Clients", path: "/clients" },
+    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   const adminMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Home, label: "Dashboard", path: "/dashboard-preview" },
     { icon: FileText, label: "All Proposals", path: "/proposals" },
     { icon: Users, label: "User Management", path: "/users" },
     { icon: BarChart, label: "Reports", path: "/reports" },
     { icon: Settings, label: "System Settings", path: "/settings" },
+    { icon: User, label: "My Profile", path: "/profile" }
   ];
 
   let menuItems;
