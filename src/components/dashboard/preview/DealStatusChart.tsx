@@ -8,12 +8,12 @@ import {
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
-// Enhanced data with more vibrant colors matching the 3D pie chart design
+// Enhanced data with colors following the brand palette
 const data = [
-  { name: 'Draft', value: 4, color: '#9ca3af', shadowColor: '#7c7f86' },
-  { name: 'Pending', value: 6, color: '#22c55e', shadowColor: '#15803d' },
-  { name: 'Signed', value: 8, color: '#3b82f6', shadowColor: '#1d4ed8' },
-  { name: 'Declined', value: 2, color: '#ef4444', shadowColor: '#b91c1c' },
+  { name: 'Draft', value: 4, color: '#5A5A5A', shadowColor: '#3D3D3D' },    // Lighter shade of black
+  { name: 'Pending', value: 6, color: '#FFDC5D', shadowColor: '#E6C13B' },  // Lighter shade of yellow
+  { name: 'Signed', value: 8, color: '#FFCD03', shadowColor: '#E6B800' },   // Brand yellow
+  { name: 'Declined', value: 2, color: '#231F20', shadowColor: '#111111' }, // Brand black
 ];
 
 const RADIAN = Math.PI / 180;
@@ -96,15 +96,15 @@ export function DealStatusChart() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pb-4 flex-1 flex items-center justify-center min-h-[320px] overflow-visible">
-          {/* Platform/Base effect */}
-          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-[180px] h-[20px] bg-gray-200 rounded-full shadow-md opacity-50"></div>
+          {/* Enhanced platform/base effect with stronger shadow */}
+          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-[200px] h-[20px] bg-gray-200 rounded-full shadow-lg opacity-40"></div>
           
-          {/* 3D Perspective wrapper */}
+          {/* 3D Perspective wrapper with improved perspective and tilt */}
           <div className="relative w-full h-full flex items-center justify-center transform-gpu perspective-[1200px]">
-            <div className="transform-gpu rotate-x-[30deg] rotate-z-[0deg]">
-              <ResponsiveContainer width={320} height={320}>
+            <div className="transform-gpu rotate-x-30 rotate-z-12">
+              <ResponsiveContainer width={350} height={350}>
                 <PieChart>
-                  {/* Shadow effect for 3D */}
+                  {/* Enhanced shadow effect for 3D */}
                   <defs>
                     {data.map((entry, index) => (
                       <filter
@@ -115,24 +115,24 @@ export function DealStatusChart() {
                         width="200%"
                         height="200%"
                       >
-                        <feOffset dx="0" dy="10" />
-                        <feGaussianBlur stdDeviation="10" />
+                        <feOffset dx="0" dy="15" />
+                        <feGaussianBlur stdDeviation="12" />
                         <feColorMatrix
                           type="matrix"
-                          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0"
+                          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"
                         />
                       </filter>
                     ))}
                   </defs>
                   
-                  {/* Main pie */}
+                  {/* Main pie with larger size */}
                   <Pie
                     data={data}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
                     label={renderCustomizedLabel}
-                    outerRadius={80}
+                    outerRadius={100}
                     innerRadius={0}
                     paddingAngle={4}
                     dataKey="value"
@@ -151,12 +151,12 @@ export function DealStatusChart() {
                     ))}
                   </Pie>
                   
-                  {/* Shadow/Bottom effect for 3D illusion */}
+                  {/* Shadow/Bottom effect for 3D illusion with improved opacity and positioning */}
                   <Pie
                     data={data}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={100}
                     innerRadius={0}
                     paddingAngle={4}
                     dataKey="value"
@@ -165,8 +165,8 @@ export function DealStatusChart() {
                     startAngle={90}
                     endAngle={-270}
                     style={{
-                      transform: 'translateY(15px) scaleY(0.15)',
-                      opacity: 0.3,
+                      transform: 'translateY(25px) scaleY(0.15)',
+                      opacity: 0.35,
                       mixBlendMode: 'multiply'
                     }}
                   >
