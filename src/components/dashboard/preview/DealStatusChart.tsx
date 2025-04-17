@@ -58,7 +58,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
         fontWeight="bold"
         fontSize={16}
       >
-        {`${(percent * 100).toFixed(0)}%`}
+        {`${(Number(percent) * 100).toFixed(0)}%`}
       </text>
       
       {/* Label */}
@@ -164,10 +164,10 @@ export function DealStatusChart() {
                     animationDuration={0}
                     startAngle={90}
                     endAngle={-270}
-                    blendMode="multiply"
                     style={{
                       transform: 'translateY(15px) scaleY(0.15)',
                       opacity: 0.3,
+                      mixBlendMode: 'multiply'
                     }}
                   >
                     {data.map((entry, index) => (
