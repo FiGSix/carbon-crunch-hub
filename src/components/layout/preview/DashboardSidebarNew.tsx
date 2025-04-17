@@ -96,10 +96,10 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
   };
 
   return (
-    <SidebarContent className="pt-4 bg-gradient-to-b from-crunch-black to-crunch-black/95 text-white">
+    <SidebarContent className="pt-4 bg-white border-r border-crunch-black/10 text-crunch-black">
       <div className="px-3 mb-8">
         <div className="flex items-center justify-center">
-          <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12 drop-shadow-md" />
+          <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12" />
         </div>
       </div>
       
@@ -107,14 +107,14 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
         <SidebarMenuItem className="px-3 mb-2">
           <SidebarMenuButton
             onClick={handleExitPreview}
-            className="w-full flex gap-2 items-center py-2 px-3 bg-crunch-yellow/20 text-crunch-yellow rounded-md hover:bg-crunch-yellow/30"
+            className="w-full flex gap-2 items-center py-2 px-3 bg-crunch-yellow/20 text-crunch-black rounded-md hover:bg-crunch-yellow/30"
           >
-            <StepBack className="h-5 w-5" />
+            <StepBack className="h-5 w-5 text-crunch-yellow" />
             <span>Exit Preview</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
 
-        <div className="px-3 py-2 text-xs uppercase text-crunch-yellow/50 tracking-wider">Navigation</div>
+        <div className="px-3 py-2 text-xs uppercase text-crunch-black/50 tracking-wider">Navigation</div>
 
         {menuItems.map((item, index) => (
           <motion.div 
@@ -126,9 +126,9 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
             <SidebarMenuItem key={item.path}>
               <SidebarMenuButton
                 onClick={() => navigate(item.path)}
-                className="w-full flex gap-2 items-center py-2 px-3 hover:bg-white/10 rounded-md transition-colors"
+                className="w-full flex gap-2 items-center py-2 px-3 hover:bg-crunch-yellow/10 rounded-md transition-colors"
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-5 w-5 text-crunch-yellow" />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -136,12 +136,12 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
         ))}
         
         <div className="mt-8 px-3">
-          <div className="py-2 text-xs uppercase text-crunch-yellow/50 tracking-wider">Account</div>
+          <div className="py-2 text-xs uppercase text-crunch-black/50 tracking-wider">Account</div>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="w-full flex gap-2 items-center py-2 px-3 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-md transition-colors"
+              className="w-full flex gap-2 items-center py-2 px-3 text-red-500 hover:bg-red-500/10 hover:text-red-600 rounded-md transition-colors"
             >
               {isLoggingOut ? (
                 <Loader2 className="h-5 w-5 animate-spin" />

@@ -58,7 +58,7 @@ const DashboardPreview = () => {
         <StatsCardNew 
           title="Portfolio Size" 
           value={`${portfolioSize} MWp`} 
-          icon={<Wind className="h-5 w-5 text-emerald-600" />}
+          icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
           trend="+14%"
           trendDirection="up"
           color="emerald"
@@ -67,7 +67,7 @@ const DashboardPreview = () => {
         <StatsCardNew 
           title="Total Proposals" 
           value={totalProposals} 
-          icon={<FileText className="h-5 w-5 text-blue-600" />}
+          icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
           trend="+3"
           trendDirection="up"
           color="blue"
@@ -85,7 +85,7 @@ const DashboardPreview = () => {
         <StatsCardNew 
           title="CO₂ Offset" 
           value={`${co2Offset} tCO₂`} 
-          icon={<Leaf className="h-5 w-5 text-green-600" />}
+          icon={<Leaf className="h-5 w-5 text-crunch-yellow" />}
           trend="+6%"
           trendDirection="up"
           color="green"
@@ -99,7 +99,7 @@ const DashboardPreview = () => {
           <StatsCardNew 
             title="Portfolio Size" 
             value={`${portfolioSize} MWp`} 
-            icon={<Wind className="h-5 w-5 text-emerald-600" />}
+            icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
             trend="+14%"
             trendDirection="up"
             color="emerald"
@@ -110,7 +110,7 @@ const DashboardPreview = () => {
           <StatsCardNew 
             title="Total Proposals" 
             value={totalProposals} 
-            icon={<FileText className="h-5 w-5 text-blue-600" />}
+            icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
             trend="+3"
             trendDirection="up"
             color="blue"
@@ -172,7 +172,7 @@ const DashboardPreview = () => {
             onClick={handleRefreshProposals}
             disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''} text-crunch-yellow`} />
             Refresh Data
           </Button>
         }

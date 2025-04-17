@@ -39,8 +39,8 @@ export function CommissionCard({ portfolioSize }: CommissionCardProps) {
                 {portfolioSize < 15 ? `${(15 - portfolioSize).toFixed(1)} MWp to 7%` : "Maximum rate achieved"}
               </div>
             </div>
-            <div className="rounded-full bg-purple-100 p-3 shadow-sm">
-              <Percent className="h-5 w-5 text-purple-600" />
+            <div className="rounded-full bg-crunch-yellow/10 p-3 shadow-sm">
+              <Percent className="h-5 w-5 text-crunch-yellow" />
             </div>
           </div>
           
@@ -48,7 +48,7 @@ export function CommissionCard({ portfolioSize }: CommissionCardProps) {
           <div>
             <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2">
               <motion.div 
-                className="bg-purple-600 h-2.5 rounded-full"
+                className="bg-crunch-yellow h-2.5 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}

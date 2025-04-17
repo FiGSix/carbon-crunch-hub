@@ -60,7 +60,7 @@ export function DashboardLayoutNew({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <SidebarTrigger className="hover:bg-crunch-black/5 rounded-full p-2 transition-colors duration-200" />
+            <SidebarTrigger className="hover:bg-crunch-yellow/10 rounded-full p-2 transition-colors duration-200" />
             <div className="ml-4 text-lg font-bold uppercase tracking-wide bg-gradient-to-r from-crunch-black to-crunch-black/80 bg-clip-text text-transparent">
               {userRole === 'client' && 'CLIENT DASHBOARD'}
               {userRole === 'agent' && 'AGENT DASHBOARD'}

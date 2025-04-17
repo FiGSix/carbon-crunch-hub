@@ -30,16 +30,16 @@ export function StatsCardNew({
   const getIconColor = () => {
     switch(color) {
       case 'green':
-        return 'bg-green-100';
+        return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'blue':
-        return 'bg-blue-100';
+        return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'emerald':
-        return 'bg-emerald-100';
+        return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'purple':
-        return 'bg-purple-100';
+        return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'yellow':
       default:
-        return 'bg-crunch-yellow/10';
+        return 'bg-crunch-yellow/10 text-crunch-yellow';
     }
   };
 
