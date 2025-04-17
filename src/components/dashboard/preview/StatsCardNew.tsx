@@ -27,22 +27,6 @@ export function StatsCardNew({
   color = 'yellow'
 }: StatsCardNewProps) {
   
-  const getGradient = () => {
-    switch(color) {
-      case 'green':
-        return 'from-green-50 to-white';
-      case 'blue':
-        return 'from-blue-50 to-white';
-      case 'emerald':
-        return 'from-emerald-50 to-white';
-      case 'purple':
-        return 'from-purple-50 to-white';
-      case 'yellow':
-      default:
-        return 'from-crunch-yellow/5 to-white';
-    }
-  };
-  
   const getIconColor = () => {
     switch(color) {
       case 'green':
@@ -73,7 +57,7 @@ export function StatsCardNew({
       transition={{ duration: 0.3 }}
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
     >
-      <Card className={`overflow-hidden border border-crunch-black/5 bg-gradient-to-br ${getGradient()} shadow-sm hover:shadow-md transition-all duration-300`}>
+      <Card className="overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-crunch-black/70">{title}</CardTitle>
         </CardHeader>
