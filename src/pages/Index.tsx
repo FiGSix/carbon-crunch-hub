@@ -1,31 +1,27 @@
 
-import { Header } from "@/components/layout/Header";
+import React from "react";
+import { HeroSection } from "@/pages/home/HeroSection";
+import { HowItWorksSection } from "@/pages/home/HowItWorksSection";
+import { TestimonialsSection } from "@/pages/home/TestimonialsSection";
+import { SocialProofSection } from "@/pages/home/SocialProofSection";
+import { CTASection } from "@/pages/home/CTASection";
 import { Footer } from "@/components/layout/footer";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { HeroSection } from "./home/HeroSection";
-import { SocialProofSection } from "./home/SocialProofSection";
-import { HowItWorksSection } from "./home/HowItWorksSection";
-import { TestimonialsSection } from "./home/TestimonialsSection";
-import { CTASection } from "./home/CTASection";
+import { Header } from "@/components/layout/Header";
+import { PreviewBanner } from "@/components/home/PreviewBanner";
 
-const Index = () => {
-  const isMobile = useIsMobile();
-  
+export default function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+      <PreviewBanner />
       <main className="flex-1">
         <HeroSection />
-        <SocialProofSection />
         <HowItWorksSection />
         <TestimonialsSection />
+        <SocialProofSection />
         <CTASection />
       </main>
-      
       <Footer />
     </div>
   );
-};
-
-export default Index;
+}

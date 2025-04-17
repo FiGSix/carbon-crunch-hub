@@ -25,6 +25,7 @@ import TestInvitations from "./pages/TestInvitations";
 import Notifications from "./pages/Notifications";
 import ButtonShowcase from "./pages/ButtonShowcase";
 import TestAgent from "./pages/TestAgent";
+import DashboardPreview from "./pages/DashboardPreview"; // New import
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,13 @@ const App = () => (
             <Route path="/force-logout" element={<ForceLogout />} />
             <Route path="/proposals/view" element={<ViewProposal />} />
             <Route path="/button-showcase" element={<ButtonShowcase />} />
+            
+            {/* Dashboard Preview Route */}
+            <Route path="/dashboard-preview" element={
+              <PrivateRoute>
+                <DashboardPreview />
+              </PrivateRoute>
+            } />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={
