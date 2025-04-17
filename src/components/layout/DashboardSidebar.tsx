@@ -1,3 +1,4 @@
+
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Home, FileText, BarChart, Users, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +28,6 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const agentMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
-    { icon: Users, label: "My Clients", path: "/clients" },
   ];
 
   const adminMenuItems = [
@@ -57,6 +57,15 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       setIsLoggingOut(true);
       console.log("Logout initiated");
       
+      // Clear local auth state first
+      const { setUser, setUserRole, setProfile, setSession } = useAuth();
+      if (setUser && setUserRole && setProfile && setSession) {
+        setUser(null);
+        setUserRole(null);
+        setProfile(null);
+        setSession(null);
+      }
+      
       // Call sign out and wait for it to complete
       const { error } = await signOut();
       
@@ -76,9 +85,20 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         description: "You have been successfully logged out",
       });
       
+      // Clear local storage items manually as a fallback
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase') || key.includes('sb-'))) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      // Clear session storage
+      sessionStorage.clear();
+      
       // Navigate to login page immediately after successful logout
       console.log("Navigating to login page");
-      navigate("/login");
+      navigate("/login", { replace: true });
     } catch (error) {
       console.error("Exception in handleLogout:", error);
       toast({
