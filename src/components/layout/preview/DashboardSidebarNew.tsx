@@ -1,4 +1,3 @@
-
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -30,8 +29,6 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
     { icon: Users, label: "My Clients", path: "/clients" },
-    { icon: BarChart, label: "Commissions", path: "/commissions" },
-    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   const adminMenuItems = [
@@ -104,16 +101,6 @@ export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
       </div>
       
       <SidebarMenu>
-        <SidebarMenuItem className="px-3 mb-2">
-          <SidebarMenuButton
-            onClick={handleExitPreview}
-            className="w-full flex gap-2 items-center py-2 px-3 bg-crunch-yellow/20 text-crunch-black rounded-md hover:bg-crunch-yellow/30"
-          >
-            <StepBack className="h-5 w-5 text-crunch-yellow" />
-            <span>Exit Preview</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-
         <div className="px-3 py-2 text-xs uppercase text-crunch-black/50 tracking-wider">Navigation</div>
 
         {menuItems.map((item, index) => (

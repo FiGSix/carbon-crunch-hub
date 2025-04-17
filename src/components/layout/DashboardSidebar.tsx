@@ -1,4 +1,3 @@
-
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Home, FileText, BarChart, Users, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -29,8 +28,6 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
     { icon: Users, label: "My Clients", path: "/clients" },
-    { icon: BarChart, label: "Commissions", path: "/commissions" },
-    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   const adminMenuItems = [

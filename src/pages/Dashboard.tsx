@@ -1,15 +1,18 @@
 
+import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
-import { RecentProjects } from "@/components/dashboard/RecentProjects";
-import { FileText, TrendingUp, Wind, RefreshCw } from "lucide-react";
+import { StatsCardNew } from "@/components/dashboard/preview/StatsCardNew";
+import { RevenueChartNew } from "@/components/dashboard/preview/RevenueChartNew";
+import { CO2OffsetChartNew } from "@/components/dashboard/preview/CO2OffsetChartNew";
+import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
+import { FileText, TrendingUp, Wind, Leaf, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { useProposals } from "@/hooks/useProposals";
 import { useEffect } from "react";
+import { CommissionCard } from "@/components/dashboard/preview/CommissionCard";
+import { DealStatusChart } from "@/components/dashboard/preview/DealStatusChart";
 
 const Dashboard = () => {
   const { profile, userRole } = useAuth();
@@ -20,9 +23,8 @@ const Dashboard = () => {
     console.log("Dashboard rendered with proposals count:", proposals.length);
   }, [proposals.length]);
   
-  // Mock data for stats (could be calculated from proposals in the future)
   const portfolioSize = 12.5; // MWp
-  const totalProjects = proposals.length || 8;
+  const totalProposals = proposals.length || 8;
   const potentialRevenue = 284350; // in Rands
   const co2Offset = 1245; // in tCO2
   
@@ -54,6 +56,96 @@ const Dashboard = () => {
     fetchProposals();
   };
   
+  const renderStatsCards = () => {
+    if (userRole === 'agent') {
+      return (
+        <>
+          <StatsCardNew 
+            title="Portfolio Size" 
+            value={`${portfolioSize} MWp`} 
+            icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
+            trend="+14%"
+            trendDirection="up"
+            color="emerald"
+          />
+          
+          <CommissionCard portfolioSize={portfolioSize} />
+          
+          <StatsCardNew 
+            title="Total Proposals" 
+            value={totalProposals} 
+            icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
+            trend="+3"
+            trendDirection="up"
+            color="blue"
+          />
+          
+          <StatsCardNew 
+            title="Potential Revenue" 
+            value={`R ${potentialRevenue.toLocaleString()}`} 
+            icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
+            trend="+12%"
+            trendDirection="up"
+            color="yellow"
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <StatsCardNew 
+          title="Portfolio Size" 
+          value={`${portfolioSize} MWp`} 
+          icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
+          trend="+14%"
+          trendDirection="up"
+          color="emerald"
+        />
+        
+        <StatsCardNew 
+          title="Total Proposals" 
+          value={totalProposals} 
+          icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
+          trend="+3"
+          trendDirection="up"
+          color="blue"
+        />
+        
+        <StatsCardNew 
+          title="Potential Revenue" 
+          value={`R ${potentialRevenue.toLocaleString()}`} 
+          icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
+          trend="+12%"
+          trendDirection="up"
+          color="yellow"
+        />
+        
+        <StatsCardNew 
+          title="CO₂ Offset" 
+          value={`${co2Offset} tCO₂`} 
+          icon={<Leaf className="h-5 w-5 text-crunch-yellow" />}
+          trend="+6%"
+          trendDirection="up"
+          color="green"
+        />
+      </>
+    );
+  };
+
+  const renderCharts = () => {
+    if (userRole === 'agent') {
+      return null;
+    }
+
+    return (
+      <>
+        <RevenueChartNew />
+        <CO2OffsetChartNew />
+      </>
+    );
+  };
+  
   return (
     <DashboardLayout>
       <DashboardHeader 
@@ -68,45 +160,38 @@ const Dashboard = () => {
             onClick={handleRefreshProposals}
             disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''} text-crunch-yellow`} />
             Refresh Data
           </Button>
         }
       />
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatsCard 
-          title="Portfolio Size" 
-          value={`${portfolioSize} MWp`} 
-          icon={<Wind className="h-5 w-5 text-carbon-green-600" />}
-        />
-        
-        <StatsCard 
-          title="Total Projects" 
-          value={totalProjects} 
-          icon={<FileText className="h-5 w-5 text-carbon-blue-600" />}
-        />
-        
-        <StatsCard 
-          title="Potential Revenue" 
-          value={`R ${potentialRevenue.toLocaleString()}`} 
-          icon={<TrendingUp className="h-5 w-5 text-carbon-green-600" />}
-        />
-        
-        <StatsCard 
-          title="CO₂ Offset" 
-          value={`${co2Offset} tCO₂`} 
-          icon={<Wind className="h-5 w-5 text-carbon-green-600" />}
-        />
-      </div>
+      {userRole === 'agent' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
+              {renderStatsCards()}
+            </div>
+          </div>
+          
+          <div className="lg:col-span-1 h-full">
+            <DealStatusChart />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {renderStatsCards()}
+        </div>
+      )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <RevenueChart />
-        <CO2OffsetChart />
-      </div>
+      {renderCharts() && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {renderCharts()}
+        </div>
+      )}
       
       <div className="grid grid-cols-1 gap-6">
-        <RecentProjects 
+        <RecentProjectsNew 
           proposals={proposals}
           loading={loading}
           onRefresh={handleRefreshProposals}
