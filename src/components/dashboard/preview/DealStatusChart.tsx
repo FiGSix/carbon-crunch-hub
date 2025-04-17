@@ -24,7 +24,7 @@ export function DealStatusChart() {
       transition={{ duration: 0.3, delay: 0.2 }}
       className="h-full"
     >
-      <Card className="border border-crunch-black/5 bg-white h-full">
+      <Card className="border border-crunch-black/5 bg-white h-full flex flex-col">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-medium flex items-center">
             <span className="bg-gradient-to-r from-crunch-black to-crunch-black/80 bg-clip-text text-transparent">
@@ -32,8 +32,8 @@ export function DealStatusChart() {
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-4 h-[240px] md:h-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <CardContent className="pb-4 flex-1 flex items-center justify-center min-h-[320px]">
+          <ResponsiveContainer width="100%" height="100%" minHeight={280}>
             <PieChart>
               <Pie
                 data={data}

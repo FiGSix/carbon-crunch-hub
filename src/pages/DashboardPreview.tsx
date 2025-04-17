@@ -1,4 +1,3 @@
-
 import React from "react";
 import { DashboardLayoutNew } from "@/components/layout/preview/DashboardLayoutNew";
 import { DashboardHeaderNew } from "@/components/dashboard/preview/DashboardHeaderNew";
@@ -21,7 +20,6 @@ const DashboardPreview = () => {
   const { profile, userRole } = useAuth();
   const { proposals, fetchProposals, loading } = useProposals();
   
-  // Mock data for stats (could be calculated from proposals in the future)
   const portfolioSize = 12.5; // MWp
   const totalProposals = proposals.length || 8;
   const potentialRevenue = 284350; // in Rands
@@ -54,9 +52,7 @@ const DashboardPreview = () => {
     fetchProposals();
   };
   
-  // Render different stats cards based on user role
   const renderStatsCards = () => {
-    // Default cards for clients
     const cards = (
       <>
         <StatsCardNew 
@@ -97,7 +93,6 @@ const DashboardPreview = () => {
       </>
     );
 
-    // Agent-specific cards
     if (userRole === 'agent') {
       return (
         <>
@@ -136,7 +131,6 @@ const DashboardPreview = () => {
     return cards;
   };
 
-  // Render different charts based on user role
   const renderCharts = () => {
     if (userRole === 'agent') {
       return (
@@ -188,23 +182,19 @@ const DashboardPreview = () => {
         }
       />
       
-      {/* New layout: Deal Status on right, Stats cards on left */}
       {userRole === 'agent' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Left side - Stats cards in a 2x2 grid */}
           <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
               {renderStatsCards()}
             </div>
           </div>
           
-          {/* Right side - Deal Status chart */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 h-full">
             <DealStatusChart />
           </div>
         </div>
       ) : (
-        /* Regular layout for clients */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {renderStatsCards()}
         </div>

@@ -56,12 +56,13 @@ export function StatsCardNew({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
+      className="h-full"
     >
-      <Card className="overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+      <Card className="overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-crunch-black/70">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col justify-between">
           <div className="flex justify-between items-center">
             <div className="space-y-1">
               <div className="text-2xl font-bold">{value}</div>
@@ -80,6 +81,8 @@ export function StatsCardNew({
               {icon}
             </div>
           </div>
+          {/* Add extra space to match CommissionCard height */}
+          <div className="pt-4"></div>
         </CardContent>
       </Card>
     </motion.div>

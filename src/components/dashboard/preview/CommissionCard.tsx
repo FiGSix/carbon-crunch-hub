@@ -25,12 +25,13 @@ export function CommissionCard({ portfolioSize }: CommissionCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
+      className="h-full"
     >
-      <Card className="overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+      <Card className="overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-crunch-black/70">Commission</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-4">
             <div className="space-y-1">
               <div className="text-2xl font-bold">{commissionRate}%</div>
@@ -44,17 +45,19 @@ export function CommissionCard({ portfolioSize }: CommissionCardProps) {
           </div>
           
           {/* Progress bar */}
-          <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2">
-            <motion.div 
-              className="bg-purple-600 h-2.5 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 1, ease: "easeOut" }}
-            />
-          </div>
-          <div className="flex justify-between mt-1 text-xs text-crunch-black/50">
-            <span>4%</span>
-            <span>7%</span>
+          <div>
+            <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2">
+              <motion.div 
+                className="bg-purple-600 h-2.5 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
+            </div>
+            <div className="flex justify-between mt-1 text-xs text-crunch-black/50">
+              <span>4%</span>
+              <span>7%</span>
+            </div>
           </div>
         </CardContent>
       </Card>
