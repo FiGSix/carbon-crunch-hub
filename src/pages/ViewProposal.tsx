@@ -9,6 +9,7 @@ import { useViewProposal } from "@/hooks/useViewProposal";
 import { ProposalArchiveDialog } from "@/components/proposals/view/ProposalArchiveDialog";
 import { useAuth } from "@/contexts/auth";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
+import { logger } from "@/lib/logger";
 
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,7 @@ const ViewProposal = () => {
   // Determine if we need to show auth form based on token and user state
   useEffect(() => {
     if (!loading && token && clientEmail && !user) {
+      logger.info("Showing authentication form for client with email:", clientEmail);
       setShowAuthForm(true);
     } else {
       setShowAuthForm(false);
@@ -45,6 +47,7 @@ const ViewProposal = () => {
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
+    logger.info("Authentication completed, refreshing view");
     setShowAuthForm(false);
     // Force refresh the component to get latest auth state
     window.location.reload();
@@ -53,7 +56,7 @@ const ViewProposal = () => {
   // Log details for debugging purposes
   useEffect(() => {
     if (proposal) {
-      console.log("ViewProposal - Current proposal state:", {
+      logger.info("ViewProposal - Current proposal state:", {
         id: proposal.id,
         status: proposal.status,
         isClient: user?.id === proposal.client_id,
@@ -71,6 +74,7 @@ const ViewProposal = () => {
   }
   
   if (error) {
+    logger.error("Error loading proposal:", error);
     return <ProposalError errorMessage={error} />;
   }
   
@@ -92,6 +96,7 @@ const ViewProposal = () => {
   }
   
   if (!proposal) {
+    logger.warn("No proposal found");
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">
@@ -108,7 +113,7 @@ const ViewProposal = () => {
   // Client can take action if they're authenticated and proposal is pending (regardless of token)
   const canTakeAction = isClient && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
   
-  console.log("ViewProposal - Show action buttons:", {
+  logger.debug("ViewProposal - Show action buttons:", {
     isClient,
     status: proposal.status,
     isArchived: !!proposal.archived_at,
@@ -150,6 +155,6 @@ const ViewProposal = () => {
       />
     </div>
   );
-}
+};
 
 export default ViewProposal;

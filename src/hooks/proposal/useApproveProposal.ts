@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
 import { useNavigate } from "react-router-dom";
+import { logger } from "@/lib/logger";
 
 export function useApproveProposal(setLoadingState: (operation: 'approve', isLoading: boolean) => void) {
   const { toast } = useToast();
@@ -11,21 +12,28 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
 
   const approveProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
     try {
+      logger.info(`Starting approval process for proposal: ${proposalId}`);
       setLoadingState('approve', true);
       
       // Fetch the proposal to get agent_id for notification
       const { data: proposals, error: fetchError } = await supabase
         .from('proposals')
-        .select('agent_id, title')
+        .select('agent_id, title, client_id')
         .eq('id', proposalId);
         
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        logger.error("Error fetching proposal details:", fetchError);
+        throw fetchError;
+      }
       
       if (!proposals || proposals.length === 0) {
-        throw new Error("Proposal not found");
+        const notFoundError = new Error("Proposal not found");
+        logger.error(notFoundError.message);
+        throw notFoundError;
       }
       
       const proposal = proposals[0];
+      logger.info("Fetched proposal details:", { title: proposal.title, agentId: proposal.agent_id });
       
       // Update proposal status - ensuring we include the proposal ID in the query
       const { error } = await supabase
@@ -38,11 +46,11 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         .eq('id', proposalId);
       
       if (error) {
-        console.error("Error updating proposal status:", error);
+        logger.error("Error updating proposal status:", error);
         throw error;
       }
       
-      console.log("Proposal approved successfully:", proposalId);
+      logger.info("Proposal approved successfully:", proposalId);
       
       // Create notification for the agent - but don't let it block approval
       if (proposal?.agent_id) {
@@ -55,9 +63,10 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
             relatedId: proposalId,
             relatedType: "proposal"
           });
+          logger.info("Agent notification created successfully");
         } catch (notificationError) {
           // Log the error but don't throw - we still want the approval to succeed
-          console.error("Error creating notification (non-blocking):", notificationError);
+          logger.error("Error creating notification (non-blocking):", notificationError);
         }
       }
       
@@ -66,14 +75,20 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         description: "Thank you for approving this proposal.",
       });
       
+      // Dispatch event for other components to react to
+      window.dispatchEvent(new CustomEvent('proposal-status-changed', { 
+        detail: { id: proposalId, status: 'approved' }
+      }));
+      
       // Navigate back to proposals list after a short delay to allow the toast to be seen
       setTimeout(() => {
+        logger.info("Navigating to proposals list after approval");
         navigate('/proposals');
       }, 1500);
       
       return { success: true };
     } catch (error) {
-      console.error("Error approving proposal:", error);
+      logger.error("Error approving proposal:", error);
       toast({
         title: "Error",
         description: "Failed to approve proposal. Please try again.",

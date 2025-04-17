@@ -5,6 +5,7 @@ import { useProposalData } from "./proposal/useProposalData";
 import { useProposalOperations } from "./proposal/useProposalOperations";
 import { ProposalData } from "@/components/proposals/view/types";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export function useViewProposal(id?: string, token?: string | null) {
   const { user } = useAuth();
@@ -28,25 +29,37 @@ export function useViewProposal(id?: string, token?: string | null) {
   useEffect(() => {
     const markInvitationViewed = async () => {
       if (token && proposal?.id && !proposal.invitation_viewed_at) {
-        // Update the invitation_viewed_at timestamp
-        await supabase
-          .from('proposals')
-          .update({ invitation_viewed_at: new Date().toISOString() })
-          .eq('id', proposal.id)
-          .eq('invitation_token', token);
-          
-        // Create notification for the agent that client viewed the proposal
-        if (proposal.agent_id) {
-          await supabase.functions.invoke('create-notification', {
-            body: {
-              userId: proposal.agent_id,
-              title: "Proposal Viewed",
-              message: `The client has viewed your proposal: ${proposal.title}`,
-              type: "info",
-              relatedId: proposal.id,
-              relatedType: "proposal"
-            }
-          });
+        logger.info(`Marking invitation as viewed for proposal: ${proposal.id}`);
+        
+        try {
+          // Update the invitation_viewed_at timestamp
+          const { error } = await supabase
+            .from('proposals')
+            .update({ invitation_viewed_at: new Date().toISOString() })
+            .eq('id', proposal.id)
+            .eq('invitation_token', token);
+            
+          if (error) {
+            logger.error("Error marking invitation as viewed:", error);
+            return;
+          }
+            
+          // Create notification for the agent that client viewed the proposal
+          if (proposal.agent_id) {
+            await supabase.functions.invoke('create-notification', {
+              body: {
+                userId: proposal.agent_id,
+                title: "Proposal Viewed",
+                message: `The client has viewed your proposal: ${proposal.title}`,
+                type: "info",
+                relatedId: proposal.id,
+                relatedType: "proposal"
+              }
+            });
+            logger.info("Agent notification sent for proposal view");
+          }
+        } catch (error) {
+          logger.error("Error in markInvitationViewed:", error);
         }
       }
     };
@@ -58,94 +71,150 @@ export function useViewProposal(id?: string, token?: string | null) {
   
   // Handle operations on the proposal
   const handleApprove = async () => {
-    if (!proposal?.id) return;
+    if (!proposal?.id) {
+      logger.error("Cannot approve proposal: proposal ID is missing");
+      return;
+    }
     
-    console.log("Approving proposal:", proposal.id);
-    const result = await approveProposal(proposal.id);
-    if (result.success) {
-      console.log("Proposal approved successfully, refreshing data");
-      // Refresh data from the server
-      if (id) {
-        await fetchProposal(id, token);
+    logger.info("Approving proposal:", proposal.id);
+    
+    try {
+      const result = await approveProposal(proposal.id);
+      if (result.success) {
+        logger.info("Proposal approved successfully, refreshing data");
+        // Refresh data from the server
+        if (id) {
+          await fetchProposal(id, token);
+        }
+        
+        // Also update local state immediately for better UX
+        setProposal(prev => prev ? {
+          ...prev, 
+          status: 'approved', 
+          signed_at: new Date().toISOString(),
+          review_later_until: null
+        } : null);
+        
+        // Force trigger a global event to notify other components
+        window.dispatchEvent(new CustomEvent('proposal-status-changed', { 
+          detail: { id: proposal.id, status: 'approved' }
+        }));
+      } else {
+        logger.error("Approval failed:", result.error);
+        throw new Error(result.error);
       }
-      
-      // Also update local state immediately for better UX
-      setProposal(prev => prev ? {
-        ...prev, 
-        status: 'approved', 
-        signed_at: new Date().toISOString(),
-        review_later_until: null
-      } : null);
-      
-      // Force trigger a global event to notify other components
-      window.dispatchEvent(new CustomEvent('proposal-status-changed', { 
-        detail: { id: proposal.id, status: 'approved' }
-      }));
+    } catch (error) {
+      logger.error("Error in handleApprove:", error);
+      throw error;
     }
   };
   
   const handleReject = async () => {
-    if (!proposal?.id) return;
+    if (!proposal?.id) {
+      logger.error("Cannot reject proposal: proposal ID is missing");
+      return;
+    }
     
-    const result = await rejectProposal(proposal.id);
-    if (result.success) {
-      console.log("Proposal rejected successfully, refreshing data");
-      // Refresh data from the server
-      if (id) {
-        await fetchProposal(id, token);
+    logger.info("Rejecting proposal:", proposal.id);
+    
+    try {
+      const result = await rejectProposal(proposal.id);
+      if (result.success) {
+        logger.info("Proposal rejected successfully, refreshing data");
+        // Refresh data from the server
+        if (id) {
+          await fetchProposal(id, token);
+        }
+        
+        // Also update local state immediately for better UX
+        setProposal(prev => prev ? {
+          ...prev, 
+          status: 'rejected',
+          review_later_until: null
+        } : null);
+        
+        // Force trigger a global event to notify other components
+        window.dispatchEvent(new CustomEvent('proposal-status-changed', { 
+          detail: { id: proposal.id, status: 'rejected' }
+        }));
+      } else {
+        logger.error("Rejection failed:", result.error);
+        throw new Error(result.error);
       }
-      
-      // Also update local state immediately for better UX
-      setProposal(prev => prev ? {
-        ...prev, 
-        status: 'rejected',
-        review_later_until: null
-      } : null);
+    } catch (error) {
+      logger.error("Error in handleReject:", error);
+      throw error;
     }
   };
 
   const handleArchive = async () => {
-    if (!proposal?.id || !user?.id) return;
+    if (!proposal?.id || !user?.id) {
+      logger.error("Cannot archive proposal: missing proposal ID or user ID");
+      return;
+    }
     
-    const result = await archiveProposal(proposal.id, user.id);
-    if (result.success) {
-      console.log("Proposal archived successfully, refreshing data");
-      // Refresh data from the server
-      if (id) {
-        await fetchProposal(id, token);
+    logger.info(`Archiving proposal: ${proposal.id} by user: ${user.id}`);
+    
+    try {
+      const result = await archiveProposal(proposal.id, user.id);
+      if (result.success) {
+        logger.info("Proposal archived successfully, refreshing data");
+        // Refresh data from the server
+        if (id) {
+          await fetchProposal(id, token);
+        }
+        
+        // Also update local state immediately for better UX
+        setProposal(prev => prev ? {
+          ...prev, 
+          archived_at: new Date().toISOString(),
+          archived_by: user.id,
+          review_later_until: null
+        } : null);
+        
+        setArchiveDialogOpen(false);
+      } else {
+        logger.error("Archiving failed:", result.error);
+        throw new Error(result.error);
       }
-      
-      // Also update local state immediately for better UX
-      setProposal(prev => prev ? {
-        ...prev, 
-        archived_at: new Date().toISOString(),
-        archived_by: user.id,
-        review_later_until: null
-      } : null);
-      
-      setArchiveDialogOpen(false);
+    } catch (error) {
+      logger.error("Error in handleArchive:", error);
+      throw error;
     }
   };
 
   const handleReviewLater = async () => {
-    if (!proposal?.id) return;
+    if (!proposal?.id) {
+      logger.error("Cannot toggle review later: proposal ID is missing");
+      return;
+    }
     
     // Toggle review later status
     const isCurrentlyMarkedForReviewLater = !!proposal.review_later_until;
-    const result = await toggleReviewLater(proposal.id, isCurrentlyMarkedForReviewLater);
+    logger.info(`Toggling review later status for proposal: ${proposal.id}, current status: ${isCurrentlyMarkedForReviewLater}`);
     
-    if (result.success) {
-      console.log("Review later status updated successfully, refreshing data");
-      // Refresh data from the server
-      if (id) {
-        await fetchProposal(id, token);
-      }
+    try {
+      const result = await toggleReviewLater(proposal.id, isCurrentlyMarkedForReviewLater);
       
-      // Also update local state immediately for better UX
-      setProposal(prev => prev ? {
-        ...prev, 
-        review_later_until: result.reviewLaterUntil || null
-      } : null);
+      if (result.success) {
+        logger.info("Review later status updated successfully, refreshing data");
+        // Refresh data from the server
+        if (id) {
+          await fetchProposal(id, token);
+        }
+        
+        // Also update local state immediately for better UX
+        setProposal(prev => prev ? {
+          ...prev, 
+          review_later_until: result.reviewLaterUntil || null
+        } : null);
+      } else {
+        logger.error("Toggle review later failed:", result.error);
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      logger.error("Error in handleReviewLater:", error);
+      throw error;
     }
   };
 

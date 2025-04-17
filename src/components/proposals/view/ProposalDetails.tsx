@@ -10,6 +10,7 @@ import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
 import { useAuth } from "@/contexts/auth";
+import { logger } from "@/lib/logger";
 
 interface ProposalDetailsProps {
   proposal: {
@@ -42,7 +43,9 @@ export function ProposalDetails({
   const projectInfo = proposal.content?.projectInfo || {};
   const { userRole } = useAuth();
   
-  console.log("ProposalDetails - showActions:", showActions);
+  logger.debug("ProposalDetails - showActions:", showActions);
+  logger.debug("ProposalDetails - proposal status:", proposal.status);
+  logger.debug("ProposalDetails - isReviewLater:", isReviewLater);
   
   return (
     <Card className="retro-card">
@@ -76,7 +79,7 @@ export function ProposalDetails({
       />
       
       {/* Show status footer if not archived and not in review later state */}
-      {!proposal.archived_at && !isReviewLater && (
+      {!proposal.archived_at && !isReviewLater && proposal.status !== 'pending' && (
         <ProposalStatusFooter 
           status={proposal.status} 
           signedAt={proposal.signed_at} 
@@ -88,7 +91,7 @@ export function ProposalDetails({
         <ProposalActionFooter 
           onApprove={onApprove}
           onReject={onReject}
-          showActions={true}
+          showActions={showActions}
         />
       )}
     </Card>
