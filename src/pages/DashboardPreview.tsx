@@ -133,11 +133,7 @@ const DashboardPreview = () => {
 
   const renderCharts = () => {
     if (userRole === 'agent') {
-      return (
-        <>
-          <RevenueChartNew />
-        </>
-      );
+      return null;
     }
 
     return (
@@ -200,9 +196,11 @@ const DashboardPreview = () => {
         </div>
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {renderCharts()}
-      </div>
+      {renderCharts() && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {renderCharts()}
+        </div>
+      )}
       
       <div className="grid grid-cols-1 gap-6">
         <RecentProjectsNew 
