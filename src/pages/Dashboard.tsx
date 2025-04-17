@@ -5,15 +5,24 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
-import { FileText, TrendingUp, Wind } from "lucide-react";
+import { FileText, TrendingUp, Wind, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import { Button } from "@/components/ui/button";
+import { useProposals } from "@/hooks/useProposals";
+import { useEffect } from "react";
 
 const Dashboard = () => {
   const { profile, userRole } = useAuth();
+  const { proposals, fetchProposals, loading } = useProposals();
   
-  // Mock data for stats
+  // Log when dashboard mounts or proposals update
+  useEffect(() => {
+    console.log("Dashboard rendered with proposals count:", proposals.length);
+  }, [proposals.length]);
+  
+  // Mock data for stats (could be calculated from proposals in the future)
   const portfolioSize = 12.5; // MWp
-  const totalProjects = 8;
+  const totalProjects = proposals.length || 8;
   const potentialRevenue = 284350; // in Rands
   const co2Offset = 1245; // in tCO2
   
@@ -40,6 +49,11 @@ const Dashboard = () => {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
   
+  const handleRefreshProposals = () => {
+    console.log("Manually refreshing proposals from dashboard");
+    fetchProposals();
+  };
+  
   return (
     <DashboardLayout>
       <DashboardHeader 
@@ -47,6 +61,17 @@ const Dashboard = () => {
         description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}
         userName={getUserDisplayName()}
         userRole={formatUserRole(userRole)}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshProposals}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        }
       />
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -81,7 +106,11 @@ const Dashboard = () => {
       </div>
       
       <div className="grid grid-cols-1 gap-6">
-        <RecentProjects />
+        <RecentProjects 
+          proposals={proposals}
+          loading={loading}
+          onRefresh={handleRefreshProposals}
+        />
       </div>
     </DashboardLayout>
   );

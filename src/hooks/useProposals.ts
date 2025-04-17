@@ -44,10 +44,11 @@ export const useProposals = (): UseProposalsResult => {
     fetchProposals();
   }, [fetchProposals]);
   
-  // Refresh proposals when returning to the proposals page
+  // Refresh proposals when returning to the proposals page or dashboard
   useEffect(() => {
-    if (location.pathname === '/proposals') {
-      console.log("Returned to proposals page, refreshing data");
+    // Check if we're on either the proposals page or dashboard
+    if (location.pathname === '/proposals' || location.pathname === '/dashboard') {
+      console.log(`Detected navigation to ${location.pathname}, refreshing proposal data`);
       fetchProposals();
     }
   }, [location.pathname, fetchProposals]);

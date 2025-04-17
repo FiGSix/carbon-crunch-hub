@@ -60,6 +60,7 @@ export function useViewProposal(id?: string, token?: string | null) {
   const handleApprove = async () => {
     if (!proposal?.id) return;
     
+    console.log("Approving proposal:", proposal.id);
     const result = await approveProposal(proposal.id);
     if (result.success) {
       console.log("Proposal approved successfully, refreshing data");
@@ -75,6 +76,11 @@ export function useViewProposal(id?: string, token?: string | null) {
         signed_at: new Date().toISOString(),
         review_later_until: null
       } : null);
+      
+      // Force trigger a global event to notify other components
+      window.dispatchEvent(new CustomEvent('proposal-status-changed', { 
+        detail: { id: proposal.id, status: 'approved' }
+      }));
     }
   };
   

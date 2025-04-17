@@ -36,6 +36,22 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
     }
   }, [proposals, userRole, user]);
   
+  // Listen for global proposal status change events
+  useEffect(() => {
+    const handleProposalStatusChange = () => {
+      console.log("ProposalList detected status change event, triggering refresh");
+      if (onProposalUpdate) {
+        onProposalUpdate();
+      }
+    };
+    
+    window.addEventListener('proposal-status-changed', handleProposalStatusChange);
+    
+    return () => {
+      window.removeEventListener('proposal-status-changed', handleProposalStatusChange);
+    };
+  }, [onProposalUpdate]);
+  
   // No proposals found state
   if (proposals.length === 0) {
     return (
