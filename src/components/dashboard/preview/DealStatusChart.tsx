@@ -32,21 +32,19 @@ export function DealStatusChart() {
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-4 h-[300px]">
+        <CardContent className="pb-4 h-[240px] md:h-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={90}
+                innerRadius={50}
+                outerRadius={80}
                 paddingAngle={4}
                 dataKey="value"
                 animationBegin={0}
                 animationDuration={1000}
-                label={({ name, value }) => `${name}: ${value}`}
-                labelLine={false}
               >
                 {data.map((entry, index) => (
                   <Cell 
@@ -68,8 +66,11 @@ export function DealStatusChart() {
               />
               <Legend 
                 verticalAlign="bottom" 
-                height={36}
+                height={30}
                 iconType="circle"
+                formatter={(value, entry, index) => (
+                  <span className="text-xs font-medium">{value}: {data[index].value}</span>
+                )}
               />
             </PieChart>
           </ResponsiveContainer>

@@ -142,7 +142,6 @@ const DashboardPreview = () => {
       return (
         <>
           <RevenueChartNew />
-          <DealStatusChart />
         </>
       );
     }
@@ -189,9 +188,27 @@ const DashboardPreview = () => {
         }
       />
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {renderStatsCards()}
-      </div>
+      {/* New layout: Deal Status on right, Stats cards on left */}
+      {userRole === 'agent' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Left side - Stats cards in a 2x2 grid */}
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {renderStatsCards()}
+            </div>
+          </div>
+          
+          {/* Right side - Deal Status chart */}
+          <div className="lg:col-span-1">
+            <DealStatusChart />
+          </div>
+        </div>
+      ) : (
+        /* Regular layout for clients */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {renderStatsCards()}
+        </div>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {renderCharts()}
