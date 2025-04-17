@@ -41,7 +41,7 @@ export const publicRoutes = (
 );
 
 export const protectedRoutes = (
-  <Route element={<PrivateRoute />}>
+  <Route element={<PrivateRoute>{/* This ensures children are passed */}</PrivateRoute>}>
     <Route path="/dashboard" element={<Dashboard />} />
     <Route path="/dashboard-preview" element={<DashboardPreview />} />
     <Route path="/proposals" element={<Proposals />} />

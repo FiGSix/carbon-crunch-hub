@@ -1,9 +1,9 @@
 
 import React, { useEffect } from 'react'
 import { Routes } from 'react-router-dom'
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "./components/theme-provider"
 import { useTheme } from 'next-themes'
-import { publicRoutes, protectedRoutes, fallbackRoute } from '@/routes';
+import { publicRoutes, protectedRoutes, fallbackRoute } from './routes';
 
 export function App() {
   const { setTheme } = useTheme()
