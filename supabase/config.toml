@@ -63,3 +63,6 @@ verify_jwt = true
 
 [functions.create-test-agent]
 verify_jwt = true
+
+[functions.create-notification]
+verify_jwt = true
