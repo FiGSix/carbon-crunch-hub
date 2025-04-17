@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,10 @@ import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
 import { useAuth } from "@/contexts/auth";
 import { logger } from "@/lib/logger";
+import { usePreviewProposal } from "@/hooks/proposal/usePreviewProposal";
+import { ProposalPreviewBanner } from "./ProposalPreviewBanner";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface ProposalDetailsProps {
   proposal: {
@@ -28,6 +31,8 @@ interface ProposalDetailsProps {
   onReject: () => Promise<void>;
   isReviewLater?: boolean;
   showActions?: boolean;
+  is_preview?: boolean;
+  preview_of_id?: string;
 }
 
 export function ProposalDetails({ 
@@ -36,32 +41,63 @@ export function ProposalDetails({
   onApprove, 
   onReject,
   isReviewLater,
-  showActions = false
+  showActions = false,
+  is_preview,
+  preview_of_id
 }: ProposalDetailsProps) {
-  // Extract client and project info from the proposal content
-  const clientInfo = proposal.content?.clientInfo || {};
-  const projectInfo = proposal.content?.projectInfo || {};
   const { userRole } = useAuth();
+  const navigate = useNavigate();
+  const { createPreview, loading: previewLoading } = usePreviewProposal();
   
-  logger.debug("ProposalDetails - showActions:", showActions);
-  logger.debug("ProposalDetails - proposal status:", proposal.status);
-  logger.debug("ProposalDetails - isReviewLater:", isReviewLater);
+  const handleCreatePreview = async () => {
+    try {
+      const preview = await createPreview(proposal.id);
+      navigate(`/proposals/${preview.id}`);
+    } catch (error) {
+      logger.error("Failed to create preview:", error);
+    }
+  };
+  
+  const handleViewOriginal = () => {
+    if (preview_of_id) {
+      navigate(`/proposals/${preview_of_id}`);
+    }
+  };
   
   return (
     <Card className="retro-card">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <FileText className="h-5 w-5 mr-2" />
-          Proposal Details
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <FileText className="h-5 w-5 mr-2" />
+            Proposal Details
+          </div>
+          {!is_preview && userRole === 'agent' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCreatePreview}
+              disabled={previewLoading}
+            >
+              Create Preview
+            </Button>
+          )}
         </CardTitle>
         <CardDescription>
           Review the details of this carbon credit proposal
         </CardDescription>
       </CardHeader>
+      
+      <ProposalPreviewBanner 
+        isPreview={is_preview || false}
+        originalProposalId={preview_of_id}
+        onViewOriginal={handleViewOriginal}
+      />
+      
       <CardContent>
         <div className="space-y-8">
-          <ClientInfoSection clientInfo={clientInfo} />
-          <ProjectInfoSection projectInfo={projectInfo} />
+          <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
+          <ProjectInfoSection projectInfo={proposal.content?.projectInfo || {}} />
           
           {projectInfo.size && (
             <>
@@ -72,13 +108,11 @@ export function ProposalDetails({
         </div>
       </CardContent>
       
-      {/* Show archived or review later banner if applicable */}
       <ProposalArchivedBanner 
         archivedAt={proposal.archived_at} 
         reviewLaterUntil={proposal.review_later_until}
       />
       
-      {/* Show status footer if not archived and not in review later state */}
       {!proposal.archived_at && !isReviewLater && proposal.status !== 'pending' && (
         <ProposalStatusFooter 
           status={proposal.status} 
@@ -86,7 +120,6 @@ export function ProposalDetails({
         />
       )}
       
-      {/* Only show action footer if we should be showing actions */}
       {showActions && (
         <ProposalActionFooter 
           onApprove={onApprove}

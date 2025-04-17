@@ -99,6 +99,8 @@ export type Database = {
           invitation_sent_at: string | null
           invitation_token: string | null
           invitation_viewed_at: string | null
+          is_preview: boolean | null
+          preview_of_id: string | null
           project_info: Json
           review_later_until: string | null
           signed_at: string | null
@@ -122,6 +124,8 @@ export type Database = {
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
+          is_preview?: boolean | null
+          preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -145,6 +149,8 @@ export type Database = {
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
+          is_preview?: boolean | null
+          preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -164,6 +170,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_preview_of_id_fkey"
+            columns: ["preview_of_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
