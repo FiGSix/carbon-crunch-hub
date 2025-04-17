@@ -8,9 +8,21 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useViewProposal(id?: string, token?: string | null) {
   const { user } = useAuth();
-  const { proposal, loading, error, clientEmail } = useProposalData(id, token);
+  const { proposal: initialProposal, loading: initialLoading, error: initialError, clientEmail, fetchProposal } = useProposalData(id, token);
+  const [proposal, setProposal] = useState<ProposalData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { loading: operationLoading, approveProposal, rejectProposal, archiveProposal, toggleReviewLater } = useProposalOperations();
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  
+  // Update local state when initial data loads
+  useEffect(() => {
+    if (!initialLoading) {
+      setProposal(initialProposal);
+      setLoading(initialLoading);
+      setError(initialError);
+    }
+  }, [initialProposal, initialLoading, initialError]);
   
   // Mark invitation as viewed when opening with token
   useEffect(() => {
@@ -50,8 +62,14 @@ export function useViewProposal(id?: string, token?: string | null) {
     
     const result = await approveProposal(proposal.id);
     if (result.success) {
-      // Update local state
-      setLocalProposal(prev => prev ? {
+      console.log("Proposal approved successfully, refreshing data");
+      // Refresh data from the server
+      if (id) {
+        await fetchProposal(id, token);
+      }
+      
+      // Also update local state immediately for better UX
+      setProposal(prev => prev ? {
         ...prev, 
         status: 'approved', 
         signed_at: new Date().toISOString(),
@@ -65,8 +83,14 @@ export function useViewProposal(id?: string, token?: string | null) {
     
     const result = await rejectProposal(proposal.id);
     if (result.success) {
-      // Update local state
-      setLocalProposal(prev => prev ? {
+      console.log("Proposal rejected successfully, refreshing data");
+      // Refresh data from the server
+      if (id) {
+        await fetchProposal(id, token);
+      }
+      
+      // Also update local state immediately for better UX
+      setProposal(prev => prev ? {
         ...prev, 
         status: 'rejected',
         review_later_until: null
@@ -79,8 +103,14 @@ export function useViewProposal(id?: string, token?: string | null) {
     
     const result = await archiveProposal(proposal.id, user.id);
     if (result.success) {
-      // Update local state
-      setLocalProposal(prev => prev ? {
+      console.log("Proposal archived successfully, refreshing data");
+      // Refresh data from the server
+      if (id) {
+        await fetchProposal(id, token);
+      }
+      
+      // Also update local state immediately for better UX
+      setProposal(prev => prev ? {
         ...prev, 
         archived_at: new Date().toISOString(),
         archived_by: user.id,
@@ -99,23 +129,17 @@ export function useViewProposal(id?: string, token?: string | null) {
     const result = await toggleReviewLater(proposal.id, isCurrentlyMarkedForReviewLater);
     
     if (result.success) {
-      // Update local state with the new review_later_until value
-      setLocalProposal(prev => prev ? {
+      console.log("Review later status updated successfully, refreshing data");
+      // Refresh data from the server
+      if (id) {
+        await fetchProposal(id, token);
+      }
+      
+      // Also update local state immediately for better UX
+      setProposal(prev => prev ? {
         ...prev, 
         review_later_until: result.reviewLaterUntil || null
       } : null);
-    }
-  };
-
-  // Helper function to update local proposal state
-  const setLocalProposal = (updater: React.SetStateAction<ProposalData | null>) => {
-    if (typeof updater === 'function') {
-      const result = updater(proposal);
-      if (result) {
-        window.dispatchEvent(new CustomEvent('proposal-updated', { detail: result }));
-      }
-    } else if (updater) {
-      window.dispatchEvent(new CustomEvent('proposal-updated', { detail: updater }));
     }
   };
 
