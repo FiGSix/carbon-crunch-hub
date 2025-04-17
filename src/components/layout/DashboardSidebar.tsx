@@ -57,15 +57,6 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       setIsLoggingOut(true);
       console.log("Logout initiated");
       
-      // Clear local auth state first
-      const { setUser, setUserRole, setProfile, setSession } = useAuth();
-      if (setUser && setUserRole && setProfile && setSession) {
-        setUser(null);
-        setUserRole(null);
-        setProfile(null);
-        setSession(null);
-      }
-      
       // Call sign out and wait for it to complete
       const { error } = await signOut();
       
@@ -95,6 +86,9 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       
       // Clear session storage
       sessionStorage.clear();
+      
+      // Refresh the auth state to ensure it registers the logged out state
+      await refreshUser();
       
       // Navigate to login page immediately after successful logout
       console.log("Navigating to login page");
