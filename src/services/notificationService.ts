@@ -25,19 +25,28 @@ export interface Notification {
 export const createNotification = async (data: NotificationData): Promise<{ success: boolean; error?: string }> => {
   try {
     console.log("Creating notification:", data);
-    const { error } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: data.userId,
+    
+    // Check if user ID is provided and valid
+    if (!data.userId) {
+      console.error("Error: userId is required for creating notifications");
+      return { success: false, error: "userId is required" };
+    }
+    
+    // Use Edge Function instead of direct database operation
+    // This bypasses RLS policies since the function has service role access
+    const { error } = await supabase.functions.invoke('create-notification', {
+      body: {
+        userId: data.userId,
         title: data.title,
         message: data.message,
         type: data.type,
-        related_id: data.relatedId,
-        related_type: data.relatedType
-      });
+        relatedId: data.relatedId,
+        relatedType: data.relatedType
+      }
+    });
     
     if (error) {
-      console.error("Error creating notification:", error);
+      console.error("Error calling create-notification function:", error);
       return { success: false, error: error.message };
     }
     

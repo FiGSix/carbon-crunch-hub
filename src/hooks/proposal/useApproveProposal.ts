@@ -42,16 +42,21 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
       
       console.log("Proposal approved successfully:", proposalId);
       
-      // Create notification for the agent
+      // Create notification for the agent - but don't let it block approval
       if (proposal?.agent_id) {
-        await createNotification({
-          userId: proposal.agent_id,
-          title: "Proposal Approved",
-          message: `The proposal "${proposal.title}" has been approved by the client.`,
-          type: "success",
-          relatedId: proposalId,
-          relatedType: "proposal"
-        });
+        try {
+          await createNotification({
+            userId: proposal.agent_id,
+            title: "Proposal Approved",
+            message: `The proposal "${proposal.title}" has been approved by the client.`,
+            type: "success",
+            relatedId: proposalId,
+            relatedType: "proposal"
+          });
+        } catch (notificationError) {
+          // Log the error but don't throw - we still want the approval to succeed
+          console.error("Error creating notification (non-blocking):", notificationError);
+        }
       }
       
       toast({
