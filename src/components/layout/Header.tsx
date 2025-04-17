@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
@@ -91,7 +90,7 @@ export function Header() {
       {/* Mobile menu */}
       <motion.div 
         className={cn(
-          "lg:hidden fixed inset-0 bg-white/95 backdrop-blur-lg z-40 pt-20 px-6",
+          "lg:hidden fixed inset-0 bg-white z-50 pt-20 px-6",
           menuOpen ? "block" : "hidden"
         )}
         initial={{ opacity: 0, y: -10 }}
