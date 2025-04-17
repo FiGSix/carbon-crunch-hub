@@ -1,8 +1,9 @@
+
 import React, { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/theme/theme-provider"
 import { useTheme } from 'next-themes'
-import { Index } from '@/pages'
+import { Index } from '@/pages/Index'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 import ForceLogout from '@/pages/ForceLogout'
@@ -16,7 +17,7 @@ import Agents from '@/pages/Agents'
 import Contact from '@/pages/Contact'
 import Calculator from '@/pages/Calculator'
 import NotFound from '@/pages/NotFound'
-import PrivateRoute from '@/components/auth/PrivateRoute'
+import { PrivateRoute } from '@/components/auth/PrivateRoute'
 import Notifications from '@/pages/Notifications'
 import TestAgent from '@/pages/TestAgent'
 import TestInvitations from '@/pages/TestInvitations'

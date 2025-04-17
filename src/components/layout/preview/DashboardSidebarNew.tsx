@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Home, FileText, BarChart, Users, Settings, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -7,11 +8,11 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { Loader2 } from "lucide-react";
 
-interface DashboardSidebarNewProps {
+interface DashboardSidebarProps {
   userRole: 'client' | 'agent' | 'admin';
 }
 
-export function DashboardSidebarNew({ userRole }: DashboardSidebarNewProps) {
+export const DashboardSidebarNew = ({ userRole }: DashboardSidebarProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
