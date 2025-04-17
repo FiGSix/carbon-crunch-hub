@@ -6,6 +6,7 @@ import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/auth";
 
 interface DashboardSidebarProps {
   userRole: 'client' | 'agent' | 'admin';
@@ -15,6 +16,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { refreshUser } = useAuth();
 
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -52,20 +54,36 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   }
 
   const handleLogout = async () => {
+    if (isLoggingOut) return; // Prevent multiple clicks
+    
     try {
       setIsLoggingOut(true);
-      await signOut();
+      console.log("Logout initiated");
+      
+      // Call sign out and wait for it to complete
+      const { error } = await signOut();
+      
+      if (error) {
+        console.error("Error during logout:", error);
+        toast({
+          title: "Error logging out",
+          description: "There was a problem logging out. Try using Force Logout.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Show success toast
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
       });
       
-      // Add a short delay before redirecting to ensure everything is cleared
-      setTimeout(() => {
-        navigate("/login");
-      }, 100);
+      // Navigate to login page immediately after successful logout
+      console.log("Navigating to login page");
+      navigate("/login");
     } catch (error) {
-      console.error("Error logging out:", error);
+      console.error("Exception in handleLogout:", error);
       toast({
         title: "Error",
         description: "There was a problem logging out. Try using Force Logout.",

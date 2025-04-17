@@ -56,6 +56,7 @@ export function useAuthInitialization() {
 
   // Helper function to clear auth state
   const clearAuthState = () => {
+    console.log("Clearing auth state");
     setUser(null);
     setUserRole(null);
     setProfile(null);
@@ -78,21 +79,25 @@ export function useAuthInitialization() {
           (event, newSession) => {
             console.log('Auth state changed:', event, 'User ID:', newSession?.user?.id);
             
-            // Update basic session and user data immediately
-            setSession(newSession);
-            setUser(newSession?.user || null);
-            
-            if (newSession?.user) {
-              // For SIGNED_IN events, fetch role and profile
-              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                // Use setTimeout to avoid recursive auth state changes
-                setTimeout(() => {
-                  fetchUserData(newSession.user, true);
-                }, 0);
-              }
-            } else if (event === 'SIGNED_OUT') {
-              // Clear all state when signed out
+            if (event === 'SIGNED_OUT') {
+              // For SIGNED_OUT events, clear auth state immediately
+              console.log("SIGNED_OUT event received, clearing auth state");
               clearAuthState();
+              setIsLoading(false);
+            } else {
+              // Update basic session and user data for other events
+              setSession(newSession);
+              setUser(newSession?.user || null);
+              
+              if (newSession?.user) {
+                // For SIGNED_IN events, fetch role and profile
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                  // Use setTimeout to avoid recursive auth state changes
+                  setTimeout(() => {
+                    fetchUserData(newSession.user, true);
+                  }, 0);
+                }
+              } 
             }
           }
         ).data.subscription;
