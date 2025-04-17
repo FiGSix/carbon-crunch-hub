@@ -62,12 +62,10 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-                // CrunchCarbon custom colors based on the brand document
                 'crunch': {
-                    black: '#231F20', // From the document #231F20
-                    yellow: '#FFCD03', // From the document #FFCD03
+                    black: '#231F20',
+                    yellow: '#FFCD03',
                 },
-                // Removing previous carbon-green, carbon-blue, and carbon-gray colors
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -98,6 +96,20 @@ export default {
 			},
             fontFamily: {
                 'sans': ['Inter', 'system-ui', 'sans-serif'],
+            },
+            transformOrigin: {
+              'center-bottom': 'center bottom',
+            },
+            perspective: {
+              '1200': '1200px',
+              '2000': '2000px',
+            },
+            rotate: {
+              'x-30': 'rotateX(30deg)',
+              'z-12': 'rotateZ(12deg)',
+            },
+            transform: {
+              'gpu': 'translate3d(0, 0, 0)',
             }
 		}
 	},
