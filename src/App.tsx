@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 import { Routes } from 'react-router-dom'
 import { ThemeProvider } from "./components/theme-provider"
 import { useTheme } from 'next-themes'
+import { AuthProvider } from './contexts/auth'
 import { publicRoutes, protectedRoutes, fallbackRoute } from './routes';
 
 export function App() {
@@ -15,11 +16,13 @@ export function App() {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <Routes>
-        {publicRoutes}
-        {protectedRoutes}
-        {fallbackRoute}
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          {publicRoutes}
+          {protectedRoutes}
+          {fallbackRoute}
+        </Routes>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
