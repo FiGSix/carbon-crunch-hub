@@ -179,7 +179,7 @@ export function DealStatusChart() {
                   </Pie>
                   
                   <Tooltip 
-                    formatter={(value) => [`${value} proposals (${((value / total) * 100).toFixed(0)}%)`, 'Count']}
+                    formatter={(value) => [`${value} proposals (${(Number(value) / total * 100).toFixed(0)}%)`, 'Count']}
                     contentStyle={{ 
                       backgroundColor: 'white', 
                       borderRadius: '8px', 
