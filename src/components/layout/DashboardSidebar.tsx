@@ -105,7 +105,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   };
 
   return (
-    <SidebarContent className="pt-4">
+    <SidebarContent className="pt-4 bg-white">
       <div className="px-3 mb-8">
         <div className="flex items-center justify-center">
           <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12" />
