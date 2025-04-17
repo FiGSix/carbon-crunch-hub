@@ -1,3 +1,4 @@
+
 import React from "react";
 import { FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +65,9 @@ export function ProposalDetails({
     }
   };
   
+  // Extract project info from the proposal content
+  const projectInfo = proposal.content?.projectInfo || {};
+  
   return (
     <Card className="retro-card">
       <CardHeader>
@@ -97,7 +101,7 @@ export function ProposalDetails({
       <CardContent>
         <div className="space-y-8">
           <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
-          <ProjectInfoSection projectInfo={proposal.content?.projectInfo || {}} />
+          <ProjectInfoSection projectInfo={projectInfo} />
           
           {projectInfo.size && (
             <>
