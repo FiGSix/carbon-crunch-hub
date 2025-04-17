@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFetchProposals } from "./proposals/useFetchProposals";
 import { useProposalFilters } from "./proposals/useProposalFilters";
 import { UseProposalsResult } from "./proposals/types";
+import { useLocation } from "react-router-dom";
 
 export const useProposals = (): UseProposalsResult => {
   const { toast } = useToast();
@@ -14,6 +15,7 @@ export const useProposals = (): UseProposalsResult => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const location = useLocation();
   
   // Use the extracted filter hook
   const { filters, handleFilterChange } = useProposalFilters();
@@ -32,6 +34,7 @@ export const useProposals = (): UseProposalsResult => {
 
   // Wrap the fetchProposals function to maintain the same API
   const fetchProposals = useCallback(async () => {
+    console.log("Fetching proposals manually triggered");
     await fetchProposalsService();
   }, [fetchProposalsService]);
 
@@ -40,6 +43,14 @@ export const useProposals = (): UseProposalsResult => {
     console.log("Initial fetch triggered");
     fetchProposals();
   }, [fetchProposals]);
+  
+  // Refresh proposals when returning to the proposals page
+  useEffect(() => {
+    if (location.pathname === '/proposals') {
+      console.log("Returned to proposals page, refreshing data");
+      fetchProposals();
+    }
+  }, [location.pathname, fetchProposals]);
 
   return {
     proposals,

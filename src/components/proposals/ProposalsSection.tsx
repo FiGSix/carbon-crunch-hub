@@ -40,9 +40,21 @@ export function ProposalsSection() {
   return (
     <Card className="retro-card mb-8">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <FileText className="h-5 w-5 mr-2" />
-          {userRole === 'agent' ? 'My Assigned Proposals' : 'Proposal Management'}
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <FileText className="h-5 w-5 mr-2" />
+            {userRole === 'agent' ? 'My Assigned Proposals' : 'Proposal Management'}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleProposalUpdate}
+            disabled={loading}
+            className="ml-auto"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent>

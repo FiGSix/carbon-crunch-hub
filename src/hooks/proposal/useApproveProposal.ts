@@ -3,9 +3,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
+import { useNavigate } from "react-router-dom";
 
 export function useApproveProposal(setLoadingState: (operation: 'approve', isLoading: boolean) => void) {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const approveProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
     try {
@@ -63,6 +65,11 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         title: "Proposal Approved",
         description: "Thank you for approving this proposal.",
       });
+      
+      // Navigate back to proposals list after a short delay to allow the toast to be seen
+      setTimeout(() => {
+        navigate('/proposals');
+      }, 1500);
       
       return { success: true };
     } catch (error) {
