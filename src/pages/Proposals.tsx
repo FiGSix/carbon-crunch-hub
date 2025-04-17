@@ -7,12 +7,25 @@ import { useAuth } from "@/contexts/auth";
 
 const Proposals = () => {
   const { userRole } = useAuth();
+  
+  // Set up appropriate titles and descriptions based on user role
+  const pageTitle = userRole === 'client' 
+    ? 'My Proposals' 
+    : userRole === 'agent' 
+      ? 'My Assigned Proposals' 
+      : 'Proposals';
+      
+  const pageDescription = userRole === 'client'
+    ? "View and manage proposals for your solar installations."
+    : userRole === 'agent'
+      ? "Manage and track proposals assigned to you."
+      : "Manage and track all carbon credit proposals.";
 
   return (
     <DashboardLayout>
       <DashboardHeader 
-        title="Proposals" 
-        description="Manage and track all your carbon credit proposals." 
+        title={pageTitle} 
+        description={pageDescription} 
       />
       <ProposalsSection />
     </DashboardLayout>

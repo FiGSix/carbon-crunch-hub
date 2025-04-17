@@ -10,6 +10,7 @@ import { useProposals } from "@/hooks/useProposals";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export function ProposalsSection() {
   const { 
@@ -21,6 +22,7 @@ export function ProposalsSection() {
   } = useProposals();
   
   const { user, userRole } = useAuth();
+  const { toast } = useToast();
   
   // Log auth state on mount for debugging
   useEffect(() => {
@@ -31,6 +33,37 @@ export function ProposalsSection() {
       proposalsCount: proposals.length
     });
   }, [user, userRole, proposals.length]);
+  
+  // Listen for global proposal status change events
+  useEffect(() => {
+    const handleProposalStatusChange = (event: Event) => {
+      // Cast event to CustomEvent to access detail property
+      const customEvent = event as CustomEvent<{id: string, status: string}>;
+      console.log("ProposalsSection detected status change event:", customEvent.detail);
+      
+      // Show toast notification based on the new status
+      if (customEvent.detail.status === 'approved') {
+        toast({
+          title: "Proposal Approved",
+          description: "The proposal has been approved successfully.",
+        });
+      } else if (customEvent.detail.status === 'rejected') {
+        toast({
+          title: "Proposal Rejected",
+          description: "The proposal has been rejected.",
+        });
+      }
+      
+      // Refresh the proposals list
+      fetchProposals();
+    };
+    
+    window.addEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
+    };
+  }, [fetchProposals, toast]);
   
   const handleProposalUpdate = () => {
     console.log("Proposal update triggered - refreshing proposals list");
@@ -43,7 +76,11 @@ export function ProposalsSection() {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            {userRole === 'agent' ? 'My Assigned Proposals' : 'Proposal Management'}
+            {userRole === 'agent' 
+              ? 'My Assigned Proposals' 
+              : userRole === 'client' 
+                ? 'My Proposals' 
+                : 'Proposal Management'}
           </div>
           <Button
             variant="outline"

@@ -35,7 +35,7 @@ export function ProposalDetails({
   onApprove, 
   onReject,
   isReviewLater,
-  showActions
+  showActions = false
 }: ProposalDetailsProps) {
   // Extract client and project info from the proposal content
   const clientInfo = proposal.content?.clientInfo || {};
@@ -83,11 +83,14 @@ export function ProposalDetails({
         />
       )}
       
-      <ProposalActionFooter 
-        onApprove={onApprove}
-        onReject={onReject}
-        showActions={showActions}
-      />
+      {/* Only show action footer if we should be showing actions */}
+      {showActions && (
+        <ProposalActionFooter 
+          onApprove={onApprove}
+          onReject={onReject}
+          showActions={true}
+        />
+      )}
     </Card>
   );
 }

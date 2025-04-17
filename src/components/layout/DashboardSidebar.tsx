@@ -18,11 +18,10 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { refreshUser } = useAuth();
 
+  // Simplified client menu items - removed Carbon Reports and Settings
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "My Proposals", path: "/proposals" },
-    { icon: BarChart, label: "Carbon Reports", path: "/reports" },
-    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   const agentMenuItems = [

@@ -50,6 +50,18 @@ const ViewProposal = () => {
     window.location.reload();
   };
   
+  // Log details for debugging purposes
+  useEffect(() => {
+    if (proposal) {
+      console.log("ViewProposal - Current proposal state:", {
+        id: proposal.id,
+        status: proposal.status,
+        isClient: user?.id === proposal.client_id,
+        canTakeAction: user?.id === proposal.client_id && proposal.status === 'pending'
+      });
+    }
+  }, [proposal, user]);
+  
   if (loading) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">

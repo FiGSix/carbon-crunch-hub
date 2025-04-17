@@ -38,17 +38,21 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
   
   // Listen for global proposal status change events
   useEffect(() => {
-    const handleProposalStatusChange = () => {
-      console.log("ProposalList detected status change event, triggering refresh");
+    const handleProposalStatusChange = (event: Event) => {
+      // Cast event to CustomEvent to access detail property
+      const customEvent = event as CustomEvent<{id: string, status: string}>;
+      console.log("ProposalList detected status change event:", customEvent.detail);
+      
       if (onProposalUpdate) {
+        console.log("Triggering proposal list refresh after status change");
         onProposalUpdate();
       }
     };
     
-    window.addEventListener('proposal-status-changed', handleProposalStatusChange);
+    window.addEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
     
     return () => {
-      window.removeEventListener('proposal-status-changed', handleProposalStatusChange);
+      window.removeEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
     };
   }, [onProposalUpdate]);
   
