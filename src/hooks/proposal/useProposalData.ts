@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ProposalData } from "@/components/proposals/view/types";
+import { ProposalData } from "@/types/proposals";
+import { transformToProposalData } from "@/utils/proposalTransformers";
 
 export function useProposalData(id?: string, token?: string | null) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
@@ -42,13 +43,9 @@ export function useProposalData(id?: string, token?: string | null) {
           throw fetchError;
         }
         
-        // Ensure the data is properly typed with all required ProposalData fields
-        const typedData: ProposalData = {
-          ...proposalData as any,
-          review_later_until: proposalData.review_later_until || null
-        };
-        
-        setProposal(typedData);
+        // Transform to our standard ProposalData type
+        const typedProposal = transformToProposalData(proposalData);
+        setProposal(typedProposal);
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
         console.log("Fetching proposal by ID:", proposalId);
@@ -63,14 +60,10 @@ export function useProposalData(id?: string, token?: string | null) {
           throw fetchError;
         }
         
-        // Ensure the data is properly typed with all required ProposalData fields
-        const typedData: ProposalData = {
-          ...data as any,
-          review_later_until: data.review_later_until || null
-        };
-        
-        console.log("Proposal fetched successfully:", typedData);
-        setProposal(typedData);
+        // Transform to our standard ProposalData type
+        const typedProposal = transformToProposalData(data);
+        console.log("Proposal fetched successfully:", typedProposal);
+        setProposal(typedProposal);
       } else {
         setError("No proposal ID or invitation token provided.");
       }

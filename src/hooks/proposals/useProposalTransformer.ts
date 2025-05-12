@@ -1,19 +1,18 @@
 
-import { useState } from "react";
-import { Proposal } from "@/components/proposals/ProposalList";
-import { ProfileData, RawProposalData } from "./types";
-import { transformProposalData } from "./proposalUtils";
+import { RawProposalData } from "./types";
+import { ProposalListItem } from "@/types/proposals";
+import { transformToProposalListItems } from "@/utils/proposalTransformers";
 import { fetchProfilesByIds } from "./api/fetchProfiles";
 
 /**
- * Hook for transforming raw proposal data into the Proposal interface
+ * Hook for transforming raw proposal data into the ProposalListItem interface
  */
 export function useProposalTransformer() {
   const transformProposalDataWithProfiles = async (
     proposalsData: RawProposalData[]
   ) => {
     if (!proposalsData || proposalsData.length === 0) {
-      return [] as Proposal[];
+      return [] as ProposalListItem[];
     }
     
     // Extract unique client and agent IDs
@@ -28,8 +27,8 @@ export function useProposalTransformer() {
       fetchProfilesByIds(agentIds)
     ]);
     
-    // Transform the data
-    return transformProposalData(proposalsData, clientProfiles, agentProfiles);
+    // Transform the data using our utility function
+    return transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles);
   };
 
   return {

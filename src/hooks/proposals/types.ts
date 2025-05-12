@@ -1,14 +1,8 @@
 
-import { Proposal } from "@/components/proposals/ProposalList";
-
-export interface ProposalFilters {
-  search: string;
-  status: string;
-  sort: string;
-}
+import { ProposalFilters, ProposalListItem } from "@/types/proposals";
 
 export interface UseProposalsResult {
-  proposals: Proposal[];
+  proposals: ProposalListItem[];
   loading: boolean;
   error?: string | null;
   filters: ProposalFilters;
@@ -23,6 +17,7 @@ export interface ProfileData {
   email: string;
 }
 
+// This type represents the raw data structure from the database
 export interface RawProposalData {
   id: string;
   title: string;
@@ -38,4 +33,6 @@ export interface RawProposalData {
   invitation_viewed_at: string | null;
   invitation_expires_at: string | null;
   review_later_until: string | null;
+  is_preview: boolean | null;
+  preview_of_id: string | null;
 }

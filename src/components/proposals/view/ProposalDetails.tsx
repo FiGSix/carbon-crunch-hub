@@ -15,26 +15,7 @@ import { usePreviewProposal } from "@/hooks/proposal/usePreviewProposal";
 import { ProposalPreviewBanner } from "./ProposalPreviewBanner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-
-interface ProposalDetailsProps {
-  proposal: {
-    id: string;
-    title: string;
-    status: string;
-    content: any;
-    signed_at: string | null;
-    archived_at: string | null;
-    archived_by: string | null;
-    review_later_until: string | null;
-  };
-  token?: string | null;
-  onApprove: () => Promise<void>;
-  onReject: () => Promise<void>;
-  isReviewLater?: boolean;
-  showActions?: boolean;
-  is_preview?: boolean;
-  preview_of_id?: string;
-}
+import { ProposalDetailsProps } from "@/types/proposals";
 
 export function ProposalDetails({ 
   proposal, 

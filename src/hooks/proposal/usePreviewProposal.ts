@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { ProposalData } from "@/types/proposals";
 
 export function usePreviewProposal() {
   const [loading, setLoading] = useState(false);
