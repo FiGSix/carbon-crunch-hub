@@ -41,6 +41,7 @@ export interface ClientInformation {
   phone: string;
   companyName: string;
   existingClient: boolean;
+  address?: string; // Added address field as optional
 }
 
 export interface ProjectInformation {
