@@ -2,7 +2,8 @@
 import { useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Proposal } from "@/components/proposals/ProposalList";
-import { ProposalFilters, RawProposalData } from "./types";
+import { ProposalFilters } from "@/types/proposals";
+import { RawProposalData } from "./types";
 import { useAuthRefresh } from "./useAuthRefresh";
 import { transformProposalData } from "./proposalUtils";
 import { fetchProfilesByIds } from "./api/fetchProfiles";

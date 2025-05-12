@@ -1,16 +1,9 @@
 
 import React from "react";
-
-interface ClientInfo {
-  name?: string;
-  email?: string;
-  phone?: string;
-  companyName?: string;
-  address?: string;
-}
+import { ClientInformation } from "@/types/proposals";
 
 interface ClientInfoSectionProps {
-  clientInfo: ClientInfo;
+  clientInfo: Partial<ClientInformation>;
 }
 
 export function ClientInfoSection({ clientInfo }: ClientInfoSectionProps) {

@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Proposal } from "@/components/proposals/ProposalList";
-import { ProposalFilters } from "./proposals/types";
+import { ProposalFilters } from "@/types/proposals";  // Updated import path
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useFetchProposals } from "./proposals/useFetchProposals";

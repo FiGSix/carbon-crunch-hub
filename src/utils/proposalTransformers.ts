@@ -17,7 +17,7 @@ type ProfileRecord = {
 /**
  * Transforms a raw database proposal record to the ProposalData format used by components
  */
-export function transformToProposalData(record: ProposalDbRecord): ProposalData {
+export function transformToProposalData(record: any): ProposalData {
   return {
     id: record.id,
     title: record.title,
@@ -40,7 +40,7 @@ export function transformToProposalData(record: ProposalDbRecord): ProposalData 
  * Transforms database proposal records to list item format for use in proposal lists
  */
 export function transformToProposalListItems(
-  proposalsData: ProposalDbRecord[],
+  proposalsData: any[],
   clientProfiles: Record<string, ProfileRecord>,
   agentProfiles: Record<string, ProfileRecord>
 ): ProposalListItem[] {

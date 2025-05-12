@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
@@ -10,6 +9,7 @@ import { ProposalArchiveDialog } from "@/components/proposals/view/ProposalArchi
 import { useAuth } from "@/contexts/auth";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
 import { logger } from "@/lib/logger";
+import { ProjectInformation } from "@/types/proposals";
 
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
@@ -106,8 +106,8 @@ const ViewProposal = () => {
     );
   }
   
-  // Extract project info from the proposal content for the header
-  const projectInfo = proposal.content?.projectInfo || {};
+  // Extract project info from the proposal content for the header and cast to the correct type
+  const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
   const isClient = user?.id === proposal.client_id;
   
   // Client can take action if they're authenticated and proposal is pending (regardless of token)

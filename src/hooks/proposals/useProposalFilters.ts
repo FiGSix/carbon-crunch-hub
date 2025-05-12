@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react";
-import { ProposalFilters } from "./types";
+import { ProposalFilters } from "@/types/proposals";
 
 export function useProposalFilters() {
   const [filters, setFilters] = useState<ProposalFilters>({

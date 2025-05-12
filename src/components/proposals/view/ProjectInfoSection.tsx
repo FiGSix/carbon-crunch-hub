@@ -1,15 +1,9 @@
 
 import React from "react";
-
-interface ProjectInfo {
-  name?: string;
-  size?: string;
-  address?: string;
-  commissionDate?: string;
-}
+import { ProjectInformation } from "@/types/proposals";
 
 interface ProjectInfoSectionProps {
-  projectInfo: ProjectInfo;
+  projectInfo: Partial<ProjectInformation>;
 }
 
 export function ProjectInfoSection({ projectInfo }: ProjectInfoSectionProps) {

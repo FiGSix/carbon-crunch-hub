@@ -11,7 +11,7 @@ export interface ProposalDbRecord {
   title: string;
   client_id: string;
   agent_id: string | null;
-  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  status: string; // Changed from union type to string to match Supabase data
   content: Json;
   signed_at: string | null;
   archived_at: string | null;
