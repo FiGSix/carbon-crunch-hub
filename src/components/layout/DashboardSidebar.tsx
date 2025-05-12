@@ -1,12 +1,13 @@
 
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart, Users, Settings, LogOut } from "lucide-react";
+import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
+import { motion } from "framer-motion";
 
 interface DashboardSidebarProps {
   userRole: 'client' | 'agent' | 'admin';
@@ -18,15 +19,17 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { refreshUser } = useAuth();
 
-  // Simplified client menu items - removed Carbon Reports and Settings
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "My Proposals", path: "/proposals" },
+    { icon: BarChart, label: "Carbon Reports", path: "/reports" },
+    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   const agentMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
+    { icon: Users, label: "My Clients", path: "/clients" },
   ];
 
   const adminMenuItems = [
@@ -54,13 +57,11 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     
     try {
       setIsLoggingOut(true);
-      console.log("Logout initiated");
       
       // Call sign out and wait for it to complete
       const { error } = await signOut();
       
       if (error) {
-        console.error("Error during logout:", error);
         toast({
           title: "Error logging out",
           description: "There was a problem logging out. Try using Force Logout.",
@@ -75,25 +76,9 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         description: "You have been successfully logged out",
       });
       
-      // Clear local storage items manually as a fallback
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('supabase') || key.includes('sb-'))) {
-          localStorage.removeItem(key);
-        }
-      }
-      
-      // Clear session storage
-      sessionStorage.clear();
-      
-      // Refresh the auth state to ensure it registers the logged out state
-      await refreshUser();
-      
       // Navigate to login page immediately after successful logout
-      console.log("Navigating to login page");
-      navigate("/login", { replace: true });
+      navigate("/login");
     } catch (error) {
-      console.error("Exception in handleLogout:", error);
       toast({
         title: "Error",
         description: "There was a problem logging out. Try using Force Logout.",
@@ -104,8 +89,14 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     }
   };
 
+  const handleExitPreview = () => {
+    navigate("/dashboard");
+  };
+
   return (
-    <SidebarContent className="pt-4 bg-white">
+    <SidebarContent 
+      className="pt-4 bg-white dark:bg-[#1A1F2C] border-r border-crunch-black/10 text-crunch-black dark:text-white"
+    >
       <div className="px-3 mb-8">
         <div className="flex items-center justify-center">
           <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12" />
@@ -113,24 +104,34 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       </div>
       
       <SidebarMenu>
-        {menuItems.map((item) => (
-          <SidebarMenuItem key={item.path}>
-            <SidebarMenuButton
-              onClick={() => navigate(item.path)}
-              className="w-full flex gap-2 items-center py-2 px-3 hover:bg-crunch-yellow/10 hover:text-crunch-black"
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+        <div className="px-3 py-2 text-xs uppercase text-crunch-black/50 dark:text-white/50 tracking-wider">Navigation</div>
+
+        {menuItems.map((item, index) => (
+          <motion.div 
+            key={item.path}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+          >
+            <SidebarMenuItem key={item.path}>
+              <SidebarMenuButton
+                onClick={() => navigate(item.path)}
+                className="w-full flex gap-2 items-center py-2 px-3 hover:bg-crunch-yellow/10 dark:hover:bg-white/10 rounded-md transition-colors"
+              >
+                <item.icon className="h-5 w-5 text-crunch-yellow dark:text-white/70" />
+                <span>{item.label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </motion.div>
         ))}
         
         <div className="mt-8 px-3">
+          <div className="py-2 text-xs uppercase text-crunch-black/50 dark:text-white/50 tracking-wider">Account</div>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="w-full flex gap-2 items-center py-2 px-3 text-destructive"
+              className="w-full flex gap-2 items-center py-2 px-3 text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20 hover:text-red-600 rounded-md transition-colors"
             >
               {isLoggingOut ? (
                 <Loader2 className="h-5 w-5 animate-spin" />

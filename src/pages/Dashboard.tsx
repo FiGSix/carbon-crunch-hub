@@ -3,8 +3,8 @@ import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsCardNew } from "@/components/dashboard/preview/StatsCardNew";
-import { RevenueChartNew } from "@/components/dashboard/preview/RevenueChartNew";
-import { CO2OffsetChartNew } from "@/components/dashboard/preview/CO2OffsetChartNew";
+import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
 import { FileText, TrendingUp, Wind, Leaf, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
@@ -140,8 +140,8 @@ const Dashboard = () => {
 
     return (
       <>
-        <RevenueChartNew />
-        <CO2OffsetChartNew />
+        <RevenueChart />
+        <CO2OffsetChart />
       </>
     );
   };

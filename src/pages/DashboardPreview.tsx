@@ -1,9 +1,10 @@
+
 import React from "react";
-import { DashboardLayoutNew } from "@/components/layout/preview/DashboardLayoutNew";
-import { DashboardHeaderNew } from "@/components/dashboard/preview/DashboardHeaderNew";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsCardNew } from "@/components/dashboard/preview/StatsCardNew";
-import { RevenueChartNew } from "@/components/dashboard/preview/RevenueChartNew";
-import { CO2OffsetChartNew } from "@/components/dashboard/preview/CO2OffsetChartNew";
+import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
 import { FileText, TrendingUp, Wind, Leaf, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
@@ -138,14 +139,14 @@ const DashboardPreview = () => {
 
     return (
       <>
-        <RevenueChartNew />
-        <CO2OffsetChartNew />
+        <RevenueChart />
+        <CO2OffsetChart />
       </>
     );
   };
   
   return (
-    <DashboardLayoutNew>
+    <DashboardLayout>
       <div className="bg-crunch-yellow/10 py-3 px-4 rounded-lg mb-6 flex items-center justify-between">
         <div className="flex items-center">
           <AlertTriangle className="h-5 w-5 text-crunch-yellow mr-2" />
@@ -160,7 +161,7 @@ const DashboardPreview = () => {
         </Button>
       </div>
 
-      <DashboardHeaderNew 
+      <DashboardHeader 
         title="Dashboard" 
         description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}
         userName={getUserDisplayName()}
@@ -209,7 +210,7 @@ const DashboardPreview = () => {
           onRefresh={handleRefreshProposals}
         />
       </div>
-    </DashboardLayoutNew>
+    </DashboardLayout>
   );
 };
 

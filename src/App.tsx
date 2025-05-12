@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import DashboardPreview from "./pages/DashboardPreview";
 import Proposals from "./pages/Proposals";
 import CreateProposal from "./pages/CreateProposal";
 import ViewProposal from "./pages/ViewProposal";
@@ -52,6 +53,11 @@ const App = () => (
             <Route path="/dashboard" element={
               <PrivateRoute>
                 <Dashboard />
+              </PrivateRoute>
+            } />
+            <Route path="/dashboard-preview" element={
+              <PrivateRoute>
+                <DashboardPreview />
               </PrivateRoute>
             } />
             <Route path="/proposals" element={
