@@ -3,7 +3,7 @@ import React from "react";
 import { 
   getClientSharePercentage,
   getAgentCommissionPercentage
-} from "../utils/proposalCalculations";
+} from "@/lib/calculations/carbon";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface RevenueDistributionSectionProps {

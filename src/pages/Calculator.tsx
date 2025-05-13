@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
@@ -9,7 +10,7 @@ import { CalculatorForm } from "./calculator/CalculatorForm";
 import { CalculationResults } from "./calculator/CalculationResults";
 import { FeaturesSection } from "./calculator/FeaturesSection";
 import { CTASection } from "./calculator/CTASection";
-import { CalculationResults as ICalculationResults } from "./calculator/types";
+import { CalculationResults as ICalculationResults } from "@/lib/calculations/carbon";
 
 const Calculator = () => {
   const navigate = useNavigate();

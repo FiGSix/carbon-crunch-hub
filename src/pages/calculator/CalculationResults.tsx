@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -14,8 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ResultCard } from "./ResultCard";
-import { formatNumber } from "./utils";
-import { CalculationResults as ICalculationResults, YearData } from "./types";
+import { CalculationResults as ICalculationResults, YearData, formatNumber } from "@/lib/calculations/carbon";
 
 interface CalculationResultsProps {
   results: ICalculationResults;

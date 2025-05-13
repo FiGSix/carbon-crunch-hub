@@ -5,8 +5,9 @@ import { Download } from "lucide-react";
 import { 
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
-  getCarbonPriceForYear 
-} from "../utils/proposalCalculations";
+  getFormattedCarbonPriceForYear,
+  getCarbonPriceForYear
+} from "@/lib/calculations/carbon";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProposalExportButtonProps {
@@ -30,8 +31,8 @@ export function ProposalExportButton({ systemSize, projectName }: ProposalExport
       // Create CSV data
       const csvHeader = ["Year", "Carbon Price (R/tCO₂)", "Carbon Credits (tCO₂)", "Estimated Revenue (R)"];
       const csvData = years.map(year => {
-        const carbonPrice = getCarbonPriceForYear(year).replace("R ", "");
-        const revenue = carbonCredits * parseFloat(carbonPrice);
+        const carbonPrice = getCarbonPriceForYear(year);
+        const revenue = carbonCredits * carbonPrice;
         return [
           year,
           carbonPrice,

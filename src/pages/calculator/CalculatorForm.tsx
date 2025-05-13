@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -6,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calculator as CalculatorIcon, ArrowRight, Loader2 } from "lucide-react";
 import { IconCard } from "./IconCard";
 import { BarChart3, TreePine, CircleDollarSign } from "lucide-react";
-import { CalculationResults } from "./types";
-import { calculateResults } from "./utils";
+import { CalculationResults, calculateResults } from "@/lib/calculations/carbon";
 
 interface CalculatorFormProps {
   onResultsCalculated: (results: CalculationResults, systemSize: number, commissioningDate: Date) => void;

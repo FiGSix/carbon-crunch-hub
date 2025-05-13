@@ -4,8 +4,8 @@ import {
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
   calculateRevenue,
-  getCarbonPriceForYear
-} from "../utils/proposalCalculations";
+  getFormattedCarbonPriceForYear
+} from "@/lib/calculations/carbon";
 
 interface CarbonCreditSectionProps {
   systemSize: string;
@@ -43,7 +43,7 @@ export function CarbonCreditSection({ systemSize }: CarbonCreditSectionProps) {
               <tr key={year}>
                 <td className="px-4 py-2 text-sm border border-carbon-gray-200">{year}</td>
                 <td className="px-4 py-2 text-sm border border-carbon-gray-200">
-                  {getCarbonPriceForYear(year)}
+                  {getFormattedCarbonPriceForYear(year)}
                 </td>
                 <td className="px-4 py-2 text-sm text-right border border-carbon-gray-200">R {amount.toLocaleString()}</td>
               </tr>
