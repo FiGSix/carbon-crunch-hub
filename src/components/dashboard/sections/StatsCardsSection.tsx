@@ -1,6 +1,6 @@
 
 import React from "react";
-import { StatsCardNew } from "@/components/dashboard/preview/StatsCardNew";
+import { StatsCard } from "@/components/dashboard/StatsCard";
 import { CommissionCard } from "@/components/dashboard/preview/CommissionCard";
 import { FileText, TrendingUp, Wind, Leaf } from "lucide-react";
 import { UserRole } from "@/lib/supabase/types";
@@ -25,7 +25,7 @@ export function StatsCardsSection({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
-            <StatsCardNew 
+            <StatsCard 
               title="Portfolio Size" 
               value={`${portfolioSize} MWp`} 
               icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
@@ -36,7 +36,7 @@ export function StatsCardsSection({
             
             <CommissionCard portfolioSize={portfolioSize} />
             
-            <StatsCardNew 
+            <StatsCard 
               title="Total Proposals" 
               value={totalProposals} 
               icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
@@ -45,7 +45,7 @@ export function StatsCardsSection({
               color="blue"
             />
             
-            <StatsCardNew 
+            <StatsCard 
               title="Potential Revenue" 
               value={`R ${potentialRevenue.toLocaleString()}`} 
               icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
@@ -61,7 +61,7 @@ export function StatsCardsSection({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <StatsCardNew 
+      <StatsCard 
         title="Portfolio Size" 
         value={`${portfolioSize} MWp`} 
         icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
@@ -70,7 +70,7 @@ export function StatsCardsSection({
         color="emerald"
       />
       
-      <StatsCardNew 
+      <StatsCard 
         title="Total Proposals" 
         value={totalProposals} 
         icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
@@ -79,7 +79,7 @@ export function StatsCardsSection({
         color="blue"
       />
       
-      <StatsCardNew 
+      <StatsCard 
         title="Potential Revenue" 
         value={`R ${potentialRevenue.toLocaleString()}`} 
         icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
@@ -88,7 +88,7 @@ export function StatsCardsSection({
         color="yellow"
       />
       
-      <StatsCardNew 
+      <StatsCard 
         title="CO₂ Offset" 
         value={`${co2Offset} tCO₂`} 
         icon={<Leaf className="h-5 w-5 text-crunch-yellow" />}
