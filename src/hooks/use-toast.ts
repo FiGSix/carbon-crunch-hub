@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 
 // Types for shadcn/ui toast compatibility
 export type ToastProps = {
-  title?: string;
+  title?: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
   variant?: "default" | "destructive";
@@ -14,23 +14,29 @@ export type ToastProps = {
 const adaptToSonnerToast = ({
   title,
   description,
-  variant,
   action,
-  ...rest
+  variant,
 }: ToastProps) => {
-  if (variant === "destructive") {
-    return sonnerToast.error(title, {
+  // Map variants
+  const style = variant === "destructive" ? { style: { backgroundColor: "red" } } : {};
+
+  // Handle string title
+  if (typeof title === "string") {
+    return sonnerToast(title, {
       description,
       action,
-      ...rest,
+      ...style,
     });
   }
 
-  return sonnerToast(title, {
-    description,
-    action,
-    ...rest,
-  });
+  // Handle ReactNode title with custom rendering
+  return sonnerToast(
+    <div>
+      {title && <div className="font-semibold">{title}</div>}
+      {description && <div>{description}</div>}
+    </div>,
+    { action, ...style }
+  );
 };
 
 /**
@@ -40,14 +46,14 @@ const adaptToSonnerToast = ({
 const useToast = () => {
   return {
     toast: (props: ToastProps | string) => {
-      // Handle string case for direct calls
       if (typeof props === "string") {
         return sonnerToast(props);
+      } else {
+        return adaptToSonnerToast(props);
       }
-      
-      // Handle object case (shadcn/ui style)
-      return adaptToSonnerToast(props);
-    }
+    },
+    // Add the toasts array to maintain compatibility with shadcn/ui toast
+    toasts: [] // Empty array as Sonner manages its own state
   };
 };
 

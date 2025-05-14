@@ -11,7 +11,7 @@ import {
   calculateRevenue,
   getClientSharePercentage,
   getAgentCommissionPercentage
-} from "@/components/proposals/utils/proposalCalculations";
+} from "@/lib/calculations/carbon";
 
 export interface ProposalData {
   title: string;
