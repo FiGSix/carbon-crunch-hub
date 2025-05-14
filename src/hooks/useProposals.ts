@@ -1,8 +1,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Proposal } from "@/components/proposals/ProposalList";
-import { ProposalFilters } from "@/types/proposals";  // Updated import path
-import { useAuth } from "@/contexts/auth";
+import { ProposalFilters } from "@/types/proposals";
+import { useAuth } from "@/contexts/auth"; // Updated import path
 import { useToast } from "@/hooks/use-toast";
 import { useFetchProposals } from "./proposals/useFetchProposals";
 import { useProposalFilters } from "./proposals/useProposalFilters";
@@ -11,7 +11,7 @@ import { useLocation } from "react-router-dom";
 
 export const useProposals = (): UseProposalsResult => {
   const { toast } = useToast();
-  const { userRole, user, refreshUser } = useAuth();
+  const { userRole, user, refreshUser } = useAuth(); // Using modern context
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);

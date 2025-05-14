@@ -1,7 +1,7 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth';
-import { UserRole } from '@/contexts/auth/types';
+import { useAuth } from '@/contexts/auth'; // Updated import path
+import { UserRole } from '@/contexts/auth/types'; // Updated import path
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -14,7 +14,7 @@ interface PrivateRouteProps {
 }
 
 export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
-  const { user, userRole, isLoading, refreshUser } = useAuth();
+  const { user, userRole, isLoading, refreshUser } = useAuth(); // Now using modern context
   const location = useLocation();
   const [refreshAttempted, setRefreshAttempted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);

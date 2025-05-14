@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signUp } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth";
+import { useAuth } from "@/contexts/auth"; // Updated import path
 
 interface RegisterFormData {
   firstName: string;
@@ -18,7 +18,7 @@ interface RegisterFormData {
 export function useRegisterForm(initialRole: "client" | "agent") {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const { refreshUser } = useAuth(); // Using modern context
   
   const [formData, setFormData] = useState<RegisterFormData>({
     firstName: "",

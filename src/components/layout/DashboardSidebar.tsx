@@ -6,7 +6,7 @@ import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "@/contexts/auth";
+import { useAuth } from "@/contexts/auth"; // Updated import path
 import { motion } from "framer-motion";
 
 interface DashboardSidebarProps {
@@ -17,7 +17,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { refreshUser } = useAuth();
+  const { refreshUser } = useAuth(); // Using modern context
 
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },

@@ -6,22 +6,28 @@ import { StatsCardNew } from "@/components/dashboard/preview/StatsCardNew";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
-import { FileText, TrendingUp, Wind, Leaf, RefreshCw } from "lucide-react";
-import { useAuth } from "@/contexts/auth";
+import { FileText, TrendingUp, Wind, Leaf, RefreshCw, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/auth"; // Updated import path
 import { Button } from "@/components/ui/button";
 import { useProposals } from "@/hooks/useProposals";
 import { useEffect } from "react";
 import { CommissionCard } from "@/components/dashboard/preview/CommissionCard";
 import { DealStatusChart } from "@/components/dashboard/preview/DealStatusChart";
+import { useNavigate } from "react-router-dom";
 
-const Dashboard = () => {
+interface DashboardProps {
+  isPreview?: boolean;
+}
+
+const Dashboard = ({ isPreview = false }: DashboardProps) => {
+  const navigate = useNavigate();
   const { profile, userRole } = useAuth();
   const { proposals, fetchProposals, loading } = useProposals();
   
   // Log when dashboard mounts or proposals update
   useEffect(() => {
-    console.log("Dashboard rendered with proposals count:", proposals.length);
-  }, [proposals.length]);
+    console.log(`${isPreview ? 'Preview' : ''} Dashboard rendered with proposals count:`, proposals.length);
+  }, [proposals.length, isPreview]);
   
   const portfolioSize = 12.5; // MWp
   const totalProposals = proposals.length || 8;
@@ -52,7 +58,7 @@ const Dashboard = () => {
   };
   
   const handleRefreshProposals = () => {
-    console.log("Manually refreshing proposals from dashboard");
+    console.log(`Manually refreshing proposals from ${isPreview ? 'preview ' : ''}dashboard`);
     fetchProposals();
   };
   
@@ -148,6 +154,22 @@ const Dashboard = () => {
   
   return (
     <DashboardLayout>
+      {isPreview && (
+        <div className="bg-crunch-yellow/10 py-3 px-4 rounded-lg mb-6 flex items-center justify-between">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-crunch-yellow mr-2" />
+            <p className="text-sm font-medium">This is a preview of the new dashboard design. <span className="font-bold">No functionality has changed.</span></p>
+          </div>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/dashboard')}
+          >
+            Go back to current dashboard
+          </Button>
+        </div>
+      )}
+
       <DashboardHeader 
         title="Dashboard" 
         description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}
