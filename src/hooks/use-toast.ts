@@ -1,5 +1,5 @@
 
-import { toast as sonnerToast, type ToastT } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import { ReactNode } from "react";
 
 // Types for shadcn/ui toast compatibility
@@ -10,7 +10,7 @@ export type ToastProps = {
   variant?: "default" | "destructive";
 };
 
-// Adapter function to convert shadcn/ui toast props to sonner toast
+// Simple adapter function to convert shadcn/ui toast props to sonner toast
 const adaptToSonnerToast = ({
   title,
   description,
@@ -33,22 +33,10 @@ const adaptToSonnerToast = ({
   });
 };
 
-// Create a toast compatibility class that mimics shadcn/ui toast API
-const createCompatToast = () => {
-  return {
-    // Direct sonner methods
-    toast: sonnerToast,
-    
-    // Compatibility method for shadcn/ui toast
-    // This is what's being called with the {title, description} objects
-    // causing the TypeScript errors
-    (...args: Parameters<typeof sonnerToast>): ReturnType<typeof sonnerToast> {
-      return sonnerToast(...args);
-    },
-  };
-};
-
-// For backward compatibility
+/**
+ * Hook that provides a toast function with compatibility for both Sonner's native API
+ * and shadcn/ui toast style object parameters.
+ */
 const useToast = () => {
   return {
     toast: (props: ToastProps | string) => {
@@ -63,5 +51,5 @@ const useToast = () => {
   };
 };
 
-// Expose both the hook and direct toast function
+// Export the hook and direct toast function for convenience
 export { useToast, sonnerToast as toast };
