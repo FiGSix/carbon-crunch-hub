@@ -20,7 +20,8 @@ const adaptToSonnerToast = ({
   // Map variants
   const style = variant === "destructive" ? { style: { backgroundColor: "red" } } : {};
 
-  // Handle string title
+  // For ReactNode titles, we need to use a different approach
+  // since we can't use JSX in a .ts file
   if (typeof title === "string") {
     return sonnerToast(title, {
       description,
@@ -28,15 +29,14 @@ const adaptToSonnerToast = ({
       ...style,
     });
   }
-
-  // Handle ReactNode title with custom rendering
-  return sonnerToast(
-    <div>
-      {title && <div className="font-semibold">{title}</div>}
-      {description && <div>{description}</div>}
-    </div>,
-    { action, ...style }
-  );
+  
+  // For non-string titles, pass them directly to Sonner
+  // Sonner internally can handle React nodes
+  return sonnerToast(title || "", {
+    description,
+    action,
+    ...style
+  });
 };
 
 /**
