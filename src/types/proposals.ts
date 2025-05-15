@@ -1,3 +1,4 @@
+
 import { Json } from "@/types/supabase";
 
 /**
@@ -103,6 +104,8 @@ export interface ProposalListItem {
   review_later_until?: string;
   agent_id?: string | null;
   agent?: string;
+  is_preview?: boolean | null;
+  preview_of_id?: string | null;
 }
 
 /**

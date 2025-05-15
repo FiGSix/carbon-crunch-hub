@@ -1,13 +1,13 @@
 
 import { useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { Proposal } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/types/proposals";
 import { useAuthRefresh } from "./useAuthRefresh";
 import { logger } from "@/lib/logger";
 import { buildProposalQuery } from "./utils/queryBuilders";
 import { handleQueryError } from "./utils/queryErrorHandler";
 import { fetchAndTransformProposalData } from "./utils/dataTransformer";
+import { RawProposalData } from "./types";
 
 type UseFetchProposalsProps = {
   user: any;
@@ -15,7 +15,7 @@ type UseFetchProposalsProps = {
   filters: ProposalFilters;
   toast: any;
   refreshUser: () => Promise<void>;
-  setProposals: (proposals: Proposal[]) => void;
+  setProposals: (proposals: any[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 };
@@ -81,8 +81,28 @@ export function useFetchProposals({
         return;
       }
       
+      // Cast the data to ensure it matches the expected type
+      const typedProposalsData = proposalsData.map(item => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        status: item.status,
+        created_at: item.created_at,
+        client_id: item.client_id,
+        agent_id: item.agent_id,
+        annual_energy: item.annual_energy,
+        carbon_credits: item.carbon_credits,
+        client_share_percentage: item.client_share_percentage,
+        invitation_sent_at: item.invitation_sent_at,
+        invitation_viewed_at: item.invitation_viewed_at,
+        invitation_expires_at: item.invitation_expires_at,
+        review_later_until: item.review_later_until,
+        is_preview: item.is_preview || null,
+        preview_of_id: item.preview_of_id || null
+      })) as RawProposalData[];
+      
       // Transform data using our utility function
-      const transformedProposals = await fetchAndTransformProposalData(proposalsData);
+      const transformedProposals = await fetchAndTransformProposalData(typedProposalsData);
       
       proposalLogger.info("Setting proposals in state", { count: transformedProposals.length });
       setProposals(transformedProposals);
