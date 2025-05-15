@@ -4,7 +4,7 @@ import {
   EligibilityCriteria, 
   ClientInformation, 
   ProjectInformation 
-} from "@/components/proposals/types";
+} from "@/types/proposals";
 import { 
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
@@ -16,7 +16,7 @@ import {
 export interface ProposalData {
   title: string;
   client_id: string;
-  agent_id: string; // Changed to not nullable
+  agent_id: string;
   eligibility_criteria: EligibilityCriteria;
   project_info: ProjectInformation;
   annual_energy: number;

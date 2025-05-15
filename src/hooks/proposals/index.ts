@@ -1,7 +1,6 @@
 
 /**
- * Re-export proposal hooks for cleaner imports
- * This provides a centralized import point for all proposal-related hooks
+ * Centralized import point for all proposal-related hooks
  */
 
 // Main query hooks

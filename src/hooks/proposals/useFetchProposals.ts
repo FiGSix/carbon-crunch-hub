@@ -7,7 +7,26 @@ import { logger } from "@/lib/logger";
 import { buildProposalQuery } from "./utils/queryBuilders";
 import { handleQueryError } from "./utils/queryErrorHandler";
 import { fetchAndTransformProposalData } from "./utils/dataTransformer";
-import { RawProposalData } from "./types";
+
+// Define the raw proposal data interface here
+export interface RawProposalData {
+  id: string;
+  title: string;
+  content: any;
+  status: string;
+  created_at: string;
+  client_id: string;
+  agent_id: string | null;
+  annual_energy: number | null;
+  carbon_credits: number | null;
+  client_share_percentage: number | null;
+  invitation_sent_at: string | null;
+  invitation_viewed_at: string | null;
+  invitation_expires_at: string | null;
+  review_later_until: string | null;
+  is_preview: boolean | null;
+  preview_of_id: string | null;
+}
 
 type UseFetchProposalsProps = {
   user: any;
@@ -81,9 +100,9 @@ export function useFetchProposals({
         return;
       }
       
-      // Transform the raw data into our expected format with proper type safety
+      // Transform the raw data with proper typing
       const typedProposalsData = proposalsData.map(item => {
-        return {
+        const transformedItem: RawProposalData = {
           id: item.id,
           title: item.title,
           content: item.content,
@@ -98,10 +117,11 @@ export function useFetchProposals({
           invitation_viewed_at: item.invitation_viewed_at,
           invitation_expires_at: item.invitation_expires_at,
           review_later_until: item.review_later_until,
-          is_preview: item.is_preview || null,
-          preview_of_id: item.preview_of_id || null
+          is_preview: item.is_preview,
+          preview_of_id: item.preview_of_id
         };
-      }) as RawProposalData[];
+        return transformedItem;
+      });
       
       // Transform data using our utility function
       const transformedProposals = await fetchAndTransformProposalData(typedProposalsData);
