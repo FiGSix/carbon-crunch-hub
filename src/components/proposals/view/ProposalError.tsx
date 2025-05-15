@@ -1,44 +1,27 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ErrorDisplay, ErrorDisplayProps } from "@/components/ui/error-display";
 
 interface ProposalErrorProps {
   errorMessage: string;
   showArchiveError?: boolean;
+  onRetry?: () => void;
 }
 
-export function ProposalError({ errorMessage, showArchiveError }: ProposalErrorProps) {
-  const navigate = useNavigate();
+export function ProposalError({ errorMessage, showArchiveError, onRetry }: ProposalErrorProps) {
+  const errorProps: ErrorDisplayProps = {
+    title: showArchiveError ? "Archive Error" : "Proposal Error",
+    message: errorMessage,
+    severity: "error",
+    backPath: "/",
+    onRetry: onRetry,
+    className: "max-w-5xl mx-auto"
+  };
   
   return (
-    <div className="container max-w-5xl mx-auto px-4 py-12">
-      <Card className="retro-card">
-        <CardHeader>
-          <CardTitle className="text-destructive">
-            {showArchiveError ? "Archive Error" : "Error"}
-          </CardTitle>
-          <CardDescription>
-            {showArchiveError 
-              ? "There was a problem archiving this proposal" 
-              : "There was a problem loading this proposal"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-carbon-gray-700">{errorMessage}</p>
-        </CardContent>
-        <CardFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/")}
-            className="retro-button"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Return to Home
-          </Button>
-        </CardFooter>
-      </Card>
+    <div className="container px-4 py-12">
+      <ErrorDisplay {...errorProps} />
     </div>
   );
 }
+

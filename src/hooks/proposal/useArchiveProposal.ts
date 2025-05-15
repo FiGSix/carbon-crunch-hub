@@ -3,9 +3,15 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoading: boolean) => void) {
   const { toast } = useToast();
+  const { handleError } = useErrorHandler({
+    context: "proposal-archival",
+    toastOnError: true,
+    navigateOnFatal: false
+  });
   
   const archiveProposal = async (proposalId: string, userId: string): Promise<ProposalOperationResult> => {
     try {
@@ -48,14 +54,19 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
       const recipientId = userId === proposal?.client_id ? proposal?.agent_id : proposal?.client_id;
       
       if (recipientId) {
-        await createNotification({
-          userId: recipientId,
-          title: "Proposal Archived",
-          message: `The proposal "${proposal?.title}" has been archived.`,
-          type: "info",
-          relatedId: proposalId,
-          relatedType: "proposal"
-        });
+        try {
+          await createNotification({
+            userId: recipientId,
+            title: "Proposal Archived",
+            message: `The proposal "${proposal?.title}" has been archived.`,
+            type: "info",
+            relatedId: proposalId,
+            relatedType: "proposal"
+          });
+        } catch (notificationError) {
+          // Log but don't block the main operation
+          handleError(notificationError, "Failed to send notification", "warning");
+        }
       }
       
       toast({
@@ -65,13 +76,11 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
       
       return { success: true };
     } catch (error) {
-      console.error("Error archiving proposal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to archive proposal. Please try again.",
-        variant: "destructive",
-      });
-      return { success: false, error: "Failed to archive proposal" };
+      const errorState = handleError(error, "Failed to archive proposal");
+      return { 
+        success: false, 
+        error: errorState.message || "Failed to archive proposal" 
+      };
     } finally {
       setLoadingState('archive', false);
     }
@@ -79,3 +88,4 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
 
   return { archiveProposal };
 }
+

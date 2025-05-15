@@ -3,16 +3,24 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProposalData } from "@/types/proposals";
 import { transformToProposalData } from "@/utils/proposalTransformers";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 export function useProposalData(id?: string, token?: string | null) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clientEmail, setClientEmail] = useState<string | null>(null);
+  
+  const { handleError } = useErrorHandler({
+    context: "proposal-data",
+    toastOnError: false, // We'll handle UI display through the component
+    navigateOnFatal: false
+  });
 
   const fetchProposal = useCallback(async (proposalId?: string, invitationToken?: string | null) => {
     try {
       setLoading(true);
+      setError(null);
       console.log("Fetching proposal with:", { proposalId, invitationToken });
       
       if (invitationToken) {
@@ -20,10 +28,7 @@ export function useProposalData(id?: string, token?: string | null) {
         const { data, error: validationError } = await supabase.rpc('validate_invitation_token', { token: invitationToken });
         
         if (validationError || !data || !data.length || !data[0].proposal_id) {
-          console.error("Token validation failed:", validationError || "No valid proposal ID returned");
-          setError("This invitation link is invalid or has expired.");
-          setLoading(false);
-          return;
+          throw new Error("This invitation link is invalid or has expired.");
         }
         
         const validatedProposalId = data[0].proposal_id;
@@ -56,7 +61,6 @@ export function useProposalData(id?: string, token?: string | null) {
           .single();
         
         if (fetchError) {
-          console.error("Error fetching proposal by ID:", fetchError);
           throw fetchError;
         }
         
@@ -65,15 +69,15 @@ export function useProposalData(id?: string, token?: string | null) {
         console.log("Proposal fetched successfully:", typedProposal);
         setProposal(typedProposal);
       } else {
-        setError("No proposal ID or invitation token provided.");
+        throw new Error("No proposal ID or invitation token provided.");
       }
     } catch (err) {
-      console.error("Error fetching proposal:", err);
-      setError("Failed to load the proposal. It may have been deleted or you don't have permission to view it.");
+      const errorState = handleError(err, "Failed to load the proposal");
+      setError(errorState.message || "Failed to load the proposal. It may have been deleted or you don't have permission to view it.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
   useEffect(() => {
     fetchProposal(id, token);
@@ -87,3 +91,4 @@ export function useProposalData(id?: string, token?: string | null) {
     fetchProposal
   };
 }
+

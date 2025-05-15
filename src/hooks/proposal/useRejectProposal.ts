@@ -4,9 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
 import { logger } from "@/lib/logger";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 export function useRejectProposal(setLoadingState: (operation: 'reject', isLoading: boolean) => void) {
   const { toast } = useToast();
+  const { handleError } = useErrorHandler({
+    context: "proposal-rejection",
+    toastOnError: true,
+    navigateOnFatal: false
+  });
   
   const rejectProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
     try {
@@ -20,14 +26,11 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
         .eq('id', proposalId);
         
       if (fetchError) {
-        logger.error("Error fetching proposal details:", fetchError);
         throw fetchError;
       }
       
       if (!proposals || proposals.length === 0) {
-        const notFoundError = new Error("Proposal not found");
-        logger.error(notFoundError.message);
-        throw notFoundError;
+        throw new Error("Proposal not found");
       }
       
       const proposal = proposals[0];
@@ -42,7 +45,6 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
         .eq('id', proposalId);
       
       if (error) {
-        logger.error("Error updating proposal status:", error);
         throw error;
       }
       
@@ -62,7 +64,7 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
           logger.info("Agent notification created successfully");
         } catch (notificationError) {
           // Log the error but don't throw - we still want the rejection to succeed
-          logger.error("Error creating notification (non-blocking):", notificationError);
+          handleError(notificationError, "Failed to create notification", "warning");
         }
       }
       
@@ -78,13 +80,11 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
       
       return { success: true };
     } catch (error) {
-      logger.error("Error rejecting proposal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject proposal. Please try again.",
-        variant: "destructive",
-      });
-      return { success: false, error: "Failed to reject proposal" };
+      const errorState = handleError(error, "Failed to reject proposal");
+      return { 
+        success: false, 
+        error: errorState.message || "Failed to reject proposal" 
+      };
     } finally {
       setLoadingState('reject', false);
     }
@@ -92,3 +92,4 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
 
   return { rejectProposal };
 }
+

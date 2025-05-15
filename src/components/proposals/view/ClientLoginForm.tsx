@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, LogIn } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ErrorDisplay } from "@/components/ui/error-display";
 import { signIn } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 interface ClientLoginFormProps {
   clientEmail: string;
@@ -17,13 +18,17 @@ interface ClientLoginFormProps {
 export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  const { error, handleError, clearError } = useErrorHandler({
+    context: "client-login",
+    toastOnError: false
+  });
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    clearError();
 
     try {
       const { data, error: signInError } = await signIn(clientEmail, password);
@@ -44,13 +49,12 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
         throw new Error("Login successful but no session was created");
       }
     } catch (error: any) {
-      console.error("Login error:", error);
-      
-      if (error.message.includes("Invalid login credentials")) {
-        setError("Invalid email or password. Please try again.");
-      } else {
-        setError(error.message || "Failed to log in. Please try again.");
-      }
+      handleError(
+        error, 
+        error.message.includes("Invalid login credentials")
+          ? "Invalid email or password. Please try again."
+          : "Failed to log in. Please try again."
+      );
       
       toast({
         title: "Login failed",
@@ -72,10 +76,12 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
       </CardHeader>
       <CardContent>
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Login Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <ErrorDisplay 
+            message={error.message || "Login failed"} 
+            severity={error.severity}
+            compact={true}
+            className="mb-4"
+          />
         )}
         
         <form onSubmit={handleSignIn} className="space-y-4">
@@ -126,3 +132,4 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
     </Card>
   );
 }
+

@@ -5,10 +5,16 @@ import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
 import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 export function useApproveProposal(setLoadingState: (operation: 'approve', isLoading: boolean) => void) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { handleError } = useErrorHandler({
+    context: "proposal-approval",
+    toastOnError: true,
+    navigateOnFatal: false
+  });
 
   const approveProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
     try {
@@ -22,14 +28,11 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         .eq('id', proposalId);
         
       if (fetchError) {
-        logger.error("Error fetching proposal details:", fetchError);
         throw fetchError;
       }
       
       if (!proposals || proposals.length === 0) {
-        const notFoundError = new Error("Proposal not found");
-        logger.error(notFoundError.message);
-        throw notFoundError;
+        throw new Error("Proposal not found");
       }
       
       const proposal = proposals[0];
@@ -46,7 +49,6 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         .eq('id', proposalId);
       
       if (error) {
-        logger.error("Error updating proposal status:", error);
         throw error;
       }
       
@@ -66,7 +68,7 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
           logger.info("Agent notification created successfully");
         } catch (notificationError) {
           // Log the error but don't throw - we still want the approval to succeed
-          logger.error("Error creating notification (non-blocking):", notificationError);
+          handleError(notificationError, "Failed to create notification", "warning");
         }
       }
       
@@ -88,13 +90,11 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
       
       return { success: true };
     } catch (error) {
-      logger.error("Error approving proposal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve proposal. Please try again.",
-        variant: "destructive",
-      });
-      return { success: false, error: "Failed to approve proposal" };
+      const errorState = handleError(error, "Failed to approve proposal");
+      return { 
+        success: false, 
+        error: errorState.message || "Failed to approve proposal" 
+      };
     } finally {
       setLoadingState('approve', false);
     }
@@ -102,3 +102,4 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
 
   return { approveProposal };
 }
+
