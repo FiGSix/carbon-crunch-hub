@@ -82,24 +82,26 @@ export function useFetchProposals({
       }
       
       // Transform the raw data into our expected format with proper type safety
-      const typedProposalsData = proposalsData.map(item => ({
-        id: item.id,
-        title: item.title,
-        content: item.content,
-        status: item.status,
-        created_at: item.created_at,
-        client_id: item.client_id,
-        agent_id: item.agent_id,
-        annual_energy: item.annual_energy,
-        carbon_credits: item.carbon_credits,
-        client_share_percentage: item.client_share_percentage,
-        invitation_sent_at: item.invitation_sent_at,
-        invitation_viewed_at: item.invitation_viewed_at,
-        invitation_expires_at: item.invitation_expires_at,
-        review_later_until: item.review_later_until,
-        is_preview: item.is_preview || null,
-        preview_of_id: item.preview_of_id || null
-      })) as RawProposalData[];
+      const typedProposalsData = proposalsData.map(item => {
+        return {
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          status: item.status,
+          created_at: item.created_at,
+          client_id: item.client_id,
+          agent_id: item.agent_id,
+          annual_energy: item.annual_energy,
+          carbon_credits: item.carbon_credits,
+          client_share_percentage: item.client_share_percentage,
+          invitation_sent_at: item.invitation_sent_at,
+          invitation_viewed_at: item.invitation_viewed_at,
+          invitation_expires_at: item.invitation_expires_at,
+          review_later_until: item.review_later_until,
+          is_preview: item.is_preview || null,
+          preview_of_id: item.preview_of_id || null
+        };
+      }) as RawProposalData[];
       
       // Transform data using our utility function
       const transformedProposals = await fetchAndTransformProposalData(typedProposalsData);
