@@ -97,8 +97,8 @@ export function useFetchProposals({
         invitation_viewed_at: item.invitation_viewed_at,
         invitation_expires_at: item.invitation_expires_at,
         review_later_until: item.review_later_until,
-        is_preview: item.is_preview || null,
-        preview_of_id: item.preview_of_id || null
+        is_preview: item.is_preview,
+        preview_of_id: item.preview_of_id
       })) as RawProposalData[];
       
       // Transform data using our utility function

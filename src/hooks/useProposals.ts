@@ -1,8 +1,7 @@
 
 import { useState, useCallback, useEffect } from "react";
-import { Proposal } from "@/components/proposals/ProposalList";
-import { ProposalFilters } from "@/types/proposals";
-import { useAuth } from "@/contexts/auth";
+import { ProposalListItem, ProposalFilters } from "@/types/proposals";
+import { useAuth } from "@/contexts/auth"; // Standardized import path
 import { useToast } from "@/hooks/use-toast";
 import { useFetchProposals } from "./proposals/useFetchProposals";
 import { useProposalFilters } from "./proposals/useProposalFilters";
@@ -15,7 +14,7 @@ export const useProposals = (): UseProposalsResult => {
   const { userRole, user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [proposals, setProposals] = useState<ProposalListItem[]>([]); // Using standardized type
   const location = useLocation();
   
   // Create a contextualized logger
