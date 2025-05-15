@@ -10,41 +10,51 @@ import {
 import { ProposalStatusBadge } from "./components/ProposalStatusBadge";
 import { InvitationStatus } from "./components/InvitationStatus";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
-import { ProposalListProps } from "./ProposalListTypes";
-import { useAuth } from "@/contexts/AuthContext";
+import { ProposalListProps } from "@/types/proposals";
+import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect } from "react";
+import { logger } from "@/lib/logger";
 
-export type { Proposal } from "./ProposalListTypes";
+export type { ProposalListItem as Proposal } from "@/types/proposals";
 
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
   const { userRole, user } = useAuth();
   
+  // Create a contextualized logger
+  const proposalLogger = logger.withContext({ 
+    component: 'ProposalList', 
+    feature: 'proposals' 
+  });
+  
   // Enhanced logging for debugging
   useEffect(() => {
-    console.log("ProposalList - userRole:", userRole, "userId:", user?.id);
-    console.log("ProposalList - received proposals count:", proposals.length);
+    proposalLogger.debug("Component rendered", {
+      userRole, 
+      userId: user?.id,
+      proposalsCount: proposals.length
+    });
     
     // Log the first proposal for debugging if available
     if (proposals.length > 0) {
-      console.log("ProposalList - first proposal sample:", {
+      proposalLogger.debug("First proposal sample", {
         id: proposals[0].id,
         name: proposals[0].name,
         agent_id: proposals[0].agent_id,
         status: proposals[0].status
       });
     }
-  }, [proposals, userRole, user]);
+  }, [proposals, userRole, user, proposalLogger]);
   
   // Listen for global proposal status change events
   useEffect(() => {
     const handleProposalStatusChange = (event: Event) => {
       // Cast event to CustomEvent to access detail property
       const customEvent = event as CustomEvent<{id: string, status: string}>;
-      console.log("ProposalList detected status change event:", customEvent.detail);
+      proposalLogger.info("Status change event detected", customEvent.detail);
       
       if (onProposalUpdate) {
-        console.log("Triggering proposal list refresh after status change");
+        proposalLogger.info("Triggering proposal list refresh");
         onProposalUpdate();
       }
     };
@@ -54,7 +64,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
     return () => {
       window.removeEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
     };
-  }, [onProposalUpdate]);
+  }, [onProposalUpdate, proposalLogger]);
   
   // No proposals found state
   if (proposals.length === 0) {

@@ -81,7 +81,7 @@ export function useFetchProposals({
         return;
       }
       
-      // Cast the data to ensure it matches the expected type
+      // Transform the raw data into our expected format
       const typedProposalsData = proposalsData.map(item => ({
         id: item.id,
         title: item.title,
