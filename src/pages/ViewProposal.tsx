@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
@@ -31,7 +30,9 @@ const ViewProposal = () => {
     archiveDialogOpen,
     setArchiveDialogOpen,
     canArchive,
-    isReviewLater
+    isReviewLater,
+    canTakeAction,
+    isClient
   } = useViewProposal(id, token);
   
   const [showAuthForm, setShowAuthForm] = useState(false);
@@ -39,7 +40,7 @@ const ViewProposal = () => {
   // Determine if we need to show auth form based on token and user state
   useEffect(() => {
     if (!loading && token && clientEmail && !user) {
-      logger.info("Showing authentication form for client with email:", { clientEmail });
+      logger.info("Showing authentication form for client with email", { clientEmail });
       setShowAuthForm(true);
     } else {
       setShowAuthForm(false);
@@ -57,14 +58,14 @@ const ViewProposal = () => {
   // Log details for debugging purposes
   useEffect(() => {
     if (proposal) {
-      logger.info("ViewProposal - Current proposal state:", {
+      logger.info("ViewProposal - Current proposal state", {
         id: proposal.id,
         status: proposal.status,
-        isClient: user?.id === proposal.client_id,
-        canTakeAction: user?.id === proposal.client_id && proposal.status === 'pending'
+        isClient,
+        canTakeAction
       });
     }
-  }, [proposal, user]);
+  }, [proposal, isClient, canTakeAction]);
   
   if (loading) {
     return (
@@ -75,7 +76,7 @@ const ViewProposal = () => {
   }
   
   if (error) {
-    logger.error("Error loading proposal:", { error });
+    logger.error("Error loading proposal", { error });
     return <ProposalError errorMessage={error} />;
   }
   
@@ -109,12 +110,8 @@ const ViewProposal = () => {
   
   // Extract project info from the proposal content for the header and cast to the correct type
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
-  const isClient = user?.id === proposal.client_id;
   
-  // Client can take action if they're authenticated and proposal is pending (regardless of token)
-  const canTakeAction = isClient && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
-  
-  logger.debug("ViewProposal - Show action buttons:", {
+  logger.debug("ViewProposal - Show action buttons", {
     isClient,
     status: proposal.status,
     isArchived: !!proposal.archived_at,
