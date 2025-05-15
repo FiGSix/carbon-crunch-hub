@@ -98,10 +98,10 @@ export interface ProposalListItem {
   size: number;
   status: string;
   revenue: number;
-  invitation_sent_at?: string;
-  invitation_viewed_at?: string;
-  invitation_expires_at?: string;
-  review_later_until?: string;
+  invitation_sent_at?: string | null;
+  invitation_viewed_at?: string | null;
+  invitation_expires_at?: string | null;
+  review_later_until?: string | null;
   agent_id?: string | null;
   agent?: string;
   is_preview?: boolean | null;
