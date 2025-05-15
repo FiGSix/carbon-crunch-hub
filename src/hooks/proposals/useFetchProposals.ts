@@ -3,11 +3,11 @@ import { useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Proposal } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/types/proposals";
-import { RawProposalData } from "./types";
 import { useAuthRefresh } from "./useAuthRefresh";
-import { transformProposalData } from "./proposalUtils";
-import { fetchProfilesByIds } from "./api/fetchProfiles";
 import { logger } from "@/lib/logger";
+import { buildProposalQuery } from "./utils/queryBuilders";
+import { handleQueryError } from "./utils/queryErrorHandler";
+import { fetchAndTransformProposalData } from "./utils/dataTransformer";
 
 type UseFetchProposalsProps = {
   user: any;
@@ -38,80 +38,6 @@ export function useFetchProposals({
     feature: 'proposals' 
   });
 
-  const buildQuery = useCallback((filters: ProposalFilters) => {
-    let query = supabase
-      .from('proposals')
-      .select(`
-        id, 
-        title, 
-        created_at, 
-        status, 
-        content, 
-        client_id,
-        agent_id,
-        annual_energy,
-        carbon_credits,
-        client_share_percentage,
-        invitation_sent_at,
-        invitation_viewed_at,
-        invitation_expires_at,
-        review_later_until
-      `);
-    
-    // Apply filters
-    if (filters.status !== 'all') {
-      query = query.eq('status', filters.status);
-    }
-    
-    if (filters.search) {
-      query = query.ilike('title', `%${filters.search}%`);
-    }
-    
-    // Apply sorting
-    switch (filters.sort) {
-      case 'oldest':
-        query = query.order('created_at', { ascending: true });
-        break;
-      case 'size-high':
-      case 'size-low':
-        query = query.order('annual_energy', { 
-          ascending: filters.sort === 'size-low', 
-          nullsFirst: filters.sort === 'size-low'
-        });
-        break;
-      case 'revenue-high':
-      case 'revenue-low':
-        query = query.order('carbon_credits', { 
-          ascending: filters.sort === 'revenue-low', 
-          nullsFirst: filters.sort === 'revenue-low'
-        });
-        break;
-      case 'newest':
-      default:
-        query = query.order('created_at', { ascending: false });
-        break;
-    }
-    
-    return query;
-  }, []);
-
-  const handleQueryError = useCallback(async (error: any) => {
-    proposalLogger.error("Supabase query error", { error });
-    
-    // Handle permission errors by refreshing session
-    if (error.code === 'PGRST116' || error.code === '42501') {
-      proposalLogger.info("Permission error detected, trying to refresh session");
-      const isAuthenticated = await handleAuthError();
-      if (!isAuthenticated) {
-        throw new Error("Permission error. Please try logging in again.");
-      } else {
-        throw new Error("Permission error. Please try again after refreshing.");
-      }
-    } else {
-      throw error;
-    }
-  }, [handleAuthError, proposalLogger]);
-
   const fetchProposals = useCallback(async () => {
     if (!user?.id) {
       proposalLogger.info("No user ID found, attempting to refresh user session");
@@ -136,12 +62,14 @@ export function useFetchProposals({
       
       proposalLogger.info("Fetching proposals", { filters, userRole, userId: user?.id });
       
-      const query = buildQuery(filters);
+      // Build the query using our utility function
+      const query = buildProposalQuery(supabase, filters);
       
+      // Execute the query
       const { data: proposalsData, error: queryError } = await query;
       
       if (queryError) {
-        await handleQueryError(queryError);
+        await handleQueryError(queryError, handleAuthError);
       }
       
       proposalLogger.info("Supabase returned proposals", { count: proposalsData?.length || 0 });
@@ -153,26 +81,10 @@ export function useFetchProposals({
         return;
       }
       
-      // Extract IDs for related data
-      const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
-      const agentIds = proposalsData
-        .map(p => p.agent_id)
-        .filter((id): id is string => id !== null && id !== undefined);
+      // Transform data using our utility function
+      const transformedProposals = await fetchAndTransformProposalData(proposalsData);
       
-      // Fetch related profiles
-      const [clientProfiles, agentProfiles] = await Promise.all([
-        fetchProfilesByIds(clientIds),
-        fetchProfilesByIds(agentIds)
-      ]);
-      
-      // Transform the data
-      const transformedProposals = transformProposalData(
-        proposalsData as RawProposalData[], 
-        clientProfiles,
-        agentProfiles
-      );
-      
-      proposalLogger.info("Formatted proposals", { count: transformedProposals.length });
+      proposalLogger.info("Setting proposals in state", { count: transformedProposals.length });
       setProposals(transformedProposals);
     } catch (error) {
       proposalLogger.error("Error fetching proposals", { error });
@@ -204,8 +116,6 @@ export function useFetchProposals({
     user, 
     userRole, 
     toast, 
-    buildQuery, 
-    handleQueryError, 
     handleAuthError, 
     setError, 
     setLoading, 

@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
-import { useProposalData } from "@/hooks/proposal/useProposalData";
+import { useProposalData } from "@/hooks/proposals/view/useProposalData";
 
 export function ProposalPreviewBanner() {
   const { id } = useParams<{ id: string }>();

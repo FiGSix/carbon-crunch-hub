@@ -4,7 +4,7 @@
  */
 
 // Main query hooks
-export { useProposals } from './useProposals';
+export { useProposals } from '../useProposals';
 export { useProposalFilters } from './useProposalFilters';
 
 // View hooks
@@ -15,3 +15,7 @@ export { useProposalData } from './view/useProposalData';
 
 // Operations
 export { useProposalOperations } from './useProposalOperations';
+
+// Utilities
+export { useFetchProposals } from './useFetchProposals';
+export { useAuthRefresh } from './useAuthRefresh';
