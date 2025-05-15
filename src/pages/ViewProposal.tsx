@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
@@ -38,7 +39,7 @@ const ViewProposal = () => {
   // Determine if we need to show auth form based on token and user state
   useEffect(() => {
     if (!loading && token && clientEmail && !user) {
-      logger.info("Showing authentication form for client with email:", clientEmail);
+      logger.info("Showing authentication form for client with email:", { clientEmail });
       setShowAuthForm(true);
     } else {
       setShowAuthForm(false);
@@ -47,7 +48,7 @@ const ViewProposal = () => {
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
-    logger.info("Authentication completed, refreshing view");
+    logger.info("Authentication completed, refreshing view", { action: 'authComplete' });
     setShowAuthForm(false);
     // Force refresh the component to get latest auth state
     window.location.reload();
@@ -74,7 +75,7 @@ const ViewProposal = () => {
   }
   
   if (error) {
-    logger.error("Error loading proposal:", error);
+    logger.error("Error loading proposal:", { error });
     return <ProposalError errorMessage={error} />;
   }
   
@@ -96,7 +97,7 @@ const ViewProposal = () => {
   }
   
   if (!proposal) {
-    logger.warn("No proposal found");
+    logger.warn("No proposal found", { path: window.location.pathname });
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">

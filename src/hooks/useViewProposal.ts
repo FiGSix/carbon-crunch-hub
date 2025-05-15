@@ -29,7 +29,7 @@ export function useViewProposal(id?: string, token?: string | null) {
   useEffect(() => {
     const markInvitationViewed = async () => {
       if (token && proposal?.id && !proposal.invitation_viewed_at) {
-        logger.info(`Marking invitation as viewed for proposal: ${proposal.id}`);
+        logger.info(`Marking invitation as viewed for proposal: ${proposal.id}`, { proposalId: proposal.id });
         
         try {
           // Update the invitation_viewed_at timestamp
@@ -56,7 +56,7 @@ export function useViewProposal(id?: string, token?: string | null) {
                 relatedType: "proposal"
               }
             });
-            logger.info("Agent notification sent for proposal view");
+            logger.info("Agent notification sent for proposal view", { proposalId: proposal.id });
           }
         } catch (error) {
           logger.error("Error in markInvitationViewed:", error);
@@ -72,16 +72,16 @@ export function useViewProposal(id?: string, token?: string | null) {
   // Handle operations on the proposal
   const handleApprove = async () => {
     if (!proposal?.id) {
-      logger.error("Cannot approve proposal: proposal ID is missing");
+      logger.error("Cannot approve proposal: proposal ID is missing", { action: 'approve' });
       return;
     }
     
-    logger.info("Approving proposal:", proposal.id);
+    logger.info("Approving proposal:", { proposalId: proposal.id });
     
     try {
       const result = await approveProposal(proposal.id);
       if (result.success) {
-        logger.info("Proposal approved successfully, refreshing data");
+        logger.info("Proposal approved successfully, refreshing data", { proposalId: proposal.id });
         // Refresh data from the server
         if (id) {
           await fetchProposal(id, token);
@@ -100,7 +100,7 @@ export function useViewProposal(id?: string, token?: string | null) {
           detail: { id: proposal.id, status: 'approved' }
         }));
       } else {
-        logger.error("Approval failed:", result.error);
+        logger.error("Approval failed:", { error: result.error });
         throw new Error(result.error);
       }
     } catch (error) {
@@ -111,16 +111,16 @@ export function useViewProposal(id?: string, token?: string | null) {
   
   const handleReject = async () => {
     if (!proposal?.id) {
-      logger.error("Cannot reject proposal: proposal ID is missing");
+      logger.error("Cannot reject proposal: proposal ID is missing", { action: 'reject' });
       return;
     }
     
-    logger.info("Rejecting proposal:", proposal.id);
+    logger.info("Rejecting proposal:", { proposalId: proposal.id });
     
     try {
       const result = await rejectProposal(proposal.id);
       if (result.success) {
-        logger.info("Proposal rejected successfully, refreshing data");
+        logger.info("Proposal rejected successfully, refreshing data", { proposalId: proposal.id });
         // Refresh data from the server
         if (id) {
           await fetchProposal(id, token);
@@ -138,7 +138,7 @@ export function useViewProposal(id?: string, token?: string | null) {
           detail: { id: proposal.id, status: 'rejected' }
         }));
       } else {
-        logger.error("Rejection failed:", result.error);
+        logger.error("Rejection failed:", { error: result.error });
         throw new Error(result.error);
       }
     } catch (error) {
@@ -149,16 +149,16 @@ export function useViewProposal(id?: string, token?: string | null) {
 
   const handleArchive = async () => {
     if (!proposal?.id || !user?.id) {
-      logger.error("Cannot archive proposal: missing proposal ID or user ID");
+      logger.error("Cannot archive proposal: missing proposal ID or user ID", { action: 'archive' });
       return;
     }
     
-    logger.info(`Archiving proposal: ${proposal.id} by user: ${user.id}`);
+    logger.info(`Archiving proposal: ${proposal.id} by user: ${user.id}`, { proposalId: proposal.id, userId: user.id });
     
     try {
       const result = await archiveProposal(proposal.id, user.id);
       if (result.success) {
-        logger.info("Proposal archived successfully, refreshing data");
+        logger.info("Proposal archived successfully, refreshing data", { proposalId: proposal.id });
         // Refresh data from the server
         if (id) {
           await fetchProposal(id, token);
@@ -174,7 +174,7 @@ export function useViewProposal(id?: string, token?: string | null) {
         
         setArchiveDialogOpen(false);
       } else {
-        logger.error("Archiving failed:", result.error);
+        logger.error("Archiving failed:", { error: result.error });
         throw new Error(result.error);
       }
     } catch (error) {
@@ -185,19 +185,20 @@ export function useViewProposal(id?: string, token?: string | null) {
 
   const handleReviewLater = async () => {
     if (!proposal?.id) {
-      logger.error("Cannot toggle review later: proposal ID is missing");
+      logger.error("Cannot toggle review later: proposal ID is missing", { action: 'reviewLater' });
       return;
     }
     
     // Toggle review later status
     const isCurrentlyMarkedForReviewLater = !!proposal.review_later_until;
-    logger.info(`Toggling review later status for proposal: ${proposal.id}, current status: ${isCurrentlyMarkedForReviewLater}`);
+    logger.info(`Toggling review later status for proposal: ${proposal.id}, current status: ${isCurrentlyMarkedForReviewLater}`, 
+      { proposalId: proposal.id, currentStatus: isCurrentlyMarkedForReviewLater });
     
     try {
       const result = await toggleReviewLater(proposal.id, isCurrentlyMarkedForReviewLater);
       
       if (result.success) {
-        logger.info("Review later status updated successfully, refreshing data");
+        logger.info("Review later status updated successfully, refreshing data", { proposalId: proposal.id });
         // Refresh data from the server
         if (id) {
           await fetchProposal(id, token);
@@ -209,7 +210,7 @@ export function useViewProposal(id?: string, token?: string | null) {
           review_later_until: result.reviewLaterUntil || null
         } : null);
       } else {
-        logger.error("Toggle review later failed:", result.error);
+        logger.error("Toggle review later failed:", { error: result.error });
         throw new Error(result.error);
       }
     } catch (error) {
