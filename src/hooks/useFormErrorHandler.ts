@@ -1,5 +1,5 @@
 
-import { useForm, UseFormReturn, FieldValues, FieldErrors } from "react-hook-form";
+import { FieldValues, FieldErrors, UseFormReturn } from "react-hook-form";
 import { useErrorHandler, ErrorSeverity } from "./useErrorHandler";
 import { logger } from "@/lib/logger";
 

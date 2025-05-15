@@ -1,8 +1,11 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { logger } from "@/lib/logger";
 import { useNavigate } from "react-router-dom";
+import { createErrorState, extractErrorInfo, ErrorState } from "@/lib/errors/errorState";
+import { logError } from "@/lib/errors/errorLogger";
+import { showErrorToast } from "@/lib/errors/errorNotification";
+import { LogContext } from "@/lib/logger";
 
 export type ErrorSeverity = "info" | "warning" | "error" | "fatal";
 
@@ -11,14 +14,6 @@ interface ErrorHandlerOptions {
   toastOnError?: boolean;
   navigateOnFatal?: boolean;
   fallbackPath?: string;
-}
-
-export interface ErrorState {
-  message: string | null;
-  details?: string | null;
-  code?: string | null;
-  severity: ErrorSeverity;
-  timestamp: number;
 }
 
 /**
@@ -42,46 +37,21 @@ export function useErrorHandler(options: ErrorHandlerOptions) {
     severity: ErrorSeverity = "error"
   ) => {
     // Extract error information
-    const isErrorObject = err instanceof Error;
-    const message = customMessage || (isErrorObject ? err.message : String(err));
-    const details = isErrorObject && err.stack ? err.stack : null;
-    const errorCode = (err as any)?.code || (err as any)?.statusCode || null;
+    const { message: extractedMessage, details, code } = extractErrorInfo(err);
+    const message = customMessage || extractedMessage;
     
     // Create standardized error state
-    const errorState: ErrorState = {
-      message,
-      details,
-      code: errorCode,
-      severity,
-      timestamp: Date.now()
-    };
+    const errorState = createErrorState(message, details, code, severity);
     
     // Set the error state
     setError(errorState);
     
-    // Log based on severity
-    switch (severity) {
-      case "info":
-        logger.info(`[${context}] ${message}`, { details, code: errorCode });
-        break;
-      case "warning":
-        logger.warn(`[${context}] ${message}`, { details, code: errorCode });
-        break;
-      case "error":
-      case "fatal":
-        logger.error(`[${context}] ${message}`, { details, code: errorCode });
-        break;
-    }
+    // Log the error
+    logError(context, message, details, code, severity);
     
     // Show toast notification if enabled
     if (toastOnError) {
-      toast({
-        title: severity === "fatal" ? "Critical Error" : 
-               severity === "error" ? "Error" : 
-               severity === "warning" ? "Warning" : "Notice",
-        description: message,
-        variant: severity === "info" ? "default" : "destructive"
-      });
+      showErrorToast(toast, message, severity);
     }
     
     // Navigate away on fatal errors if enabled
@@ -89,7 +59,7 @@ export function useErrorHandler(options: ErrorHandlerOptions) {
       navigate(fallbackPath, { 
         state: { 
           errorMessage: message,
-          errorCode: errorCode
+          errorCode: code
         } 
       });
     }
@@ -134,4 +104,3 @@ export function useErrorHandler(options: ErrorHandlerOptions) {
     withErrorHandling
   };
 }
-
