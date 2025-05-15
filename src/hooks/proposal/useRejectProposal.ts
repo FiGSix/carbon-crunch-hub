@@ -3,8 +3,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
-import { logger } from "@/lib/logger";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { logger } from "@/lib/logger";
 
 export function useRejectProposal(setLoadingState: (operation: 'reject', isLoading: boolean) => void) {
   const { toast } = useToast();
@@ -14,9 +14,15 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
     navigateOnFatal: false
   });
   
+  // Create a contextualized logger for this component
+  const proposalLogger = logger.withContext({ 
+    component: 'RejectProposal', 
+    feature: 'proposals' 
+  });
+  
   const rejectProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
     try {
-      logger.info(`Starting rejection process for proposal: ${proposalId}`);
+      proposalLogger.info(`Starting rejection process for proposal: ${proposalId}`, { proposalId });
       setLoadingState('reject', true);
       
       // Fetch the proposal to get agent_id for notification
@@ -34,7 +40,11 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
       }
       
       const proposal = proposals[0];
-      logger.info("Fetched proposal details:", { title: proposal.title, agentId: proposal.agent_id });
+      proposalLogger.info("Fetched proposal details", { 
+        proposalId, 
+        title: proposal.title, 
+        agentId: proposal.agent_id 
+      });
       
       const { error } = await supabase
         .from('proposals')
@@ -48,7 +58,7 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
         throw error;
       }
       
-      logger.info("Proposal rejected successfully:", proposalId);
+      proposalLogger.info("Proposal rejected successfully", { proposalId });
       
       // Create notification for the agent
       if (proposal?.agent_id) {
@@ -61,7 +71,7 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
             relatedId: proposalId,
             relatedType: "proposal"
           });
-          logger.info("Agent notification created successfully");
+          proposalLogger.info("Agent notification created successfully");
         } catch (notificationError) {
           // Log the error but don't throw - we still want the rejection to succeed
           handleError(notificationError, "Failed to create notification", "warning");
@@ -92,4 +102,3 @@ export function useRejectProposal(setLoadingState: (operation: 'reject', isLoadi
 
   return { rejectProposal };
 }
-

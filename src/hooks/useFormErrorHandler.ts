@@ -21,6 +21,8 @@ export function useFormErrorHandler<T extends FieldValues>(options: FormErrorOpt
     toastOnError: false // We don't want toasts for form validation errors
   });
   
+  const formLogger = logger.withContext({ component: 'FormHandler', context });
+  
   /**
    * Process form submission errors
    */
@@ -33,7 +35,7 @@ export function useFormErrorHandler<T extends FieldValues>(options: FormErrorOpt
   ) => {
     // First handle field validation errors if available
     if (fieldErrors && Object.keys(fieldErrors).length > 0 && logFieldErrors) {
-      logger.warn(`[${context}] Form validation errors:`, fieldErrors);
+      formLogger.warn("Form validation errors", { fieldErrors });
     }
     
     // Then handle any other errors
@@ -54,7 +56,9 @@ export function useFormErrorHandler<T extends FieldValues>(options: FormErrorOpt
   ) => {
     return async (formData: T): Promise<{ data: R | null; error: Error | null }> => {
       try {
+        formLogger.debug("Form submission started", { formType: context });
         const result = await fn(formData, form);
+        formLogger.info("Form submission successful", { formType: context });
         return { data: result, error: null };
       } catch (err) {
         const errorState = handleFormError(err, form, form.formState.errors, customMessage);
@@ -68,4 +72,3 @@ export function useFormErrorHandler<T extends FieldValues>(options: FormErrorOpt
     withFormErrorHandling
   };
 }
-

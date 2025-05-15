@@ -2,17 +2,23 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { logger } from "@/lib/logger";
 import { ProposalData } from "@/types/proposals";
+import { logger } from "@/lib/logger";
 
 export function usePreviewProposal() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Create a contextualized logger for preview functionality
+  const previewLogger = logger.withContext({ 
+    component: 'PreviewProposal', 
+    feature: 'proposals' 
+  });
+
   const createPreview = async (proposalId: string) => {
     setLoading(true);
     try {
-      logger.info(`Creating preview for proposal: ${proposalId}`);
+      previewLogger.info(`Creating preview for proposal: ${proposalId}`, { proposalId });
       
       // First fetch the original proposal
       const { data: originalProposal, error: fetchError } = await supabase
@@ -22,7 +28,7 @@ export function usePreviewProposal() {
         .single();
       
       if (fetchError) {
-        logger.error("Error fetching original proposal:", fetchError);
+        previewLogger.error("Error fetching original proposal", { proposalId, error: fetchError });
         throw fetchError;
       }
       
@@ -48,11 +54,15 @@ export function usePreviewProposal() {
         .single();
         
       if (createError) {
-        logger.error("Error creating preview:", createError);
+        previewLogger.error("Error creating preview", { proposalId, error: createError });
         throw createError;
       }
       
-      logger.info("Preview created successfully:", preview.id);
+      previewLogger.info("Preview created successfully", { 
+        originalProposalId: proposalId,
+        previewId: preview.id 
+      });
+      
       toast({
         title: "Preview Created",
         description: "You can now make changes to the preview without affecting the original proposal.",
@@ -60,7 +70,7 @@ export function usePreviewProposal() {
       
       return preview;
     } catch (error) {
-      logger.error("Error in createPreview:", error);
+      previewLogger.error("Error in createPreview", error);
       toast({
         title: "Error",
         description: "Failed to create preview. Please try again.",

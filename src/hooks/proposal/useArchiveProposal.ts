@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { ProposalOperationResult } from "@/components/proposals/view/types";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { logger } from "@/lib/logger";
 
 export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoading: boolean) => void) {
   const { toast } = useToast();
@@ -13,8 +14,15 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
     navigateOnFatal: false
   });
   
+  // Create a contextualized logger for this component
+  const proposalLogger = logger.withContext({ 
+    component: 'ArchiveProposal', 
+    feature: 'proposals' 
+  });
+  
   const archiveProposal = async (proposalId: string, userId: string): Promise<ProposalOperationResult> => {
     try {
+      proposalLogger.info(`Starting archive process for proposal: ${proposalId}`, { proposalId, userId });
       setLoadingState('archive', true);
       
       // Fetch the proposal for notification
@@ -49,6 +57,8 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
         .update({ review_later_until: null })
         .eq('id', proposalId);
       
+      proposalLogger.info("Proposal archived successfully", { proposalId });
+      
       // Create notification for the relevant party
       // If agent archived, notify client; if client archived, notify agent
       const recipientId = userId === proposal?.client_id ? proposal?.agent_id : proposal?.client_id;
@@ -63,6 +73,7 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
             relatedId: proposalId,
             relatedType: "proposal"
           });
+          proposalLogger.info("Notification sent to recipient", { recipientId });
         } catch (notificationError) {
           // Log but don't block the main operation
           handleError(notificationError, "Failed to send notification", "warning");
@@ -88,4 +99,3 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
 
   return { archiveProposal };
 }
-

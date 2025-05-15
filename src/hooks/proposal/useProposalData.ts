@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProposalData } from "@/types/proposals";
 import { transformToProposalData } from "@/utils/proposalTransformers";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { logger } from "@/lib/logger";
 
 export function useProposalData(id?: string, token?: string | null) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
@@ -17,11 +18,17 @@ export function useProposalData(id?: string, token?: string | null) {
     navigateOnFatal: false
   });
 
+  // Create a contextualized logger
+  const proposalLogger = logger.withContext({
+    component: 'ProposalData',
+    feature: 'proposals'
+  });
+
   const fetchProposal = useCallback(async (proposalId?: string, invitationToken?: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      console.log("Fetching proposal with:", { proposalId, invitationToken });
+      proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
       
       if (invitationToken) {
         // Validate the token and get the proposal ID and client email
@@ -34,7 +41,10 @@ export function useProposalData(id?: string, token?: string | null) {
         const validatedProposalId = data[0].proposal_id;
         const invitedEmail = data[0].client_email;
         
-        console.log("Token validated, proposal ID:", validatedProposalId, "Client email:", invitedEmail);
+        proposalLogger.info("Token validated", { 
+          validatedProposalId, 
+          invitedEmail 
+        });
         setClientEmail(invitedEmail);
         
         // Now fetch the proposal with the validated ID
@@ -53,7 +63,7 @@ export function useProposalData(id?: string, token?: string | null) {
         setProposal(typedProposal);
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
-        console.log("Fetching proposal by ID:", proposalId);
+        proposalLogger.info("Fetching proposal by ID", { proposalId });
         const { data, error: fetchError } = await supabase
           .from('proposals')
           .select('*')
@@ -66,7 +76,7 @@ export function useProposalData(id?: string, token?: string | null) {
         
         // Transform to our standard ProposalData type
         const typedProposal = transformToProposalData(data);
-        console.log("Proposal fetched successfully:", typedProposal);
+        proposalLogger.info("Proposal fetched successfully", { proposalId });
         setProposal(typedProposal);
       } else {
         throw new Error("No proposal ID or invitation token provided.");
@@ -74,10 +84,11 @@ export function useProposalData(id?: string, token?: string | null) {
     } catch (err) {
       const errorState = handleError(err, "Failed to load the proposal");
       setError(errorState.message || "Failed to load the proposal. It may have been deleted or you don't have permission to view it.");
+      proposalLogger.error("Error fetching proposal", err);
     } finally {
       setLoading(false);
     }
-  }, [handleError]);
+  }, [handleError, proposalLogger]);
 
   useEffect(() => {
     fetchProposal(id, token);
@@ -91,4 +102,3 @@ export function useProposalData(id?: string, token?: string | null) {
     fetchProposal
   };
 }
-

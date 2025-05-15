@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { UserRole, UserProfile } from '../types';
+import { logger } from '@/lib/logger';
 
 interface UseAuthDebugProps {
   user: User | null;
@@ -15,6 +16,12 @@ export function useAuthDebug({
   profile
 }: UseAuthDebugProps) {
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  
+  // Create a contextualized logger for authentication debugging
+  const authLogger = logger.withContext({ 
+    component: 'AuthDebug', 
+    feature: 'auth' 
+  });
 
   const debugAuthState = async () => {
     try {
@@ -50,14 +57,15 @@ export function useAuthDebug({
         }
       };
       
-      console.log("Auth Debug Information:", info);
+      authLogger.info("Auth Debug Information Generated", { userId: user?.id });
+      authLogger.debug("Auth State", info);
       
       const infoString = JSON.stringify(info, null, 2);
       setDebugInfo(infoString);
       
       return infoString;
     } catch (error) {
-      console.error("Error generating debug info:", error);
+      authLogger.error("Error generating debug info", error);
       return "Error generating debug information";
     }
   };

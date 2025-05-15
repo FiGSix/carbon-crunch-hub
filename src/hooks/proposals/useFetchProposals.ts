@@ -7,6 +7,7 @@ import { RawProposalData } from "./types";
 import { useAuthRefresh } from "./useAuthRefresh";
 import { transformProposalData } from "./proposalUtils";
 import { fetchProfilesByIds } from "./api/fetchProfiles";
+import { logger } from "@/lib/logger";
 
 type UseFetchProposalsProps = {
   user: any;
@@ -30,6 +31,12 @@ export function useFetchProposals({
   setError
 }: UseFetchProposalsProps) {
   const { handleAuthError } = useAuthRefresh({ refreshUser, user });
+  
+  // Create a contextualized logger
+  const proposalLogger = logger.withContext({ 
+    component: 'FetchProposals', 
+    feature: 'proposals' 
+  });
 
   const buildQuery = useCallback((filters: ProposalFilters) => {
     let query = supabase
@@ -89,11 +96,11 @@ export function useFetchProposals({
   }, []);
 
   const handleQueryError = useCallback(async (error: any) => {
-    console.error("Supabase query error:", error);
+    proposalLogger.error("Supabase query error", { error });
     
     // Handle permission errors by refreshing session
     if (error.code === 'PGRST116' || error.code === '42501') {
-      console.log("Permission error detected, trying to refresh session");
+      proposalLogger.info("Permission error detected, trying to refresh session");
       const isAuthenticated = await handleAuthError();
       if (!isAuthenticated) {
         throw new Error("Permission error. Please try logging in again.");
@@ -103,11 +110,11 @@ export function useFetchProposals({
     } else {
       throw error;
     }
-  }, [handleAuthError]);
+  }, [handleAuthError, proposalLogger]);
 
   const fetchProposals = useCallback(async () => {
     if (!user?.id) {
-      console.log("No user ID found, attempting to refresh user session");
+      proposalLogger.info("No user ID found, attempting to refresh user session");
       try {
         const isAuthenticated = await handleAuthError();
         if (!isAuthenticated) {
@@ -116,7 +123,7 @@ export function useFetchProposals({
           return;
         }
       } catch (refreshError) {
-        console.error("Failed to refresh user:", refreshError);
+        proposalLogger.error("Failed to refresh user", { error: refreshError });
         setError("Authentication issue detected. Please try logging out and back in.");
         setLoading(false);
         return;
@@ -127,8 +134,7 @@ export function useFetchProposals({
       setLoading(true);
       setError(null);
       
-      console.log("Fetching proposals with filters:", filters);
-      console.log("Current user role:", userRole, "User ID:", user?.id);
+      proposalLogger.info("Fetching proposals", { filters, userRole, userId: user?.id });
       
       const query = buildQuery(filters);
       
@@ -138,10 +144,10 @@ export function useFetchProposals({
         await handleQueryError(queryError);
       }
       
-      console.log("Supabase returned proposals count:", proposalsData?.length || 0);
+      proposalLogger.info("Supabase returned proposals", { count: proposalsData?.length || 0 });
       
       if (!proposalsData || proposalsData.length === 0) {
-        console.log("No proposals found with the current filters");
+        proposalLogger.info("No proposals found with the current filters");
         setProposals([]);
         setLoading(false);
         return;
@@ -166,10 +172,10 @@ export function useFetchProposals({
         agentProfiles
       );
       
-      console.log("Formatted proposals count:", transformedProposals.length);
+      proposalLogger.info("Formatted proposals", { count: transformedProposals.length });
       setProposals(transformedProposals);
     } catch (error) {
-      console.error("Error fetching proposals:", error);
+      proposalLogger.error("Error fetching proposals", { error });
       setError(error instanceof Error ? error.message : "Failed to load proposals");
       
       // Show auth-specific errors with recovery options
@@ -193,7 +199,19 @@ export function useFetchProposals({
     } finally {
       setLoading(false);
     }
-  }, [filters, user, userRole, toast, buildQuery, handleQueryError, handleAuthError, setError, setLoading, setProposals]);
+  }, [
+    filters, 
+    user, 
+    userRole, 
+    toast, 
+    buildQuery, 
+    handleQueryError, 
+    handleAuthError, 
+    setError, 
+    setLoading, 
+    setProposals, 
+    proposalLogger
+  ]);
 
   return { fetchProposals };
 }
