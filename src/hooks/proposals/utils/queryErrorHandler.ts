@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 export async function handleQueryError(
   error: PostgrestError,
   handleAuthError: () => Promise<boolean>
-) {
+): Promise<never> {
   const errorLogger = logger.withContext({
     component: 'QueryErrorHandler',
     feature: 'proposals'

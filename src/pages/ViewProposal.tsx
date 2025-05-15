@@ -75,6 +75,19 @@ const ViewProposal = () => {
     }
   }, [proposal, isClient, canTakeAction, viewLogger]);
   
+  // Create wrapper functions that return void instead of boolean
+  const handleApproveWrapper = async () => {
+    await handleApprove();
+  };
+  
+  const handleRejectWrapper = async () => {
+    await handleReject();
+  };
+  
+  const handleArchiveWrapper = async () => {
+    await handleArchive();
+  };
+  
   if (loading) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
@@ -146,8 +159,8 @@ const ViewProposal = () => {
         <ProposalDetails 
           proposal={proposal}
           token={token}
-          onApprove={handleApprove}
-          onReject={handleReject}
+          onApprove={handleApproveWrapper}
+          onReject={handleRejectWrapper}
           isReviewLater={isReviewLater}
           showActions={canTakeAction}
         />
@@ -157,7 +170,7 @@ const ViewProposal = () => {
       <ProposalArchiveDialog
         open={archiveDialogOpen}
         onOpenChange={setArchiveDialogOpen}
-        onArchive={handleArchive}
+        onArchive={handleArchiveWrapper}
         isClient={isClient}
       />
     </div>
