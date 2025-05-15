@@ -3,14 +3,14 @@ import { useAuth } from "@/contexts/auth";
 import { useProposals } from "@/hooks/useProposals";
 import { useEffect } from "react";
 
-export function useDashboardData(isPreview: boolean) {
+export function useDashboardData() {
   const { profile, userRole } = useAuth();
   const { proposals, fetchProposals, loading } = useProposals();
   
   // Log when dashboard mounts or proposals update
   useEffect(() => {
-    console.log(`${isPreview ? 'Preview' : ''} Dashboard rendered with proposals count:`, proposals.length);
-  }, [proposals.length, isPreview]);
+    console.log(`Dashboard rendered with proposals count:`, proposals.length);
+  }, [proposals.length]);
   
   // Dashboard metrics
   const portfolioSize = 12.5; // MWp
@@ -43,7 +43,7 @@ export function useDashboardData(isPreview: boolean) {
   };
   
   const handleRefreshProposals = () => {
-    console.log(`Manually refreshing proposals from ${isPreview ? 'preview ' : ''}dashboard`);
+    console.log(`Manually refreshing proposals from dashboard`);
     fetchProposals();
   };
 

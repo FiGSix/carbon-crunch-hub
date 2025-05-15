@@ -23,9 +23,7 @@ export function ProposalDetails({
   onApprove, 
   onReject,
   isReviewLater,
-  showActions = false,
-  is_preview,
-  preview_of_id
+  showActions = false
 }: ProposalDetailsProps) {
   const { userRole } = useAuth();
   const navigate = useNavigate();
@@ -40,12 +38,6 @@ export function ProposalDetails({
     }
   };
   
-  const handleViewOriginal = () => {
-    if (preview_of_id) {
-      navigate(`/proposals/${preview_of_id}`);
-    }
-  };
-  
   // Extract project info from the proposal content and properly cast it
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
   
@@ -57,7 +49,7 @@ export function ProposalDetails({
             <FileText className="h-5 w-5 mr-2" />
             Proposal Details
           </div>
-          {!is_preview && userRole === 'agent' && (
+          {!proposal.is_preview && userRole === 'agent' && (
             <Button
               variant="outline"
               size="sm"
@@ -73,11 +65,7 @@ export function ProposalDetails({
         </CardDescription>
       </CardHeader>
       
-      <ProposalPreviewBanner 
-        isPreview={is_preview || false}
-        originalProposalId={preview_of_id}
-        onViewOriginal={handleViewOriginal}
-      />
+      <ProposalPreviewBanner />
       
       <CardContent>
         <div className="space-y-8">

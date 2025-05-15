@@ -7,14 +7,9 @@ import { Button } from "@/components/ui/button";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
 import { StatsCardsSection } from "@/components/dashboard/sections/StatsCardsSection";
 import { ChartsSection } from "@/components/dashboard/sections/ChartsSection";
-import { DashboardPreviewBanner } from "@/components/dashboard/sections/DashboardPreviewBanner";
 import { useDashboardData } from "@/hooks/useDashboardData";
 
-interface DashboardProps {
-  isPreview?: boolean;
-}
-
-const Dashboard = ({ isPreview = false }: DashboardProps) => {
+const Dashboard = () => {
   const {
     userRole,
     proposals,
@@ -27,12 +22,10 @@ const Dashboard = ({ isPreview = false }: DashboardProps) => {
     getUserDisplayName,
     formatUserRole,
     handleRefreshProposals
-  } = useDashboardData(isPreview);
+  } = useDashboardData();
   
   return (
     <DashboardLayout>
-      <DashboardPreviewBanner isPreview={isPreview} />
-
       <DashboardHeader 
         title="Dashboard" 
         description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}

@@ -4,16 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
-interface DashboardPreviewBannerProps {
-  isPreview: boolean;
-}
-
-export function DashboardPreviewBanner({ isPreview }: DashboardPreviewBannerProps) {
+export function DashboardPreviewBanner() {
   const navigate = useNavigate();
-
-  if (!isPreview) {
-    return null;
-  }
 
   return (
     <div className="bg-crunch-yellow/10 py-3 px-4 rounded-lg mb-6 flex items-center justify-between">

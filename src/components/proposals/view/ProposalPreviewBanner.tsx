@@ -4,19 +4,22 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate, useParams } from "react-router-dom";
+import { useProposalData } from "@/hooks/proposal/useProposalData";
 
-interface ProposalPreviewBannerProps {
-  isPreview: boolean;
-  originalProposalId?: string;
-  onViewOriginal?: () => void;
-}
+export function ProposalPreviewBanner() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { proposal } = useProposalData(id);
+  
+  // If this is not a preview proposal, don't render anything
+  if (!proposal?.is_preview) return null;
 
-export function ProposalPreviewBanner({ 
-  isPreview, 
-  originalProposalId, 
-  onViewOriginal 
-}: ProposalPreviewBannerProps) {
-  if (!isPreview) return null;
+  const handleViewOriginal = () => {
+    if (proposal.preview_of_id) {
+      navigate(`/proposals/${proposal.preview_of_id}`);
+    }
+  };
 
   return (
     <Alert className="mb-6 bg-blue-50 border-blue-200">
@@ -28,11 +31,11 @@ export function ProposalPreviewBanner({
       </AlertTitle>
       <AlertDescription className="mt-2 text-blue-700">
         <p>This is a preview of the proposal. Changes made here won't affect the original proposal.</p>
-        {originalProposalId && onViewOriginal && (
+        {proposal.preview_of_id && (
           <Button
             variant="link"
             className="p-0 h-auto font-normal text-blue-800 hover:text-blue-900"
-            onClick={onViewOriginal}
+            onClick={handleViewOriginal}
           >
             View original proposal →
           </Button>
