@@ -1,6 +1,6 @@
 
 import { useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import { ProposalData } from "@/types/proposals";
 
@@ -8,9 +8,15 @@ import { ProposalData } from "@/types/proposals";
  * Hook to handle marking proposal invitations as viewed
  */
 export function useMarkInvitationViewed() {
+  // Create a contextualized logger
+  const invitationLogger = logger.withContext({
+    component: 'MarkInvitationViewed',
+    feature: 'proposals'
+  });
+
   const markInvitationViewed = useCallback(async (token: string | null, proposal: ProposalData) => {
     if (token && proposal?.id && !proposal.invitation_viewed_at) {
-      logger.info("Marking invitation as viewed for proposal", { proposalId: proposal.id });
+      invitationLogger.info({ message: "Marking invitation as viewed for proposal", proposalId: proposal.id });
       
       try {
         // Update the invitation_viewed_at timestamp
@@ -21,7 +27,7 @@ export function useMarkInvitationViewed() {
           .eq('invitation_token', token);
           
         if (error) {
-          logger.error("Error marking invitation as viewed", { error });
+          invitationLogger.error({ message: "Error marking invitation as viewed", error });
           return false;
         }
           
@@ -37,17 +43,17 @@ export function useMarkInvitationViewed() {
               relatedType: "proposal"
             }
           });
-          logger.info("Agent notification sent for proposal view", { proposalId: proposal.id });
+          invitationLogger.info({ message: "Agent notification sent for proposal view", proposalId: proposal.id });
         }
         
         return true;
       } catch (error) {
-        logger.error("Error in markInvitationViewed", { error });
+        invitationLogger.error({ message: "Error in markInvitationViewed", error });
         return false;
       }
     }
     return false;
-  }, []);
+  }, [invitationLogger]);
 
   return { markInvitationViewed };
 }

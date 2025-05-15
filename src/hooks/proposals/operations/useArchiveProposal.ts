@@ -1,11 +1,14 @@
 
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { createNotification } from "@/services/notificationService";
-import { ProposalOperationResult } from "@/components/proposals/view/types";
+import { ProposalOperationResult } from "@/types/proposals";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { logger } from "@/lib/logger";
 
+/**
+ * Hook for archiving proposals
+ */
 export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoading: boolean) => void) {
   const { toast } = useToast();
   const { handleError } = useErrorHandler({
@@ -22,7 +25,7 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
   
   const archiveProposal = async (proposalId: string, userId: string): Promise<ProposalOperationResult> => {
     try {
-      proposalLogger.info(`Starting archive process for proposal: ${proposalId}`, { proposalId, userId });
+      proposalLogger.info({ message: `Starting archive process for proposal: ${proposalId}`, proposalId, userId });
       setLoadingState('archive', true);
       
       // Fetch the proposal for notification
@@ -57,7 +60,7 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
         .update({ review_later_until: null })
         .eq('id', proposalId);
       
-      proposalLogger.info("Proposal archived successfully", { proposalId });
+      proposalLogger.info({ message: "Proposal archived successfully", proposalId });
       
       // Create notification for the relevant party
       // If agent archived, notify client; if client archived, notify agent
@@ -73,7 +76,7 @@ export function useArchiveProposal(setLoadingState: (operation: 'archive', isLoa
             relatedId: proposalId,
             relatedType: "proposal"
           });
-          proposalLogger.info("Notification sent to recipient", { recipientId });
+          proposalLogger.info({ message: "Notification sent to recipient", recipientId });
         } catch (notificationError) {
           // Log but don't block the main operation
           handleError(notificationError, "Failed to send notification", "warning");

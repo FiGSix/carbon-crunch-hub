@@ -1,4 +1,3 @@
-
 import { Json } from "@/types/supabase";
 
 /**
@@ -126,7 +125,7 @@ export interface ProposalDetailsProps {
 export interface ProposalOperationResult {
   success: boolean;
   error?: string;
-  reviewLaterUntil?: string | null;
+  [key: string]: any;
 }
 
 /**

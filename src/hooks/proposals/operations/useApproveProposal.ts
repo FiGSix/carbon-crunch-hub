@@ -1,12 +1,15 @@
 
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { createNotification } from "@/services/notificationService";
-import { ProposalOperationResult } from "@/components/proposals/view/types";
+import { ProposalOperationResult } from "@/types/proposals";
 import { useNavigate } from "react-router-dom";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { logger } from "@/lib/logger";
 
+/**
+ * Hook for approving proposals
+ */
 export function useApproveProposal(setLoadingState: (operation: 'approve', isLoading: boolean) => void) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -24,7 +27,7 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
 
   const approveProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
     try {
-      proposalLogger.info(`Starting approval process for proposal: ${proposalId}`, { proposalId });
+      proposalLogger.info({ message: `Starting approval process for proposal: ${proposalId}`, proposalId });
       setLoadingState('approve', true);
       
       // Fetch the proposal to get agent_id for notification
@@ -42,7 +45,8 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
       }
       
       const proposal = proposals[0];
-      proposalLogger.info("Fetched proposal details", { 
+      proposalLogger.info({ 
+        message: "Fetched proposal details", 
         proposalId, 
         title: proposal.title, 
         agentId: proposal.agent_id 
@@ -62,7 +66,7 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         throw error;
       }
       
-      proposalLogger.info("Proposal approved successfully", { proposalId });
+      proposalLogger.info({ message: "Proposal approved successfully", proposalId });
       
       // Create notification for the agent - but don't let it block approval
       if (proposal?.agent_id) {
@@ -75,7 +79,10 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
             relatedId: proposalId,
             relatedType: "proposal"
           });
-          proposalLogger.info("Agent notification created successfully", { agentId: proposal.agent_id });
+          proposalLogger.info({ 
+            message: "Agent notification created successfully", 
+            agentId: proposal.agent_id 
+          });
         } catch (notificationError) {
           // Log the error but don't throw - we still want the approval to succeed
           handleError(notificationError, "Failed to create notification", "warning");
@@ -94,7 +101,7 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
       
       // Navigate back to proposals list after a short delay to allow the toast to be seen
       setTimeout(() => {
-        proposalLogger.info("Navigating to proposals list after approval", { proposalId });
+        proposalLogger.info({ message: "Navigating to proposals list after approval", proposalId });
         navigate('/proposals');
       }, 1500);
       

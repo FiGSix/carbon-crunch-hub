@@ -1,13 +1,29 @@
 
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { ProposalOperationResult } from "@/components/proposals/view/types";
+import { supabase } from "@/lib/supabase/client";
+import { ProposalOperationResult } from "@/types/proposals";
+import { logger } from "@/lib/logger";
 
+/**
+ * Hook to mark proposals for review later
+ */
 export function useReviewLaterProposal(setLoadingState: (operation: 'reviewLater', isLoading: boolean) => void) {
   const { toast } = useToast();
   
+  // Create a contextualized logger
+  const proposalLogger = logger.withContext({ 
+    component: 'ReviewLaterProposal', 
+    feature: 'proposals' 
+  });
+  
   const toggleReviewLater = async (proposalId: string, isCurrentlyMarkedForReviewLater: boolean): Promise<ProposalOperationResult> => {
     try {
+      proposalLogger.info({ 
+        message: "Toggling review later status", 
+        proposalId, 
+        currentStatus: isCurrentlyMarkedForReviewLater 
+      });
+      
       setLoadingState('reviewLater', true);
       
       // Set review later date to 30 days from now, or null if removing
@@ -31,7 +47,7 @@ export function useReviewLaterProposal(setLoadingState: (operation: 'reviewLater
       
       return { success: true, reviewLaterUntil };
     } catch (error) {
-      console.error("Error updating review later status:", error);
+      proposalLogger.error({ message: "Error updating review later status", error });
       toast({
         title: "Error",
         description: "Failed to update review status. Please try again.",

@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalHeader } from "@/components/proposals/view/ProposalHeader";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalDetails } from "@/components/proposals/view/ProposalDetails";
-import { useViewProposal } from "@/hooks/useViewProposal";
+import { useViewProposal } from "@/hooks/proposals/view/useViewProposal";
 import { ProposalArchiveDialog } from "@/components/proposals/view/ProposalArchiveDialog";
 import { useAuth } from "@/contexts/auth";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
@@ -17,6 +18,12 @@ const ViewProposal = () => {
   const token = searchParams.get('token');
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
+  
+  // Create a contextualized logger
+  const viewLogger = logger.withContext({ 
+    component: 'ViewProposalPage', 
+    feature: 'proposals' 
+  });
   
   const {
     proposal,
@@ -40,16 +47,16 @@ const ViewProposal = () => {
   // Determine if we need to show auth form based on token and user state
   useEffect(() => {
     if (!loading && token && clientEmail && !user) {
-      logger.info("Showing authentication form for client with email", { clientEmail });
+      viewLogger.info({ message: "Showing authentication form for client with email", clientEmail });
       setShowAuthForm(true);
     } else {
       setShowAuthForm(false);
     }
-  }, [loading, token, clientEmail, user]);
+  }, [loading, token, clientEmail, user, viewLogger]);
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
-    logger.info("Authentication completed, refreshing view", { action: 'authComplete' });
+    viewLogger.info({ message: "Authentication completed, refreshing view", action: 'authComplete' });
     setShowAuthForm(false);
     // Force refresh the component to get latest auth state
     window.location.reload();
@@ -58,14 +65,15 @@ const ViewProposal = () => {
   // Log details for debugging purposes
   useEffect(() => {
     if (proposal) {
-      logger.info("ViewProposal - Current proposal state", {
+      viewLogger.info({ 
+        message: "ViewProposal - Current proposal state", 
         id: proposal.id,
         status: proposal.status,
         isClient,
         canTakeAction
       });
     }
-  }, [proposal, isClient, canTakeAction]);
+  }, [proposal, isClient, canTakeAction, viewLogger]);
   
   if (loading) {
     return (
@@ -76,7 +84,7 @@ const ViewProposal = () => {
   }
   
   if (error) {
-    logger.error("Error loading proposal", { error });
+    viewLogger.error({ message: "Error loading proposal", error });
     return <ProposalError errorMessage={error} />;
   }
   
@@ -98,7 +106,7 @@ const ViewProposal = () => {
   }
   
   if (!proposal) {
-    logger.warn("No proposal found", { path: window.location.pathname });
+    viewLogger.warn({ message: "No proposal found", path: window.location.pathname });
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">
@@ -111,7 +119,8 @@ const ViewProposal = () => {
   // Extract project info from the proposal content for the header and cast to the correct type
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
   
-  logger.debug("ViewProposal - Show action buttons", {
+  viewLogger.debug({ 
+    message: "ViewProposal - Show action buttons", 
     isClient,
     status: proposal.status,
     isArchived: !!proposal.archived_at,
