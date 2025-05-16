@@ -7,7 +7,7 @@ import { EligibilityStep } from "@/components/proposals/EligibilityStep";
 import { ClientInfoStep } from "@/components/proposals/ClientInfoStep";
 import { ProjectInfoStep } from "@/components/proposals/ProjectInfoStep";
 import { SummaryStep } from "@/components/proposals/SummaryStep";
-import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation } from "@/components/proposals/types";
+import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
 
 const CreateProposal = () => {
