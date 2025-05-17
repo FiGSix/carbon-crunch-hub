@@ -45,11 +45,17 @@ site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = true
+# Enable HaveIBeenPwned password check for enhanced security
+enable_hibp_check = true
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
+
+# Set OTP expiry to 15 minutes (900 seconds) for better security
+[auth.sms]
+otp_expiry = 900
 
 [analytics]
 enabled = false
