@@ -1,5 +1,5 @@
 
-import { Proposal } from "@/components/proposals/ProposalList";
+import { Proposal } from "@/components/proposals/types";
 import { ProfileData, RawProposalData } from "./types";
 
 /**

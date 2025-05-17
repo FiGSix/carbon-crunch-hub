@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Proposal } from "../ProposalListTypes";
+import { Proposal } from "../types";
 import { useProposalInvitations } from "../hooks/useProposalInvitations";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";

@@ -3,10 +3,10 @@ import React from "react";
 import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Proposal } from "../ProposalListTypes";
+import { Proposal } from "../types";
 import { ProposalInviteButton } from "./ProposalInviteButton";
 import { SubmitForReviewButton } from "./SubmitForReviewButton";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface ProposalActionButtonsProps {
   proposal: Proposal;

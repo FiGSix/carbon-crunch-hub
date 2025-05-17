@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Plus, RefreshCw } from "lucide-react";
-import { Proposal } from "@/components/proposals/ProposalList";
+import { Proposal } from "@/components/proposals/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 

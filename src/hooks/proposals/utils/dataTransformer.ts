@@ -1,6 +1,6 @@
 
 import { RawProposalData, ProfileData } from "../types";
-import { Proposal } from "@/components/proposals/ProposalList";
+import { Proposal } from "@/components/proposals/types";
 import { fetchProfilesByIds } from "../api/fetchProfiles";
 import { logger } from "@/lib/logger";
 

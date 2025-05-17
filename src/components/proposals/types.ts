@@ -6,5 +6,6 @@ export type {
   ProjectInformation,
   ProposalContent,
   FormStep,
-  ProposalData
+  ProposalData,
+  ProposalListItem as Proposal // Export ProposalListItem as Proposal for backward compatibility
 } from "@/types/proposals";
