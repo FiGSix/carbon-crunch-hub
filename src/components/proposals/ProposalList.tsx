@@ -11,15 +11,22 @@ import {
 import { ProposalStatusBadge } from "./components/ProposalStatusBadge";
 import { InvitationStatus } from "./components/InvitationStatus";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
-import { ProposalListProps } from "@/types/proposals";
+import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
+import { UserRole } from "@/contexts/auth/types";
 
-export type { ProposalListItem as Proposal } from "@/types/proposals";
+// Define the props interface for the MemoizedProposalRow component
+interface ProposalRowProps {
+  proposal: ProposalListItem;
+  userRole: UserRole | null;
+  isCurrentUser: boolean;
+  onProposalUpdate?: () => void;
+}
 
-// Create a memoized TableRow component to prevent unnecessary re-renders
-const MemoizedProposalRow = memo(({ 
+// Create a memoized TableRow component with proper typing to prevent unnecessary re-renders
+const MemoizedProposalRow = memo<ProposalRowProps>(({ 
   proposal, 
   userRole, 
   isCurrentUser,
