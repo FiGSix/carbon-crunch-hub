@@ -53,7 +53,11 @@ const Dashboard = () => {
       />
       
       {userRole === 'agent' ? (
-        <ChartsSection userRole={userRole} />
+        <ChartsSection 
+          userRole={userRole} 
+          proposals={proposals} 
+          loading={loading}
+        />
       ) : (
         renderCharts(userRole) && <ChartsSection userRole={userRole} />
       )}
