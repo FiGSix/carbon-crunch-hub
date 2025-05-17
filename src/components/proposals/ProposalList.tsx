@@ -1,4 +1,5 @@
 
+import React, { useEffect, memo } from "react";
 import { 
   Table, 
   TableBody, 
@@ -13,10 +14,51 @@ import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ProposalListProps } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useEffect } from "react";
 import { logger } from "@/lib/logger";
 
 export type { ProposalListItem as Proposal } from "@/types/proposals";
+
+// Create a memoized TableRow component to prevent unnecessary re-renders
+const MemoizedProposalRow = memo(({ 
+  proposal, 
+  userRole, 
+  isCurrentUser,
+  onProposalUpdate 
+}) => {
+  return (
+    <TableRow className={isCurrentUser ? "bg-carbon-green-50" : ""}>
+      <TableCell className="font-medium">{proposal.name}</TableCell>
+      <TableCell>{proposal.client}</TableCell>
+      <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
+      <TableCell>{proposal.size.toFixed(2)} MWp</TableCell>
+      <TableCell>
+        <ProposalStatusBadge 
+          status={proposal.status} 
+          reviewLater={!!proposal.review_later_until}
+        />
+      </TableCell>
+      {userRole === "agent" && (
+        <TableCell>
+          <InvitationStatus proposal={proposal} />
+        </TableCell>
+      )}
+      {userRole === "admin" && (
+        <TableCell>
+          {proposal.agent || "Unassigned"}
+        </TableCell>
+      )}
+      <TableCell className="text-right">R {proposal.revenue.toLocaleString()}</TableCell>
+      <TableCell className="text-right">
+        <ProposalActionButtons 
+          proposal={proposal} 
+          onProposalUpdate={onProposalUpdate}
+        />
+      </TableCell>
+    </TableRow>
+  );
+});
+
+MemoizedProposalRow.displayName = "MemoizedProposalRow";
 
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
   const { userRole, user } = useAuth();
@@ -34,17 +76,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
       userId: user?.id,
       proposalsCount: proposals.length
     });
-    
-    // Log the first proposal for debugging if available
-    if (proposals.length > 0) {
-      proposalLogger.debug("First proposal sample", {
-        id: proposals[0].id,
-        name: proposals[0].name,
-        agent_id: proposals[0].agent_id,
-        status: proposals[0].status
-      });
-    }
-  }, [proposals, userRole, user, proposalLogger]);
+  }, [proposals.length, userRole, user, proposalLogger]);
   
   // Listen for global proposal status change events
   useEffect(() => {
@@ -100,35 +132,13 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
         </TableHeader>
         <TableBody>
           {proposals.map((proposal) => (
-            <TableRow key={proposal.id} className={proposal.agent_id === user?.id ? "bg-carbon-green-50" : ""}>
-              <TableCell className="font-medium">{proposal.name}</TableCell>
-              <TableCell>{proposal.client}</TableCell>
-              <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
-              <TableCell>{proposal.size.toFixed(2)} MWp</TableCell>
-              <TableCell>
-                <ProposalStatusBadge 
-                  status={proposal.status} 
-                  reviewLater={!!proposal.review_later_until}
-                />
-              </TableCell>
-              {userRole === "agent" && (
-                <TableCell>
-                  <InvitationStatus proposal={proposal} />
-                </TableCell>
-              )}
-              {userRole === "admin" && (
-                <TableCell>
-                  {proposal.agent || "Unassigned"}
-                </TableCell>
-              )}
-              <TableCell className="text-right">R {proposal.revenue.toLocaleString()}</TableCell>
-              <TableCell className="text-right">
-                <ProposalActionButtons 
-                  proposal={proposal} 
-                  onProposalUpdate={onProposalUpdate}
-                />
-              </TableCell>
-            </TableRow>
+            <MemoizedProposalRow
+              key={proposal.id}
+              proposal={proposal}
+              userRole={userRole}
+              isCurrentUser={proposal.agent_id === user?.id}
+              onProposalUpdate={onProposalUpdate}
+            />
           ))}
         </TableBody>
       </Table>

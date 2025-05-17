@@ -42,6 +42,15 @@ export interface UseAuthRefreshProps {
 }
 
 /**
+ * Cache configuration for proposals data
+ */
+export interface ProposalCache {
+  timestamp: number;
+  data: ProposalListItem[];
+  filters: ProposalFilters;
+}
+
+/**
  * Result of the useProposals hook
  */
 export interface UseProposalsResult {
@@ -64,6 +73,15 @@ export interface BasicProposalInfo {
   id: string;
   title: string;
   status: string;
+}
+
+/**
+ * Proposal filters for listing
+ */
+export interface ProposalFilters {
+  search: string;
+  status: string;
+  sort: string;
 }
 
 /**

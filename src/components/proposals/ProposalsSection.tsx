@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, RefreshCw } from "lucide-react";
 import { ProposalList } from "@/components/proposals/ProposalList";
@@ -11,6 +11,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
+import { clearProposalsCache } from "@/hooks/proposals/utils/proposalCache";
 
 export function ProposalsSection() {
   const { 
@@ -34,6 +35,20 @@ export function ProposalsSection() {
     });
   }, [user, userRole, proposals.length]);
   
+  // Memoize title based on user role to prevent re-renders
+  const sectionTitle = useMemo(() => {
+    if (userRole === 'agent') return 'My Assigned Proposals';
+    if (userRole === 'client') return 'My Proposals';
+    return 'Proposal Management';
+  }, [userRole]);
+  
+  // Optimize proposal update handler with useCallback
+  const handleProposalUpdate = useCallback(() => {
+    console.log("Proposal update triggered - refreshing proposals list");
+    clearProposalsCache(); // Clear cache to force refresh
+    fetchProposals();
+  }, [fetchProposals]);
+  
   // Listen for global proposal status change events
   useEffect(() => {
     const handleProposalStatusChange = (event: Event) => {
@@ -54,8 +69,7 @@ export function ProposalsSection() {
         });
       }
       
-      // Refresh the proposals list
-      fetchProposals();
+      // Don't need to call fetchProposals here - handled by the event listener in useProposals
     };
     
     window.addEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
@@ -63,12 +77,7 @@ export function ProposalsSection() {
     return () => {
       window.removeEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
     };
-  }, [fetchProposals, toast]);
-  
-  const handleProposalUpdate = () => {
-    console.log("Proposal update triggered - refreshing proposals list");
-    fetchProposals();
-  };
+  }, [toast]);
   
   return (
     <Card className="retro-card mb-8">
@@ -76,11 +85,7 @@ export function ProposalsSection() {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            {userRole === 'agent' 
-              ? 'My Assigned Proposals' 
-              : userRole === 'client' 
-                ? 'My Proposals' 
-                : 'Proposal Management'}
+            {sectionTitle}
           </div>
           <Button
             variant="outline"
