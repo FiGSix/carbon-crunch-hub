@@ -1,23 +1,9 @@
 
-import { ProposalFilters, ProposalListItem } from "@/types/proposals";
+import { ProposalListItem, ProposalData, ProposalOperationResult } from "@/types/proposals";
 
-export interface UseProposalsResult {
-  proposals: ProposalListItem[];
-  loading: boolean;
-  error?: string | null;
-  filters: ProposalFilters;
-  handleFilterChange: (filter: string, value: string) => void;
-  fetchProposals: () => Promise<void>;
-}
-
-export interface ProfileData {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string;
-}
-
-// This type represents the raw data structure from the database
+/**
+ * Raw proposal data from Supabase before transformation
+ */
 export interface RawProposalData {
   id: string;
   title: string;
@@ -36,3 +22,43 @@ export interface RawProposalData {
   is_preview: boolean | null;
   preview_of_id: string | null;
 }
+
+/**
+ * Props for the useAuthRefresh hook
+ */
+export interface UseAuthRefreshProps {
+  refreshUser: () => Promise<void>;
+  user: any | null;
+}
+
+/**
+ * Result of the useProposals hook
+ */
+export interface UseProposalsResult {
+  proposals: ProposalListItem[];
+  loading: boolean;
+  error: string | null;
+  filters: {
+    search: string;
+    status: string;
+    sort: string;
+  };
+  handleFilterChange: (key: string, value: string) => void;
+  fetchProposals: () => Promise<void>;
+}
+
+/**
+ * Basic proposal information
+ */
+export interface BasicProposalInfo {
+  id: string;
+  title: string;
+  status: string;
+}
+
+/**
+ * Result object returned by proposal operations
+ */
+export type {
+  ProposalOperationResult
+};

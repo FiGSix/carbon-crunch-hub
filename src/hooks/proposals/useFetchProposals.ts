@@ -60,19 +60,31 @@ export function useFetchProposals({
       setLoading(true);
       setError(null);
       
-      proposalLogger.info("Fetching proposals", { filters, userRole, userId: user?.id });
+      proposalLogger.info("Fetching proposals", { 
+        filters,
+        userRole,
+        userId: user?.id 
+      });
       
-      // Build the query using our utility function
-      const query = buildProposalQuery(supabase, filters);
+      // Build the query using our utility function, now with user role and ID
+      const query = buildProposalQuery(supabase, filters, userRole, user?.id);
       
       // Execute the query
       const { data: proposalsData, error: queryError } = await query;
       
       if (queryError) {
+        proposalLogger.error("Error executing query", { error: queryError });
         await handleQueryError(queryError, handleAuthError);
+        setError(`Failed to fetch proposals: ${queryError.message}`);
+        setLoading(false);
+        return;
       }
       
-      proposalLogger.info("Supabase returned proposals", { count: proposalsData?.length || 0 });
+      proposalLogger.info("Supabase returned proposals", { 
+        count: proposalsData?.length || 0,
+        userRole,
+        userId: user?.id 
+      });
       
       if (!proposalsData || proposalsData.length === 0) {
         proposalLogger.info("No proposals found with the current filters");
@@ -107,10 +119,17 @@ export function useFetchProposals({
       // Transform data using our utility function
       const transformedProposals = await fetchAndTransformProposalData(typedProposalsData);
       
-      proposalLogger.info("Setting proposals in state", { count: transformedProposals.length });
+      proposalLogger.info("Setting proposals in state", { 
+        count: transformedProposals.length,
+        userRole
+      });
       setProposals(transformedProposals);
     } catch (error) {
-      proposalLogger.error("Error fetching proposals", { error });
+      proposalLogger.error("Error fetching proposals", { 
+        error,
+        userRole,
+        userId: user?.id 
+      });
       setError(error instanceof Error ? error.message : "Failed to load proposals");
       
       // Show auth-specific errors with recovery options
