@@ -1,3 +1,4 @@
+
 import React from "react";
 import { HeroSection } from "@/pages/home/HeroSection";
 import { HowItWorksSection } from "@/pages/home/HowItWorksSection";
@@ -22,9 +23,6 @@ const Index = () => {
           <div className="container mx-auto text-center text-sm">
             <p className="text-gray-500 mb-2">Developer Tools</p>
             <div className="flex justify-center gap-4">
-              <a href="/test-login-flow" className="text-crunch-yellow hover:underline">
-                Test Login Flow
-              </a>
               <a href="/test-agent" className="text-crunch-yellow hover:underline">
                 Test Agent Creation
               </a>
