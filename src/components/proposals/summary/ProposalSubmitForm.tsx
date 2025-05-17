@@ -87,7 +87,6 @@ export function ProposalSubmitForm({
           displayError = "Unable to create client profile. Please check your connection and try again.";
         } else if (result.error?.includes("logged in")) {
           displayError = "Your session has expired. Please sign in again to continue.";
-          // Could redirect to login page here
         }
         
         setErrorMessage(displayError);

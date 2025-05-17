@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      client_contacts: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          notes: string | null
+          phone: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -201,6 +237,16 @@ export type Database = {
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
+      }
+      search_clients: {
+        Args: { search_term: string }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          company: string
+          is_registered: boolean
+        }[]
       }
       validate_invitation_token: {
         Args: { token: string }

@@ -35,7 +35,7 @@ export interface ProposalData {
 
 /**
  * Create or find a client profile using the secure edge function
- * Added token refresh to handle expired tokens
+ * Added token refresh to handle expired tokens and improved error handling
  */
 export async function findOrCreateClient(clientInfo: ClientInformation): Promise<string | null> {
   try {
@@ -73,7 +73,8 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
 
     logger.info("Successfully found/created client profile", { 
       clientId: data.clientId,
-      isNewProfile: data.isNewProfile 
+      isNewProfile: data.isNewProfile,
+      isRegisteredUser: data.isRegisteredUser
     });
     
     return data.clientId;
@@ -99,7 +100,10 @@ export async function createProposal(
     const clientId = await findOrCreateClient(clientInfo);
     
     if (!clientId) {
-      return { success: false, error: "Failed to find or create client profile. Please try again or contact support." };
+      return { 
+        success: false, 
+        error: "Failed to find or create client profile. Please check your connection and try again." 
+      };
     }
     
     // Get the current user (agent)

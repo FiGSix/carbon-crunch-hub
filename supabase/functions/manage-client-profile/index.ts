@@ -15,6 +15,7 @@ interface ClientProfileRequest {
 interface ClientProfileResponse {
   clientId: string;
   isNewProfile: boolean;
+  isRegisteredUser: boolean;
   error?: string;
 }
 
@@ -121,99 +122,151 @@ serve(async (req) => {
     // Logic for existing clients
     if (existingClient) {
       console.log("Searching for existing client with email:", email)
-      // Search for existing client by email
-      const { data: existingProfile, error: searchError } = await supabase
+      
+      // First, search in profiles (registered users)
+      const { data: existingProfile, error: profileSearchError } = await supabase
         .from('profiles')
         .select('id, role')
         .eq('email', email)
+        .eq('role', 'client')
         .maybeSingle()
-        
-      if (searchError) {
-        console.error("Error finding client:", searchError)
-        return new Response(
-          JSON.stringify({ error: `Error finding client: ${searchError.message}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      
+      if (profileSearchError) {
+        console.error("Error searching for client in profiles:", profileSearchError)
       }
       
       if (existingProfile) {
-        console.log("Found existing profile:", existingProfile.id)
+        console.log("Found existing registered user profile:", existingProfile.id)
         return new Response(
           JSON.stringify({ 
             clientId: existingProfile.id,
-            isNewProfile: false
+            isNewProfile: false,
+            isRegisteredUser: true
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
-      } else {
-        console.error("No existing client found with email:", email)
+      }
+      
+      // If not found in profiles, search in client_contacts
+      const { data: existingContact, error: contactSearchError } = await supabase
+        .from('client_contacts')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
+      
+      if (contactSearchError) {
+        console.error("Error searching for client in client_contacts:", contactSearchError)
+      }
+      
+      if (existingContact) {
+        console.log("Found existing client contact:", existingContact.id)
         return new Response(
-          JSON.stringify({ error: `No existing client found with email: ${email}` }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            clientId: existingContact.id,
+            isNewProfile: false,
+            isRegisteredUser: false
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      
+      console.error("No existing client found with email:", email)
+      return new Response(
+        JSON.stringify({ error: `No existing client found with email: ${email}` }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     } 
-    // Logic for new clients
+    // Logic for new clients - Add to client_contacts table
     else {
-      console.log("Creating new client with email:", email)
+      console.log("Creating new client contact with email:", email)
+      
       // First check if a profile with this email already exists
-      const { data: existingProfile, error: searchError } = await supabase
+      const { data: existingProfile, error: profileSearchError } = await supabase
         .from('profiles')
         .select('id, role')
         .eq('email', email)
+        .eq('role', 'client')
         .maybeSingle()
       
-      if (searchError) {
-        console.error("Error checking for existing profile:", searchError)
-        return new Response(
-          JSON.stringify({ error: `Error checking for existing profile: ${searchError.message}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      if (profileSearchError) {
+        console.error("Error checking for existing profile:", profileSearchError)
       }
       
       if (existingProfile) {
-        console.log("Found existing profile when trying to create new:", existingProfile.id)
+        console.log("Found existing registered user profile when trying to create new:", existingProfile.id)
         return new Response(
           JSON.stringify({ 
             clientId: existingProfile.id,
-            isNewProfile: false
+            isNewProfile: false,
+            isRegisteredUser: true
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
       
-      // Create a new profile with a server-generated UUID
-      const newProfileId = crypto.randomUUID()
-      const firstName = name.split(' ')[0] || ''
-      const lastName = name.split(' ').slice(1).join(' ') || ''
+      // Check if a client contact with this email already exists
+      const { data: existingContact, error: contactSearchError } = await supabase
+        .from('client_contacts')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
       
-      console.log("Creating new profile with ID:", newProfileId)
+      if (contactSearchError) {
+        console.error("Error checking for existing client contact:", contactSearchError)
+      }
       
-      const { error: createError } = await supabase
-        .from('profiles')
+      if (existingContact) {
+        console.log("Found existing client contact when trying to create new:", existingContact.id)
+        return new Response(
+          JSON.stringify({ 
+            clientId: existingContact.id,
+            isNewProfile: false,
+            isRegisteredUser: false
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Parse name into first and last name
+      const firstName = name.split(' ')[0] || '';
+      const lastName = name.split(' ').slice(1).join(' ') || '';
+      
+      // Create a new client contact with built-in UUID generation from Postgres
+      const { data: newContact, error: createError } = await supabase
+        .from('client_contacts')
         .insert({
-          id: newProfileId,
           first_name: firstName,
           last_name: lastName,
           email: email,
           phone: phone,
           company_name: companyName,
-          role: 'client'
+          created_by: authUser.id
         })
+        .select('id')
+        .single()
       
       if (createError) {
-        console.error("Error creating client profile:", createError)
+        console.error("Error creating client contact:", createError)
         return new Response(
-          JSON.stringify({ error: `Error creating client profile: ${createError.message}` }),
+          JSON.stringify({ error: `Error creating client contact: ${createError.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
       
-      console.log("Successfully created new profile:", newProfileId)
+      if (!newContact || !newContact.id) {
+        console.error("Failed to create client contact, no ID returned")
+        return new Response(
+          JSON.stringify({ error: "Failed to create client contact, no ID returned" }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      console.log("Successfully created new client contact:", newContact.id)
       return new Response(
         JSON.stringify({ 
-          clientId: newProfileId,
-          isNewProfile: true 
+          clientId: newContact.id,
+          isNewProfile: true,
+          isRegisteredUser: false
         }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
