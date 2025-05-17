@@ -16,7 +16,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { signOut } = useAuth(); // Use signOut from auth context
+  const { signOut } = useAuth();
 
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -75,11 +75,11 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         description: "You have been successfully logged out",
       });
       
-      // Add a small delay before navigation to ensure state clearing completes
+      // Add a significant delay before navigation to ensure state clearing completes
       setTimeout(() => {
         // Navigate to login page
         navigate("/login");
-      }, 100);
+      }, 500); // Increased from 100ms to 500ms for better reliability
     } catch (error) {
       toast({
         title: "Error",

@@ -14,25 +14,6 @@ export async function signOut() {
     clearCache();
     console.log("Cache cleared");
     
-    // Clear all Supabase-related items from localStorage
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.includes('supabase') || key.includes('sb-'))) {
-        keysToRemove.push(key);
-      }
-    }
-    
-    // Remove collected keys
-    keysToRemove.forEach(key => {
-      console.log(`Removing localStorage item: ${key}`);
-      localStorage.removeItem(key);
-    });
-    
-    // Clear session storage
-    console.log("Clearing session storage");
-    sessionStorage.clear();
-    
     // Call the official sign out method and wait for it to complete
     const { error } = await supabase.auth.signOut({
       scope: 'global'  // Sign out from all devices

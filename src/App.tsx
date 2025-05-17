@@ -23,7 +23,14 @@ import Contact from "./pages/Contact";
 import ForceLogout from "./pages/ForceLogout";
 import Notifications from "./pages/Notifications";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

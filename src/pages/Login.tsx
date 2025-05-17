@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,16 +25,30 @@ const Login = () => {
   // Use a ref to track if we're already redirecting to prevent loops
   const isRedirectingRef = React.useRef(false);
   
+  // Keep track of when the component was mounted to prevent redirect
+  // too soon after a potential logout
+  const mountTimeRef = useRef(Date.now());
+  
   useEffect(() => {
-    // Only redirect if user is logged in, we're not already redirecting, and auth loading is complete
-    if (user && !authLoading && !isRedirectingRef.current) {
+    // Only redirect if:
+    // 1. User is logged in
+    // 2. We're not already redirecting
+    // 3. Auth loading is complete
+    // 4. Component has been mounted for at least 1 second (prevents immediate redirect after logout)
+    const timeSinceMounted = Date.now() - mountTimeRef.current;
+    const shouldRedirect = user && 
+                          !authLoading && 
+                          !isRedirectingRef.current && 
+                          timeSinceMounted > 1000;
+    
+    if (shouldRedirect) {
       console.log("User already logged in, redirecting to dashboard. User role:", userRole);
       isRedirectingRef.current = true;
       const from = location.state?.from || "/dashboard";
       // Use a slight delay to ensure state updates are processed
       setTimeout(() => {
         navigate(from);
-      }, 100);
+      }, 300);
     }
   }, [user, navigate, userRole, authLoading, location.state]);
   
