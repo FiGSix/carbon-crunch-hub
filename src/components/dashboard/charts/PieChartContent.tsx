@@ -3,6 +3,7 @@ import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { CustomPieLabel } from "./CustomPieLabel";
 import { STATUS_COLORS } from "./StatusColors";
+import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface ChartData {
   name: string;
@@ -46,7 +47,7 @@ export const PieChartContent: React.FC<PieChartContentProps> = ({
               />
             ))}
           </Pie>
-          <Tooltip 
+          <ChartTooltip 
             formatter={(value) => [`${value} proposals (${(Number(value) / total * 100).toFixed(0)}%)`, 'Count']}
             contentStyle={{ 
               backgroundColor: 'white', 
