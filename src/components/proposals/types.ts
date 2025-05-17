@@ -1,6 +1,6 @@
 
 // Re-export all proposal types from the main types file
-export {
+export type {
   EligibilityCriteria,
   ClientInformation,
   ProjectInformation,
