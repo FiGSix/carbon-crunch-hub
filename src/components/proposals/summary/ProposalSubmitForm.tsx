@@ -1,10 +1,11 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createProposal } from "@/services/proposalService";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "../types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ProposalSubmitFormProps {
   eligibility: EligibilityCriteria;
@@ -23,11 +24,39 @@ export function ProposalSubmitForm({
 }: ProposalSubmitFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmitProposal = async () => {
+    // Reset error state
+    setErrorMessage(null);
     setIsSubmitting(true);
     
     try {
+      // Perform validation before submission
+      if (!clientInfo.email) {
+        setErrorMessage("Client email is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!clientInfo.name) {
+        setErrorMessage("Client name is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!projectInfo.name) {
+        setErrorMessage("Project name is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!projectInfo.size) {
+        setErrorMessage("Project size is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      
       const result = await createProposal(
         eligibility,
         clientInfo,
@@ -42,17 +71,19 @@ export function ProposalSubmitForm({
         });
         nextStep(); // Navigate to the next step or proposals list
       } else {
+        setErrorMessage(result.error || "Failed to create proposal. Please try again.");
         toast({
           title: "Error",
-          description: result.error || "Failed to create proposal",
+          description: result.error || "Failed to create proposal. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Error submitting proposal:", error);
+      setErrorMessage("An unexpected error occurred. Please try again or contact support.");
       toast({
         title: "Error",
-        description: "An unexpected error occurred while creating the proposal.",
+        description: "An unexpected error occurred. Please try again or contact support.",
         variant: "destructive",
       });
     } finally {
@@ -61,26 +92,36 @@ export function ProposalSubmitForm({
   };
 
   return (
-    <div className="flex justify-between border-t pt-6">
-      <Button 
-        variant="outline" 
-        onClick={prevStep}
-        className="retro-button"
-        disabled={isSubmitting}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" /> Previous
-      </Button>
-      <Button 
-        onClick={handleSubmitProposal}
-        disabled={isSubmitting}
-        className="retro-button"
-      >
-        {isSubmitting ? (
-          <>Generating Proposal...</>
-        ) : (
-          <>Generate Proposal <ArrowRight className="ml-2 h-4 w-4" /></>
-        )}
-      </Button>
+    <div className="space-y-4 w-full">
+      {errorMessage && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="flex justify-between border-t pt-6">
+        <Button 
+          variant="outline" 
+          onClick={prevStep}
+          className="retro-button"
+          disabled={isSubmitting}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+        </Button>
+        <Button 
+          onClick={handleSubmitProposal}
+          disabled={isSubmitting}
+          className="retro-button"
+        >
+          {isSubmitting ? (
+            <>Generating Proposal...</>
+          ) : (
+            <>Generate Proposal <ArrowRight className="ml-2 h-4 w-4" /></>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

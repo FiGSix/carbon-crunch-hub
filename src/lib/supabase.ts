@@ -12,7 +12,7 @@ export {
   refreshSession,
   getProfile,
   updateProfile,
-} from './supabase/index'
+} from '@/integrations/supabase/client'
 
 // Re-export types using the proper 'export type' syntax
-export type { UserRole } from './supabase/types'
+export type { UserRole } from '@/lib/supabase/types'

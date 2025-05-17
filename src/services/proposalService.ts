@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   EligibilityCriteria, 
   ClientInformation, 
@@ -13,6 +13,7 @@ import {
   getAgentCommissionPercentage
 } from "@/lib/calculations/carbon";
 import { Json } from "@/types/supabase";
+import { logger } from "@/lib/logger";
 
 export interface ProposalData {
   title: string;
@@ -32,62 +33,34 @@ export interface ProposalData {
 }
 
 /**
- * Create or find a client profile and return the user ID
+ * Create or find a client profile using the secure edge function
  */
 export async function findOrCreateClient(clientInfo: ClientInformation): Promise<string | null> {
-  // If it's an existing client, we need to find their profile
-  if (clientInfo.existingClient) {
-    // Look up existing client by email
-    const { data: existingProfile, error: searchError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', clientInfo.email)
-      .single();
-    
-    if (searchError) {
-      console.error("Error finding client:", searchError);
-      return null;
-    }
-    
-    return existingProfile?.id || null;
-  } else {
-    // For a new client, we would normally create a user account using auth.signUp
-    // But for simplicity and demo purposes, we'll create a placeholder entry in profiles
-    // In a real app, you'd want to invite the user via email and create a proper account
-    
-    // First, check if a profile with this email already exists
-    const { data: existingProfile, error: searchError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', clientInfo.email)
-      .single();
-    
-    if (!searchError && existingProfile) {
-      return existingProfile.id;
-    }
-    
-    // For demo purposes, we're generating a UUID client-side
-    // In a real app, this would be a proper Supabase auth user ID
-    const placeholderId = crypto.randomUUID();
-    
-    const { error: createError } = await supabase
-      .from('profiles')
-      .insert({
-        id: placeholderId,
-        first_name: clientInfo.name.split(' ')[0],
-        last_name: clientInfo.name.split(' ').slice(1).join(' '),
+  try {
+    const { data, error } = await supabase.functions.invoke('manage-client-profile', {
+      body: {
+        name: clientInfo.name,
         email: clientInfo.email,
-        phone: clientInfo.phone,
-        company_name: clientInfo.companyName,
-        role: 'client'
-      });
-    
-    if (createError) {
-      console.error("Error creating client profile:", createError);
+        phone: clientInfo.phone || null,
+        companyName: clientInfo.companyName || null,
+        existingClient: clientInfo.existingClient
+      }
+    });
+
+    if (error) {
+      logger.error("Error from manage-client-profile function:", { error });
       return null;
     }
-    
-    return placeholderId;
+
+    if (!data || !data.clientId) {
+      logger.error("Invalid response from manage-client-profile function:", { data });
+      return null;
+    }
+
+    return data.clientId;
+  } catch (error) {
+    logger.error("Unexpected error in findOrCreateClient:", { error });
+    return null;
   }
 }
 
@@ -100,18 +73,18 @@ export async function createProposal(
   projectInfo: ProjectInformation
 ): Promise<{ success: boolean; error?: string; proposalId?: string }> {
   try {
-    // Find or create the client
+    // Find or create the client through the secure edge function
     const clientId = await findOrCreateClient(clientInfo);
     
     if (!clientId) {
-      return { success: false, error: "Failed to find or create client" };
+      return { success: false, error: "Failed to find or create client profile. Please try again or contact support." };
     }
     
     // Get the current user (agent)
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      return { success: false, error: "You must be logged in to create a proposal" };
+      return { success: false, error: "You must be logged in to create a proposal. Please sign in again." };
     }
     
     // Calculate values for the proposal
@@ -156,13 +129,13 @@ export async function createProposal(
       .single();
     
     if (error) {
-      console.error("Error creating proposal:", error);
+      logger.error("Error creating proposal:", { error });
       return { success: false, error: error.message };
     }
     
     return { success: true, proposalId: data.id };
   } catch (error) {
-    console.error("Unexpected error creating proposal:", error);
-    return { success: false, error: "An unexpected error occurred" };
+    logger.error("Unexpected error creating proposal:", { error });
+    return { success: false, error: "An unexpected error occurred. Please try again or contact support." };
   }
 }
