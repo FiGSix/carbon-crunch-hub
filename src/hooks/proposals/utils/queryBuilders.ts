@@ -33,7 +33,9 @@ export function buildProposalQuery(
       invitation_sent_at,
       invitation_viewed_at,
       invitation_expires_at,
-      review_later_until
+      review_later_until,
+      is_preview,
+      preview_of_id
     `);
   
   // Apply filters
