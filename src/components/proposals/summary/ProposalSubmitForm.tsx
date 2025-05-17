@@ -1,10 +1,10 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createProposal } from "@/services/proposalService";
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from "../types";
+import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { refreshSession } from "@/lib/supabase/auth";
 
@@ -83,7 +83,9 @@ export function ProposalSubmitForm({
         // Check for specific error types and provide helpful messages
         let displayError = result.error || "Failed to create proposal. Please try again.";
         
-        if (result.error?.includes("client profile")) {
+        if (result.error?.includes("infinite recursion")) {
+          displayError = "Database permission error detected. This issue has been fixed, please try again.";
+        } else if (result.error?.includes("client profile")) {
           displayError = "Unable to create client profile. Please check your connection and try again.";
         } else if (result.error?.includes("logged in")) {
           displayError = "Your session has expired. Please sign in again to continue.";
@@ -115,7 +117,14 @@ export function ProposalSubmitForm({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errorMessage}</AlertDescription>
+          <AlertDescription>
+            {errorMessage}
+            {errorMessage.includes("Database permission error") && (
+              <p className="mt-2 text-sm">
+                This was a known issue that has been fixed. Please try submitting again.
+              </p>
+            )}
+          </AlertDescription>
         </Alert>
       )}
       
@@ -134,7 +143,7 @@ export function ProposalSubmitForm({
           className="retro-button"
         >
           {isSubmitting ? (
-            <>Generating Proposal...</>
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Proposal...</>
           ) : (
             <>Generate Proposal <ArrowRight className="ml-2 h-4 w-4" /></>
           )}

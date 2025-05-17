@@ -226,6 +226,10 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
+      can_create_preview_proposal: {
+        Args: { proposal_row: Database["public"]["Tables"]["proposals"]["Row"] }
+        Returns: boolean
+      }
       generate_secure_token: {
         Args: Record<PropertyKey, never>
         Returns: string

@@ -88,7 +88,7 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
 }
 
 /**
- * Create a new proposal in the database
+ * Create a new proposal in the database with improved error handling for RLS
  */
 export async function createProposal(
   eligibility: EligibilityCriteria,
@@ -156,12 +156,33 @@ export async function createProposal(
     
     if (error) {
       logger.error("Error creating proposal:", { error });
+      
+      // Provide more specific error messages for common errors
+      if (error.message.includes('infinite recursion')) {
+        return { 
+          success: false, 
+          error: "Permission error: Database policy recursion detected. This is likely due to a permission configuration issue. Please contact support." 
+        };
+      }
+      
+      if (error.message.includes('violates row-level security policy')) {
+        return { 
+          success: false, 
+          error: "You don't have permission to create proposals. Please verify your account role." 
+        };
+      }
+      
       return { success: false, error: error.message };
     }
     
     return { success: true, proposalId: data.id };
   } catch (error) {
     logger.error("Unexpected error creating proposal:", { error });
-    return { success: false, error: "An unexpected error occurred. Please try again or contact support." };
+    return { 
+      success: false, 
+      error: error instanceof Error 
+        ? `Error: ${error.message}` 
+        : "An unexpected error occurred. Please try again or contact support." 
+    };
   }
 }
