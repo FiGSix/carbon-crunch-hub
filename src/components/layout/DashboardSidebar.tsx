@@ -2,11 +2,10 @@
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { signOut } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "@/contexts/auth"; // Updated import path
+import { useAuth } from "@/contexts/auth";
 import { motion } from "framer-motion";
 
 interface DashboardSidebarProps {
@@ -17,7 +16,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { refreshUser } = useAuth(); // Using modern context
+  const { signOut } = useAuth(); // Use signOut from auth context
 
   const clientMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -58,10 +57,10 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     try {
       setIsLoggingOut(true);
       
-      // Call sign out and wait for it to complete
-      const { error } = await signOut();
+      // Use the context's signOut method, which clears state first
+      const success = await signOut();
       
-      if (error) {
+      if (!success) {
         toast({
           title: "Error logging out",
           description: "There was a problem logging out. Try using Force Logout.",
@@ -76,8 +75,11 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         description: "You have been successfully logged out",
       });
       
-      // Navigate to login page immediately after successful logout
-      navigate("/login");
+      // Add a small delay before navigation to ensure state clearing completes
+      setTimeout(() => {
+        // Navigate to login page
+        navigate("/login");
+      }, 100);
     } catch (error) {
       toast({
         title: "Error",

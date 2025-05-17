@@ -4,6 +4,7 @@ import { clearCache } from '../cache';
 
 /**
  * Sign out the current user
+ * @returns Promise that resolves when logout is complete
  */
 export async function signOut() {
   console.log("Starting signOut process...");
@@ -32,20 +33,20 @@ export async function signOut() {
     console.log("Clearing session storage");
     sessionStorage.clear();
     
-    // Finally, call the official sign out method and wait for it to complete
+    // Call the official sign out method and wait for it to complete
     const { error } = await supabase.auth.signOut({
       scope: 'global'  // Sign out from all devices
     });
     
     if (error) {
       console.error("Error during supabase.auth.signOut():", error);
-      return { error };
+      return { success: false, error };
     }
     
     console.log("Sign out completed successfully");
-    return { error: null };
+    return { success: true, error: null };
   } catch (e) {
     console.error("Exception during signOut:", e);
-    return { error: e instanceof Error ? e : new Error("Unknown error during signOut") };
+    return { success: false, error: e instanceof Error ? e : new Error("Unknown error during signOut") };
   }
 }

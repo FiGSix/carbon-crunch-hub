@@ -2,15 +2,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/contexts/auth";
 
 const ForceLogout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signOut } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [clearingStatus, setClearingStatus] = useState<"idle" | "clearing" | "completed">("idle");
   const [progressValue, setProgressValue] = useState(0);
@@ -66,10 +67,10 @@ const ForceLogout = () => {
       setIsProcessing(true);
       setClearingStatus("clearing");
       
-      // Sign out from all devices
-      await supabase.auth.signOut({ scope: 'global' });
+      // Use the context's signOut method first
+      await signOut();
       
-      // Clear browser storage
+      // Also clear browser storage as a second measure
       clearBrowserStorage();
       
       toast({
@@ -81,7 +82,7 @@ const ForceLogout = () => {
       setTimeout(() => {
         // Redirect to login page
         navigate("/login");
-      }, 1000);
+      }, 500);
     } catch (error) {
       console.error("Error during force logout:", error);
       toast({

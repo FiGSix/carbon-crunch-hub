@@ -1,30 +1,40 @@
 
-import { Session, User } from '@supabase/supabase-js'
+import { User } from '@supabase/supabase-js';
 
-export interface UserProfile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  company_name: string | null;
-  email: string;
-  role: UserRole;
-  terms_accepted_at: string | null;
-  created_at: string;
-  phone: string | null;
-}
-
+// Role types
 export type UserRole = 'client' | 'agent' | 'admin';
 
+// Profile information
+export interface UserProfile {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  company_name?: string;
+  role?: UserRole;
+  terms_accepted_at?: string;
+  created_at?: string;
+}
+
+// Auth context type definition
 export interface AuthContextType {
-  session: Session | null;
+  // User and session state
   user: User | null;
+  session: any;
   userRole: UserRole | null;
   profile: UserProfile | null;
+  
+  // State flags
   isLoading: boolean;
   isRefreshing: boolean;
   refreshAttemptCount: number;
   authInitialized: boolean;
-  refreshUser: () => Promise<void>;
-  debugAuthState: () => Promise<string>;
   isAdmin: boolean;
+  
+  // Methods
+  refreshUser: () => Promise<void>;
+  debugAuthState: () => void;
+  
+  // New sign out method
+  signOut: () => Promise<boolean>;
 }
