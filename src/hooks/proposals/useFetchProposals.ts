@@ -7,26 +7,7 @@ import { logger } from "@/lib/logger";
 import { buildProposalQuery } from "./utils/queryBuilders";
 import { handleQueryError } from "./utils/queryErrorHandler";
 import { fetchAndTransformProposalData } from "./utils/dataTransformer";
-
-// Define the raw proposal data interface here
-export interface RawProposalData {
-  id: string;
-  title: string;
-  content: any;
-  status: string;
-  created_at: string;
-  client_id: string;
-  agent_id: string | null;
-  annual_energy: number | null;
-  carbon_credits: number | null;
-  client_share_percentage: number | null;
-  invitation_sent_at: string | null;
-  invitation_viewed_at: string | null;
-  invitation_expires_at: string | null;
-  review_later_until: string | null;
-  is_preview: boolean | null;
-  preview_of_id: string | null;
-}
+import { RawProposalData } from "./types";
 
 type UseFetchProposalsProps = {
   user: any;
