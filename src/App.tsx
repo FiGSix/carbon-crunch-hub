@@ -12,7 +12,6 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import DashboardPreview from "./pages/DashboardPreview";
 import Proposals from "./pages/Proposals";
 import CreateProposal from "./pages/CreateProposal";
 import ViewProposal from "./pages/ViewProposal";
@@ -22,10 +21,7 @@ import About from "./pages/About";
 import Calculator from "./pages/Calculator";
 import Contact from "./pages/Contact";
 import ForceLogout from "./pages/ForceLogout";
-import TestInvitations from "./pages/TestInvitations";
 import Notifications from "./pages/Notifications";
-import ButtonShowcase from "./pages/ButtonShowcase";
-import TestAgent from "./pages/TestAgent";
 
 const queryClient = new QueryClient();
 
@@ -47,17 +43,11 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/force-logout" element={<ForceLogout />} />
             <Route path="/proposals/view" element={<ViewProposal />} />
-            <Route path="/button-showcase" element={<ButtonShowcase />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={
               <PrivateRoute>
                 <Dashboard />
-              </PrivateRoute>
-            } />
-            <Route path="/dashboard-preview" element={
-              <PrivateRoute>
-                <DashboardPreview />
               </PrivateRoute>
             } />
             <Route path="/proposals" element={
@@ -75,19 +65,9 @@ const App = () => (
                 <ViewProposal />
               </PrivateRoute>
             } />
-            <Route path="/test-invitations" element={
-              <PrivateRoute>
-                <TestInvitations />
-              </PrivateRoute>
-            } />
             <Route path="/notifications" element={
               <PrivateRoute>
                 <Notifications />
-              </PrivateRoute>
-            } />
-            <Route path="/test-agent" element={
-              <PrivateRoute>
-                <TestAgent />
               </PrivateRoute>
             } />
             
