@@ -26,6 +26,7 @@ import TestInvitations from "./pages/TestInvitations";
 import Notifications from "./pages/Notifications";
 import ButtonShowcase from "./pages/ButtonShowcase";
 import TestAgent from "./pages/TestAgent";
+import TestLoginFlow from "./pages/TestLoginFlow";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/force-logout" element={<ForceLogout />} />
             <Route path="/proposals/view" element={<ViewProposal />} />
             <Route path="/button-showcase" element={<ButtonShowcase />} />
+            <Route path="/test-login-flow" element={<TestLoginFlow />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={
