@@ -14,6 +14,7 @@ import {
 } from "@/lib/calculations/carbon";
 import { Json } from "@/types/supabase";
 import { logger } from "@/lib/logger";
+import { refreshSession } from "@/lib/supabase/auth";
 
 export interface ProposalData {
   title: string;
@@ -34,9 +35,18 @@ export interface ProposalData {
 
 /**
  * Create or find a client profile using the secure edge function
+ * Added token refresh to handle expired tokens
  */
 export async function findOrCreateClient(clientInfo: ClientInformation): Promise<string | null> {
   try {
+    // First try to refresh the session to ensure we have a valid token
+    await refreshSession();
+    
+    logger.info("Calling manage-client-profile edge function", { 
+      clientEmail: clientInfo.email,
+      isExistingClient: clientInfo.existingClient 
+    });
+    
     const { data, error } = await supabase.functions.invoke('manage-client-profile', {
       body: {
         name: clientInfo.name,
@@ -48,7 +58,11 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
     });
 
     if (error) {
-      logger.error("Error from manage-client-profile function:", { error });
+      logger.error("Error from manage-client-profile function:", { 
+        error,
+        statusCode: error.status,
+        message: error.message
+      });
       return null;
     }
 
@@ -57,9 +71,17 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
       return null;
     }
 
+    logger.info("Successfully found/created client profile", { 
+      clientId: data.clientId,
+      isNewProfile: data.isNewProfile 
+    });
+    
     return data.clientId;
   } catch (error) {
-    logger.error("Unexpected error in findOrCreateClient:", { error });
+    logger.error("Unexpected error in findOrCreateClient:", { 
+      error,
+      clientEmail: clientInfo.email
+    });
     return null;
   }
 }

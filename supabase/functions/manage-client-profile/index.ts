@@ -35,12 +35,21 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase environment variables")
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
     // Create Supabase client with service role key for admin privileges
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     // Get user information from authorization header to verify permissions
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error("No authorization header provided")
       return new Response(
         JSON.stringify({ error: 'No authorization header provided' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -51,9 +60,18 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
     
-    if (authError || !authUser) {
+    if (authError) {
+      console.error("Authentication error:", authError)
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid token' }),
+        JSON.stringify({ error: 'Authentication failed - ' + authError.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    if (!authUser) {
+      console.error("No user found in token")
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - invalid token or no user found' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -62,7 +80,16 @@ serve(async (req) => {
     const { data: agentData, error: roleError } = await supabase
       .rpc('get_user_role', { user_id: authUser.id })
     
-    if (roleError || (agentData !== 'agent' && agentData !== 'admin')) {
+    if (roleError) {
+      console.error("Role verification error:", roleError)
+      return new Response(
+        JSON.stringify({ error: 'Error verifying user role: ' + roleError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    if (agentData !== 'agent' && agentData !== 'admin') {
+      console.error("Permission denied: User role is", agentData)
       return new Response(
         JSON.stringify({ error: 'Permission denied. Only agents can create client profiles.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -70,9 +97,21 @@ serve(async (req) => {
     }
     
     // Parse the request
-    const { name, email, phone, companyName, existingClient } = await req.json() as ClientProfileRequest
+    let requestBody;
+    try {
+      requestBody = await req.json() as ClientProfileRequest
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const { name, email, phone, companyName, existingClient } = requestBody
     
     if (!email) {
+      console.error("Email is required")
       return new Response(
         JSON.stringify({ error: 'Email is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -81,14 +120,15 @@ serve(async (req) => {
     
     // Logic for existing clients
     if (existingClient) {
+      console.log("Searching for existing client with email:", email)
       // Search for existing client by email
       const { data: existingProfile, error: searchError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, role')
         .eq('email', email)
-        .single()
+        .maybeSingle()
         
-      if (searchError && searchError.code !== 'PGRST116') {
+      if (searchError) {
         console.error("Error finding client:", searchError)
         return new Response(
           JSON.stringify({ error: `Error finding client: ${searchError.message}` }),
@@ -97,6 +137,7 @@ serve(async (req) => {
       }
       
       if (existingProfile) {
+        console.log("Found existing profile:", existingProfile.id)
         return new Response(
           JSON.stringify({ 
             clientId: existingProfile.id,
@@ -105,6 +146,7 @@ serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       } else {
+        console.error("No existing client found with email:", email)
         return new Response(
           JSON.stringify({ error: `No existing client found with email: ${email}` }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -113,10 +155,11 @@ serve(async (req) => {
     } 
     // Logic for new clients
     else {
+      console.log("Creating new client with email:", email)
       // First check if a profile with this email already exists
       const { data: existingProfile, error: searchError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, role')
         .eq('email', email)
         .maybeSingle()
       
@@ -129,6 +172,7 @@ serve(async (req) => {
       }
       
       if (existingProfile) {
+        console.log("Found existing profile when trying to create new:", existingProfile.id)
         return new Response(
           JSON.stringify({ 
             clientId: existingProfile.id,
@@ -140,8 +184,10 @@ serve(async (req) => {
       
       // Create a new profile with a server-generated UUID
       const newProfileId = crypto.randomUUID()
-      const firstName = name.split(' ')[0]
-      const lastName = name.split(' ').slice(1).join(' ')
+      const firstName = name.split(' ')[0] || ''
+      const lastName = name.split(' ').slice(1).join(' ') || ''
+      
+      console.log("Creating new profile with ID:", newProfileId)
       
       const { error: createError } = await supabase
         .from('profiles')
@@ -163,6 +209,7 @@ serve(async (req) => {
         )
       }
       
+      console.log("Successfully created new profile:", newProfileId)
       return new Response(
         JSON.stringify({ 
           clientId: newProfileId,

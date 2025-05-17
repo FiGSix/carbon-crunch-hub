@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createProposal } from "@/services/proposalService";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "../types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { refreshSession } from "@/lib/supabase/auth";
 
 interface ProposalSubmitFormProps {
   eligibility: EligibilityCriteria;
@@ -57,6 +58,14 @@ export function ProposalSubmitForm({
         return;
       }
       
+      // Refresh session before submitting to ensure we have valid tokens
+      try {
+        await refreshSession();
+      } catch (sessionError) {
+        console.error("Failed to refresh session:", sessionError);
+        // Continue anyway, the createProposal function will handle auth errors
+      }
+      
       const result = await createProposal(
         eligibility,
         clientInfo,
@@ -71,10 +80,20 @@ export function ProposalSubmitForm({
         });
         nextStep(); // Navigate to the next step or proposals list
       } else {
-        setErrorMessage(result.error || "Failed to create proposal. Please try again.");
+        // Check for specific error types and provide helpful messages
+        let displayError = result.error || "Failed to create proposal. Please try again.";
+        
+        if (result.error?.includes("client profile")) {
+          displayError = "Unable to create client profile. Please check your connection and try again.";
+        } else if (result.error?.includes("logged in")) {
+          displayError = "Your session has expired. Please sign in again to continue.";
+          // Could redirect to login page here
+        }
+        
+        setErrorMessage(displayError);
         toast({
           title: "Error",
-          description: result.error || "Failed to create proposal. Please try again.",
+          description: displayError,
           variant: "destructive",
         });
       }

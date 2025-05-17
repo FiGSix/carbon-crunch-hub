@@ -1,5 +1,5 @@
 
-# Update the config with our new edge function
+# Update the config with our manage-client-profile edge function
 project_id = "uyjryuopuqgmsvayiccl"
 [api]
 enabled = true
