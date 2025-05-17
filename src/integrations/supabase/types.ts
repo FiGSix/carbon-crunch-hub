@@ -125,6 +125,7 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           carbon_credits: number | null
+          client_contact_id: string | null
           client_id: string
           client_share_percentage: number | null
           content: Json
@@ -150,6 +151,7 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           carbon_credits?: number | null
+          client_contact_id?: string | null
           client_id: string
           client_share_percentage?: number | null
           content?: Json
@@ -175,6 +177,7 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           carbon_credits?: number | null
+          client_contact_id?: string | null
           client_id?: string
           client_share_percentage?: number | null
           content?: Json
@@ -199,6 +202,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_contact_id_fkey"
+            columns: ["client_contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
           {
@@ -229,6 +239,10 @@ export type Database = {
       can_create_preview_proposal: {
         Args: { proposal_row: Database["public"]["Tables"]["proposals"]["Row"] }
         Returns: boolean
+      }
+      fix_proposal_client_references: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       generate_secure_token: {
         Args: Record<PropertyKey, never>
