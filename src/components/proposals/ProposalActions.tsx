@@ -2,7 +2,7 @@
 import { Download, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 export function ProposalActions() {
   const navigate = useNavigate();

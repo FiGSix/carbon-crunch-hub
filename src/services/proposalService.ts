@@ -12,6 +12,7 @@ import {
   getClientSharePercentage,
   getAgentCommissionPercentage
 } from "@/lib/calculations/carbon";
+import { Json } from "@/types/supabase";
 
 export interface ProposalData {
   title: string;
@@ -138,10 +139,19 @@ export async function createProposal(
       }
     };
     
+    // Convert complex objects to JSON format compatible with Supabase
+    const supabaseProposalData = {
+      ...proposalData,
+      // Convert complex objects to JSON compatible format
+      eligibility_criteria: proposalData.eligibility_criteria as unknown as Json,
+      project_info: proposalData.project_info as unknown as Json,
+      content: proposalData.content as unknown as Json
+    };
+    
     // Insert the proposal
     const { data, error } = await supabase
       .from('proposals')
-      .insert(proposalData)
+      .insert(supabaseProposalData)
       .select('id')
       .single();
     

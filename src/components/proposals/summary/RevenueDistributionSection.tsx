@@ -1,10 +1,9 @@
-
 import React from "react";
 import { 
   getClientSharePercentage,
   getAgentCommissionPercentage
 } from "@/lib/calculations/carbon";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface RevenueDistributionSectionProps {
   systemSize: string;

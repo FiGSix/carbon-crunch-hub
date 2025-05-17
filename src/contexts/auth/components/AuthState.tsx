@@ -52,7 +52,11 @@ export function AuthState({ children }: AuthStateProps) {
     isRefreshing,
     refreshAttemptCount,
     authInitialized,
-    refreshUser,
+    refreshUser: async () => {
+      const result = await refreshUser();
+      // Convert boolean return to void to satisfy the interface
+      return;
+    },
     debugAuthState,
     isAdmin
   };
