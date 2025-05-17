@@ -24,6 +24,16 @@ export interface RawProposalData {
 }
 
 /**
+ * Profile data structure for users
+ */
+export interface ProfileData {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+}
+
+/**
  * Props for the useAuthRefresh hook
  */
 export interface UseAuthRefreshProps {
