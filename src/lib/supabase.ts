@@ -4,15 +4,21 @@
 
 export {
   supabase,
+} from '@/integrations/supabase/client'
+
+export {
   signUp,
   signIn,
   signOut,
   getCurrentUser,
   getUserRole,
   refreshSession,
+} from '@/lib/supabase/auth'
+
+export {
   getProfile,
   updateProfile,
-} from '@/integrations/supabase/client'
+} from '@/lib/supabase/profile'
 
 // Re-export types using the proper 'export type' syntax
 export type { UserRole } from '@/lib/supabase/types'
