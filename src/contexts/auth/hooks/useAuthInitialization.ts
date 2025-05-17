@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { getUserRole, getCurrentUser } from '@/lib/supabase/auth';
 import { getProfile } from '@/lib/supabase/profile';
 import { UserRole, UserProfile } from '../types';
@@ -16,7 +16,7 @@ export function useAuthInitialization() {
   const [authInitialized, setAuthInitialized] = useState(false);
   const { toast } = useToast();
 
-  // Function to fetch user profile data
+  // Function to fetch user profile data with debouncing
   const fetchUserData = async (currentUser: User, skipLoading = false) => {
     if (!skipLoading) {
       setIsLoading(true);
@@ -71,10 +71,7 @@ export function useAuthInitialization() {
       setIsLoading(true);
       
       try {
-        // First check if there's an existing session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        // Set up auth state listener
+        // Set up auth state listener FIRST to avoid missing events
         subscription = supabase.auth.onAuthStateChange(
           (event, newSession) => {
             console.log('Auth state changed:', event, 'User ID:', newSession?.user?.id);
@@ -94,13 +91,21 @@ export function useAuthInitialization() {
                 if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                   // Use setTimeout to avoid recursive auth state changes
                   setTimeout(() => {
-                    fetchUserData(newSession.user, true);
+                    fetchUserData(newSession.user, true)
+                      .finally(() => setIsLoading(false));
                   }, 0);
+                } else {
+                  setIsLoading(false);
                 }
-              } 
+              } else {
+                setIsLoading(false);
+              }
             }
           }
         ).data.subscription;
+        
+        // THEN check if there's an existing session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         // Handle initial session if it exists
         if (currentSession?.user) {
@@ -113,6 +118,7 @@ export function useAuthInitialization() {
 
         // Mark auth as initialized to prevent duplicate initialization
         setAuthInitialized(true);
+        setIsLoading(false);
       } catch (error) {
         console.error('Error initializing auth:', error);
         toast({
@@ -120,7 +126,6 @@ export function useAuthInitialization() {
           description: 'Failed to initialize authentication',
           variant: 'destructive',
         });
-      } finally {
         setIsLoading(false);
       }
     }

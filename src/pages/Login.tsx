@@ -9,25 +9,33 @@ import { Footer } from "@/components/layout/footer";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
 import { signIn } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth"; // Updated import path
+import { useAuth } from "@/contexts/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { refreshUser, user, userRole, isLoading: authLoading } = useAuth(); // Using modern context
+  const { user, userRole, isLoading: authLoading, refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   
+  // Use a ref to track if we're already redirecting to prevent loops
+  const isRedirectingRef = React.useRef(false);
+  
   useEffect(() => {
-    if (user && !authLoading) {
+    // Only redirect if user is logged in, we're not already redirecting, and auth loading is complete
+    if (user && !authLoading && !isRedirectingRef.current) {
       console.log("User already logged in, redirecting to dashboard. User role:", userRole);
+      isRedirectingRef.current = true;
       const from = location.state?.from || "/dashboard";
-      navigate(from);
+      // Use a slight delay to ensure state updates are processed
+      setTimeout(() => {
+        navigate(from);
+      }, 100);
     }
   }, [user, navigate, userRole, authLoading, location.state]);
   
@@ -50,6 +58,9 @@ const Login = () => {
         title: "Success",
         description: "You have successfully logged in",
       });
+      
+      // Set redirecting flag to prevent login loops
+      isRedirectingRef.current = true;
       
       const from = location.state?.from || "/dashboard";
       console.log(`Redirecting to: ${from}`);

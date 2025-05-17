@@ -9,6 +9,7 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 import { signIn } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { useAuth } from "@/contexts/auth";
 
 interface ClientLoginFormProps {
   clientEmail: string;
@@ -19,6 +20,7 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
   
   const { error, handleError, clearError } = useErrorHandler({
     context: "client-login",
@@ -38,6 +40,9 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
       }
 
       if (data?.session) {
+        // Refresh user data after login
+        await refreshUser();
+        
         toast({
           title: "Login successful",
           description: "You are now logged in and can view the proposal.",
@@ -51,7 +56,7 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
     } catch (error: any) {
       handleError(
         error, 
-        error.message.includes("Invalid login credentials")
+        error.message?.includes("Invalid login credentials")
           ? "Invalid email or password. Please try again."
           : "Failed to log in. Please try again."
       );
@@ -132,4 +137,3 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
     </Card>
   );
 }
-

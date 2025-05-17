@@ -1,6 +1,6 @@
 
-import { supabase } from '../client'
-import { clearCache } from '../cache'
+import { supabase } from '@/integrations/supabase/client';
+import { clearCache } from '../cache';
 
 /**
  * Sign out the current user
@@ -33,7 +33,9 @@ export async function signOut() {
     sessionStorage.clear();
     
     // Finally, call the official sign out method and wait for it to complete
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({
+      scope: 'global'  // Sign out from all devices
+    });
     
     if (error) {
       console.error("Error during supabase.auth.signOut():", error);

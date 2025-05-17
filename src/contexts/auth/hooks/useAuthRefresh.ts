@@ -25,7 +25,7 @@ export function useAuthRefresh({
   const [refreshAttemptCount, setRefreshAttemptCount] = useState(0);
 
   const refreshUser = async () => {
-    if (isRefreshing) return; // Prevent multiple concurrent refreshes
+    if (isRefreshing) return false; // Prevent multiple concurrent refreshes
     
     setIsLoading(true);
     setIsRefreshing(true);
@@ -45,23 +45,28 @@ export function useAuthRefresh({
           setUser(currentUser);
           await fetchUserData(currentUser);
           console.log("User data refreshed via getCurrentUser");
+          return true;
         } else {
           console.log("Could not get current user, user may be signed out");
           clearAuthState();
+          return false;
         }
       } else if (refreshedSession) {
         setSession(refreshedSession);
         setUser(refreshedSession.user);
         await fetchUserData(refreshedSession.user);
         console.log("User data refreshed via session refresh");
+        return true;
       } else {
         // No session or error, likely user is signed out
         clearAuthState();
+        return false;
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
       // On critical errors, clear state to avoid confusion
       clearAuthState();
+      return false;
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -100,10 +105,12 @@ export function useAuthRefresh({
         console.warn("No profile found for user", currentUser.id);
         setProfile(null);
       }
+      return true;
     } catch (error) {
       console.error('Error fetching user data during refresh:', error);
       setUserRole(null);
       setProfile(null);
+      return false;
     }
   };
 
