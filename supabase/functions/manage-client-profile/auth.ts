@@ -39,6 +39,8 @@ export async function verifyUserAuth(
       };
     }
     
+    console.log(`User authenticated: ${authUser.id}, email: ${authUser.email}`);
+    
     // Check if the user has the agent role
     const { data: roleData, error: roleError } = await supabase
       .rpc('get_user_role', { user_id: authUser.id });
@@ -58,6 +60,8 @@ export async function verifyUserAuth(
         status: 403
       };
     }
+    
+    console.log(`User role verified: ${roleData}`);
     
     return { 
       userId: authUser.id,

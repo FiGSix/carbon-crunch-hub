@@ -14,7 +14,7 @@ import {
 } from "@/lib/calculations/carbon";
 import { Json } from "@/types/supabase";
 import { logger } from "@/lib/logger";
-import { findOrCreateClient } from "./clientProfileService";
+import { findOrCreateClient, directClientLookup } from "./clientProfileService";
 import { ProposalData } from "./types";
 
 /**
@@ -26,22 +26,73 @@ export async function createProposal(
   clientInfo: ClientInformation,
   projectInfo: ProjectInformation
 ): Promise<{ success: boolean; error?: string; proposalId?: string }> {
+  const contextLogger = logger.withContext({
+    function: 'createProposal',
+    clientEmail: clientInfo.email,
+    projectName: projectInfo.name
+  });
+  
   try {
-    // Find or create the client through the secure edge function
-    const clientResult = await findOrCreateClient(clientInfo);
+    // Validate inputs before proceeding
+    if (!clientInfo.email) {
+      return { success: false, error: "Client email is required." };
+    }
+    
+    if (!projectInfo.name) {
+      return { success: false, error: "Project name is required." };
+    }
+
+    // Normalize client email to prevent case mismatch issues
+    const normalizedClientInfo = {
+      ...clientInfo,
+      email: clientInfo.email.trim().toLowerCase()
+    };
+    
+    // Get the current user (agent) before attempting client operations
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      contextLogger.error("Authentication failed - no user found");
+      return { success: false, error: "You must be logged in to create a proposal. Please sign in again." };
+    }
+    
+    contextLogger.info("Starting proposal creation process", {
+      agentId: user.id,
+      clientName: normalizedClientInfo.name
+    });
+    
+    // Find or create the client profile with improved error handling
+    let clientResult = null;
+    
+    try {
+      // Try to find or create the client through the primary method (edge function)
+      clientResult = await findOrCreateClient(normalizedClientInfo);
+    } catch (error) {
+      contextLogger.warn("Primary client lookup failed, attempting fallback", { 
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      // If the edge function approach fails, try direct lookup as fallback
+      clientResult = await directClientLookup(normalizedClientInfo.email);
+      
+      // If both methods fail, return a helpful error
+      if (!clientResult) {
+        contextLogger.error("All client lookup methods failed");
+        return { 
+          success: false, 
+          error: "Unable to find or create client profile. Please check the client information and try again." 
+        };
+      }
+      
+      contextLogger.info("Fallback client lookup succeeded", { clientResult });
+    }
     
     if (!clientResult || !clientResult.clientId) {
+      contextLogger.error("Client lookup failed with no specific error");
       return { 
         success: false, 
         error: "Failed to find or create client profile. Please check your connection and try again." 
       };
-    }
-    
-    // Get the current user (agent)
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return { success: false, error: "You must be logged in to create a proposal. Please sign in again." };
     }
     
     // Calculate values for the proposal
@@ -64,7 +115,7 @@ export async function createProposal(
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
       content: {
-        clientInfo,
+        clientInfo: normalizedClientInfo,
         projectInfo,
         revenue
       }
@@ -75,10 +126,9 @@ export async function createProposal(
       proposalData.client_contact_id = clientResult.clientId;
     }
     
-    logger.info("Creating proposal with client data:", { 
+    contextLogger.info("Creating proposal with client data", { 
       isRegisteredUser: clientResult.isRegisteredUser,
-      clientId: clientResult.clientId,
-      clientEmail: clientInfo.email
+      clientId: clientResult.clientId
     });
     
     // Convert complex objects to JSON format compatible with Supabase
@@ -98,7 +148,7 @@ export async function createProposal(
       .single();
     
     if (error) {
-      logger.error("Error creating proposal:", { error });
+      contextLogger.error("Error creating proposal", { error });
       
       // Provide more specific error messages for common errors
       if (error.message.includes('foreign key constraint')) {
@@ -125,9 +175,10 @@ export async function createProposal(
       return { success: false, error: error.message };
     }
     
+    contextLogger.info("Proposal created successfully", { proposalId: data.id });
     return { success: true, proposalId: data.id };
   } catch (error) {
-    logger.error("Unexpected error creating proposal:", { error });
+    contextLogger.error("Unexpected error creating proposal", { error });
     return { 
       success: false, 
       error: error instanceof Error 

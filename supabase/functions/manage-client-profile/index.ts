@@ -32,6 +32,7 @@ serve(async (req) => {
     );
     
     if ('error' in authResult) {
+      console.error("Auth error:", authResult.error);
       return createResponse({ error: authResult.error }, authResult.status || 401);
     }
     
@@ -39,19 +40,34 @@ serve(async (req) => {
     let requestBody: ClientProfileRequest;
     try {
       requestBody = await req.json() as ClientProfileRequest;
+      console.log("Received client request:", { 
+        name: requestBody.name,
+        email: requestBody.email, 
+        existingClient: requestBody.existingClient 
+      });
     } catch (parseError) {
       console.error("Error parsing request body:", parseError);
       return createResponse({ error: 'Invalid request body' }, 400);
     }
     
+    // Validate input
+    if (!requestBody.email) {
+      return createResponse({ error: 'Email is required' }, 400);
+    }
+    
+    // Normalize email
+    requestBody.email = requestBody.email.toLowerCase().trim();
+    
     // Process the client request
     const result = await processClientRequest(requestBody, authResult.userId, supabase);
     
     if ('error' in result) {
+      console.error("Error processing client request:", result.error);
       return createResponse({ error: result.error }, result.status || 500);
     }
     
     // Return successful response
+    console.log("Successfully processed client request:", result);
     return createResponse(result, 'isNewProfile' in result && result.isNewProfile ? 201 : 200);
     
   } catch (error) {
