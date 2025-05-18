@@ -51,10 +51,11 @@ export async function createProposal(
     const clientSharePercentage = getClientSharePercentage(projectInfo.size);
     const agentCommissionPercentage = getAgentCommissionPercentage(projectInfo.size);
     
-    // Create the proposal data with agent_id assigned at creation
-    // Use either client_id or client_contact_id based on the client type
-    const proposalData: ProposalData & { client_contact_id?: string } = {
+    // Always initialize proposalData with client_id to satisfy TypeScript
+    // Fixed: Initialize client_id with placeholder if using client_contact_id
+    const proposalData: ProposalData = {
       title: projectInfo.name,
+      client_id: clientResult.isRegisteredUser ? clientResult.clientId : '00000000-0000-0000-0000-000000000000',
       agent_id: user.id, // Always assign the current user as the agent
       eligibility_criteria: eligibility,
       project_info: projectInfo,
@@ -69,14 +70,9 @@ export async function createProposal(
       }
     };
     
-    // Set either client_id or client_contact_id based on client type
-    if (clientResult.isRegisteredUser) {
-      proposalData.client_id = clientResult.clientId;
-    } else {
+    // Set client_contact_id if the client is not a registered user
+    if (!clientResult.isRegisteredUser) {
       proposalData.client_contact_id = clientResult.clientId;
-      // We still need a client_id for RLS policies - use a placeholder
-      // This will be a valid UUID that meets RLS requirements but isn't used functionally
-      proposalData.client_id = '00000000-0000-0000-0000-000000000000';
     }
     
     logger.info("Creating proposal with client data:", { 
