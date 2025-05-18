@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { ClientProfileRequest, corsHeaders } from "../_shared/types.ts";
 import { verifyUserAuth, createResponse } from "./auth.ts";
-import { processClientRequest } from "./client-operations.ts";
+import { processClientRequest } from "./client/client-processor.ts";
 import { supabase as supabaseClient } from "../_shared/supabase-client.ts";
 
 serve(async (req) => {
