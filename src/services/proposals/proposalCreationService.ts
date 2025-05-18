@@ -18,7 +18,8 @@ import { findOrCreateClient } from "./clientProfileService";
 import { ProposalData } from "./types";
 
 /**
- * Create a new proposal in the database with improved error handling for RLS
+ * Create a new proposal in the database with improved client handling for both
+ * registered users and client contacts
  */
 export async function createProposal(
   eligibility: EligibilityCriteria,
@@ -27,9 +28,9 @@ export async function createProposal(
 ): Promise<{ success: boolean; error?: string; proposalId?: string }> {
   try {
     // Find or create the client through the secure edge function
-    const clientId = await findOrCreateClient(clientInfo);
+    const clientResult = await findOrCreateClient(clientInfo);
     
-    if (!clientId) {
+    if (!clientResult || !clientResult.clientId) {
       return { 
         success: false, 
         error: "Failed to find or create client profile. Please check your connection and try again." 
@@ -51,9 +52,9 @@ export async function createProposal(
     const agentCommissionPercentage = getAgentCommissionPercentage(projectInfo.size);
     
     // Create the proposal data with agent_id assigned at creation
-    const proposalData: ProposalData = {
+    // Use either client_id or client_contact_id based on the client type
+    const proposalData: ProposalData & { client_contact_id?: string } = {
       title: projectInfo.name,
-      client_id: clientId,
       agent_id: user.id, // Always assign the current user as the agent
       eligibility_criteria: eligibility,
       project_info: projectInfo,
@@ -67,6 +68,22 @@ export async function createProposal(
         revenue
       }
     };
+    
+    // Set either client_id or client_contact_id based on client type
+    if (clientResult.isRegisteredUser) {
+      proposalData.client_id = clientResult.clientId;
+    } else {
+      proposalData.client_contact_id = clientResult.clientId;
+      // We still need a client_id for RLS policies - use a placeholder
+      // This will be a valid UUID that meets RLS requirements but isn't used functionally
+      proposalData.client_id = '00000000-0000-0000-0000-000000000000';
+    }
+    
+    logger.info("Creating proposal with client data:", { 
+      isRegisteredUser: clientResult.isRegisteredUser,
+      clientId: clientResult.clientId,
+      clientEmail: clientInfo.email
+    });
     
     // Convert complex objects to JSON format compatible with Supabase
     const supabaseProposalData = {
@@ -88,6 +105,13 @@ export async function createProposal(
       logger.error("Error creating proposal:", { error });
       
       // Provide more specific error messages for common errors
+      if (error.message.includes('foreign key constraint')) {
+        return { 
+          success: false, 
+          error: "Database constraint error: Client reference is invalid. This could be due to an issue with the client profile. Please try with a different client or contact support." 
+        };
+      }
+      
       if (error.message.includes('infinite recursion')) {
         return { 
           success: false, 

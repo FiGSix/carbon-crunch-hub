@@ -1,5 +1,9 @@
 
-// Shared types for edge functions
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 export interface ClientProfileRequest {
   name: string;
   email: string;
@@ -12,16 +16,9 @@ export interface ClientProfileResponse {
   clientId: string;
   isNewProfile: boolean;
   isRegisteredUser: boolean;
-  error?: string;
 }
 
 export interface ErrorResponse {
   error: string;
-  status?: number;
+  status: number;
 }
-
-// Standard CORS headers for all edge functions
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};

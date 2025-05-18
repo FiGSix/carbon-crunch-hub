@@ -21,4 +21,6 @@ export interface ProposalData {
     projectInfo: ProjectInformation;
     revenue: Record<string, number>;
   };
+  // Add client_contact_id for non-registered clients
+  client_contact_id?: string;
 }

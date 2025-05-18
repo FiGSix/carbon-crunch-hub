@@ -6,9 +6,9 @@ import { refreshSession } from "@/lib/supabase/auth";
 
 /**
  * Create or find a client profile using the secure edge function
- * Added token refresh to handle expired tokens and improved error handling
+ * Returns both client ID and source information (registered user or client contact)
  */
-export async function findOrCreateClient(clientInfo: ClientInformation): Promise<string | null> {
+export async function findOrCreateClient(clientInfo: ClientInformation): Promise<{ clientId: string | null, isRegisteredUser: boolean } | null> {
   try {
     // First try to refresh the session to ensure we have a valid token
     await refreshSession();
@@ -48,7 +48,10 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
       isRegisteredUser: data.isRegisteredUser
     });
     
-    return data.clientId;
+    return {
+      clientId: data.clientId,
+      isRegisteredUser: data.isRegisteredUser
+    };
   } catch (error) {
     logger.error("Unexpected error in findOrCreateClient:", { 
       error,

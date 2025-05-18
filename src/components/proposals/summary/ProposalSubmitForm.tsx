@@ -83,8 +83,10 @@ export function ProposalSubmitForm({
         // Check for specific error types and provide helpful messages
         let displayError = result.error || "Failed to create proposal. Please try again.";
         
-        if (result.error?.includes("infinite recursion")) {
-          displayError = "Database permission error detected. This issue has been fixed, please try again.";
+        if (result.error?.includes("foreign key constraint")) {
+          displayError = "Invalid client reference. This client may need to be properly registered first.";
+        } else if (result.error?.includes("infinite recursion")) {
+          displayError = "Database permission error detected. Please try again.";
         } else if (result.error?.includes("client profile")) {
           displayError = "Unable to create client profile. Please check your connection and try again.";
         } else if (result.error?.includes("logged in")) {
