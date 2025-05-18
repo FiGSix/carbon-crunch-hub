@@ -78,7 +78,7 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
     contextLogger.error("Unexpected error in findOrCreateClient", { error });
     
     // If this is an Error object, get its message
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Client profile operation failed: ${errorMessage}`);
   }
 }

@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { ClientProfileRequest, corsHeaders } from "../_shared/types.ts";
 import { verifyUserAuth, createResponse } from "./auth.ts";
 import { processClientRequest } from "./client-operations.ts";
+import { supabase as supabaseClient } from "../_shared/supabase-client.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -71,7 +72,8 @@ serve(async (req) => {
     return createResponse(result, 'isNewProfile' in result && result.isNewProfile ? 201 : 200);
     
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return createResponse({ error: `Unexpected error: ${error.message}` }, 500);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Unexpected error:", errorMessage);
+    return createResponse({ error: `Unexpected error: ${errorMessage}` }, 500);
   }
 });

@@ -72,8 +72,9 @@ export async function createClientContact(
     console.log(`Creating new client contact with normalized email: ${normalizedEmail}`);
     
     // Parse name into first and last name
-    const firstName = clientData.name.split(' ')[0] || '';
-    const lastName = clientData.name.split(' ').slice(1).join(' ') || '';
+    const nameParts = clientData.name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
     
     // Create a new client contact
     const { data: newContact, error: createError } = await supabase
@@ -130,7 +131,7 @@ export async function createClientContact(
   } catch (error) {
     console.error("Unexpected error creating client:", error);
     return {
-      error: `Unexpected error creating client: ${error.message}`,
+      error: `Unexpected error creating client: ${error instanceof Error ? error.message : String(error)}`,
       status: 500
     };
   }
@@ -178,7 +179,7 @@ export async function processClientRequest(
     } 
     // For new clients, check if they exist first, then create if not
     else {
-      console.log(`Creating new client contact with email: ${normalizedEmail}`);
+      console.log(`Processing new client with email: ${normalizedEmail}`);
       
       // Check if a client with this email already exists
       const existingClient = await findExistingClient(normalizedEmail, supabase);
@@ -202,7 +203,7 @@ export async function processClientRequest(
   } catch (error) {
     console.error("Error in processClientRequest:", error);
     return {
-      error: `Error processing client request: ${error.message}`,
+      error: `Error processing client request: ${error instanceof Error ? error.message : String(error)}`,
       status: 500
     };
   }

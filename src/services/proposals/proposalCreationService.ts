@@ -102,12 +102,10 @@ export async function createProposal(
     const clientSharePercentage = getClientSharePercentage(projectInfo.size);
     const agentCommissionPercentage = getAgentCommissionPercentage(projectInfo.size);
     
-    // Always initialize proposalData with client_id to satisfy TypeScript
-    // Fixed: Initialize client_id with placeholder if using client_contact_id
+    // Initialize proposal data object based on client type
     const proposalData: ProposalData = {
       title: projectInfo.name,
-      client_id: clientResult.isRegisteredUser ? clientResult.clientId : '00000000-0000-0000-0000-000000000000',
-      agent_id: user.id, // Always assign the current user as the agent
+      agent_id: user.id,
       eligibility_criteria: eligibility,
       project_info: projectInfo,
       annual_energy: annualEnergy,
@@ -121,8 +119,10 @@ export async function createProposal(
       }
     };
     
-    // Set client_contact_id if the client is not a registered user
-    if (!clientResult.isRegisteredUser) {
+    // Set the appropriate client reference based on whether they're a registered user or not
+    if (clientResult.isRegisteredUser) {
+      proposalData.client_id = clientResult.clientId;
+    } else {
       proposalData.client_contact_id = clientResult.clientId;
     }
     
@@ -169,6 +169,13 @@ export async function createProposal(
         return { 
           success: false, 
           error: "You don't have permission to create proposals. Please verify your account role." 
+        };
+      }
+      
+      if (error.message.includes('check constraint')) {
+        return {
+          success: false,
+          error: "Invalid client reference: A proposal must have either a registered user client or a client contact. Please check the client information."
         };
       }
       
