@@ -6,6 +6,18 @@ import { logError } from "@/lib/errors/errorLogger";
 import { findOrCreateClient } from "./clientProfileService";
 import { toast } from "sonner";
 
+// Define the return type for consistent interface
+export interface ProposalCreationResult {
+  success: boolean;
+  proposalId?: string;
+  error?: string;
+}
+
+// Helper function to convert complex TypeScript objects to Supabase-compatible JSON
+function convertToSupabaseJson(obj: any): any {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 export async function createProposal(
   title: string,
   agentId: string,
@@ -16,7 +28,7 @@ export async function createProposal(
   carbonCredits: number,
   clientShare: number,
   agentCommission: number
-): Promise<{ proposalId: string } | null> {
+): Promise<ProposalCreationResult> {
   try {
     // Step 1: Find or create client profile
     const clientResult = await findOrCreateClient(clientInfo);
@@ -28,21 +40,24 @@ export async function createProposal(
         JSON.stringify(clientInfo), 
         "CLIENT_PROFILE_ERROR"
       );
-      return null;
+      return { 
+        success: false, 
+        error: "Failed to create or find client profile" 
+      };
     }
 
-    // Step 2: Prepare proposal data
-    const proposalData: ProposalData = {
+    // Step 2: Prepare proposal data with properly converted JSON
+    const proposalData: any = {
       title,
       agent_id: agentId,
       client_id: clientResult.clientId, // Use client_id for registered users
-      eligibility_criteria: eligibilityCriteria,
-      project_info: projectInfo,
+      eligibility_criteria: convertToSupabaseJson(eligibilityCriteria),
+      project_info: convertToSupabaseJson(projectInfo),
       annual_energy: annualEnergy,
       carbon_credits: carbonCredits,
       client_share_percentage: clientShare,
       agent_commission_percentage: agentCommission,
-      content: {
+      content: convertToSupabaseJson({
         clientInfo,
         projectInfo,
         revenue: {
@@ -53,7 +68,7 @@ export async function createProposal(
           yearFour: carbonCredits * 56,
           yearFive: carbonCredits * 58,
         }
-      }
+      })
     };
 
     // If the client is not a registered user, set the client_contact_id
@@ -76,10 +91,16 @@ export async function createProposal(
         error.code
       );
       toast.error("Failed to create proposal. Please try again.");
-      return null;
+      return { 
+        success: false, 
+        error: error.message 
+      };
     }
 
-    return { proposalId: proposal.id };
+    return { 
+      success: true,
+      proposalId: proposal.id
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logError(
@@ -89,6 +110,9 @@ export async function createProposal(
       "UNEXPECTED_ERROR"
     );
     toast.error("An unexpected error occurred. Please try again.");
-    return null;
+    return { 
+      success: false, 
+      error: errorMessage 
+    };
   }
 }
