@@ -21,6 +21,10 @@ export interface ProposalData {
     projectInfo: ProjectInformation;
     revenue: Record<string, number>;
   };
-  // Add client_contact_id for non-registered clients
+  // Additional fields to match database schema
   client_contact_id?: string;
+  status?: string;
 }
+
+// Export the ProposalCreationResult interface from the service
+export { type ProposalCreationResult } from './proposalCreationService';

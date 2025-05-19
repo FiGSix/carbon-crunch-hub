@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { createProposal } from "@/services/proposals";
+import { createProposal } from "@/services/proposalService";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { refreshSession } from "@/lib/supabase/auth";
@@ -28,19 +28,6 @@ export function ProposalSubmitForm({
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Helper function to calculate approximate annual energy from system size
-  const calculateAnnualEnergy = (systemSize: string): number => {
-    const size = parseFloat(systemSize) || 0;
-    // Simple estimation: 1 kW system produces roughly 1600 kWh per year in good conditions
-    return size * 1600;
-  };
-
-  // Helper function to calculate approximate carbon credits
-  const calculateCarbonCredits = (annualEnergy: number): number => {
-    // Simple estimation: 1 MWh of solar energy prevents roughly 0.7 tons of CO2
-    return (annualEnergy / 1000) * 0.7;
-  };
 
   const handleSubmitProposal = async () => {
     // Reset error state
@@ -80,26 +67,12 @@ export function ProposalSubmitForm({
         console.error("Failed to refresh session:", sessionError);
         // Continue anyway, the createProposal function will handle auth errors
       }
-
-      // Calculate derived values
-      const annualEnergy = calculateAnnualEnergy(projectInfo.size);
-      const carbonCredits = calculateCarbonCredits(annualEnergy);
-      const clientSharePercentage = 80; // Default percentage for client's revenue share
-      const agentCommissionPercentage = 5; // Default percentage for agent's commission
       
-      // Generate a title for the proposal based on client and project information
-      const proposalTitle = `${projectInfo.name} - ${clientInfo.name}`;
-      
+      // Submit the proposal using our service
       const result = await createProposal(
-        proposalTitle,
-        user?.id || '',
         eligibility,
-        projectInfo,
         clientInfo,
-        annualEnergy,
-        carbonCredits,
-        clientSharePercentage,
-        agentCommissionPercentage
+        projectInfo
       );
       
       if (result.success) {

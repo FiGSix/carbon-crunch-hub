@@ -15,7 +15,33 @@ export interface ProposalCreationResult {
 
 // Helper function to convert complex TypeScript objects to Supabase-compatible JSON
 function convertToSupabaseJson(obj: any): any {
-  return JSON.parse(JSON.stringify(obj));
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertToSupabaseJson(item));
+  }
+  
+  // Handle Date objects
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+  
+  // Handle objects (but not primitive wrappers)
+  if (typeof obj === 'object' && Object.getPrototypeOf(obj) === Object.prototype) {
+    const result: Record<string, any> = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        result[key] = convertToSupabaseJson(obj[key]);
+      }
+    }
+    return result;
+  }
+  
+  // Return primitive values and functions as is
+  return obj;
 }
 
 export async function createProposal(
@@ -47,7 +73,7 @@ export async function createProposal(
     }
 
     // Step 2: Prepare proposal data with properly converted JSON
-    const proposalData: any = {
+    const proposalData = {
       title,
       agent_id: agentId,
       client_id: clientResult.clientId, // Use client_id for registered users
@@ -68,7 +94,8 @@ export async function createProposal(
           yearFour: carbonCredits * 56,
           yearFive: carbonCredits * 58,
         }
-      })
+      }),
+      status: 'draft' // Default status for new proposals
     };
 
     // If the client is not a registered user, set the client_contact_id
