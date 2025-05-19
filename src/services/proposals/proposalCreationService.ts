@@ -73,7 +73,21 @@ export async function createProposal(
     }
 
     // Step 2: Prepare proposal data with properly converted JSON
-    const proposalData = {
+    // Define the structure explicitly including all possible fields
+    const proposalData: {
+      title: string;
+      agent_id: string;
+      client_id: string;
+      eligibility_criteria: any;
+      project_info: any;
+      annual_energy: number;
+      carbon_credits: number;
+      client_share_percentage: number;
+      agent_commission_percentage: number;
+      content: any;
+      status: string;
+      client_contact_id?: string; // Make this property optional
+    } = {
       title,
       agent_id: agentId,
       client_id: clientResult.clientId, // Use client_id for registered users
