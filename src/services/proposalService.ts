@@ -9,9 +9,19 @@ import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/ty
 export async function createProposal(
   eligibility: EligibilityCriteria,
   clientInfo: ClientInformation,
-  projectInfo: ProjectInformation
+  projectInfo: ProjectInformation,
+  agentId: string
 ): Promise<ProposalCreationResult> {
   try {
+    // Validate agent ID is available
+    if (!agentId) {
+      console.error("Agent ID is missing when creating proposal");
+      return {
+        success: false,
+        error: "Authentication error: User ID is missing. Please sign out and back in."
+      };
+    }
+
     // Calculate derived values from project info
     const annualEnergy = calculateAnnualEnergy(projectInfo.size);
     const carbonCredits = calculateCarbonCredits(annualEnergy);
@@ -20,18 +30,6 @@ export async function createProposal(
     
     // Generate proposal title
     const proposalTitle = `${projectInfo.name} - ${clientInfo.name}`;
-    
-    // Get current user ID from localStorage as fallback
-    let agentId = '';
-    try {
-      const authData = localStorage.getItem('supabase.auth.token');
-      if (authData) {
-        const parsedAuth = JSON.parse(authData);
-        agentId = parsedAuth?.currentSession?.user?.id || '';
-      }
-    } catch (error) {
-      console.error("Failed to get agent ID from localStorage:", error);
-    }
     
     // Call the implementation with all required parameters
     return await createProposalImpl(

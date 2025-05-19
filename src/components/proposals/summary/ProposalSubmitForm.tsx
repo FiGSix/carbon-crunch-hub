@@ -60,6 +60,13 @@ export function ProposalSubmitForm({
         return;
       }
       
+      // Check if user is authenticated
+      if (!user || !user.id) {
+        setErrorMessage("You must be signed in to create a proposal. Please sign in and try again.");
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Refresh session before submitting to ensure we have valid tokens
       try {
         await refreshSession();
@@ -68,11 +75,12 @@ export function ProposalSubmitForm({
         // Continue anyway, the createProposal function will handle auth errors
       }
       
-      // Submit the proposal using our service
+      // Submit the proposal using our service with explicit user ID
       const result = await createProposal(
         eligibility,
         clientInfo,
-        projectInfo
+        projectInfo,
+        user.id
       );
       
       if (result.success) {
@@ -94,6 +102,8 @@ export function ProposalSubmitForm({
           displayError = "Unable to create client profile. Please check your connection and try again.";
         } else if (result.error?.includes("logged in")) {
           displayError = "Your session has expired. Please sign in again to continue.";
+        } else if (result.error?.includes("invalid input syntax for type uuid")) {
+          displayError = "Authentication error. Please sign out and sign back in to continue.";
         }
         
         setErrorMessage(displayError);

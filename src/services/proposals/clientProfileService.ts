@@ -31,6 +31,22 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
       });
     }
     
+    // For existing clients, try the direct lookup first since we know they exist
+    if (normalizedClientInfo.existingClient) {
+      contextLogger.info("Client marked as existing, attempting direct lookup first");
+      const directResult = await directClientLookup(normalizedClientInfo.email);
+      
+      if (directResult && directResult.clientId) {
+        contextLogger.info("Found existing client via direct lookup", {
+          clientId: directResult.clientId,
+          isRegisteredUser: directResult.isRegisteredUser
+        });
+        return directResult;
+      }
+      
+      contextLogger.warn("Client marked as existing but not found in direct lookup, falling back to edge function");
+    }
+    
     contextLogger.info("Calling manage-client-profile edge function");
     
     // Call the edge function with improved error handling
@@ -85,7 +101,7 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
 
 /**
  * Utility function to attempt direct database lookup for a client
- * This serves as a fallback when the edge function fails
+ * This serves as a fallback when the edge function fails or as a first try for existing clients
  */
 export async function directClientLookup(email: string): Promise<{ clientId: string | null, isRegisteredUser: boolean } | null> {
   const contextLogger = logger.withContext({
@@ -93,24 +109,34 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
     clientEmail: email
   });
   
+  if (!email) {
+    contextLogger.error("Cannot lookup client with empty email");
+    return null;
+  }
+  
   try {
-    contextLogger.info("Attempting direct client lookup as fallback");
+    contextLogger.info("Attempting direct client lookup");
+    const normalizedEmail = email.toLowerCase().trim();
     
     // First, search in profiles (registered users)
     const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
+      .select('id, email')
+      .eq('email', normalizedEmail)
       .eq('role', 'client')
       .maybeSingle();
     
     if (profileError && !profileError.message.includes('No rows found')) {
       contextLogger.error("Error searching for client in profiles", { error: profileError });
-      return null;
+    } else if (profileError) {
+      contextLogger.info("No matching profile found in registered users");
     }
     
     if (existingProfile?.id) {
-      contextLogger.info("Found existing registered user profile", { id: existingProfile.id });
+      contextLogger.info("Found existing registered user profile", { 
+        id: existingProfile.id,
+        email: existingProfile.email 
+      });
       return {
         clientId: existingProfile.id,
         isRegisteredUser: true
@@ -120,27 +146,31 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
     // If not found in profiles, search in client_contacts
     const { data: existingContact, error: contactError } = await supabase
       .from('client_contacts')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
+      .select('id, email')
+      .eq('email', normalizedEmail)
       .maybeSingle();
     
     if (contactError && !contactError.message.includes('No rows found')) {
       contextLogger.error("Error searching for client in client_contacts", { error: contactError });
-      return null;
+    } else if (contactError) {
+      contextLogger.info("No matching client found in client_contacts");
     }
     
     if (existingContact?.id) {
-      contextLogger.info("Found existing client contact", { id: existingContact.id });
+      contextLogger.info("Found existing client contact", { 
+        id: existingContact.id,
+        email: existingContact.email
+      });
       return {
         clientId: existingContact.id,
         isRegisteredUser: false
       };
     }
     
-    contextLogger.info("No existing client found in direct lookup");
+    contextLogger.info("No existing client found in direct lookup with email:", { email: normalizedEmail });
     return null;
   } catch (error) {
-    contextLogger.error("Error in directClientLookup fallback", { error });
+    contextLogger.error("Error in directClientLookup", { error });
     return null;
   }
 }
