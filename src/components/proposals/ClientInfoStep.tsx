@@ -18,15 +18,32 @@ interface ClientInfoStepProps {
   updateClientInfo: (e: React.ChangeEvent<HTMLInputElement>) => void;
   nextStep: () => void;
   prevStep: () => void;
+  setClientInfo?: (clientInfo: ClientInformation) => void;
+  selectedClientId?: string;
+  setSelectedClientId?: (id: string | null) => void;
 }
 
 export function ClientInfoStep({ 
   clientInfo, 
   updateClientInfo, 
   nextStep, 
-  prevStep 
+  prevStep,
+  setClientInfo,
+  selectedClientId,
+  setSelectedClientId
 }: ClientInfoStepProps) {
   const isFormValid = Boolean(clientInfo.name && clientInfo.email);
+
+  // Handle client selection from the autocomplete
+  const handleClientSelect = (updatedClientInfo: ClientInformation, clientId: string) => {
+    if (setClientInfo) {
+      setClientInfo(updatedClientInfo);
+    }
+    
+    if (setSelectedClientId) {
+      setSelectedClientId(clientId);
+    }
+  };
 
   return (
     <Card className="retro-card">
@@ -41,6 +58,7 @@ export function ClientInfoStep({
           <ClientFormFields 
             clientInfo={clientInfo}
             updateClientInfo={updateClientInfo}
+            setClientInfo={setClientInfo}
           />
           
           <ClientNotification isExistingClient={clientInfo.existingClient} />

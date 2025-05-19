@@ -32,6 +32,9 @@ const CreateProposal = () => {
     existingClient: false,
   });
   
+  // New state for selected client ID
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  
   const [projectInfo, setProjectInfo] = useState<ProjectInformation>({
     name: "",
     address: "",
@@ -97,6 +100,16 @@ const CreateProposal = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value
     }));
+    
+    // Reset selected client ID if the form is modified manually
+    if (selectedClientId && name !== "existingClient") {
+      setSelectedClientId(null);
+    }
+  };
+  
+  // Direct setter for client info for use by the client search component
+  const setClientInfoDirectly = (newClientInfo: ClientInformation) => {
+    setClientInfo(newClientInfo);
   };
   
   // Update project info
@@ -136,6 +149,9 @@ const CreateProposal = () => {
           updateClientInfo={updateClientInfo}
           nextStep={nextStep}
           prevStep={prevStep}
+          setClientInfo={setClientInfoDirectly}
+          selectedClientId={selectedClientId}
+          setSelectedClientId={setSelectedClientId}
         />
       )}
       
@@ -157,6 +173,7 @@ const CreateProposal = () => {
           projectInfo={projectInfo}
           nextStep={nextStep}
           prevStep={prevStep}
+          selectedClientId={selectedClientId}
         />
       )}
     </DashboardLayout>

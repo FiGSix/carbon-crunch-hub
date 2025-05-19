@@ -15,6 +15,7 @@ interface ProposalSubmitFormProps {
   projectInfo: ProjectInformation;
   nextStep: () => void;
   prevStep: () => void;
+  selectedClientId?: string | null;
 }
 
 export function ProposalSubmitForm({ 
@@ -22,7 +23,8 @@ export function ProposalSubmitForm({
   clientInfo, 
   projectInfo, 
   nextStep, 
-  prevStep 
+  prevStep,
+  selectedClientId
 }: ProposalSubmitFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -68,6 +70,7 @@ export function ProposalSubmitForm({
       }
       
       console.log("Creating proposal with user ID:", user.id);
+      console.log("Selected client ID:", selectedClientId || "None");
       
       // Refresh session before submitting to ensure we have valid tokens
       try {
@@ -77,12 +80,13 @@ export function ProposalSubmitForm({
         // Continue anyway, the createProposal function will handle auth errors
       }
       
-      // Submit the proposal using our service with explicit user ID
+      // Submit the proposal using our service with explicit user ID and selectedClientId
       const result = await createProposal(
         eligibility,
         clientInfo,
         projectInfo,
-        user.id
+        user.id,
+        selectedClientId || undefined
       );
       
       if (result.success) {

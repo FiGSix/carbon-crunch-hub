@@ -1,21 +1,63 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ClientSearchAutocomplete } from "./ClientSearchAutocomplete";
+import { ClientInformation } from "@/types/proposals";
 
 interface ClientFormFieldsProps {
-  clientInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    companyName: string;
-    existingClient: boolean;
-  };
+  clientInfo: ClientInformation;
   updateClientInfo: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setClientInfo?: (clientInfo: ClientInformation) => void;
 }
 
-export function ClientFormFields({ clientInfo, updateClientInfo }: ClientFormFieldsProps) {
+export function ClientFormFields({ 
+  clientInfo, 
+  updateClientInfo,
+  setClientInfo
+}: ClientFormFieldsProps) {
+  const [clientId, setClientId] = useState<string | null>(null);
+  
+  const handleClientSelect = (selectedClientInfo: ClientInformation, selectedClientId: string) => {
+    setClientId(selectedClientId);
+    
+    // If we have a direct setter, use it
+    if (setClientInfo) {
+      setClientInfo({
+        ...selectedClientInfo,
+        existingClient: true
+      });
+    } else {
+      // Otherwise simulate form field changes (legacy support)
+      Object.entries(selectedClientInfo).forEach(([key, value]) => {
+        if (key === 'existingClient') return; // Skip the checkbox
+
+        const event = {
+          target: {
+            name: key,
+            value,
+            type: 'text'
+          }
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        updateClientInfo(event);
+      });
+      
+      // Set the existingClient checkbox if not already set
+      if (!clientInfo.existingClient) {
+        const checkboxEvent = {
+          target: {
+            name: "existingClient",
+            type: "checkbox",
+            checked: true
+          }
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        updateClientInfo(checkboxEvent);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-start space-x-3 mb-6">
@@ -46,6 +88,16 @@ export function ClientFormFields({ clientInfo, updateClientInfo }: ClientFormFie
           </p>
         </div>
       </div>
+      
+      {clientInfo.existingClient && (
+        <div className="mb-4 border rounded-md p-4 bg-slate-50">
+          <Label className="mb-2 block">Search for existing client</Label>
+          <ClientSearchAutocomplete onClientSelect={handleClientSelect} />
+          <p className="text-xs text-muted-foreground mt-2">
+            Select a client from the dropdown or modify the fields below manually.
+          </p>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
@@ -95,6 +147,16 @@ export function ClientFormFields({ clientInfo, updateClientInfo }: ClientFormFie
           />
         </div>
       </div>
+      
+      {/* Hidden field for client ID, this will be sent to the backend */}
+      {clientId && (
+        <input 
+          type="hidden" 
+          id="clientId" 
+          name="clientId" 
+          value={clientId} 
+        />
+      )}
     </div>
   );
 }

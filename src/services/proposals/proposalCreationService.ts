@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ProposalData } from "./types";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
@@ -55,7 +54,8 @@ export async function createProposal(
   annualEnergy: number,
   carbonCredits: number,
   clientShare: number,
-  agentCommission: number
+  agentCommission: number,
+  selectedClientId?: string
 ): Promise<ProposalCreationResult> {
   // Create a contextualized logger
   const proposalLogger = logger.withContext({
@@ -74,26 +74,53 @@ export async function createProposal(
       };
     }
     
-    // Step 1: Find or create client profile
-    proposalLogger.info("Finding or creating client profile", { 
-      clientEmail: clientInfo.email,
-      existingClient: clientInfo.existingClient
-    });
+    let clientResult;
     
-    const clientResult = await findOrCreateClient(clientInfo);
-    
-    if (!clientResult) {
-      proposalLogger.error("Failed to create or find client profile", { clientInfo });
-      return { 
-        success: false, 
-        error: "Failed to create or find client profile" 
+    // If we have an explicit selected client ID, we can skip client creation
+    if (selectedClientId && isValidUUID(selectedClientId)) {
+      proposalLogger.info("Using selected client ID directly", { selectedClientId });
+      
+      // Check if this is a registered user or client contact
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', selectedClientId)
+        .eq('role', 'client')
+        .maybeSingle();
+        
+      const isRegisteredUser = !!existingProfile;
+      
+      clientResult = {
+        clientId: selectedClientId,
+        isRegisteredUser
       };
+      
+      proposalLogger.info("Found client by ID", { 
+        clientId: selectedClientId, 
+        isRegisteredUser 
+      });
+    } else {
+      // Otherwise, find or create client profile
+      proposalLogger.info("Finding or creating client profile", { 
+        clientEmail: clientInfo.email,
+        existingClient: clientInfo.existingClient
+      });
+      
+      clientResult = await findOrCreateClient(clientInfo);
+      
+      if (!clientResult) {
+        proposalLogger.error("Failed to create or find client profile", { clientInfo });
+        return { 
+          success: false, 
+          error: "Failed to create or find client profile" 
+        };
+      }
+      
+      proposalLogger.info("Client profile found/created", { 
+        clientId: clientResult.clientId,
+        isRegisteredUser: clientResult.isRegisteredUser
+      });
     }
-
-    proposalLogger.info("Client profile found/created", { 
-      clientId: clientResult.clientId,
-      isRegisteredUser: clientResult.isRegisteredUser
-    });
 
     // Step 2: Prepare proposal data with properly converted JSON
     // Define the structure explicitly without optional fields initially

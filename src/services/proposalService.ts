@@ -5,13 +5,15 @@ import {
 } from "./proposals/proposalCreationService";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { logger } from "@/lib/logger";
+import { isValidUUID } from "@/utils/validationUtils";
 
 // Simplified wrapper that provides a more user-friendly interface to the component
 export async function createProposal(
   eligibility: EligibilityCriteria,
   clientInfo: ClientInformation,
   projectInfo: ProjectInformation,
-  agentId: string
+  agentId: string,
+  selectedClientId?: string
 ): Promise<ProposalCreationResult> {
   try {
     // Create a contextualized logger
@@ -48,11 +50,28 @@ export async function createProposal(
     // Generate proposal title
     const proposalTitle = `${projectInfo.name} - ${clientInfo.name}`;
     
+    // Add logging for selected client ID if available
+    if (selectedClientId) {
+      if (isValidUUID(selectedClientId)) {
+        proposalLogger.info("Creating proposal with explicit client ID", { 
+          clientId: selectedClientId,
+          existingClient: clientInfo.existingClient
+        });
+      } else {
+        proposalLogger.warn("Invalid client ID format provided", { selectedClientId });
+        return {
+          success: false,
+          error: "Invalid client ID format. Please try selecting the client again."
+        };
+      }
+    }
+    
     proposalLogger.info("Creating proposal", {
       title: proposalTitle,
       clientEmail: clientInfo.email,
       existingClient: clientInfo.existingClient,
-      projectName: projectInfo.name
+      projectName: projectInfo.name,
+      hasSelectedClientId: !!selectedClientId
     });
     
     // Call the implementation with all required parameters
@@ -65,7 +84,8 @@ export async function createProposal(
       annualEnergy,
       carbonCredits,
       clientSharePercentage,
-      agentCommissionPercentage
+      agentCommissionPercentage,
+      selectedClientId
     );
   } catch (error) {
     logger.error("Error in createProposal wrapper:", error);
