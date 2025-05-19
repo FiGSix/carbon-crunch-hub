@@ -47,7 +47,10 @@ const ViewProposal = () => {
   // Determine if we need to show auth form based on token and user state
   useEffect(() => {
     if (!loading && token && clientEmail && !user) {
-      viewLogger.info({ message: "Showing authentication form for client with email", clientEmail });
+      viewLogger.info("Showing authentication form for client", {
+        clientEmail,
+        hasToken: !!token
+      });
       setShowAuthForm(true);
     } else {
       setShowAuthForm(false);
@@ -56,7 +59,7 @@ const ViewProposal = () => {
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
-    viewLogger.info({ message: "Authentication completed, refreshing view", action: 'authComplete' });
+    viewLogger.info("Authentication completed, refreshing view", { action: 'authComplete' });
     setShowAuthForm(false);
     // Force refresh the component to get latest auth state
     window.location.reload();
@@ -65,12 +68,13 @@ const ViewProposal = () => {
   // Log details for debugging purposes
   useEffect(() => {
     if (proposal) {
-      viewLogger.info({ 
-        message: "ViewProposal - Current proposal state", 
+      viewLogger.info("ViewProposal - Current proposal state", { 
         id: proposal.id,
         status: proposal.status,
         isClient,
-        canTakeAction
+        canTakeAction,
+        hasClientId: !!proposal.client_id,
+        hasClientContactId: !!proposal.client_contact_id
       });
     }
   }, [proposal, isClient, canTakeAction, viewLogger]);
@@ -97,7 +101,7 @@ const ViewProposal = () => {
   }
   
   if (error) {
-    viewLogger.error({ message: "Error loading proposal", error });
+    viewLogger.error("Error loading proposal", { error });
     return <ProposalError errorMessage={error} />;
   }
   
@@ -119,7 +123,7 @@ const ViewProposal = () => {
   }
   
   if (!proposal) {
-    viewLogger.warn({ message: "No proposal found", path: window.location.pathname });
+    viewLogger.warn("No proposal found", { path: window.location.pathname });
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">
@@ -132,8 +136,7 @@ const ViewProposal = () => {
   // Extract project info from the proposal content for the header and cast to the correct type
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
   
-  viewLogger.debug({ 
-    message: "ViewProposal - Show action buttons", 
+  viewLogger.debug("ViewProposal - Show action buttons", { 
     isClient,
     status: proposal.status,
     isArchived: !!proposal.archived_at,

@@ -2,12 +2,19 @@
 import { useMemo } from "react";
 import { ProposalData } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to determine various proposal statuses and permissions
  */
 export function useProposalStatus(proposal: ProposalData | null) {
   const { user } = useAuth();
+  
+  // Create a contextualized logger
+  const statusLogger = logger.withContext({
+    component: 'useProposalStatus',
+    feature: 'proposals'
+  });
 
   return useMemo(() => {
     if (!proposal) {
@@ -19,10 +26,32 @@ export function useProposalStatus(proposal: ProposalData | null) {
       };
     }
 
-    const isClient = !!user && user.id === proposal.client_id;
-    const canArchive = !!user && !proposal.archived_at && 
-      (user.id === proposal.client_id || user.id === proposal.agent_id);
+    const userId = user?.id;
+    
+    // Check if current user is the client for this proposal
+    // This handles both registered clients (client_id) and client contacts
+    const isClient = !!userId && (
+      userId === proposal.client_id || 
+      userId === proposal.client_contact_id
+    );
+    
+    // For debugging permission issues
+    if (userId && (proposal.client_id || proposal.client_contact_id)) {
+      statusLogger.debug("Checking client status", { 
+        userId,
+        proposalClientId: proposal.client_id,
+        proposalClientContactId: proposal.client_contact_id,
+        isClient
+      });
+    }
+    
+    // Check if user can archive the proposal
+    const canArchive = !!userId && !proposal.archived_at && 
+      (isClient || userId === proposal.agent_id);
+      
     const isReviewLater = !!proposal.review_later_until;
+    
+    // Check if client can take action on the proposal
     const canTakeAction = isClient && 
       proposal.status === 'pending' && 
       !proposal.archived_at && 
@@ -34,5 +63,5 @@ export function useProposalStatus(proposal: ProposalData | null) {
       isClient,
       canTakeAction
     };
-  }, [user, proposal]);
+  }, [user, proposal, statusLogger]);
 }

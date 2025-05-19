@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { logger } from "@/lib/logger";
 
 interface ClientRegistrationFormProps {
   proposalId: string;
@@ -25,6 +26,12 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Create a contextualized logger
+  const registrationLogger = logger.withContext({
+    component: 'ClientRegistrationForm', 
+    feature: 'client-auth'
+  });
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +50,11 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
     setError(null);
 
     try {
+      registrationLogger.info("Starting client registration", { 
+        email: clientEmail,
+        proposalId
+      });
+      
       // Create a new user with Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: clientEmail,
@@ -62,22 +74,67 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
 
       // Once registered, update the client_id in the proposal
       if (data?.user) {
+        registrationLogger.info("User registered successfully, updating proposal", {
+          userId: data.user.id,
+          proposalId
+        });
+        
+        // First, check if this email exists as a client_contact
+        const { data: clientContact, error: contactLookupError } = await supabase
+          .from('client_contacts')
+          .select('id')
+          .eq('email', clientEmail.toLowerCase().trim())
+          .maybeSingle();
+          
+        if (contactLookupError && !contactLookupError.message.includes('No rows found')) {
+          registrationLogger.error("Error looking up client contact", { 
+            error: contactLookupError,
+            email: clientEmail 
+          });
+        }
+        
+        // Update strategy: We need to handle both cases
+        // 1. If the proposal was created with a client_contact_id
+        // 2. If the proposal has a null client_id that needs to be set
+        const updateData: { client_id: string, client_contact_id?: null } = {
+          client_id: data.user.id
+        };
+        
+        // If a client contact was found, also set client_contact_id to null
+        // to avoid conflicting identity references
+        if (clientContact?.id) {
+          updateData.client_contact_id = null;
+          
+          registrationLogger.info("Found existing client contact, linking to new user account", {
+            contactId: clientContact.id,
+            userId: data.user.id
+          });
+        }
+        
         // Try to update the proposal with the new client ID
         const { error: updateError } = await supabase
           .from('proposals')
-          .update({ client_id: data.user.id })
-          .eq('id', proposalId)
-          .is('client_id', null);
+          .update(updateData)
+          .eq('id', proposalId);
         
         if (updateError) {
-          console.error("Error linking proposal to new client account:", updateError);
-          // Don't throw here - the user has been created, we just couldn't link the proposal
+          registrationLogger.error("Error linking proposal to new client account", { 
+            error: updateError,
+            userId: data.user.id,
+            proposalId
+          });
+          
           toast({
             title: "Account created",
             description: "Your account was created but there was an issue linking it to this proposal. Please contact support.",
             variant: "default"
           });
         } else {
+          registrationLogger.info("Successfully linked proposal to new client account", {
+            userId: data.user.id,
+            proposalId
+          });
+          
           toast({
             title: "Registration successful!",
             description: "Your account has been created and linked to this proposal.",
@@ -89,7 +146,10 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
         onComplete();
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
+      registrationLogger.error("Registration error", { 
+        error: error.message,
+        email: clientEmail
+      });
       
       // Handle common errors
       if (error.message.includes("User already registered")) {

@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { ProposalData } from "@/types/proposals";
 import { transformToProposalData } from "@/utils/proposalTransformers";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
@@ -23,7 +23,7 @@ export function useProposalData(id?: string, token?: string | null) {
 
   // Create a contextualized logger
   const proposalLogger = logger.withContext({
-    component: 'ProposalData',
+    component: 'useProposalData',
     feature: 'proposals'
   });
 
@@ -31,21 +31,27 @@ export function useProposalData(id?: string, token?: string | null) {
     try {
       setLoading(true);
       setError(null);
-      proposalLogger.info({ message: "Fetching proposal", proposalId, hasToken: !!invitationToken });
+      proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
       
       if (invitationToken) {
         // Validate the token and get the proposal ID and client email
-        const { data, error: validationError } = await supabase.rpc('validate_invitation_token', { token: invitationToken });
+        const { data, error: validationError } = await supabase.rpc(
+          'validate_invitation_token', 
+          { token: invitationToken }
+        );
         
         if (validationError || !data || !data.length || !data[0].proposal_id) {
+          proposalLogger.error("Token validation failed", { 
+            error: validationError,
+            tokenPrefix: invitationToken?.substring(0, 5)
+          });
           throw new Error("This invitation link is invalid or has expired.");
         }
         
         const validatedProposalId = data[0].proposal_id;
         const invitedEmail = data[0].client_email;
         
-        proposalLogger.info({ 
-          message: "Token validated", 
+        proposalLogger.info("Token validated", { 
           validatedProposalId, 
           invitedEmail 
         });
@@ -59,15 +65,23 @@ export function useProposalData(id?: string, token?: string | null) {
           .single();
         
         if (fetchError) {
+          proposalLogger.error("Error fetching proposal after token validation", { 
+            error: fetchError,
+            proposalId: validatedProposalId
+          });
           throw fetchError;
         }
         
         // Transform to our standard ProposalData type
         const typedProposal = transformToProposalData(proposalData);
+        proposalLogger.info("Proposal fetched via token", { 
+          proposalId: typedProposal.id,
+          status: typedProposal.status
+        });
         setProposal(typedProposal);
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
-        proposalLogger.info({ message: "Fetching proposal by ID", proposalId });
+        proposalLogger.info("Fetching proposal by ID", { proposalId });
         const { data, error: fetchError } = await supabase
           .from('proposals')
           .select('*')
@@ -75,12 +89,21 @@ export function useProposalData(id?: string, token?: string | null) {
           .single();
         
         if (fetchError) {
+          proposalLogger.error("Error fetching proposal by ID", { 
+            error: fetchError,
+            proposalId
+          });
           throw fetchError;
         }
         
         // Transform to our standard ProposalData type
         const typedProposal = transformToProposalData(data);
-        proposalLogger.info({ message: "Proposal fetched successfully", proposalId });
+        proposalLogger.info("Proposal fetched successfully", { 
+          proposalId,
+          status: typedProposal.status,
+          hasClientId: !!typedProposal.client_id,
+          hasClientContactId: !!typedProposal.client_contact_id
+        });
         setProposal(typedProposal);
       } else {
         throw new Error("No proposal ID or invitation token provided.");
@@ -88,7 +111,7 @@ export function useProposalData(id?: string, token?: string | null) {
     } catch (err) {
       const errorState = handleError(err, "Failed to load the proposal");
       setError(errorState.message || "Failed to load the proposal. It may have been deleted or you don't have permission to view it.");
-      proposalLogger.error({ message: "Error fetching proposal", error: err });
+      proposalLogger.error("Error fetching proposal", { error: err });
     } finally {
       setLoading(false);
     }

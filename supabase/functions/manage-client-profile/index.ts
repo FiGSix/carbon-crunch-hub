@@ -1,79 +1,106 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { ClientProfileRequest, corsHeaders } from "../_shared/types.ts";
+import { corsHeaders, ErrorResponse } from "../_shared/types.ts";
 import { verifyUserAuth, createResponse } from "./auth.ts";
-import { processClientRequest } from "./client/client-processor.ts";
-import { supabase as supabaseClient } from "../_shared/supabase-client.ts";
+import { findExistingClient } from "./client/client-lookup.ts";
+import { createClientContact } from "./client/client-creation.ts";
+import { processClient } from "./client/client-processor.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get environment variables
+    // Configuration
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase environment variables");
-      return createResponse({ error: 'Server configuration error' }, 500);
+      return createResponse({
+        error: "Server configuration error. Missing required environment variables.",
+      }, 500);
     }
+
+    // Get auth header
+    const authHeader = req.headers.get("Authorization");
     
-    // Create Supabase client with service role key for admin privileges
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Verify user authorization
-    const authResult = await verifyUserAuth(
-      req.headers.get('Authorization'), 
-      supabaseUrl, 
-      supabaseServiceKey
-    );
+    // Verify auth and get user details
+    const authResult = await verifyUserAuth(authHeader, supabaseUrl, supabaseServiceKey);
     
     if ('error' in authResult) {
-      console.error("Auth error:", authResult.error);
-      return createResponse({ error: authResult.error }, authResult.status || 401);
+      return createResponse(authResult, authResult.status);
     }
     
-    // Parse the request body
-    let requestBody: ClientProfileRequest;
-    try {
-      requestBody = await req.json() as ClientProfileRequest;
-      console.log("Received client request:", { 
-        name: requestBody.name,
-        email: requestBody.email, 
-        existingClient: requestBody.existingClient 
+    // User is authenticated, proceed with client management
+    const { userId, role } = authResult;
+    
+    // Parse request body
+    const { name, email, phone, companyName, existingClient } = await req.json();
+    
+    if (!email) {
+      return createResponse({
+        error: "Email is required"
+      }, 400);
+    }
+
+    // Connect to Supabase with service role
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // If marked as existing, search for existing client first
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingClientInfo = await findExistingClient(normalizedEmail, supabase);
+    
+    if (existingClient && !existingClientInfo) {
+      return createResponse({
+        error: "Client marked as existing but not found in database",
+        clientEmail: normalizedEmail
+      }, 404);
+    }
+    
+    // If we found an existing client, return it
+    if (existingClientInfo) {
+      return createResponse({
+        clientId: existingClientInfo.clientId,
+        isNewProfile: false,
+        isRegisteredUser: existingClientInfo.isRegisteredUser
       });
-    } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
-      return createResponse({ error: 'Invalid request body' }, 400);
     }
     
-    // Validate input
-    if (!requestBody.email) {
-      return createResponse({ error: 'Email is required' }, 400);
+    // Create a new client contact if we don't have an existing client
+    const clientContact = await createClientContact(
+      {
+        firstName: name?.split(' ')[0] || "",
+        lastName: name?.split(' ').slice(1).join(' ') || "",
+        email: normalizedEmail,
+        phone: phone || null,
+        companyName: companyName || null
+      },
+      userId,
+      supabase
+    );
+    
+    if (!clientContact || !clientContact.id) {
+      return createResponse({
+        error: "Failed to create client contact"
+      }, 500);
     }
     
-    // Normalize email
-    requestBody.email = requestBody.email.toLowerCase().trim();
+    // Process the client and return appropriate response
+    const processResult = await processClient(clientContact, supabase);
     
-    // Process the client request
-    const result = await processClientRequest(requestBody, authResult.userId, supabase);
-    
-    if ('error' in result) {
-      console.error("Error processing client request:", result.error);
-      return createResponse({ error: result.error }, result.status || 500);
-    }
-    
-    // Return successful response
-    console.log("Successfully processed client request:", result);
-    return createResponse(result, 'isNewProfile' in result && result.isNewProfile ? 201 : 200);
+    return createResponse({
+      clientId: processResult.clientId,
+      isNewProfile: true,
+      isRegisteredUser: processResult.isRegisteredUser
+    });
     
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Unexpected error:", errorMessage);
-    return createResponse({ error: `Unexpected error: ${errorMessage}` }, 500);
+    console.error("Uncaught error in manage-client-profile:", error);
+    return createResponse({
+      error: `Unexpected error: ${error.message}`
+    }, 500);
   }
 });
