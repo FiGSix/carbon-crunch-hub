@@ -4,6 +4,7 @@ import {
   type ProposalCreationResult 
 } from "./proposals/proposalCreationService";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { logger } from "@/lib/logger";
 
 // Simplified wrapper that provides a more user-friendly interface to the component
 export async function createProposal(
@@ -13,12 +14,28 @@ export async function createProposal(
   agentId: string
 ): Promise<ProposalCreationResult> {
   try {
+    // Create a contextualized logger
+    const proposalLogger = logger.withContext({
+      component: 'ProposalService',
+      method: 'createProposal',
+      agentId
+    });
+    
     // Validate agent ID is available
     if (!agentId) {
-      console.error("Agent ID is missing when creating proposal");
+      proposalLogger.error("Missing agent ID when creating proposal");
       return {
         success: false,
         error: "Authentication error: User ID is missing. Please sign out and back in."
+      };
+    }
+
+    // Validate client information is present
+    if (!clientInfo.email || !clientInfo.name) {
+      proposalLogger.error("Missing required client information", { clientInfo });
+      return {
+        success: false,
+        error: "Client information is incomplete. Email and name are required."
       };
     }
 
@@ -30,6 +47,13 @@ export async function createProposal(
     
     // Generate proposal title
     const proposalTitle = `${projectInfo.name} - ${clientInfo.name}`;
+    
+    proposalLogger.info("Creating proposal", {
+      title: proposalTitle,
+      clientEmail: clientInfo.email,
+      existingClient: clientInfo.existingClient,
+      projectName: projectInfo.name
+    });
     
     // Call the implementation with all required parameters
     return await createProposalImpl(
@@ -44,7 +68,7 @@ export async function createProposal(
       agentCommissionPercentage
     );
   } catch (error) {
-    console.error("Error in createProposal wrapper:", error);
+    logger.error("Error in createProposal wrapper:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred"

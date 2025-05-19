@@ -126,7 +126,7 @@ export type Database = {
           archived_by: string | null
           carbon_credits: number | null
           client_contact_id: string | null
-          client_id: string
+          client_id: string | null
           client_share_percentage: number | null
           content: Json
           created_at: string
@@ -152,7 +152,7 @@ export type Database = {
           archived_by?: string | null
           carbon_credits?: number | null
           client_contact_id?: string | null
-          client_id: string
+          client_id?: string | null
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
@@ -178,7 +178,7 @@ export type Database = {
           archived_by?: string | null
           carbon_credits?: number | null
           client_contact_id?: string | null
-          client_id?: string
+          client_id?: string | null
           client_share_percentage?: number | null
           content?: Json
           created_at?: string

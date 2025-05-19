@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClientInformation } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { refreshSession } from "@/lib/supabase/auth";
+import { isValidUUID } from "@/utils/validationUtils";
 
 /**
  * Create or find a client profile using the secure edge function
@@ -36,7 +37,7 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
       contextLogger.info("Client marked as existing, attempting direct lookup first");
       const directResult = await directClientLookup(normalizedClientInfo.email);
       
-      if (directResult && directResult.clientId) {
+      if (directResult && directResult.clientId && isValidUUID(directResult.clientId)) {
         contextLogger.info("Found existing client via direct lookup", {
           clientId: directResult.clientId,
           isRegisteredUser: directResult.isRegisteredUser
@@ -75,9 +76,9 @@ export async function findOrCreateClient(clientInfo: ClientInformation): Promise
       throw new Error(`Failed to manage client profile: ${error.message}`);
     }
 
-    if (!data || !data.clientId) {
+    if (!data || !data.clientId || !isValidUUID(data.clientId)) {
       contextLogger.error("Invalid response from manage-client-profile function:", { data });
-      throw new Error("Received invalid response from server. Please try again.");
+      throw new Error("Received invalid client ID from server. Please try again.");
     }
 
     contextLogger.info("Successfully found/created client profile", { 
@@ -132,7 +133,7 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
       contextLogger.info("No matching profile found in registered users");
     }
     
-    if (existingProfile?.id) {
+    if (existingProfile?.id && isValidUUID(existingProfile.id)) {
       contextLogger.info("Found existing registered user profile", { 
         id: existingProfile.id,
         email: existingProfile.email 
@@ -156,7 +157,7 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
       contextLogger.info("No matching client found in client_contacts");
     }
     
-    if (existingContact?.id) {
+    if (existingContact?.id && isValidUUID(existingContact.id)) {
       contextLogger.info("Found existing client contact", { 
         id: existingContact.id,
         email: existingContact.email

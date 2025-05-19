@@ -5,6 +5,8 @@ import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/ty
 import { logError } from "@/lib/errors/errorLogger";
 import { findOrCreateClient } from "./clientProfileService";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
+import { isValidUUID } from "@/utils/validationUtils";
 
 // Define the return type for consistent interface
 export interface ProposalCreationResult {
@@ -55,29 +57,49 @@ export async function createProposal(
   clientShare: number,
   agentCommission: number
 ): Promise<ProposalCreationResult> {
+  // Create a contextualized logger
+  const proposalLogger = logger.withContext({
+    component: 'ProposalCreationService', 
+    method: 'createProposal',
+    agentId
+  });
+  
   try {
+    // Validate agentId is a valid UUID
+    if (!isValidUUID(agentId)) {
+      proposalLogger.error("Invalid agent ID format", { agentId });
+      return { 
+        success: false, 
+        error: "Authentication error: Invalid agent ID format." 
+      };
+    }
+    
     // Step 1: Find or create client profile
+    proposalLogger.info("Finding or creating client profile", { 
+      clientEmail: clientInfo.email,
+      existingClient: clientInfo.existingClient
+    });
+    
     const clientResult = await findOrCreateClient(clientInfo);
     
     if (!clientResult) {
-      logError(
-        "ProposalCreation", 
-        "Failed to create or find client profile", 
-        JSON.stringify(clientInfo), 
-        "CLIENT_PROFILE_ERROR"
-      );
+      proposalLogger.error("Failed to create or find client profile", { clientInfo });
       return { 
         success: false, 
         error: "Failed to create or find client profile" 
       };
     }
 
+    proposalLogger.info("Client profile found/created", { 
+      clientId: clientResult.clientId,
+      isRegisteredUser: clientResult.isRegisteredUser
+    });
+
     // Step 2: Prepare proposal data with properly converted JSON
-    // Define the structure explicitly including all possible fields
+    // Define the structure explicitly without optional fields initially
     const proposalData: {
       title: string;
       agent_id: string;
-      client_id: string;
       eligibility_criteria: any;
       project_info: any;
       annual_energy: number;
@@ -86,11 +108,11 @@ export async function createProposal(
       agent_commission_percentage: number;
       content: any;
       status: string;
-      client_contact_id?: string; // Make this property optional
+      client_id?: string | null; // Optional now that we changed the DB schema
+      client_contact_id?: string | null; // Optional
     } = {
       title,
       agent_id: agentId,
-      client_id: clientResult.clientId, // Use client_id for registered users
       eligibility_criteria: convertToSupabaseJson(eligibilityCriteria),
       project_info: convertToSupabaseJson(projectInfo),
       annual_energy: annualEnergy,
@@ -112,10 +134,39 @@ export async function createProposal(
       status: 'draft' // Default status for new proposals
     };
 
-    // If the client is not a registered user, set the client_contact_id
-    if (!clientResult.isRegisteredUser) {
-      proposalData.client_contact_id = clientResult.clientId;
+    // Set the appropriate client reference based on client type
+    if (clientResult.isRegisteredUser) {
+      // For registered users, set client_id to the user profile ID
+      if (isValidUUID(clientResult.clientId)) {
+        proposalData.client_id = clientResult.clientId;
+        proposalData.client_contact_id = null; // Ensure client_contact_id is null
+      } else {
+        proposalLogger.error("Invalid client ID for registered user", { clientId: clientResult.clientId });
+        return {
+          success: false,
+          error: "Invalid client ID format for registered user"
+        };
+      }
+    } else {
+      // For non-registered clients, set client_contact_id to the client contact ID
+      if (isValidUUID(clientResult.clientId)) {
+        proposalData.client_contact_id = clientResult.clientId;
+        proposalData.client_id = null; // Explicitly set client_id to null
+      } else {
+        proposalLogger.error("Invalid client contact ID", { clientContactId: clientResult.clientId });
+        return {
+          success: false,
+          error: "Invalid client contact ID format"
+        };
+      }
     }
+
+    proposalLogger.info("Prepared proposal data", {
+      title: proposalData.title,
+      clientId: proposalData.client_id,
+      clientContactId: proposalData.client_contact_id,
+      isRegisteredUser: clientResult.isRegisteredUser
+    });
 
     // Step 3: Insert proposal into database
     const { data: proposal, error } = await supabase
@@ -125,32 +176,28 @@ export async function createProposal(
       .single();
     
     if (error) {
-      logError(
-        "ProposalCreation", 
-        "Failed to insert proposal", 
-        error.message, 
-        error.code
-      );
-      toast.error("Failed to create proposal. Please try again.");
+      proposalLogger.error("Failed to insert proposal", {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      
       return { 
         success: false, 
         error: error.message 
       };
     }
 
+    proposalLogger.info("Proposal created successfully", { proposalId: proposal.id });
     return { 
       success: true,
       proposalId: proposal.id
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logError(
-      "ProposalCreation", 
-      "Unexpected error creating proposal", 
-      errorMessage, 
-      "UNEXPECTED_ERROR"
-    );
-    toast.error("An unexpected error occurred. Please try again.");
+    proposalLogger.error("Unexpected error creating proposal", { error: errorMessage });
+    
     return { 
       success: false, 
       error: errorMessage 

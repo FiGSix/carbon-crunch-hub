@@ -67,6 +67,8 @@ export function ProposalSubmitForm({
         return;
       }
       
+      console.log("Creating proposal with user ID:", user.id);
+      
       // Refresh session before submitting to ensure we have valid tokens
       try {
         await refreshSession();
