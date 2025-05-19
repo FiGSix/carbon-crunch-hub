@@ -36,7 +36,7 @@ export function useProposalStatus(proposal: ProposalData | null) {
     );
     
     // For debugging permission issues
-    if (userId && (proposal.client_id || proposal.client_contact_id)) {
+    if (userId) {
       statusLogger.debug("Checking client status", { 
         userId,
         proposalClientId: proposal.client_id,

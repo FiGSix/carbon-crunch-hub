@@ -34,7 +34,7 @@ export function useProposalData(id?: string, token?: string | null) {
       proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
       
       if (invitationToken) {
-        // Validate the token and get the proposal ID and client email
+        // Validate the token and get the proposal ID, client email, and both ID types
         const { data, error: validationError } = await supabase.rpc(
           'validate_invitation_token', 
           { token: invitationToken }
@@ -50,11 +50,16 @@ export function useProposalData(id?: string, token?: string | null) {
         
         const validatedProposalId = data[0].proposal_id;
         const invitedEmail = data[0].client_email;
+        const clientId = data[0].client_id;
+        const clientContactId = data[0].client_contact_id;
         
         proposalLogger.info("Token validated", { 
           validatedProposalId, 
-          invitedEmail 
+          invitedEmail,
+          hasClientId: !!clientId,
+          hasClientContactId: !!clientContactId
         });
+        
         setClientEmail(invitedEmail);
         
         // Now fetch the proposal with the validated ID
@@ -76,7 +81,9 @@ export function useProposalData(id?: string, token?: string | null) {
         const typedProposal = transformToProposalData(proposalData);
         proposalLogger.info("Proposal fetched via token", { 
           proposalId: typedProposal.id,
-          status: typedProposal.status
+          status: typedProposal.status,
+          hasClientId: !!typedProposal.client_id,
+          hasClientContactId: !!typedProposal.client_contact_id
         });
         setProposal(typedProposal);
       } else if (proposalId) {

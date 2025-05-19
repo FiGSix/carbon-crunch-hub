@@ -271,6 +271,8 @@ export type Database = {
         Returns: {
           proposal_id: string
           client_email: string
+          client_id: string
+          client_contact_id: string
         }[]
       }
     }

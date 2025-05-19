@@ -24,6 +24,7 @@ export function transformToProposalData(record: any): ProposalData {
     status: record.status,
     content: record.content as any, // The content JSON is already typed correctly
     client_id: record.client_id,
+    client_contact_id: record.client_contact_id, // Add this missing property
     agent_id: record.agent_id,
     created_at: record.created_at,
     signed_at: record.signed_at,
