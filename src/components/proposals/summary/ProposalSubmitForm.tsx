@@ -1,13 +1,12 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { createProposal } from "@/services/proposalService";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { refreshSession } from "@/lib/supabase/auth";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { Loader2 } from "lucide-react";
 
 interface ProposalSubmitFormProps {
   eligibility: EligibilityCriteria;
@@ -15,11 +14,11 @@ interface ProposalSubmitFormProps {
   projectInfo: ProjectInformation;
   nextStep: () => void;
   prevStep: () => void;
-  selectedClientId?: string | null;
+  selectedClientId?: string | null; // Added selectedClientId prop
 }
 
 export function ProposalSubmitForm({ 
-  eligibility,
+  eligibility, 
   clientInfo, 
   projectInfo, 
   nextStep, 
@@ -27,104 +26,53 @@ export function ProposalSubmitForm({
   selectedClientId
 }: ProposalSubmitFormProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmitProposal = async () => {
-    // Reset error state
-    setErrorMessage(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user?.id) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create a proposal",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // Perform validation before submission
-      if (!clientInfo.email) {
-        setErrorMessage("Client email is required.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (!clientInfo.name) {
-        setErrorMessage("Client name is required.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (!projectInfo.name) {
-        setErrorMessage("Project name is required.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (!projectInfo.size) {
-        setErrorMessage("Project size is required.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Check if user is authenticated
-      if (!user || !user.id) {
-        setErrorMessage("You must be signed in to create a proposal. Please sign in and try again.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      console.log("Creating proposal with user ID:", user.id);
-      console.log("Selected client ID:", selectedClientId || "None");
-      
-      // Refresh session before submitting to ensure we have valid tokens
-      try {
-        await refreshSession();
-      } catch (sessionError) {
-        console.error("Failed to refresh session:", sessionError);
-        // Continue anyway, the createProposal function will handle auth errors
-      }
-      
-      // Submit the proposal using our service with explicit user ID and selectedClientId
       const result = await createProposal(
         eligibility,
         clientInfo,
         projectInfo,
         user.id,
-        selectedClientId || undefined
+        selectedClientId || undefined // Pass the selectedClientId if it exists
       );
       
       if (result.success) {
         toast({
           title: "Proposal Created",
-          description: "Your proposal has been successfully created.",
-          variant: "default",
+          description: "Your proposal has been successfully saved.",
         });
-        nextStep(); // Navigate to the next step or proposals list
+        
+        // Move to next step, which will navigate to the proposals list
+        nextStep();
       } else {
-        // Check for specific error types and provide helpful messages
-        let displayError = result.error || "Failed to create proposal. Please try again.";
-        
-        if (result.error?.includes("foreign key constraint")) {
-          displayError = "Invalid client reference. This client may need to be properly registered first.";
-        } else if (result.error?.includes("infinite recursion")) {
-          displayError = "Database permission error detected. Please try again.";
-        } else if (result.error?.includes("client profile")) {
-          displayError = "Unable to create client profile. Please check your connection and try again.";
-        } else if (result.error?.includes("logged in")) {
-          displayError = "Your session has expired. Please sign in again to continue.";
-        } else if (result.error?.includes("invalid input syntax for type uuid")) {
-          displayError = "Authentication error. Please sign out and sign back in to continue.";
-        }
-        
-        setErrorMessage(displayError);
         toast({
           title: "Error",
-          description: displayError,
+          description: result.error || "Failed to create proposal.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Error submitting proposal:", error);
-      setErrorMessage("An unexpected error occurred. Please try again or contact support.");
+      console.error("Error in proposal submission:", error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again or contact support.",
+        title: "Unexpected Error",
+        description: "Something went wrong while creating your proposal.",
         variant: "destructive",
       });
     } finally {
@@ -133,43 +81,30 @@ export function ProposalSubmitForm({
   };
 
   return (
-    <div className="space-y-4 w-full">
-      {errorMessage && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {errorMessage}
-            {errorMessage.includes("Database permission error") && (
-              <p className="mt-2 text-sm">
-                This was a known issue that has been fixed. Please try submitting again.
-              </p>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="flex justify-between border-t pt-6">
-        <Button 
-          variant="outline" 
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex justify-between w-full">
+        <Button
+          type="button"
+          variant="outline"
           onClick={prevStep}
-          className="retro-button"
           disabled={isSubmitting}
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+          Previous
         </Button>
         <Button 
-          onClick={handleSubmitProposal}
+          type="submit" 
           disabled={isSubmitting}
-          className="retro-button"
         >
           {isSubmitting ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Proposal...</>
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating Proposal...
+            </>
           ) : (
-            <>Generate Proposal <ArrowRight className="ml-2 h-4 w-4" /></>
+            "Create Proposal"
           )}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

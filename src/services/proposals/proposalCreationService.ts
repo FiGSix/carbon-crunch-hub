@@ -1,48 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
-import { ProposalData } from "./types";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
-import { logError } from "@/lib/errors/errorLogger";
 import { findOrCreateClient } from "./clientProfileService";
-import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { isValidUUID } from "@/utils/validationUtils";
+import { buildProposalData } from "./utils/proposalBuilder";
+import { validateClientId } from "./utils/dataTransformers";
 
 // Define the return type for consistent interface
 export interface ProposalCreationResult {
   success: boolean;
   proposalId?: string;
   error?: string;
-}
-
-// Helper function to convert complex TypeScript objects to Supabase-compatible JSON
-function convertToSupabaseJson(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return null;
-  }
-  
-  // Handle arrays
-  if (Array.isArray(obj)) {
-    return obj.map(item => convertToSupabaseJson(item));
-  }
-  
-  // Handle Date objects
-  if (obj instanceof Date) {
-    return obj.toISOString();
-  }
-  
-  // Handle objects (but not primitive wrappers)
-  if (typeof obj === 'object' && Object.getPrototypeOf(obj) === Object.prototype) {
-    const result: Record<string, any> = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        result[key] = convertToSupabaseJson(obj[key]);
-      }
-    }
-    return result;
-  }
-  
-  // Return primitive values and functions as is
-  return obj;
 }
 
 export async function createProposal(
@@ -122,77 +90,40 @@ export async function createProposal(
       });
     }
 
-    // Step 2: Prepare proposal data with properly converted JSON
-    // Define the structure explicitly without optional fields initially
-    const proposalData: {
-      title: string;
-      agent_id: string;
-      eligibility_criteria: any;
-      project_info: any;
-      annual_energy: number;
-      carbon_credits: number;
-      client_share_percentage: number;
-      agent_commission_percentage: number;
-      content: any;
-      status: string;
-      client_id?: string | null; // Optional now that we changed the DB schema
-      client_contact_id?: string | null; // Optional
-    } = {
+    // Step 2: Build the proposal data
+    const proposalData = buildProposalData(
       title,
-      agent_id: agentId,
-      eligibility_criteria: convertToSupabaseJson(eligibilityCriteria),
-      project_info: convertToSupabaseJson(projectInfo),
-      annual_energy: annualEnergy,
-      carbon_credits: carbonCredits,
-      client_share_percentage: clientShare,
-      agent_commission_percentage: agentCommission,
-      content: convertToSupabaseJson({
-        clientInfo,
-        projectInfo,
-        revenue: {
-          // Sample revenue calculation values
-          yearOne: carbonCredits * 50,
-          yearTwo: carbonCredits * 52,
-          yearThree: carbonCredits * 54,
-          yearFour: carbonCredits * 56,
-          yearFive: carbonCredits * 58,
-        }
-      }),
-      status: 'draft' // Default status for new proposals
-    };
+      agentId,
+      eligibilityCriteria,
+      projectInfo,
+      clientInfo,
+      annualEnergy,
+      carbonCredits,
+      clientShare,
+      agentCommission,
+      selectedClientId,
+      clientResult
+    );
 
-    // Set the appropriate client reference based on client type
-    if (clientResult.isRegisteredUser) {
-      // For registered users, set client_id to the user profile ID
-      if (isValidUUID(clientResult.clientId)) {
-        proposalData.client_id = clientResult.clientId;
-        proposalData.client_contact_id = null; // Ensure client_contact_id is null
-      } else {
-        proposalLogger.error("Invalid client ID for registered user", { clientId: clientResult.clientId });
-        return {
-          success: false,
-          error: "Invalid client ID format for registered user"
-        };
-      }
-    } else {
-      // For non-registered clients, set client_contact_id to the client contact ID
-      if (isValidUUID(clientResult.clientId)) {
-        proposalData.client_contact_id = clientResult.clientId;
-        proposalData.client_id = null; // Explicitly set client_id to null
-      } else {
-        proposalLogger.error("Invalid client contact ID", { clientContactId: clientResult.clientId });
-        return {
-          success: false,
-          error: "Invalid client contact ID format"
-        };
-      }
+    // Client validation before insert
+    const clientValidation = validateClientId(
+      proposalData.client_id, 
+      proposalData.client_contact_id,
+      proposalLogger
+    );
+
+    if (!clientValidation.isValid) {
+      proposalLogger.error("Client validation failed", { error: clientValidation.error });
+      return {
+        success: false,
+        error: clientValidation.error
+      };
     }
 
     proposalLogger.info("Prepared proposal data", {
       title: proposalData.title,
       clientId: proposalData.client_id,
-      clientContactId: proposalData.client_contact_id,
-      isRegisteredUser: clientResult.isRegisteredUser
+      clientContactId: proposalData.client_contact_id
     });
 
     // Step 3: Insert proposal into database

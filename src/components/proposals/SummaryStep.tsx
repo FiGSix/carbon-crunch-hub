@@ -21,6 +21,7 @@ interface SummaryStepProps {
   projectInfo: ProjectInformation;
   nextStep: () => void;
   prevStep: () => void;
+  selectedClientId?: string | null; // Added selectedClientId prop
 }
 
 export function SummaryStep({ 
@@ -28,7 +29,8 @@ export function SummaryStep({
   clientInfo, 
   projectInfo, 
   nextStep, 
-  prevStep 
+  prevStep,
+  selectedClientId
 }: SummaryStepProps) {
   return (
     <Card className="retro-card">
@@ -53,6 +55,7 @@ export function SummaryStep({
           projectInfo={projectInfo}
           nextStep={nextStep}
           prevStep={prevStep}
+          selectedClientId={selectedClientId}
         />
       </CardFooter>
     </Card>
