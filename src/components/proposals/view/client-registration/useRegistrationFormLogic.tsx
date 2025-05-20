@@ -9,7 +9,8 @@ import { useFormValidation } from './hooks/useFormValidation';
 export function useRegistrationFormLogic(
   proposalId: string,
   clientEmail: string,
-  onComplete: () => void
+  onComplete: () => void,
+  onError?: (errorMessage: string) => void
 ) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -66,6 +67,9 @@ export function useRegistrationFormLogic(
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      if (onError) {
+        onError(validationError);
+      }
       return;
     }
 
@@ -125,15 +129,23 @@ export function useRegistrationFormLogic(
       });
       
       // Handle common errors
+      let errorMessage: string;
       if (error.message.includes("User already registered")) {
-        setError("An account with this email already exists. Please sign in instead.");
+        errorMessage = "An account with this email already exists. Please sign in instead.";
         toast({
           title: "Account exists",
           description: "This email is already registered. Please use the login option instead.",
           variant: "destructive"
         });
       } else {
-        setError(error.message || "Failed to create account. Please try again.");
+        errorMessage = error.message || "Failed to create account. Please try again.";
+      }
+      
+      setError(errorMessage);
+      
+      // Call the onError callback if provided
+      if (onError) {
+        onError(errorMessage);
       }
     } finally {
       setLoading(false);

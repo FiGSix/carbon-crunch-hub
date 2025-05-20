@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientRegistrationForm } from './ClientRegistrationForm';
 import { ClientLoginForm } from './ClientLoginForm';
 import { useAuth } from "@/contexts/auth";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
+import { AuthTabSwitcher } from './auth/AuthTabSwitcher';
+import { AuthErrorDisplay } from './auth/AuthErrorDisplay';
 
 interface ClientAuthWrapperProps {
   proposalId: string;
@@ -70,38 +70,34 @@ export function ClientAuthWrapper({
     setError(errorMessage);
   };
 
+  // Components for each tab
+  const registrationForm = (
+    <ClientRegistrationForm 
+      proposalId={proposalId} 
+      clientEmail={clientEmail} 
+      onComplete={handleAuthComplete}
+      onError={handleAuthError}
+    />
+  );
+  
+  const loginForm = (
+    <ClientLoginForm 
+      clientEmail={clientEmail} 
+      onComplete={handleAuthComplete}
+      onError={handleAuthError}
+    />
+  );
+
   return (
     <div className="max-w-md mx-auto my-8">
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Authentication Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <AuthErrorDisplay error={error} />
       
-      <Tabs defaultValue="register" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="register">Create Account</TabsTrigger>
-          <TabsTrigger value="login">Sign In</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="register">
-          <ClientRegistrationForm 
-            proposalId={proposalId} 
-            clientEmail={clientEmail} 
-            onComplete={handleAuthComplete}
-            onError={handleAuthError}
-          />
-        </TabsContent>
-        
-        <TabsContent value="login">
-          <ClientLoginForm 
-            clientEmail={clientEmail} 
-            onComplete={handleAuthComplete}
-            onError={handleAuthError}
-          />
-        </TabsContent>
-      </Tabs>
+      <AuthTabSwitcher
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        registerContent={registrationForm}
+        loginContent={loginForm}
+      />
     </div>
   );
 }

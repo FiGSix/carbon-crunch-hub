@@ -7,7 +7,11 @@ import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { logger } from "@/lib/logger";
 import { useFormValidation } from '../client-registration/hooks/useFormValidation';
 
-export function useLoginFormLogic(clientEmail: string, onComplete: () => void) {
+export function useLoginFormLogic(
+  clientEmail: string, 
+  onComplete: () => void, 
+  onError?: (errorMessage: string) => void
+) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -80,12 +84,16 @@ export function useLoginFormLogic(clientEmail: string, onComplete: () => void) {
         email: clientEmail
       });
       
-      handleError(
-        error, 
-        error.message?.includes("Invalid login credentials")
-          ? "Invalid email or password. Please try again."
-          : "Failed to log in. Please try again."
-      );
+      const errorMessage = error.message?.includes("Invalid login credentials")
+        ? "Invalid email or password. Please try again."
+        : "Failed to log in. Please try again.";
+      
+      handleError(error, errorMessage);
+      
+      // Call the onError callback if provided
+      if (onError) {
+        onError(errorMessage);
+      }
       
       toast({
         title: "Login failed",
