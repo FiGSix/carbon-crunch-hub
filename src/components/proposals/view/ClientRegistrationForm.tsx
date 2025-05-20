@@ -72,14 +72,29 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
         throw signUpError;
       }
 
-      // Once registered, update the client_id in the proposal
+      // Once registered, update the proposal's client_id
       if (data?.user) {
         registrationLogger.info("User registered successfully, updating proposal", {
           userId: data.user.id,
           proposalId
         });
         
-        // First, check if this email exists as a client_contact
+        // First, fetch the current state of the proposal to check both client IDs
+        const { data: proposalData, error: proposalFetchError } = await supabase
+          .from('proposals')
+          .select('client_id, client_contact_id')
+          .eq('id', proposalId)
+          .single();
+          
+        if (proposalFetchError) {
+          registrationLogger.error("Error fetching proposal before update", { 
+            error: proposalFetchError,
+            proposalId
+          });
+          throw proposalFetchError;
+        }
+        
+        // Check if this email exists as a client_contact
         const { data: clientContact, error: contactLookupError } = await supabase
           .from('client_contacts')
           .select('id')
@@ -93,25 +108,30 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
           });
         }
         
-        // Update strategy: We need to handle both cases
-        // 1. If the proposal was created with a client_contact_id
-        // 2. If the proposal has a null client_id that needs to be set
+        // Log the current state for debugging
+        registrationLogger.info("Current proposal state before update", {
+          proposalId,
+          currentClientId: proposalData.client_id,
+          currentClientContactId: proposalData.client_contact_id,
+          foundClientContactId: clientContact?.id
+        });
+        
+        // Build the update data based on the current state
         const updateData: { client_id: string, client_contact_id?: null } = {
           client_id: data.user.id
         };
         
-        // If a client contact was found, also set client_contact_id to null
+        // If this proposal was using client_contact_id, ensure we clear it
         // to avoid conflicting identity references
-        if (clientContact?.id) {
+        if (proposalData.client_contact_id || clientContact?.id) {
           updateData.client_contact_id = null;
-          
-          registrationLogger.info("Found existing client contact, linking to new user account", {
-            contactId: clientContact.id,
-            userId: data.user.id
+          registrationLogger.info("Clearing client_contact_id during registration", {
+            previousContactId: proposalData.client_contact_id,
+            foundContactId: clientContact?.id
           });
         }
         
-        // Try to update the proposal with the new client ID
+        // Update the proposal with the new client ID
         const { error: updateError } = await supabase
           .from('proposals')
           .update(updateData)
@@ -121,7 +141,8 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
           registrationLogger.error("Error linking proposal to new client account", { 
             error: updateError,
             userId: data.user.id,
-            proposalId
+            proposalId,
+            updateData
           });
           
           toast({
@@ -132,7 +153,8 @@ export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: 
         } else {
           registrationLogger.info("Successfully linked proposal to new client account", {
             userId: data.user.id,
-            proposalId
+            proposalId,
+            updateData
           });
           
           toast({

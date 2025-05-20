@@ -10,6 +10,7 @@ import { signIn } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useAuth } from "@/contexts/auth";
+import { logger } from "@/lib/logger";
 
 interface ClientLoginFormProps {
   clientEmail: string;
@@ -26,6 +27,12 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
     context: "client-login",
     toastOnError: false
   });
+  
+  // Create a contextualized logger
+  const loginLogger = logger.withContext({
+    component: 'ClientLoginForm',
+    feature: 'client-auth'
+  });
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +40,24 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
     clearError();
 
     try {
+      loginLogger.info("Attempting client login", { email: clientEmail });
+      
       const { data, error: signInError } = await signIn(clientEmail, password);
 
       if (signInError) {
+        loginLogger.error("Login failed", { 
+          error: signInError.message,
+          email: clientEmail
+        });
         throw signInError;
       }
 
       if (data?.session) {
+        loginLogger.info("Login successful, refreshing user data", { 
+          userId: data.session.user.id,
+          email: clientEmail 
+        });
+        
         // Refresh user data after login
         await refreshUser();
         
@@ -54,6 +72,11 @@ export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProp
         throw new Error("Login successful but no session was created");
       }
     } catch (error: any) {
+      loginLogger.error("Login error", { 
+        errorMessage: error.message,
+        email: clientEmail
+      });
+      
       handleError(
         error, 
         error.message?.includes("Invalid login credentials")
