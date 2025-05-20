@@ -33,6 +33,20 @@ export function useProposalData(id?: string, token?: string | null) {
       setError(null);
       proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
       
+      // Create a new Supabase client for this request with the token in headers if available
+      const clientOptions = invitationToken ? {
+        global: {
+          headers: {
+            'X-Invitation-Token': invitationToken
+          }
+        }
+      } : undefined;
+      
+      // Set the invitation token as a header to be used by RLS policies
+      if (invitationToken) {
+        await supabase.rpc('set_request_invitation_token', { token: invitationToken });
+      }
+      
       if (invitationToken) {
         // Validate the token and get the proposal ID, client email, and both ID types
         const { data, error: validationError } = await supabase.rpc(

@@ -54,7 +54,7 @@ export function useViewProposal(id?: string, token?: string | null) {
   }, [token, proposal, loading, markInvitationViewed, viewProposalLogger]);
   
   // Get proposal status data
-  const { canArchive, isReviewLater, isClient, canTakeAction } = useProposalStatus(proposal);
+  const { canArchive, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
 
   return {
     proposal,
@@ -71,6 +71,7 @@ export function useViewProposal(id?: string, token?: string | null) {
     canArchive,
     isReviewLater,
     canTakeAction,
-    isClient
+    isClient,
+    isAuthenticated
   };
 }

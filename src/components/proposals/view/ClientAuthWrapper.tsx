@@ -11,14 +11,14 @@ interface ClientAuthWrapperProps {
   proposalId: string;
   clientEmail: string;
   onAuthComplete: () => void;
-  requireAuth?: boolean; // New prop to determine if auth is required
+  requireAuth?: boolean; // Whether auth is required or optional viewing is allowed
 }
 
 export function ClientAuthWrapper({ 
   proposalId, 
   clientEmail, 
   onAuthComplete,
-  requireAuth = false // Default to false - view without auth
+  requireAuth = false
 }: ClientAuthWrapperProps) {
   const [activeTab, setActiveTab] = useState<string>("register");
   const { user } = useAuth();
@@ -30,29 +30,24 @@ export function ClientAuthWrapper({
     feature: 'client-auth'
   });
   
-  // If user is already authenticated, complete the process
+  // Effect to handle auth completion
   useEffect(() => {
     if (user) {
-      authLogger.info("User already authenticated, completing auth flow", {
+      // User is authenticated, complete the auth process
+      authLogger.info("User authenticated, completing auth flow", {
         userId: user.id,
         proposalId
       });
       onAuthComplete();
     } else if (!requireAuth) {
-      // If auth is not required and no user, we still complete the auth flow
-      // This allows viewing the proposal without authentication
-      authLogger.info("Auth not required for viewing, proceeding without login", {
-        proposalId,
-        email: clientEmail
+      // Auth is not required and user is not logged in, still complete the flow
+      // This handles the token-based view-only access case
+      authLogger.info("Auth not required, proceeding with token-based access", {
+        proposalId
       });
       onAuthComplete();
     }
-  }, [user, onAuthComplete, proposalId, requireAuth, authLogger, clientEmail]);
-  
-  // If auth is not required and user is not logged in, we don't need to show the auth form
-  if (!requireAuth && !user) {
-    return null;
-  }
+  }, [user, requireAuth, onAuthComplete, proposalId, authLogger]);
   
   // Handle authentication completion
   const handleAuthComplete = () => {
@@ -94,14 +89,16 @@ export function ClientAuthWrapper({
           <ClientRegistrationForm 
             proposalId={proposalId} 
             clientEmail={clientEmail} 
-            onComplete={handleAuthComplete} 
+            onComplete={handleAuthComplete}
+            onError={handleAuthError}
           />
         </TabsContent>
         
         <TabsContent value="login">
           <ClientLoginForm 
             clientEmail={clientEmail} 
-            onComplete={handleAuthComplete} 
+            onComplete={handleAuthComplete}
+            onError={handleAuthError}
           />
         </TabsContent>
       </Tabs>

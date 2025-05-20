@@ -22,7 +22,8 @@ export function useProposalStatus(proposal: ProposalData | null) {
         canArchive: false,
         isReviewLater: false,
         isClient: false,
-        canTakeAction: false
+        canTakeAction: false,
+        isAuthenticated: !!user
       };
     }
 
@@ -62,7 +63,8 @@ export function useProposalStatus(proposal: ProposalData | null) {
       canArchive,
       isReviewLater,
       isClient,
-      canTakeAction
+      canTakeAction,
+      isAuthenticated: !!user
     };
   }, [user, proposal, statusLogger]);
 }

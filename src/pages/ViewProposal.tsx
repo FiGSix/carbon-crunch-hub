@@ -18,7 +18,7 @@ const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   // Create a contextualized logger
@@ -41,44 +41,32 @@ const ViewProposal = () => {
     canArchive,
     isReviewLater,
     canTakeAction,
-    isClient
+    isClient,
+    isAuthenticated
   } = useViewProposal(id, token);
   
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   
-  // Update to determine when auth is required
+  // Determine when to show the auth form
   useEffect(() => {
-    if (!loading) {
-      // Auth is required if:
-      // 1. User wants to take actions on proposal (approve/reject) - needs to be logged in
-      // 2. User has clicked "Sign in" button
-      setAuthRequired(showAuthForm);
-      
-      // Display auth form when token exists, client email is available, no logged in user,
-      // and either auth is required or user clicked sign in
-      if (token && clientEmail && !user && (authRequired || showAuthForm)) {
-        viewLogger.info("Showing authentication form for client", {
-          clientEmail,
-          hasToken: !!token,
-          authRequired
-        });
-        setShowAuthForm(true);
-      } else {
-        setShowAuthForm(false);
-      }
+    if (!loading && proposal && clientEmail && token && !user && showAuthForm) {
+      viewLogger.info("Showing authentication form for client", {
+        hasClientEmail: !!clientEmail,
+        hasToken: !!token,
+        authRequired
+      });
     }
-  }, [loading, token, clientEmail, user, authRequired, showAuthForm, viewLogger]);
+  }, [loading, proposal, token, clientEmail, user, authRequired, showAuthForm, viewLogger]);
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
     viewLogger.info("Authentication completed, refreshing view", { action: 'authComplete' });
     setShowAuthForm(false);
-    // Force refresh the component to get latest auth state
-    window.location.reload();
+    // No need to force reload anymore, just update the state
   };
   
-  // New handler for when user wants to sign in (to take actions)
+  // Handler for when user wants to sign in (to take actions)
   const handleSignInClick = () => {
     viewLogger.info("User clicked sign in to take actions", { proposalId: proposal?.id });
     setAuthRequired(true);
@@ -167,7 +155,7 @@ const ViewProposal = () => {
     userLoggedIn: !!user
   });
   
-  // Determine if we should show the sign-in prompt
+  // Determine if we should show the sign-in prompt - token access but not logged in
   const showSignInPrompt = !user && token && clientEmail && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
   
   return (
