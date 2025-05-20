@@ -56,15 +56,40 @@ export function useViewProposal(id?: string, token?: string | null) {
   // Get proposal status data
   const { canArchive, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
 
+  // Create wrapper functions that convert boolean returns to void
+  const handleApproveWrapper = async (): Promise<void> => {
+    if (proposal?.id) {
+      await handleApprove(proposal.id);
+    }
+  };
+
+  const handleRejectWrapper = async (): Promise<void> => {
+    if (proposal?.id) {
+      await handleReject(proposal.id);
+    }
+  };
+
+  const handleArchiveWrapper = async (): Promise<void> => {
+    if (proposal?.id && user?.id) {
+      await handleArchive(proposal.id, user.id);
+    }
+  };
+
+  const handleReviewLaterWrapper = async (): Promise<void> => {
+    if (proposal?.id) {
+      await handleReviewLater(proposal.id, !!proposal.review_later_until);
+    }
+  };
+
   return {
     proposal,
     loading,
     error,
     clientEmail,
-    handleApprove: proposal?.id ? () => handleApprove(proposal.id) : () => Promise.resolve(false),
-    handleReject: proposal?.id ? () => handleReject(proposal.id) : () => Promise.resolve(false),
-    handleArchive: proposal?.id && user?.id ? () => handleArchive(proposal.id, user.id) : () => Promise.resolve(false),
-    handleReviewLater: proposal?.id ? () => handleReviewLater(proposal.id, !!proposal.review_later_until) : () => Promise.resolve(false),
+    handleApprove: handleApproveWrapper,
+    handleReject: handleRejectWrapper,
+    handleArchive: handleArchiveWrapper,
+    handleReviewLater: handleReviewLaterWrapper,
     archiveDialogOpen,
     setArchiveDialogOpen,
     archiveLoading,

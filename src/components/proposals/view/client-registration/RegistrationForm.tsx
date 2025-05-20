@@ -11,9 +11,10 @@ interface RegistrationFormProps {
   proposalId: string;
   clientEmail: string;
   onComplete: () => void;
+  onError?: (errorMessage: string) => void; // Added optional onError prop
 }
 
-export function RegistrationForm({ proposalId, clientEmail, onComplete }: RegistrationFormProps) {
+export function RegistrationForm({ proposalId, clientEmail, onComplete, onError }: RegistrationFormProps) {
   const {
     firstName,
     lastName,
@@ -23,7 +24,7 @@ export function RegistrationForm({ proposalId, clientEmail, onComplete }: Regist
     error,
     handleChange,
     handleSignUp
-  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete);
+  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError); // Pass onError to the hook
 
   return (
     <Card className="w-full max-w-md mx-auto">

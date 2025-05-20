@@ -11,16 +11,17 @@ import { useLoginFormLogic } from './useLoginFormLogic';
 interface LoginFormProps {
   clientEmail: string;
   onComplete: () => void;
+  onError?: (errorMessage: string) => void; // Added optional onError prop
 }
 
-export function LoginForm({ clientEmail, onComplete }: LoginFormProps) {
+export function LoginForm({ clientEmail, onComplete, onError }: LoginFormProps) {
   const {
     password,
     loading,
     error,
     setPassword,
     handleSignIn
-  } = useLoginFormLogic(clientEmail, onComplete);
+  } = useLoginFormLogic(clientEmail, onComplete, onError); // Pass onError to the hook
 
   return (
     <Card className="w-full max-w-md mx-auto">
