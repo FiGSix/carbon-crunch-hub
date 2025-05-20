@@ -1,11 +1,10 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RegisterPersonalInfo } from "@/components/auth/RegisterPersonalInfo";
 import { RegisterCredentials } from "@/components/auth/RegisterCredentials";
 import { RegisterSubmitButton } from "@/components/auth/RegisterSubmitButton";
-import { logger } from "@/lib/logger";
 import { useRegistrationFormLogic } from './useRegistrationFormLogic';
 
 interface RegistrationFormProps {
@@ -25,12 +24,6 @@ export function RegistrationForm({ proposalId, clientEmail, onComplete }: Regist
     handleChange,
     handleSignUp
   } = useRegistrationFormLogic(proposalId, clientEmail, onComplete);
-
-  // Create a contextualized logger
-  const registrationLogger = logger.withContext({
-    component: 'RegistrationForm',
-    feature: 'client-auth'
-  });
 
   return (
     <Card className="w-full max-w-md mx-auto">

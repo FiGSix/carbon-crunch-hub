@@ -5,12 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { logger } from "@/lib/logger";
+import { useFormValidation } from '../client-registration/hooks/useFormValidation';
 
 export function useLoginFormLogic(clientEmail: string, onComplete: () => void) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { refreshUser } = useAuth();
+  const { validateRequired } = useFormValidation();
   
   const { error, handleError, clearError } = useErrorHandler({
     context: "client-login",
@@ -23,8 +25,20 @@ export function useLoginFormLogic(clientEmail: string, onComplete: () => void) {
     feature: 'client-auth'
   });
 
+  const validateForm = (): boolean => {
+    const passwordError = validateRequired(password, 'Password');
+    if (passwordError) {
+      handleError(new Error(passwordError), passwordError);
+      return false;
+    }
+    return true;
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     setLoading(true);
     clearError();
 

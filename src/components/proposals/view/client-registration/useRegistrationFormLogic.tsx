@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { useProposalUpdate } from './hooks/useProposalUpdate';
+import { useFormValidation } from './hooks/useFormValidation';
 
 export function useRegistrationFormLogic(
   proposalId: string,
@@ -16,6 +18,8 @@ export function useRegistrationFormLogic(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { updateProposalClientId } = useProposalUpdate();
+  const { validatePasswords, validateRequired } = useFormValidation();
   
   // Create a contextualized logger
   const registrationLogger = logger.withContext({
@@ -42,16 +46,26 @@ export function useRegistrationFormLogic(
     }
   };
 
+  const validateForm = (): string | null => {
+    const firstNameError = validateRequired(firstName, 'First name');
+    if (firstNameError) return firstNameError;
+    
+    const lastNameError = validateRequired(lastName, 'Last name');
+    if (lastNameError) return lastNameError;
+    
+    const passwordError = validatePasswords(password, confirmPassword);
+    if (passwordError) return passwordError;
+    
+    return null;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) {
-      setError("Passwords don't match. Please try again.");
-      return;
-    }
-    
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    // Validate form inputs
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -88,84 +102,12 @@ export function useRegistrationFormLogic(
           proposalId
         });
         
-        // First, fetch the current state of the proposal to check both client IDs
-        const { data: proposalData, error: proposalFetchError } = await supabase
-          .from('proposals')
-          .select('client_id, client_contact_id')
-          .eq('id', proposalId)
-          .single();
-          
-        if (proposalFetchError) {
-          registrationLogger.error("Error fetching proposal before update", { 
-            error: proposalFetchError,
-            proposalId
-          });
-          throw proposalFetchError;
-        }
-        
-        // Check if this email exists as a client_contact
-        const { data: clientContact, error: contactLookupError } = await supabase
-          .from('client_contacts')
-          .select('id')
-          .eq('email', clientEmail.toLowerCase().trim())
-          .maybeSingle();
-          
-        if (contactLookupError && !contactLookupError.message.includes('No rows found')) {
-          registrationLogger.error("Error looking up client contact", { 
-            error: contactLookupError,
-            email: clientEmail 
-          });
-        }
-        
-        // Log the current state for debugging
-        registrationLogger.info("Current proposal state before update", {
+        const updateSuccess = await updateProposalClientId({
           proposalId,
-          currentClientId: proposalData.client_id,
-          currentClientContactId: proposalData.client_contact_id,
-          foundClientContactId: clientContact?.id
+          userId: data.user.id
         });
         
-        // Build the update data based on the current state
-        const updateData: { client_id: string, client_contact_id?: null } = {
-          client_id: data.user.id
-        };
-        
-        // If this proposal was using client_contact_id, ensure we clear it
-        // to avoid conflicting identity references
-        if (proposalData.client_contact_id || clientContact?.id) {
-          updateData.client_contact_id = null;
-          registrationLogger.info("Clearing client_contact_id during registration", {
-            previousContactId: proposalData.client_contact_id,
-            foundContactId: clientContact?.id
-          });
-        }
-        
-        // Update the proposal with the new client ID
-        const { error: updateError } = await supabase
-          .from('proposals')
-          .update(updateData)
-          .eq('id', proposalId);
-        
-        if (updateError) {
-          registrationLogger.error("Error linking proposal to new client account", { 
-            error: updateError,
-            userId: data.user.id,
-            proposalId,
-            updateData
-          });
-          
-          toast({
-            title: "Account created",
-            description: "Your account was created but there was an issue linking it to this proposal. Please contact support.",
-            variant: "default"
-          });
-        } else {
-          registrationLogger.info("Successfully linked proposal to new client account", {
-            userId: data.user.id,
-            proposalId,
-            updateData
-          });
-          
+        if (updateSuccess) {
           toast({
             title: "Registration successful!",
             description: "Your account has been created and linked to this proposal.",
