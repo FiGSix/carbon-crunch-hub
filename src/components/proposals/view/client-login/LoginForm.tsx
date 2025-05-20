@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { useLoginFormLogic } from './useLoginFormLogic';
 interface LoginFormProps {
   clientEmail: string;
   onComplete: () => void;
-  onError?: (errorMessage: string) => void; // Added optional onError prop
+  onError?: (errorMessage: string) => void;
 }
 
 export function LoginForm({ clientEmail, onComplete, onError }: LoginFormProps) {
@@ -21,7 +20,7 @@ export function LoginForm({ clientEmail, onComplete, onError }: LoginFormProps) 
     error,
     setPassword,
     handleSignIn
-  } = useLoginFormLogic(clientEmail, onComplete, onError); // Pass onError to the hook
+  } = useLoginFormLogic(clientEmail, onComplete, onError);
 
   return (
     <Card className="w-full max-w-md mx-auto">

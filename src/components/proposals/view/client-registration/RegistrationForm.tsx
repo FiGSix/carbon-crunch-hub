@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,7 +10,7 @@ interface RegistrationFormProps {
   proposalId: string;
   clientEmail: string;
   onComplete: () => void;
-  onError?: (errorMessage: string) => void; // Added optional onError prop
+  onError?: (errorMessage: string) => void;
 }
 
 export function RegistrationForm({ proposalId, clientEmail, onComplete, onError }: RegistrationFormProps) {
@@ -24,7 +23,7 @@ export function RegistrationForm({ proposalId, clientEmail, onComplete, onError 
     error,
     handleChange,
     handleSignUp
-  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError); // Pass onError to the hook
+  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError);
 
   return (
     <Card className="w-full max-w-md mx-auto">
