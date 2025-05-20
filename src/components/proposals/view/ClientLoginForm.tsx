@@ -5,8 +5,13 @@ import { LoginForm } from './client-login/LoginForm';
 interface ClientLoginFormProps {
   clientEmail: string;
   onComplete: () => void;
+  onError?: (errorMessage: string) => void; // Added optional onError prop
 }
 
-export function ClientLoginForm({ clientEmail, onComplete }: ClientLoginFormProps) {
-  return <LoginForm clientEmail={clientEmail} onComplete={onComplete} />;
+export function ClientLoginForm({ clientEmail, onComplete, onError }: ClientLoginFormProps) {
+  return <LoginForm 
+    clientEmail={clientEmail} 
+    onComplete={onComplete} 
+    onError={onError}
+  />;
 }

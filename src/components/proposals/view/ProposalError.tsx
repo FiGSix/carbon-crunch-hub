@@ -1,27 +1,17 @@
 
-import React from "react";
-import { ErrorDisplay, ErrorDisplayProps } from "@/components/ui/error-display";
+import React from 'react';
 
 interface ProposalErrorProps {
   errorMessage: string;
-  showArchiveError?: boolean;
-  onRetry?: () => void;
 }
 
-export function ProposalError({ errorMessage, showArchiveError, onRetry }: ProposalErrorProps) {
-  const errorProps: ErrorDisplayProps = {
-    title: showArchiveError ? "Archive Error" : "Proposal Error",
-    message: errorMessage,
-    severity: "error",
-    backPath: "/",
-    onRetry: onRetry,
-    className: "max-w-5xl mx-auto"
-  };
-  
+export function ProposalError({ errorMessage }: ProposalErrorProps) {
   return (
-    <div className="container px-4 py-12">
-      <ErrorDisplay {...errorProps} />
+    <div className="container max-w-5xl mx-auto px-4 py-12">
+      <div className="bg-red-50 border border-red-300 rounded-lg p-6 text-center">
+        <h2 className="text-xl font-semibold text-red-700 mb-2">Error Loading Proposal</h2>
+        <p className="text-red-600">{errorMessage}</p>
+      </div>
     </div>
   );
 }
-

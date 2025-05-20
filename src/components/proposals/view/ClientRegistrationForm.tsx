@@ -6,8 +6,14 @@ interface ClientRegistrationFormProps {
   proposalId: string;
   clientEmail: string;
   onComplete: () => void;
+  onError?: (errorMessage: string) => void; // Added optional onError prop
 }
 
-export function ClientRegistrationForm({ proposalId, clientEmail, onComplete }: ClientRegistrationFormProps) {
-  return <RegistrationForm proposalId={proposalId} clientEmail={clientEmail} onComplete={onComplete} />;
+export function ClientRegistrationForm({ proposalId, clientEmail, onComplete, onError }: ClientRegistrationFormProps) {
+  return <RegistrationForm 
+    proposalId={proposalId} 
+    clientEmail={clientEmail} 
+    onComplete={onComplete}
+    onError={onError} 
+  />;
 }

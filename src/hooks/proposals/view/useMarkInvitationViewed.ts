@@ -22,7 +22,14 @@ export function useMarkInvitationViewed() {
       
       try {
         // Set the token in the session for RLS policies
-        await supabase.rpc('set_request_invitation_token', { token });
+        const { error: rpcError } = await supabase.functions.invoke('set-invitation-token', {
+          body: { token }
+        });
+        
+        if (rpcError) {
+          invitationLogger.error("Error setting invitation token", { error: rpcError });
+          return false;
+        }
         
         // Update the invitation_viewed_at timestamp
         const { error } = await supabase
