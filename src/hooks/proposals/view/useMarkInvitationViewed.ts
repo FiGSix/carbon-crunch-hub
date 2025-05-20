@@ -1,71 +1,59 @@
 
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logger } from "@/lib/logger";
 import { ProposalData } from "@/types/proposals";
+import { logger } from "@/lib/logger";
 
 /**
- * Hook to handle marking proposal invitations as viewed
+ * Hook to mark a proposal invitation as viewed
  */
 export function useMarkInvitationViewed() {
-  // Create a contextualized logger
-  const invitationLogger = logger.withContext({
-    component: 'MarkInvitationViewed',
+  const markLogger = logger.withContext({
+    component: 'useMarkInvitationViewed',
     feature: 'proposals'
   });
 
-  const markInvitationViewed = useCallback(async (token: string | null, proposal: ProposalData) => {
-    if (token && proposal?.id && !proposal.invitation_viewed_at) {
-      invitationLogger.info("Marking invitation as viewed for proposal", {
-        proposalId: proposal.id
+  const markInvitationViewed = useCallback(async (token: string, proposal: ProposalData) => {
+    try {
+      markLogger.info("Marking invitation as viewed", { 
+        proposalId: proposal.id,
+        tokenPrefix: token.substring(0, 5) + "..."
       });
       
-      try {
-        // Set the token in the session for RLS policies
-        const { error: rpcError } = await supabase.functions.invoke('set-invitation-token', {
-          body: { token }
+      // First, set the token in the edge function context
+      await supabase.functions.invoke('set-invitation-token', {
+        body: { token }
+      });
+      
+      // Then update the proposal to mark it as viewed
+      const { error } = await supabase
+        .from('proposals')
+        .update({
+          invitation_viewed_at: new Date().toISOString()
+        })
+        .eq('id', proposal.id);
+      
+      if (error) {
+        markLogger.error("Failed to mark invitation as viewed", { 
+          error: error.message,
+          proposalId: proposal.id
         });
-        
-        if (rpcError) {
-          invitationLogger.error("Error setting invitation token", { error: rpcError });
-          return false;
-        }
-        
-        // Update the invitation_viewed_at timestamp
-        const { error } = await supabase
-          .from('proposals')
-          .update({ invitation_viewed_at: new Date().toISOString() })
-          .eq('id', proposal.id)
-          .eq('invitation_token', token);
-          
-        if (error) {
-          invitationLogger.error("Error marking invitation as viewed", { error });
-          return false;
-        }
-          
-        // Create notification for the agent that client viewed the proposal
-        if (proposal.agent_id) {
-          await supabase.functions.invoke('create-notification', {
-            body: {
-              userId: proposal.agent_id,
-              title: "Proposal Viewed",
-              message: `The client has viewed your proposal: ${proposal.title}`,
-              type: "info",
-              relatedId: proposal.id,
-              relatedType: "proposal"
-            }
-          });
-          invitationLogger.info("Agent notification sent for proposal view", { proposalId: proposal.id });
-        }
-        
-        return true;
-      } catch (error) {
-        invitationLogger.error("Error in markInvitationViewed", { error });
-        return false;
+        throw error;
       }
+      
+      markLogger.info("Successfully marked invitation as viewed", { 
+        proposalId: proposal.id 
+      });
+      
+      return true;
+    } catch (error: any) {
+      markLogger.error("Error marking invitation as viewed", {
+        error: error.message,
+        proposalId: proposal.id
+      });
+      return false;
     }
-    return false;
-  }, [invitationLogger]);
-
+  }, [markLogger]);
+  
   return { markInvitationViewed };
 }
