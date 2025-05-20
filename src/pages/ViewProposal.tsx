@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/auth";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
 import { logger } from "@/lib/logger";
 import { ProjectInformation } from "@/types/proposals";
+import { Button } from "@/components/ui/button";
+import { LogIn } from "lucide-react";
 
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,19 +45,30 @@ const ViewProposal = () => {
   } = useViewProposal(id, token);
   
   const [showAuthForm, setShowAuthForm] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
   
-  // Determine if we need to show auth form based on token and user state
+  // Update to determine when auth is required
   useEffect(() => {
-    if (!loading && token && clientEmail && !user) {
-      viewLogger.info("Showing authentication form for client", {
-        clientEmail,
-        hasToken: !!token
-      });
-      setShowAuthForm(true);
-    } else {
-      setShowAuthForm(false);
+    if (!loading) {
+      // Auth is required if:
+      // 1. User wants to take actions on proposal (approve/reject) - needs to be logged in
+      // 2. User has clicked "Sign in" button
+      setAuthRequired(showAuthForm);
+      
+      // Display auth form when token exists, client email is available, no logged in user,
+      // and either auth is required or user clicked sign in
+      if (token && clientEmail && !user && (authRequired || showAuthForm)) {
+        viewLogger.info("Showing authentication form for client", {
+          clientEmail,
+          hasToken: !!token,
+          authRequired
+        });
+        setShowAuthForm(true);
+      } else {
+        setShowAuthForm(false);
+      }
     }
-  }, [loading, token, clientEmail, user, viewLogger]);
+  }, [loading, token, clientEmail, user, authRequired, showAuthForm, viewLogger]);
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
@@ -63,6 +76,13 @@ const ViewProposal = () => {
     setShowAuthForm(false);
     // Force refresh the component to get latest auth state
     window.location.reload();
+  };
+  
+  // New handler for when user wants to sign in (to take actions)
+  const handleSignInClick = () => {
+    viewLogger.info("User clicked sign in to take actions", { proposalId: proposal?.id });
+    setAuthRequired(true);
+    setShowAuthForm(true);
   };
   
   // Log details for debugging purposes
@@ -74,10 +94,11 @@ const ViewProposal = () => {
         isClient,
         canTakeAction,
         hasClientId: !!proposal.client_id,
-        hasClientContactId: !!proposal.client_contact_id
+        hasClientContactId: !!proposal.client_contact_id,
+        userLoggedIn: !!user
       });
     }
-  }, [proposal, isClient, canTakeAction, viewLogger]);
+  }, [proposal, isClient, canTakeAction, viewLogger, user]);
   
   // Create wrapper functions that return void instead of boolean
   const handleApproveWrapper = async () => {
@@ -109,14 +130,15 @@ const ViewProposal = () => {
   if (showAuthForm && clientEmail && proposal) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
-        <h1 className="text-2xl font-bold text-center mb-6">Authenticate to View Proposal</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Authenticate to {authRequired ? 'Take Action on' : 'View'} Proposal</h1>
         <p className="text-center mb-8">
-          To view the proposal "{proposal.title}", please sign in or create an account.
+          To {authRequired ? 'take action on' : 'view'} the proposal "{proposal.title}", please sign in or create an account.
         </p>
         <ClientAuthWrapper 
           proposalId={proposal.id} 
           clientEmail={clientEmail} 
           onAuthComplete={handleAuthComplete}
+          requireAuth={authRequired}
         />
       </div>
     );
@@ -141,8 +163,12 @@ const ViewProposal = () => {
     status: proposal.status,
     isArchived: !!proposal.archived_at,
     isReviewLater,
-    canTakeAction
+    canTakeAction,
+    userLoggedIn: !!user
   });
+  
+  // Determine if we should show the sign-in prompt
+  const showSignInPrompt = !user && token && clientEmail && proposal.status === 'pending' && !proposal.archived_at && !isReviewLater;
   
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
@@ -167,6 +193,24 @@ const ViewProposal = () => {
           isReviewLater={isReviewLater}
           showActions={canTakeAction}
         />
+        
+        {/* Sign In Prompt - Show when not logged in but token access is valid */}
+        {showSignInPrompt && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-4">
+            <h3 className="text-lg font-medium text-blue-800">Want to respond to this proposal?</h3>
+            <p className="text-blue-600 mt-2">
+              Sign in or create an account to approve, reject, or save this proposal for later.
+            </p>
+            <Button 
+              onClick={handleSignInClick}
+              className="mt-4"
+              variant="outline"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign in or Register
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Archive Dialog */}

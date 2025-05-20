@@ -1,6 +1,6 @@
 
 import { useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { ProposalData } from "@/types/proposals";
 
@@ -16,7 +16,9 @@ export function useMarkInvitationViewed() {
 
   const markInvitationViewed = useCallback(async (token: string | null, proposal: ProposalData) => {
     if (token && proposal?.id && !proposal.invitation_viewed_at) {
-      invitationLogger.info({ message: "Marking invitation as viewed for proposal", proposalId: proposal.id });
+      invitationLogger.info("Marking invitation as viewed for proposal", {
+        proposalId: proposal.id
+      });
       
       try {
         // Update the invitation_viewed_at timestamp
@@ -27,7 +29,7 @@ export function useMarkInvitationViewed() {
           .eq('invitation_token', token);
           
         if (error) {
-          invitationLogger.error({ message: "Error marking invitation as viewed", error });
+          invitationLogger.error("Error marking invitation as viewed", { error });
           return false;
         }
           
@@ -43,12 +45,12 @@ export function useMarkInvitationViewed() {
               relatedType: "proposal"
             }
           });
-          invitationLogger.info({ message: "Agent notification sent for proposal view", proposalId: proposal.id });
+          invitationLogger.info("Agent notification sent for proposal view", { proposalId: proposal.id });
         }
         
         return true;
       } catch (error) {
-        invitationLogger.error({ message: "Error in markInvitationViewed", error });
+        invitationLogger.error("Error in markInvitationViewed", { error });
         return false;
       }
     }

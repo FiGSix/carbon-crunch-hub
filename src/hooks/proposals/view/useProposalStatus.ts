@@ -52,6 +52,7 @@ export function useProposalStatus(proposal: ProposalData | null) {
     const isReviewLater = !!proposal.review_later_until;
     
     // Check if client can take action on the proposal
+    // Now requires user to be logged in AND be the client
     const canTakeAction = isClient && 
       proposal.status === 'pending' && 
       !proposal.archived_at && 

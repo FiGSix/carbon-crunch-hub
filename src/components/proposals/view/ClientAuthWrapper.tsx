@@ -11,9 +11,15 @@ interface ClientAuthWrapperProps {
   proposalId: string;
   clientEmail: string;
   onAuthComplete: () => void;
+  requireAuth?: boolean; // New prop to determine if auth is required
 }
 
-export function ClientAuthWrapper({ proposalId, clientEmail, onAuthComplete }: ClientAuthWrapperProps) {
+export function ClientAuthWrapper({ 
+  proposalId, 
+  clientEmail, 
+  onAuthComplete,
+  requireAuth = false // Default to false - view without auth
+}: ClientAuthWrapperProps) {
   const [activeTab, setActiveTab] = useState<string>("register");
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +38,21 @@ export function ClientAuthWrapper({ proposalId, clientEmail, onAuthComplete }: C
         proposalId
       });
       onAuthComplete();
+    } else if (!requireAuth) {
+      // If auth is not required and no user, we still complete the auth flow
+      // This allows viewing the proposal without authentication
+      authLogger.info("Auth not required for viewing, proceeding without login", {
+        proposalId,
+        email: clientEmail
+      });
+      onAuthComplete();
     }
-  }, [user, onAuthComplete, proposalId, authLogger]);
+  }, [user, onAuthComplete, proposalId, requireAuth, authLogger, clientEmail]);
+  
+  // If auth is not required and user is not logged in, we don't need to show the auth form
+  if (!requireAuth && !user) {
+    return null;
+  }
   
   // Handle authentication completion
   const handleAuthComplete = () => {
