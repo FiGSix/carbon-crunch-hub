@@ -111,7 +111,7 @@ const CreateProposal = () => {
     setClientInfo(newClientInfo);
   };
   
-  // Update project info
+  // Update project info - handles both regular inputs and our custom address input
   const updateProjectInfo = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {

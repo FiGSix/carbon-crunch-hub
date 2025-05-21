@@ -1,6 +1,6 @@
 
 import React from "react";
-import { ProjectInformation } from "../types";
+import { ProjectInformation } from "@/types/proposals";
 
 interface ProjectInformationSectionProps {
   projectInfo: ProjectInformation;

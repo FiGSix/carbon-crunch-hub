@@ -1,3 +1,4 @@
+
 import React from "react";
 import { 
   Card, 
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, ArrowRight, Calendar, HelpCircle } from "lucide-react";
+import { GoogleAddressAutocomplete } from "@/components/common/GoogleAddressAutocomplete";
 
 interface ProjectInfoStepProps {
   projectInfo: {
@@ -32,6 +34,19 @@ export function ProjectInfoStep({
   nextStep, 
   prevStep 
 }: ProjectInfoStepProps) {
+  // Add a direct setter for address field since GoogleAddressAutocomplete 
+  // doesn't use standard onChange events
+  const handleAddressChange = (address: string) => {
+    const mockEvent = {
+      target: {
+        name: "address",
+        value: address
+      }
+    } as React.ChangeEvent<HTMLTextAreaElement>;
+    
+    updateProjectInfo(mockEvent);
+  };
+  
   return (
     <Card className="retro-card">
       <CardHeader>
@@ -74,15 +89,14 @@ export function ProjectInfoStep({
             
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="address">Project Address</Label>
-              <Textarea 
-                id="address" 
-                name="address" 
+              <GoogleAddressAutocomplete
                 value={projectInfo.address}
-                onChange={updateProjectInfo}
+                onChange={handleAddressChange}
                 className="retro-input"
                 required
-                rows={2}
+                placeholder="Enter the project's physical address"
               />
+              <p className="text-xs text-carbon-gray-500">Enter the complete physical address of the project</p>
             </div>
             
             <div className="space-y-2">
