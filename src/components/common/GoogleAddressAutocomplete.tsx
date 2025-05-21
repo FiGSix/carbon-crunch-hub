@@ -5,6 +5,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 
 declare global {
   interface Window {
+    google: any;
     initGoogleMapsAutocomplete: () => void;
   }
 }
@@ -36,6 +37,7 @@ export function GoogleAddressAutocomplete({
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   
   useEffect(() => {
+    // Validate API key exists
     if (!apiKey) {
       setError("Google Maps API key is missing. Add it to your .env file.");
       if (onError) onError(true);
