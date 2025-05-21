@@ -3,6 +3,22 @@ import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 
+// Add type definitions for Google Maps API
+declare global {
+  interface Window {
+    google: {
+      maps: {
+        places: {
+          Autocomplete: new (
+            input: HTMLInputElement,
+            options?: google.maps.places.AutocompleteOptions
+          ) => google.maps.places.Autocomplete;
+        };
+      };
+    };
+  }
+}
+
 interface GoogleAddressAutocompleteProps {
   value: string;
   onChange: (address: string) => void;
