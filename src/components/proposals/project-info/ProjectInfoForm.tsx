@@ -1,9 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "lucide-react";
+import { Calendar, AlertTriangle } from "lucide-react";
 import { GoogleAddressAutocomplete } from "@/components/common/GoogleAddressAutocomplete";
 import { ProjectInformation } from "@/types/proposals";
 
@@ -18,6 +18,12 @@ export function ProjectInfoForm({
   updateProjectInfo,
   handleAddressChange
 }: ProjectInfoFormProps) {
+  const [mapsError, setMapsError] = useState(false);
+
+  const handleMapsError = (hasError: boolean) => {
+    setMapsError(hasError);
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="space-y-2">
@@ -57,7 +63,14 @@ export function ProjectInfoForm({
           className="retro-input"
           required
           placeholder="Enter the project's physical address"
+          onError={handleMapsError}
         />
+        {mapsError && (
+          <div className="flex items-center text-amber-500 text-sm mt-1">
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            <span>Add your Google Maps API key to the .env file and restart the server</span>
+          </div>
+        )}
         <p className="text-xs text-carbon-gray-500">Enter the complete physical address of the project</p>
       </div>
       

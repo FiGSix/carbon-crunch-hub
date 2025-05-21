@@ -4,11 +4,9 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ProjectInfoForm } from "@/components/proposals/project-info/ProjectInfoForm";
 import { ProjectInfoHelpCard } from "@/components/proposals/project-info/ProjectInfoHelpCard";
 import { ProjectInfoStepFooter } from "@/components/proposals/project-info/ProjectInfoStepFooter";
