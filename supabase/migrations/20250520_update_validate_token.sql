@@ -42,3 +42,4 @@ BEGIN
   RETURN QUERY SELECT _proposal_id, _client_email, _client_id, _client_contact_id;
 END;
 $function$;
+
