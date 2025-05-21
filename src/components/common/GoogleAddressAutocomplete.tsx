@@ -50,6 +50,9 @@ export function GoogleAddressAutocomplete({
   
   // Check for API key
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  
+  // Add console logging to help debug
+  console.log("API Key length:", apiKey ? apiKey.length : 0);
 
   // Handle user input with debouncing
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,11 +69,8 @@ export function GoogleAddressAutocomplete({
       return;
     }
 
-    if (apiKey === "AIzaSyDUS2rwcKPonuhM70RYUXaqCFlfOH_2dvQ") {
-      setError("Please replace the example API key with your own Google Maps API key.");
-      if (onError) onError(true);
-      return;
-    }
+    // REMOVED: Specific API key validation check that was causing problems
+    // No longer comparing against "AIzaSyDUS2rwcKPonuhM70RYUXaqCFlfOH_2dvQ"
     
     // Check if script is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
@@ -185,3 +185,4 @@ export function GoogleAddressAutocomplete({
     </div>
   );
 }
+
