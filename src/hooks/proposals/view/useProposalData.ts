@@ -5,6 +5,7 @@ import { ProposalData } from "@/types/proposals";
 import { transformToProposalData } from "@/utils/proposalTransformers";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { logger } from "@/lib/logger";
+import { useInvitationToken } from "@/hooks/useInvitationToken";
 
 /**
  * Hook to fetch and manage proposal data 
@@ -14,6 +15,7 @@ export function useProposalData(id?: string, token?: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clientEmail, setClientEmail] = useState<string | null>(null);
+  const { persistToken, loading: tokenLoading } = useInvitationToken();
   
   const { handleError } = useErrorHandler({
     context: "proposal-data",
@@ -34,7 +36,19 @@ export function useProposalData(id?: string, token?: string | null) {
       proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
       
       if (invitationToken) {
-        // Use the new function that handles token validation and proposal fetching in one transaction
+        // First, persist the token in the session to ensure it's available for RLS policies
+        const tokenResult = await persistToken(invitationToken);
+        
+        if (!tokenResult.success || !tokenResult.valid) {
+          proposalLogger.error("Token validation failed", { 
+            success: tokenResult.success,
+            valid: tokenResult.valid,
+            error: tokenResult.error
+          });
+          throw new Error(tokenResult.error || "This invitation link is invalid or has expired.");
+        }
+        
+        // Use the get_proposal_by_token function which will use the persisted token
         const { data, error: fetchError } = await supabase
           .rpc('get_proposal_by_token', { token_param: invitationToken });
         
@@ -116,7 +130,7 @@ export function useProposalData(id?: string, token?: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [handleError, proposalLogger]);
+  }, [handleError, proposalLogger, persistToken]);
 
   useEffect(() => {
     fetchProposal(id, token);
@@ -124,7 +138,7 @@ export function useProposalData(id?: string, token?: string | null) {
 
   return {
     proposal,
-    loading,
+    loading: loading || tokenLoading,
     error,
     clientEmail,
     fetchProposal

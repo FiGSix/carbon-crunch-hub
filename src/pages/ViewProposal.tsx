@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
@@ -36,7 +36,8 @@ const ViewProposal = () => {
     isReviewLater,
     canTakeAction,
     isClient,
-    isAuthenticated
+    isAuthenticated,
+    fetchProposal
   } = useViewProposal(id, token);
   
   // Only show authentication when an action is attempted
@@ -55,6 +56,12 @@ const ViewProposal = () => {
       setShowAuthForm(true);
     }
   };
+  
+  // Handler to retry loading the proposal
+  const handleRetry = useCallback(() => {
+    viewLogger.info("Retrying proposal fetch", { id, hasToken: !!token });
+    fetchProposal(id, token);
+  }, [id, token, fetchProposal, viewLogger]);
   
   // Action wrapper functions that handle authentication state
   const handleApproveWrapper = async () => {
@@ -106,8 +113,8 @@ const ViewProposal = () => {
   }
   
   if (error) {
-    viewLogger.error("Error loading proposal", { error });
-    return <ProposalError errorMessage={error} />;
+    viewLogger.error("Error loading proposal", { error, id, hasToken: !!token });
+    return <ProposalError errorMessage={error} onRetry={handleRetry} />;
   }
   
   // If we need to show the auth form

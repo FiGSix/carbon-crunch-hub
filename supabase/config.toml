@@ -6,3 +6,5 @@ enabled = true
 [functions]
 [functions.manage-client-profile]
 verify_jwt = true
+[functions.set-invitation-token]
+verify_jwt = false
