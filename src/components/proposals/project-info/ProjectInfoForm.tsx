@@ -3,10 +3,9 @@ import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, AlertTriangle } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { GoogleAddressAutocomplete } from "@/components/common/GoogleAddressAutocomplete";
 import { ProjectInformation } from "@/types/proposals";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ProjectInfoFormProps {
   projectInfo: ProjectInformation;
@@ -27,21 +26,7 @@ export function ProjectInfoForm({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {mapsError && (
-        <div className="md:col-span-2">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            <AlertDescription>
-              Google Maps API issue detected. Please check that you have:
-              <ol className="list-decimal pl-5 mt-2">
-                <li>Added a valid Google Maps API key to your .env file</li>
-                <li>Enabled the Places API in your Google Cloud Console</li>
-                <li>Restarted your development server after making these changes</li>
-              </ol>
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
+      {/* Removed mapsError Alert */}
       
       <div className="space-y-2">
         <Label htmlFor="name">Project Name</Label>
@@ -82,12 +67,7 @@ export function ProjectInfoForm({
           placeholder="Enter the project's physical address"
           onError={handleMapsError}
         />
-        {mapsError && (
-          <div className="flex items-center text-amber-500 text-sm mt-1">
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            <span>Google Maps API configuration issue detected. See error message above.</span>
-          </div>
-        )}
+        {/* Removed mapsError warning message */}
         <p className="text-xs text-carbon-gray-500">Enter the complete physical address of the project</p>
       </div>
       

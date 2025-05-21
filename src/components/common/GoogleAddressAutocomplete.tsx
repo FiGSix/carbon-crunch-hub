@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useDebounce } from "@/hooks/proposals/utils/useDebounce";
 
 // Properly define Google Maps types
@@ -176,13 +176,7 @@ export function GoogleAddressAutocomplete({
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         </div>
       )}
-      {error && (
-        <div className="mt-2 flex items-center text-destructive text-sm">
-          <AlertCircle className="h-4 w-4 mr-1" />
-          <span>{error}</span>
-        </div>
-      )}
+      {/* Removed error UI display */}
     </div>
   );
 }
-
