@@ -56,9 +56,8 @@ const ViewProposal = () => {
     }
   };
   
-  // Create wrapper functions that return void instead of boolean
+  // Action wrapper functions that handle authentication state
   const handleApproveWrapper = async () => {
-    // If not authenticated, show auth form
     if (!user) {
       handleSignInClick();
       return;
@@ -67,7 +66,6 @@ const ViewProposal = () => {
   };
   
   const handleRejectWrapper = async () => {
-    // If not authenticated, show auth form
     if (!user) {
       handleSignInClick();
       return;
@@ -76,7 +74,6 @@ const ViewProposal = () => {
   };
   
   const handleArchiveWrapper = async () => {
-    // If not authenticated, show auth form
     if (!user) {
       handleSignInClick();
       return;
@@ -84,7 +81,7 @@ const ViewProposal = () => {
     await handleArchive();
   };
   
-  // Log details for debugging purposes
+  // Debug logging
   useEffect(() => {
     if (proposal) {
       viewLogger.info("ViewProposal - Current proposal state", { 
@@ -94,10 +91,11 @@ const ViewProposal = () => {
         canTakeAction,
         hasClientId: !!proposal.client_id,
         hasClientContactId: !!proposal.client_contact_id,
-        userLoggedIn: !!user
+        userLoggedIn: !!user,
+        accessedViaToken: !!token
       });
     }
-  }, [proposal, isClient, canTakeAction, viewLogger, user]);
+  }, [proposal, isClient, canTakeAction, viewLogger, user, token]);
   
   if (loading) {
     return (
@@ -134,7 +132,10 @@ const ViewProposal = () => {
   }
   
   if (!proposal) {
-    viewLogger.warn("No proposal found", { path: window.location.pathname });
+    viewLogger.warn("No proposal found", { 
+      path: window.location.pathname,
+      hasToken: !!token
+    });
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">
@@ -153,9 +154,9 @@ const ViewProposal = () => {
       proposal={proposal}
       token={token}
       clientEmail={clientEmail}
-      canArchive={user && canArchive}
+      canArchive={canArchive && !!user}
       isReviewLater={isReviewLater}
-      canTakeAction={user && canTakeAction}
+      canTakeAction={canTakeAction && !!user}
       isClient={isClient}
       handleApprove={handleApproveWrapper}
       handleReject={handleRejectWrapper}

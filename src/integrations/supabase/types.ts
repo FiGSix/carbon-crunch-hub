@@ -252,9 +252,34 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_proposal_by_token: {
+        Args: { token_param: string }
+        Returns: {
+          id: string
+          title: string
+          status: string
+          content: Json
+          agent_id: string
+          client_id: string
+          client_contact_id: string
+          signed_at: string
+          created_at: string
+          archived_at: string
+          review_later_until: string
+          is_preview: boolean
+          preview_of_id: string
+          client_email: string
+          invitation_token: string
+          invitation_expires_at: string
+        }[]
+      }
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
+      }
+      mark_invitation_viewed: {
+        Args: { token_param: string }
+        Returns: undefined
       }
       search_clients: {
         Args: { search_term: string }

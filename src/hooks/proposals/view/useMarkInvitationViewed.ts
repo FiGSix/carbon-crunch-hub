@@ -6,6 +6,8 @@ import { logger } from "@/lib/logger";
 
 /**
  * Hook to mark a proposal invitation as viewed
+ * This is now a backup method since we're marking viewed status
+ * directly in the get_proposal_by_token function
  */
 export function useMarkInvitationViewed() {
   const markLogger = logger.withContext({
@@ -15,30 +17,22 @@ export function useMarkInvitationViewed() {
 
   const markInvitationViewed = useCallback(async (token: string, proposal: ProposalData) => {
     try {
-      markLogger.info("Marking invitation as viewed", { 
+      markLogger.info("Marking invitation as viewed (backup method)", { 
         proposalId: proposal.id,
         tokenPrefix: token.substring(0, 5) + "..."
       });
       
-      // First, set the token in the edge function context
-      await supabase.functions.invoke('set-invitation-token', {
-        body: { token }
+      // Use the dedicated RPC function
+      const { error } = await supabase.rpc('mark_invitation_viewed', {
+        token_param: token
       });
-      
-      // Then update the proposal to mark it as viewed
-      const { error } = await supabase
-        .from('proposals')
-        .update({
-          invitation_viewed_at: new Date().toISOString()
-        })
-        .eq('id', proposal.id);
       
       if (error) {
         markLogger.error("Failed to mark invitation as viewed", { 
           error: error.message,
           proposalId: proposal.id
         });
-        throw error;
+        return false;
       }
       
       markLogger.info("Successfully marked invitation as viewed", { 

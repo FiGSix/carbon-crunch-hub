@@ -33,56 +33,30 @@ export function useProposalData(id?: string, token?: string | null) {
       setError(null);
       proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
       
-      // Set the invitation token via edge function instead of direct RPC
       if (invitationToken) {
-        await supabase.functions.invoke('set-invitation-token', {
-          body: { token: invitationToken }
-        });
-      }
-      
-      if (invitationToken) {
-        // Validate the token and get the proposal ID, client email, and both ID types
-        const { data, error: validationError } = await supabase.rpc(
-          'validate_invitation_token', 
-          { token: invitationToken }
-        );
-        
-        if (validationError || !data || !data.length || !data[0].proposal_id) {
-          proposalLogger.error("Token validation failed", { 
-            error: validationError,
-            tokenPrefix: invitationToken?.substring(0, 5)
-          });
-          throw new Error("This invitation link is invalid or has expired.");
-        }
-        
-        const validatedProposalId = data[0].proposal_id;
-        const invitedEmail = data[0].client_email;
-        const clientId = data[0].client_id;
-        const clientContactId = data[0].client_contact_id;
-        
-        proposalLogger.info("Token validated", { 
-          validatedProposalId, 
-          invitedEmail,
-          hasClientId: !!clientId,
-          hasClientContactId: !!clientContactId
-        });
-        
-        setClientEmail(invitedEmail);
-        
-        // Now fetch the proposal with the validated ID
-        const { data: proposalData, error: fetchError } = await supabase
-          .from('proposals')
-          .select('*')
-          .eq('id', validatedProposalId)
-          .single();
+        // Use the new function that handles token validation and proposal fetching in one transaction
+        const { data, error: fetchError } = await supabase
+          .rpc('get_proposal_by_token', { token_param: invitationToken });
         
         if (fetchError) {
-          proposalLogger.error("Error fetching proposal after token validation", { 
+          proposalLogger.error("Error fetching proposal with token", { 
             error: fetchError,
-            proposalId: validatedProposalId
+            tokenPrefix: invitationToken.substring(0, 5) + "..."
           });
-          throw fetchError;
+          throw new Error(fetchError.message || "This invitation link is invalid or has expired.");
         }
+        
+        if (!data || data.length === 0) {
+          proposalLogger.error("No proposal found with token", { 
+            tokenPrefix: invitationToken.substring(0, 5) + "..."
+          });
+          throw new Error("Proposal not found. The invitation may have expired.");
+        }
+        
+        const proposalData = data[0];
+        
+        // Set client email from the response
+        setClientEmail(proposalData.client_email);
         
         // Transform to our standard ProposalData type
         const typedProposal = transformToProposalData(proposalData);
@@ -92,7 +66,20 @@ export function useProposalData(id?: string, token?: string | null) {
           hasClientId: !!typedProposal.client_id,
           hasClientContactId: !!typedProposal.client_contact_id
         });
+        
         setProposal(typedProposal);
+        
+        // Mark the invitation as viewed in a separate call
+        // This doesn't need to block the UI flow, so we don't await it
+        supabase.rpc('mark_invitation_viewed', { token_param: invitationToken })
+          .then(({ error }) => {
+            if (error) {
+              proposalLogger.error("Failed to mark invitation as viewed", { error });
+            } else {
+              proposalLogger.info("Invitation marked as viewed");
+            }
+          });
+        
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
         proposalLogger.info("Fetching proposal by ID", { proposalId });

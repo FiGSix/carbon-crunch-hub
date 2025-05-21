@@ -44,10 +44,11 @@ export function useViewProposal(id?: string, token?: string | null) {
     }
   }, [initialProposal, initialLoading, initialError]);
   
-  // Mark invitation as viewed when opening with token - regardless of authentication status
+  // Mark invitation as viewed when opening with token as a backup
+  // This is redundant with our new approach but kept for reliability
   useEffect(() => {
     if (!loading && proposal && token) {
-      viewProposalLogger.info("Marking invitation as viewed", { proposalId: proposal.id });
+      viewProposalLogger.info("Backup: Marking invitation as viewed", { proposalId: proposal.id });
       markInvitationViewed(token, proposal);
     }
   }, [token, proposal, loading, markInvitationViewed, viewProposalLogger]);
