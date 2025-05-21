@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { 
   Card, 
   CardContent, 
@@ -11,6 +11,7 @@ import { ProjectInfoForm } from "@/components/proposals/project-info/ProjectInfo
 import { ProjectInfoHelpCard } from "@/components/proposals/project-info/ProjectInfoHelpCard";
 import { ProjectInfoStepFooter } from "@/components/proposals/project-info/ProjectInfoStepFooter";
 import { ProjectInformation } from "@/types/proposals";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProjectInfoStepProps {
   projectInfo: ProjectInformation;
@@ -25,6 +26,9 @@ export function ProjectInfoStep({
   nextStep, 
   prevStep 
 }: ProjectInfoStepProps) {
+  const { toast } = useToast();
+  const [addressInputError, setAddressInputError] = useState(false);
+
   // Add a direct setter for address field since GoogleAddressAutocomplete 
   // doesn't use standard onChange events
   const handleAddressChange = (address: string) => {
@@ -38,8 +42,25 @@ export function ProjectInfoStep({
     updateProjectInfo(mockEvent);
   };
 
+  // Handle address input errors
+  const handleAddressError = (hasError: boolean) => {
+    setAddressInputError(hasError);
+    if (hasError) {
+      toast({
+        title: "Address Input Issue",
+        description: "There's a problem with the Google Maps integration. Check your API key configuration.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Form validation checks
   const isFormValid = Boolean(
-    projectInfo.name && projectInfo.address && projectInfo.size && projectInfo.commissionDate
+    projectInfo.name && 
+    projectInfo.address && 
+    projectInfo.size && 
+    projectInfo.commissionDate && 
+    !addressInputError
   );
   
   return (

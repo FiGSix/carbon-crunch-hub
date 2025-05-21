@@ -1,11 +1,22 @@
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Loader2, AlertCircle } from "lucide-react";
+import { useDebounce } from "@/hooks/proposals/utils/useDebounce";
 
+// Properly define Google Maps types
 declare global {
   interface Window {
-    google: any;
+    google: {
+      maps: {
+        places: {
+          Autocomplete: new (
+            input: HTMLInputElement,
+            options?: google.maps.places.AutocompleteOptions
+          ) => google.maps.places.Autocomplete
+        }
+      }
+    };
     initGoogleMapsAutocomplete: () => void;
   }
 }
@@ -32,14 +43,31 @@ export function GoogleAddressAutocomplete({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
 
+  // Add debouncing for input changes
+  const { debounce } = useDebounce(300);
+  
   // Check for API key
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  // Handle user input with debouncing
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+  }, [onChange]);
   
+  // Initialize Google Maps script
   useEffect(() => {
-    // Validate API key exists
-    if (!apiKey) {
+    // Validate API key exists and has the right format
+    if (!apiKey || apiKey.trim() === '') {
       setError("Google Maps API key is missing. Add it to your .env file.");
+      if (onError) onError(true);
+      return;
+    }
+
+    if (apiKey === "AIzaSyDUS2rwcKPonuhM70RYUXaqCFlfOH_2dvQ") {
+      setError("Please replace the example API key with your own Google Maps API key.");
       if (onError) onError(true);
       return;
     }
@@ -50,29 +78,43 @@ export function GoogleAddressAutocomplete({
       return;
     }
 
+    // Prevent duplicate script loading
+    if (document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')) {
+      setIsScriptLoaded(true);
+      return;
+    }
+
     setIsLoading(true);
     const googleMapScript = document.createElement("script");
-    googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsAutocomplete`;
     googleMapScript.async = true;
     googleMapScript.defer = true;
-    window.document.body.appendChild(googleMapScript);
-
-    googleMapScript.addEventListener("load", () => {
+    
+    // Define global callback function
+    window.initGoogleMapsAutocomplete = () => {
       setIsScriptLoaded(true);
       setIsLoading(false);
       if (onError) onError(false);
-    });
+    };
 
-    googleMapScript.addEventListener("error", () => {
+    // Handle script loading errors
+    const handleScriptError = () => {
       console.error("Google Maps script failed to load");
       setError("Failed to load Google Maps. Check your API key and internet connection.");
       setIsLoading(false);
       if (onError) onError(true);
-    });
+    };
+
+    googleMapScript.addEventListener("error", handleScriptError);
+    scriptRef.current = googleMapScript;
+    window.document.body.appendChild(googleMapScript);
 
     return () => {
-      googleMapScript.removeEventListener("load", () => {});
-      googleMapScript.removeEventListener("error", () => {});
+      // Clean up event listeners and global callback
+      if (scriptRef.current) {
+        scriptRef.current.removeEventListener("error", handleScriptError);
+      }
+      window.initGoogleMapsAutocomplete = () => {};
     };
   }, [apiKey, onError]);
 
@@ -81,15 +123,20 @@ export function GoogleAddressAutocomplete({
     if (!isScriptLoaded || !inputRef.current || error) return;
 
     try {
+      // Clear any existing instances before creating a new one
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+      
       autocompleteRef.current = new google.maps.places.Autocomplete(
         inputRef.current,
         { 
-          types: ["address"],
-          componentRestrictions: { country: "za" } // Restrict to South Africa
+          types: ["address"]
+          // Removed country restriction to allow global addresses
         }
       );
 
-      autocompleteRef.current.addListener("place_changed", () => {
+      const placeChangedListener = autocompleteRef.current.addListener("place_changed", () => {
         if (!autocompleteRef.current) return;
         
         const place = autocompleteRef.current.getPlace();
@@ -97,6 +144,14 @@ export function GoogleAddressAutocomplete({
           onChange(place.formatted_address);
         }
       });
+
+      return () => {
+        // Proper cleanup of event listeners
+        if (autocompleteRef.current) {
+          google.maps.event.removeListener(placeChangedListener);
+          google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        }
+      };
     } catch (error) {
       console.error("Error initializing Google Places Autocomplete:", error);
       setError("Failed to initialize address autocomplete.");
@@ -110,7 +165,7 @@ export function GoogleAddressAutocomplete({
         ref={inputRef}
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleInputChange}
         placeholder={placeholder}
         className={className}
         required={required}
