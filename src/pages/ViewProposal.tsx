@@ -7,7 +7,7 @@ import { useViewProposal } from "@/hooks/proposals/view/useViewProposal";
 import { useAuth } from "@/contexts/auth";
 import { logger } from "@/lib/logger";
 import { ProposalContent } from "@/components/proposals/view/ProposalContent";
-import { ProposalAuthWrapper } from "@/components/proposals/view/ProposalAuthWrapper";
+import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
 
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,19 +39,8 @@ const ViewProposal = () => {
     isAuthenticated
   } = useViewProposal(id, token);
   
+  // Only show authentication when an action is attempted
   const [showAuthForm, setShowAuthForm] = useState(false);
-  const [authRequired, setAuthRequired] = useState(false);
-  
-  // Determine when to show the auth form
-  useEffect(() => {
-    if (!loading && proposal && clientEmail && token && !user && showAuthForm) {
-      viewLogger.info("Showing authentication form for client", {
-        hasClientEmail: !!clientEmail,
-        hasToken: !!token,
-        authRequired
-      });
-    }
-  }, [loading, proposal, token, clientEmail, user, authRequired, showAuthForm, viewLogger]);
   
   // Handler for when auth is complete
   const handleAuthComplete = () => {
@@ -63,21 +52,35 @@ const ViewProposal = () => {
   const handleSignInClick = () => {
     if (proposal) {
       viewLogger.info("User clicked sign in to take actions", { proposalId: proposal.id });
-      setAuthRequired(true);
       setShowAuthForm(true);
     }
   };
   
   // Create wrapper functions that return void instead of boolean
   const handleApproveWrapper = async () => {
+    // If not authenticated, show auth form
+    if (!user) {
+      handleSignInClick();
+      return;
+    }
     await handleApprove();
   };
   
   const handleRejectWrapper = async () => {
+    // If not authenticated, show auth form
+    if (!user) {
+      handleSignInClick();
+      return;
+    }
     await handleReject();
   };
   
   const handleArchiveWrapper = async () => {
+    // If not authenticated, show auth form
+    if (!user) {
+      handleSignInClick();
+      return;
+    }
     await handleArchive();
   };
   
@@ -112,13 +115,21 @@ const ViewProposal = () => {
   // If we need to show the auth form
   if (showAuthForm && clientEmail && proposal) {
     return (
-      <ProposalAuthWrapper
-        showAuthForm={showAuthForm}
-        clientEmail={clientEmail}
-        proposal={proposal}
-        authRequired={authRequired}
-        onAuthComplete={handleAuthComplete}
-      />
+      <div className="container max-w-5xl mx-auto px-4 py-12">
+        <h1 className="text-2xl font-bold text-center mb-6">
+          Sign in to take action on this proposal
+        </h1>
+        <p className="text-center mb-8">
+          To respond to the proposal "{proposal.title}", 
+          please sign in or create an account.
+        </p>
+        <ClientAuthWrapper
+          proposalId={proposal.id} 
+          clientEmail={clientEmail} 
+          onAuthComplete={handleAuthComplete}
+          requireAuth={true}
+        />
+      </div>
     );
   }
   
@@ -142,9 +153,9 @@ const ViewProposal = () => {
       proposal={proposal}
       token={token}
       clientEmail={clientEmail}
-      canArchive={canArchive}
+      canArchive={user && canArchive}
       isReviewLater={isReviewLater}
-      canTakeAction={canTakeAction}
+      canTakeAction={user && canTakeAction}
       isClient={isClient}
       handleApprove={handleApproveWrapper}
       handleReject={handleRejectWrapper}

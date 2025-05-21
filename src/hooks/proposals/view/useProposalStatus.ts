@@ -46,14 +46,14 @@ export function useProposalStatus(proposal: ProposalData | null) {
       });
     }
     
-    // Check if user can archive the proposal
+    // Check if user can archive the proposal - requires authentication
     const canArchive = !!userId && !proposal.archived_at && 
       (isClient || userId === proposal.agent_id);
       
     const isReviewLater = !!proposal.review_later_until;
     
     // Check if client can take action on the proposal
-    // Now requires user to be logged in AND be the client
+    // Requires user to be logged in AND be the client
     const canTakeAction = isClient && 
       proposal.status === 'pending' && 
       !proposal.archived_at && 

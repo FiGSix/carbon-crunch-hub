@@ -11,15 +11,16 @@ interface ClientAuthWrapperProps {
   proposalId: string;
   clientEmail: string;
   onAuthComplete: () => void;
-  requireAuth?: boolean; // Whether auth is required or optional viewing is allowed
+  requireAuth?: boolean;
 }
 
 export function ClientAuthWrapper({ 
   proposalId, 
   clientEmail, 
   onAuthComplete,
-  requireAuth = false
+  requireAuth = true
 }: ClientAuthWrapperProps) {
+  // Default to "register" tab for new users
   const [activeTab, setActiveTab] = useState<string>("register");
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +37,6 @@ export function ClientAuthWrapper({
       // User is authenticated, complete the auth process
       authLogger.info("User authenticated, completing auth flow", {
         userId: user.id,
-        proposalId
-      });
-      onAuthComplete();
-    } else if (!requireAuth) {
-      // Auth is not required and user is not logged in, still complete the flow
-      // This handles the token-based view-only access case
-      authLogger.info("Auth not required, proceeding with token-based access", {
         proposalId
       });
       onAuthComplete();

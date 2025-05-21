@@ -15,17 +15,26 @@ import { usePreviewProposal } from "@/hooks/proposal/usePreviewProposal";
 import { ProposalPreviewBanner } from "./ProposalPreviewBanner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ProposalDetailsProps, ProjectInformation } from "@/types/proposals";
+import { ProposalData } from "@/types/proposals";
+
+interface ProposalDetailsProps {
+  proposal: ProposalData;
+  token?: string | null;
+  onApprove: () => Promise<void>;
+  onReject: () => Promise<void>;
+  isReviewLater?: boolean;
+  showActions?: boolean;
+}
 
 export function ProposalDetails({ 
   proposal, 
   token, 
   onApprove, 
   onReject,
-  isReviewLater,
+  isReviewLater = false,
   showActions = false
 }: ProposalDetailsProps) {
-  const { userRole } = useAuth();
+  const { userRole, user } = useAuth();
   const navigate = useNavigate();
   const { createPreview, loading: previewLoading } = usePreviewProposal();
   
@@ -38,8 +47,8 @@ export function ProposalDetails({
     }
   };
   
-  // Extract project info from the proposal content and properly cast it
-  const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
+  // Extract project info from the proposal content
+  const projectInfo = proposal.content?.projectInfo || {};
   
   return (
     <Card className="retro-card">
@@ -49,7 +58,7 @@ export function ProposalDetails({
             <FileText className="h-5 w-5 mr-2" />
             Proposal Details
           </div>
-          {!proposal.is_preview && userRole === 'agent' && (
+          {!proposal.is_preview && userRole === 'agent' && user && (
             <Button
               variant="outline"
               size="sm"
@@ -93,6 +102,7 @@ export function ProposalDetails({
         />
       )}
       
+      {/* Show action buttons only when authenticated and has permission */}
       {showActions && (
         <ProposalActionFooter 
           onApprove={onApprove}
