@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
@@ -85,7 +84,7 @@ const CreateProposal = () => {
     }
   };
   
-  // Toggle eligibility checkbox
+  // Toggle eligibility checkbox - updated to handle both single and bulk updates
   const toggleEligibility = (field: keyof EligibilityCriteria) => {
     setEligibility(prev => ({
       ...prev,

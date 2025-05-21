@@ -1,3 +1,4 @@
+
 import React from "react";
 import { 
   Card, 
@@ -12,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { EligibilityCriteria } from "./types";
+import { EligibilityCriteria } from "@/types/proposals";
 
 interface EligibilityStepProps {
   eligibility: EligibilityCriteria;
@@ -29,6 +30,15 @@ export function EligibilityStep({
 }: EligibilityStepProps) {
   const navigate = useNavigate();
 
+  // New function to confirm all eligibility criteria at once
+  const confirmAllCriteria = () => {
+    Object.keys(eligibility).forEach((key) => {
+      if (!eligibility[key as keyof EligibilityCriteria]) {
+        toggleEligibility(key as keyof EligibilityCriteria);
+      }
+    });
+  };
+
   return (
     <Card className="retro-card">
       <CardHeader>
@@ -38,6 +48,20 @@ export function EligibilityStep({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="p-4 mb-4 rounded-lg bg-carbon-gray-50 border border-carbon-gray-200">
+          <Button 
+            variant="secondary" 
+            className="w-full" 
+            onClick={confirmAllCriteria}
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Confirm All Eligibility Criteria
+          </Button>
+          <p className="text-sm text-carbon-gray-500 mt-2">
+            By confirming all criteria, you attest that this project meets all the eligibility requirements listed below.
+          </p>
+        </div>
+
         <div className="flex items-start space-x-3">
           <Checkbox 
             id="inSouthAfrica" 
