@@ -15,7 +15,7 @@ import { usePreviewProposal } from "@/hooks/proposal/usePreviewProposal";
 import { ProposalPreviewBanner } from "./ProposalPreviewBanner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ProposalData } from "@/types/proposals";
+import { ProposalData, ProjectInformation } from "@/types/proposals";
 
 interface ProposalDetailsProps {
   proposal: ProposalData;
@@ -47,8 +47,8 @@ export function ProposalDetails({
     }
   };
   
-  // Extract project info from the proposal content
-  const projectInfo = proposal.content?.projectInfo || {};
+  // Extract project info from the proposal content and properly type it
+  const projectInfo = (proposal.content?.projectInfo || {}) as ProjectInformation;
   
   return (
     <Card className="retro-card">
