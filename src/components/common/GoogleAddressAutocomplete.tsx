@@ -3,39 +3,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 
-// Define type declarations for Google Maps API
+// No need for manual type declarations now as we're using @types/google.maps
 declare global {
   interface Window {
-    google: any;
+    initGoogleMapsAutocomplete: () => void;
   }
-}
-
-// Explicitly define Google Maps types we need
-interface GooglePlace {
-  formatted_address?: string;
-  geometry?: {
-    location: {
-      lat: () => number;
-      lng: () => number;
-    };
-  };
-  address_components?: Array<{
-    long_name: string;
-    short_name: string;
-    types: string[];
-  }>;
-}
-
-interface GoogleAutocomplete {
-  addListener: (event: string, callback: () => void) => void;
-  getPlace: () => GooglePlace;
-}
-
-interface GoogleAutocompleteOptions {
-  types?: string[];
-  componentRestrictions?: {
-    country: string | string[];
-  };
 }
 
 interface GoogleAddressAutocompleteProps {
@@ -56,7 +28,7 @@ export function GoogleAddressAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<GoogleAutocomplete | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   // Load the Google Maps script
   useEffect(() => {
@@ -94,7 +66,7 @@ export function GoogleAddressAutocomplete({
     if (!isScriptLoaded || !inputRef.current) return;
 
     try {
-      autocompleteRef.current = new window.google.maps.places.Autocomplete(
+      autocompleteRef.current = new google.maps.places.Autocomplete(
         inputRef.current,
         { 
           types: ["address"],
