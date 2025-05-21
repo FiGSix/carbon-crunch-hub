@@ -26,8 +26,8 @@ export function EligibilityCriteriaList({
     },
     {
       id: "under15MWp" as keyof EligibilityCriteria,
-      title: "The system is under 15 MWp in capacity",
-      description: "The total capacity of the renewable energy system must be less than 15 MWp."
+      title: "The system is under 15,000 kWp in capacity",
+      description: "The total capacity of the renewable energy system must be less than 15,000 kWp."
     },
     {
       id: "commissionedAfter2022" as keyof EligibilityCriteria,

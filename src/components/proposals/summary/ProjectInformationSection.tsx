@@ -17,7 +17,7 @@ export function ProjectInformationSection({ projectInfo }: ProjectInformationSec
         </div>
         <div>
           <p className="text-sm text-carbon-gray-500">System Size</p>
-          <p className="font-medium">{projectInfo.size} MWp</p>
+          <p className="font-medium">{projectInfo.size} kWp</p>
         </div>
         <div className="md:col-span-2">
           <p className="text-sm text-carbon-gray-500">Address</p>

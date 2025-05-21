@@ -10,7 +10,7 @@ export function ProjectInfoHelpCard() {
         <div>
           <h3 className="font-medium text-carbon-gray-900">System Size Information</h3>
           <p className="text-sm text-carbon-gray-600 mt-1">
-            The system size should be specified in Megawatt peak (MWp). For example, a 100 kWp system would be entered as 0.1 MWp.
+            The system size should be specified in kilowatt peak (kWp). For example, a 1 MWp system would be entered as 1,000 kWp.
           </p>
         </div>
       </div>

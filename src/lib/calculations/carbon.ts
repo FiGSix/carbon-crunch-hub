@@ -95,13 +95,13 @@ export function getFormattedCarbonPriceForYear(year: string | number): string {
 /**
  * Calculate the annual energy production in kWh based on system size
  * 
- * @param systemSize - Solar system size in MWp or kWp (as string)
- * @param isMWp - Whether the system size is in MWp (default true)
+ * @param systemSize - Solar system size in kWp (as string)
+ * @param isMWp - Whether the system size is in MWp (default false)
  */
-export function calculateAnnualEnergy(systemSize: string | number, isMWp: boolean = true): number {
+export function calculateAnnualEnergy(systemSize: string | number, isMWp: boolean = false): number {
   // Parse input and convert to kWp if needed
   const size = typeof systemSize === 'string' ? parseFloat(systemSize) : systemSize;
-  const sizeInKWp = isMWp ? size * 1000 : size; // Convert MWp to kWp if needed
+  const sizeInKWp = isMWp ? size * 1000 : size; // Convert MWp to kWp only if flagged as MWp
   
   // Calculate daily and annual energy
   const dailyKWh = sizeInKWp * AVERAGE_SUN_HOURS;
@@ -111,10 +111,10 @@ export function calculateAnnualEnergy(systemSize: string | number, isMWp: boolea
 /**
  * Calculate the carbon credits based on annual energy production
  * 
- * @param systemSize - Solar system size in MWp or kWp (as string)
- * @param isMWp - Whether the system size is in MWp (default true)
+ * @param systemSize - Solar system size in kWp (as string)
+ * @param isMWp - Whether the system size is in MWp (default false)
  */
-export function calculateCarbonCredits(systemSize: string | number, isMWp: boolean = true): number {
+export function calculateCarbonCredits(systemSize: string | number, isMWp: boolean = false): number {
   const annualEnergy = calculateAnnualEnergy(systemSize, isMWp);
   // Convert kWh to MWh and then to tCO2 using the emission factor
   return (annualEnergy / 1000) * EMISSION_FACTOR;
@@ -132,10 +132,10 @@ export function calculateCoalAvoided(energyInKWh: number): number {
 /**
  * Calculate projected revenue based on carbon credit prices by year
  * 
- * @param systemSize - Solar system size in MWp or kWp
- * @param isMWp - Whether the system size is in MWp (default true)
+ * @param systemSize - Solar system size in kWp
+ * @param isMWp - Whether the system size is in MWp (default false)
  */
-export function calculateRevenue(systemSize: string | number, isMWp: boolean = true): Record<string, number> {
+export function calculateRevenue(systemSize: string | number, isMWp: boolean = false): Record<string, number> {
   const carbonCredits = calculateCarbonCredits(systemSize, isMWp);
   const revenue: Record<string, number> = {};
   
@@ -150,25 +150,25 @@ export function calculateRevenue(systemSize: string | number, isMWp: boolean = t
 /**
  * Calculate client share percentage based on portfolio size
  * 
- * @param portfolioSize - Portfolio size in MWp
+ * @param portfolioSize - Portfolio size in kWp
  */
 export function getClientSharePercentage(portfolioSize: string | number): number {
   const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
   
-  if (size < 5) return 63;
-  if (size < 10) return 66.5;
-  if (size < 30) return 70;
-  return 73.5;
+  if (size < 5000) return 63;       // Less than 5,000 kWp (5 MWp)
+  if (size < 10000) return 66.5;    // Less than 10,000 kWp (10 MWp)
+  if (size < 30000) return 70;      // Less than 30,000 kWp (30 MWp)
+  return 73.5;                      // 30,000+ kWp (30+ MWp)
 }
 
 /**
  * Calculate agent commission percentage
  * 
- * @param portfolioSize - Portfolio size in MWp
+ * @param portfolioSize - Portfolio size in kWp
  */
 export function getAgentCommissionPercentage(portfolioSize: string | number): number {
   const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
-  return size < 15 ? 4 : 7;
+  return size < 15000 ? 4 : 7;      // Less than 15,000 kWp (15 MWp)
 }
 
 /**

@@ -41,20 +41,20 @@ export function ProjectInfoForm({
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="size">System Size (MWp)</Label>
+        <Label htmlFor="size">System Size (kWp)</Label>
         <Input 
           id="size" 
           name="size" 
           type="number"
           step="0.01"
           min="0"
-          max="15"
+          max="15000"
           value={projectInfo.size}
           onChange={updateProjectInfo}
           className="retro-input"
           required
         />
-        <p className="text-xs text-carbon-gray-500">Must be less than 15 MWp</p>
+        <p className="text-xs text-carbon-gray-500">Must be less than 15,000 kWp</p>
       </div>
       
       <div className="space-y-2 md:col-span-2">
