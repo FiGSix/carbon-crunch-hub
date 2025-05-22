@@ -1,105 +1,156 @@
 
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0"
 
+// Define CORS headers for cross-origin requests
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+}
+
+interface RequestBody {
+  token: string;
+}
+
+interface ResponseBody {
+  success: boolean;
+  tokenSet: boolean;
+  valid: boolean;
+  proposalId?: string;
+  error?: string;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 204
-    });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders, status: 204 })
   }
 
   try {
-    // Extract the token from the request body
-    const { token } = await req.json();
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: { 
+          headers: { Authorization: req.headers.get("Authorization") ?? "" } 
+        }
+      }
+    )
+
+    // Get token from request body
+    const { token } = await req.json() as RequestBody;
 
     if (!token) {
-      console.error("No token provided in request");
       return new Response(
-        JSON.stringify({ error: "Token is required", code: "TOKEN_MISSING" }),
-        { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 400 }
-      );
+        JSON.stringify({
+          success: false,
+          tokenSet: false,
+          valid: false,
+          error: "No token provided"
+        } as ResponseBody),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400 
+        }
+      )
     }
 
     console.log(`Setting invitation token: ${token.substring(0, 8)}...`);
 
-    // Create a Supabase client with the request's auth header
-    const authHeader = req.headers.get('Authorization');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-    
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: authHeader ?? '',
-        },
-      },
-    });
-
-    // Call the SQL function to set the token in the session with persistence flag set to true
-    const { data, error } = await supabase.rpc(
+    // Set the token in the database session using RPC
+    const { data: tokenSet, error: tokenError } = await supabaseClient.rpc(
       'set_request_invitation_token',
       { token }
-    );
+    )
 
-    if (error) {
-      console.error("Error setting token:", error);
+    if (tokenError) {
+      console.error("Error setting token:", tokenError);
       return new Response(
-        JSON.stringify({ 
-          error: "Failed to set invitation token", 
-          details: error.message,
-          code: "TOKEN_SET_FAILED" 
-        }),
-        { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 500 }
-      );
+        JSON.stringify({
+          success: false,
+          tokenSet: false,
+          valid: false,
+          error: `Failed to set token: ${tokenError.message}`
+        } as ResponseBody),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500 
+        }
+      )
     }
 
-    // Get the proposal details to verify the token was set correctly
-    const { data: proposal, error: proposalError } = await supabase.rpc(
+    // Validate the token to check if it corresponds to a valid proposal
+    const { data: validationData, error: validationError } = await supabaseClient.rpc(
       'validate_invitation_token',
       { token }
-    );
+    )
 
-    // Return token validation information
-    if (proposalError || !proposal || proposal.length === 0) {
-      console.error("Token validation check failed:", proposalError || "No proposal found");
+    if (validationError) {
+      console.error("Token validation error:", validationError);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: true,
-          tokenSet: true,
+          tokenSet: !!tokenSet,
           valid: false,
-          error: proposalError?.message || "Invalid or expired token" 
-        }),
-        { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 200 }
-      );
+          error: "Invalid or expired invitation token"
+        } as ResponseBody),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        }
+      )
     }
 
-    console.log("Token successfully set and validated");
+    // Check if validation returned a proposal ID
+    const proposalId = validationData?.[0]?.proposal_id;
+    const valid = !!proposalId;
+
+    if (!valid) {
+      console.log("Token validation failed - no proposal found");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          tokenSet: !!tokenSet,
+          valid: false,
+          error: "This invitation link is invalid or has expired"
+        } as ResponseBody),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200 
+        }
+      )
+    }
+
+    console.log(`Token validation successful for proposal: ${proposalId}`);
+    
+    // Return success response
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
-        tokenSet: true,
+        tokenSet: !!tokenSet,
         valid: true,
-        proposalId: proposal[0]?.proposal_id
-      }),
-      { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 200 }
-    );
+        proposalId
+      } as ResponseBody),
+      { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200 
+      }
+    )
   } catch (error) {
-    console.error("Unexpected error in set-invitation-token:", error);
+    console.error("Unexpected error:", error);
+    
     return new Response(
-      JSON.stringify({ 
-        error: "Internal server error", 
-        details: error instanceof Error ? error.message : String(error),
-        code: "INTERNAL_ERROR"
-      }),
-      { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 500 }
-    );
+      JSON.stringify({
+        success: false,
+        tokenSet: false,
+        valid: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred"
+      } as ResponseBody),
+      { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500 
+      }
+    )
   }
-});
+})

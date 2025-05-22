@@ -97,6 +97,8 @@ export function useViewProposal(id?: string, token?: string | null) {
     isReviewLater,
     canTakeAction,
     isClient,
-    isAuthenticated
+    isAuthenticated,
+    // Expose fetchProposal from useProposalData
+    fetchProposal
   };
 }
