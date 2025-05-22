@@ -7,6 +7,7 @@ interface SetTokenResult {
   success: boolean;
   valid: boolean;
   proposalId?: string;
+  clientEmail?: string; // Added clientEmail property to interface
   error?: string;
 }
 
@@ -68,7 +69,8 @@ export function useInvitationToken() {
       
       tokenLogger.info("Token successfully persisted and validated", { 
         valid: result.valid,
-        hasProposalId: !!result.proposalId
+        hasProposalId: !!result.proposalId,
+        hasClientEmail: !!result.clientEmail
       });
       
       return result;

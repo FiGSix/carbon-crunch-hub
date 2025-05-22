@@ -16,7 +16,7 @@ interface ResponseBody {
   success: boolean;
   valid: boolean;
   proposalId?: string;
-  clientEmail?: string;
+  clientEmail?: string; // Ensure this property is defined in the response interface
   error?: string;
 }
 
