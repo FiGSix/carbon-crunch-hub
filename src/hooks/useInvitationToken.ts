@@ -5,7 +5,6 @@ import { logger } from "@/lib/logger";
 
 interface SetTokenResult {
   success: boolean;
-  tokenSet: boolean;
   valid: boolean;
   proposalId?: string;
   error?: string;
@@ -25,14 +24,14 @@ export function useInvitationToken() {
   });
 
   /**
-   * Persist an invitation token to the session via the edge function
+   * Persist and validate an invitation token
    */
   const persistToken = useCallback(async (token: string): Promise<SetTokenResult> => {
     setLoading(true);
     setError(null);
     
     try {
-      tokenLogger.info("Persisting invitation token", { tokenPrefix: token.substring(0, 8) });
+      tokenLogger.info("Setting and validating invitation token", { tokenPrefix: token.substring(0, 8) });
       
       // Call the edge function to set the token in the session
       const { data, error: functionError } = await supabase.functions.invoke(
@@ -47,7 +46,6 @@ export function useInvitationToken() {
         setError(functionError.message);
         return {
           success: false,
-          tokenSet: false,
           valid: false,
           error: functionError.message
         };
@@ -68,8 +66,7 @@ export function useInvitationToken() {
         return result;
       }
       
-      tokenLogger.info("Token successfully persisted", { 
-        tokenSet: result.tokenSet,
+      tokenLogger.info("Token successfully persisted and validated", { 
         valid: result.valid,
         hasProposalId: !!result.proposalId
       });
@@ -82,7 +79,6 @@ export function useInvitationToken() {
       
       return {
         success: false,
-        tokenSet: false,
         valid: false,
         error: errorMessage
       };

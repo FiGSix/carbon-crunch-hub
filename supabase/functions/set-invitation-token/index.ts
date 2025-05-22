@@ -14,9 +14,9 @@ interface RequestBody {
 
 interface ResponseBody {
   success: boolean;
-  tokenSet: boolean;
   valid: boolean;
   proposalId?: string;
+  clientEmail?: string;
   error?: string;
 }
 
@@ -42,10 +42,10 @@ serve(async (req) => {
     const { token } = await req.json() as RequestBody;
 
     if (!token) {
+      console.error("No token provided");
       return new Response(
         JSON.stringify({
           success: false,
-          tokenSet: false,
           valid: false,
           error: "No token provided"
         } as ResponseBody),
@@ -56,9 +56,9 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Setting invitation token: ${token.substring(0, 8)}...`);
+    console.log(`Processing invitation token: ${token.substring(0, 8)}...`);
 
-    // Set the token in the database session using RPC
+    // Set the token in the session using RPC
     const { data: tokenSet, error: tokenError } = await supabaseClient.rpc(
       'set_request_invitation_token',
       { token }
@@ -69,7 +69,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          tokenSet: false,
           valid: false,
           error: `Failed to set token: ${tokenError.message}`
         } as ResponseBody),
@@ -91,7 +90,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          tokenSet: !!tokenSet,
           valid: false,
           error: "Invalid or expired invitation token"
         } as ResponseBody),
@@ -104,6 +102,7 @@ serve(async (req) => {
 
     // Check if validation returned a proposal ID
     const proposalId = validationData?.[0]?.proposal_id;
+    const clientEmail = validationData?.[0]?.client_email;
     const valid = !!proposalId;
 
     if (!valid) {
@@ -111,7 +110,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          tokenSet: !!tokenSet,
           valid: false,
           error: "This invitation link is invalid or has expired"
         } as ResponseBody),
@@ -124,13 +122,13 @@ serve(async (req) => {
 
     console.log(`Token validation successful for proposal: ${proposalId}`);
     
-    // Return success response
+    // Return success response with all needed data
     return new Response(
       JSON.stringify({
         success: true,
-        tokenSet: !!tokenSet,
         valid: true,
-        proposalId
+        proposalId,
+        clientEmail
       } as ResponseBody),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -143,7 +141,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        tokenSet: false,
         valid: false,
         error: error instanceof Error ? error.message : "Unknown error occurred"
       } as ResponseBody),

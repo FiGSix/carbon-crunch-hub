@@ -48,52 +48,54 @@ export function useProposalData(id?: string, token?: string | null) {
           throw new Error(tokenResult.error || "This invitation link is invalid or has expired.");
         }
         
-        // Use the get_proposal_by_token function which will use the persisted token
-        const { data, error: fetchError } = await supabase
-          .rpc('get_proposal_by_token', { token_param: invitationToken });
-        
-        if (fetchError) {
-          proposalLogger.error("Error fetching proposal with token", { 
-            error: fetchError,
-            tokenPrefix: invitationToken.substring(0, 5) + "..."
+        // Get the proposal by ID (the token is already set in the session context)
+        if (tokenResult.proposalId) {
+          proposalLogger.info("Using proposal ID from token validation", { proposalId: tokenResult.proposalId });
+          
+          const { data, error: fetchError } = await supabase
+            .from('proposals')
+            .select('*')
+            .eq('id', tokenResult.proposalId)
+            .single();
+          
+          if (fetchError) {
+            proposalLogger.error("Error fetching proposal with token", { 
+              error: fetchError,
+              proposalId: tokenResult.proposalId
+            });
+            throw new Error(fetchError.message || "Error loading proposal. Please try again.");
+          }
+          
+          // Transform to our standard ProposalData type
+          const typedProposal = transformToProposalData(data);
+          
+          // Set client email from the content (if available)
+          setClientEmail(
+            typedProposal.content?.clientInfo?.email || 
+            tokenResult.clientEmail || 
+            null
+          );
+          
+          proposalLogger.info("Proposal fetched via token", { 
+            proposalId: typedProposal.id,
+            status: typedProposal.status
           });
-          throw new Error(fetchError.message || "This invitation link is invalid or has expired.");
+          
+          setProposal(typedProposal);
+          
+          // Mark the invitation as viewed in a separate call
+          // This doesn't need to block the UI flow, so we don't await it
+          supabase.rpc('mark_invitation_viewed', { token_param: invitationToken })
+            .then(({ error }) => {
+              if (error) {
+                proposalLogger.error("Failed to mark invitation as viewed", { error });
+              } else {
+                proposalLogger.info("Invitation marked as viewed");
+              }
+            });
+        } else {
+          throw new Error("No proposal ID was returned from token validation.");
         }
-        
-        if (!data || data.length === 0) {
-          proposalLogger.error("No proposal found with token", { 
-            tokenPrefix: invitationToken.substring(0, 5) + "..."
-          });
-          throw new Error("Proposal not found. The invitation may have expired.");
-        }
-        
-        const proposalData = data[0];
-        
-        // Set client email from the response
-        setClientEmail(proposalData.client_email);
-        
-        // Transform to our standard ProposalData type
-        const typedProposal = transformToProposalData(proposalData);
-        proposalLogger.info("Proposal fetched via token", { 
-          proposalId: typedProposal.id,
-          status: typedProposal.status,
-          hasClientId: !!typedProposal.client_id,
-          hasClientContactId: !!typedProposal.client_contact_id
-        });
-        
-        setProposal(typedProposal);
-        
-        // Mark the invitation as viewed in a separate call
-        // This doesn't need to block the UI flow, so we don't await it
-        supabase.rpc('mark_invitation_viewed', { token_param: invitationToken })
-          .then(({ error }) => {
-            if (error) {
-              proposalLogger.error("Failed to mark invitation as viewed", { error });
-            } else {
-              proposalLogger.info("Invitation marked as viewed");
-            }
-          });
-        
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
         proposalLogger.info("Fetching proposal by ID", { proposalId });
@@ -115,9 +117,7 @@ export function useProposalData(id?: string, token?: string | null) {
         const typedProposal = transformToProposalData(data);
         proposalLogger.info("Proposal fetched successfully", { 
           proposalId,
-          status: typedProposal.status,
-          hasClientId: !!typedProposal.client_id,
-          hasClientContactId: !!typedProposal.client_contact_id
+          status: typedProposal.status
         });
         setProposal(typedProposal);
       } else {

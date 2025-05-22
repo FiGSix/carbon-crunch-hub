@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/auth";
 import { useProposalData } from "./useProposalData";
 import { useProposalActions } from "./useProposalActions";
 import { useProposalStatus } from "./useProposalStatus";
-import { useMarkInvitationViewed } from "./useMarkInvitationViewed";
 import { ProposalData } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 
@@ -17,7 +16,6 @@ export function useViewProposal(id?: string, token?: string | null) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { markInvitationViewed } = useMarkInvitationViewed();
   
   // Create a contextualized logger
   const viewProposalLogger = logger.withContext({ 
@@ -43,15 +41,6 @@ export function useViewProposal(id?: string, token?: string | null) {
       setError(initialError);
     }
   }, [initialProposal, initialLoading, initialError]);
-  
-  // Mark invitation as viewed when opening with token as a backup
-  // This is redundant with our new approach but kept for reliability
-  useEffect(() => {
-    if (!loading && proposal && token) {
-      viewProposalLogger.info("Backup: Marking invitation as viewed", { proposalId: proposal.id });
-      markInvitationViewed(token, proposal);
-    }
-  }, [token, proposal, loading, markInvitationViewed, viewProposalLogger]);
   
   // Get proposal status data
   const { canArchive, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);

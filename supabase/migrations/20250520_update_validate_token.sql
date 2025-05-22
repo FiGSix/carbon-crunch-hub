@@ -12,10 +12,6 @@ DECLARE
   _client_id UUID;
   _client_contact_id UUID;
 BEGIN
-  -- Set the invitation token in the current session context for RLS policies
-  -- This ensures the token is available throughout the session
-  PERFORM set_config('request.invitation_token', token, false);
-  
   -- Find the proposal with the given token that hasn't expired
   SELECT 
     p.id, 
@@ -51,3 +47,4 @@ BEGIN
   RETURN QUERY SELECT _proposal_id, _client_email, _client_id, _client_contact_id;
 END;
 $function$;
+
