@@ -291,6 +291,10 @@ export type Database = {
           is_registered: boolean
         }[]
       }
+      set_request_invitation_token: {
+        Args: { token: string }
+        Returns: boolean
+      }
       validate_invitation_token: {
         Args: { token: string }
         Returns: {

@@ -33,10 +33,18 @@ export function useProposalData(id?: string, token?: string | null) {
     try {
       setLoading(true);
       setError(null);
-      proposalLogger.info("Fetching proposal", { proposalId, hasToken: !!invitationToken });
+      proposalLogger.info("Fetching proposal", { 
+        proposalId, 
+        hasToken: !!invitationToken,
+        tokenPrefix: invitationToken ? invitationToken.substring(0, 8) : null
+      });
       
       if (invitationToken) {
         // First, persist the token in the session to ensure it's available for RLS policies
+        proposalLogger.info("Using invitation token to fetch proposal", { 
+          tokenPrefix: invitationToken.substring(0, 8)
+        });
+        
         const tokenResult = await persistToken(invitationToken);
         
         if (!tokenResult.success || !tokenResult.valid) {
@@ -78,7 +86,8 @@ export function useProposalData(id?: string, token?: string | null) {
           
           proposalLogger.info("Proposal fetched via token", { 
             proposalId: typedProposal.id,
-            status: typedProposal.status
+            status: typedProposal.status,
+            clientEmail: tokenResult.clientEmail
           });
           
           setProposal(typedProposal);

@@ -8,3 +8,5 @@ enabled = true
 verify_jwt = true
 [functions.set-invitation-token]
 verify_jwt = false
+[functions.send-proposal-invitation]
+verify_jwt = true

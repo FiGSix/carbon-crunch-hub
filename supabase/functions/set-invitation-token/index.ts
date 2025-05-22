@@ -120,7 +120,7 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Token validation successful for proposal: ${proposalId}`);
+    console.log(`Token validation successful for proposal: ${proposalId}, client email: ${clientEmail}`);
     
     // Return success response with all needed data
     return new Response(

@@ -32,9 +32,14 @@ export function useInvitationToken() {
     setError(null);
     
     try {
-      tokenLogger.info("Setting and validating invitation token", { tokenPrefix: token.substring(0, 8) });
+      tokenLogger.info("Setting and validating invitation token", { 
+        tokenPrefix: token.substring(0, 8),
+        timestamp: new Date().toISOString()
+      });
       
       // Call the edge function to set the token in the session
+      tokenLogger.info("Invoking set-invitation-token edge function", { token: token.substring(0, 8) });
+      
       const { data, error: functionError } = await supabase.functions.invoke(
         'set-invitation-token',
         { 
@@ -43,7 +48,13 @@ export function useInvitationToken() {
       );
       
       if (functionError) {
-        tokenLogger.error("Error invoking set-invitation-token function", { error: functionError });
+        tokenLogger.error("Error invoking set-invitation-token function", { 
+          error: functionError,
+          message: functionError.message,
+          status: functionError.status,
+          name: functionError.name
+        });
+        
         setError(functionError.message);
         return {
           success: false,
@@ -54,6 +65,12 @@ export function useInvitationToken() {
       
       // Parse the response
       const result = data as SetTokenResult;
+      tokenLogger.info("Received response from set-invitation-token function", { 
+        success: result.success,
+        valid: result.valid,
+        hasError: !!result.error,
+        errorMessage: result.error
+      });
       
       if (!result.success) {
         tokenLogger.error("Token persistence failed", { error: result.error });
@@ -70,13 +87,19 @@ export function useInvitationToken() {
       tokenLogger.info("Token successfully persisted and validated", { 
         valid: result.valid,
         hasProposalId: !!result.proposalId,
-        hasClientEmail: !!result.clientEmail
+        hasClientEmail: !!result.clientEmail,
+        proposalId: result.proposalId?.substring(0, 8)
       });
       
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error setting invitation token";
-      tokenLogger.error("Unexpected error persisting token", { error });
+      tokenLogger.error("Unexpected error persisting token", { 
+        error,
+        message: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       setError(errorMessage);
       
       return {
