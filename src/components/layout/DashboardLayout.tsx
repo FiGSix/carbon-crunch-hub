@@ -9,10 +9,12 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { Footer } from "./footer";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/auth"; // Updated import path
-import { Navigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/auth"; 
+import { Navigate, useNavigate } from "react-router-dom";
+import { Loader2, User } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -23,7 +25,8 @@ export function DashboardLayout({
   children, 
   requiredRole 
 }: DashboardLayoutProps) {
-  const { userRole, isLoading, isAdmin } = useAuth(); // Using modern context
+  const { userRole, isLoading, isAdmin, profile } = useAuth();
+  const navigate = useNavigate();
 
   // Show loading state
   if (isLoading) {
@@ -64,11 +67,18 @@ export function DashboardLayout({
             </div>
             <div className="ml-auto flex items-center gap-4">
               <NotificationBell />
-              <div className="h-8 w-8 rounded-full bg-crunch-yellow/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-crunch-black">
-                  {userRole && userRole.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="rounded-full p-0 h-9 w-9 flex items-center justify-center"
+                onClick={() => navigate('/profile')}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-crunch-yellow/10 text-crunch-black">
+                    {profile?.first_name?.[0]?.toUpperCase() || profile?.role?.[0]?.toUpperCase() || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
             </div>
           </motion.header>
           

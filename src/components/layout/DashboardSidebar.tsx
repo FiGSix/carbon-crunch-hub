@@ -1,6 +1,6 @@
 
 import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack } from "lucide-react";
+import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -22,6 +22,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "My Proposals", path: "/proposals" },
     { icon: BarChart, label: "Carbon Reports", path: "/reports" },
+    { icon: User, label: "Profile", path: "/profile" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
@@ -29,6 +30,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: FileText, label: "Proposals", path: "/proposals" },
     { icon: Users, label: "My Clients", path: "/clients" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   const adminMenuItems = [
@@ -36,6 +38,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     { icon: FileText, label: "All Proposals", path: "/proposals" },
     { icon: Users, label: "User Management", path: "/users" },
     { icon: BarChart, label: "Reports", path: "/reports" },
+    { icon: User, label: "Profile", path: "/profile" },
     { icon: Settings, label: "System Settings", path: "/settings" },
   ];
 

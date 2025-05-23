@@ -22,6 +22,7 @@ import Calculator from "./pages/Calculator";
 import Contact from "./pages/Contact";
 import ForceLogout from "./pages/ForceLogout";
 import Notifications from "./pages/Notifications";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +76,11 @@ const App = () => (
             <Route path="/notifications" element={
               <PrivateRoute>
                 <Notifications />
+              </PrivateRoute>
+            } />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <Profile />
               </PrivateRoute>
             } />
             
