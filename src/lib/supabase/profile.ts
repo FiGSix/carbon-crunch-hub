@@ -31,11 +31,42 @@ export async function getProfile() {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
       
     if (error) {
       console.error("Error fetching profile:", error);
       return { profile: null, error }
+    }
+    
+    // If no profile exists, create one
+    if (!data) {
+      console.log("No profile found, creating new profile for user:", user.id);
+      const newProfile = {
+        id: user.id,
+        email: user.email || '',
+        role: 'client',
+        first_name: '',
+        last_name: '',
+        created_at: new Date().toISOString()
+      };
+      
+      const { data: createdProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert(newProfile)
+        .select()
+        .single()
+      
+      if (createError) {
+        console.error("Error creating profile:", createError);
+        return { profile: null, error: createError }
+      }
+      
+      // Cache the new profile
+      if (createdProfile && user.id) {
+        setCacheWithExpiry(user.id, undefined, createdProfile, CACHE_TTL_MEDIUM);
+      }
+      
+      return { profile: createdProfile, error: null }
     }
       
     // Cache the profile with medium TTL since profiles don't change often
@@ -78,12 +109,43 @@ export async function updateProfile(updates: Partial<{
   }
 
   try {
+    // First, check if profile exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle()
+    
+    if (!existingProfile) {
+      // Create profile if it doesn't exist
+      const newProfile = {
+        id: user.id,
+        email: user.email || '',
+        role: 'client',
+        ...updates
+      };
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(newProfile)
+        .select()
+        .single()
+      
+      // Update cache with new profile data
+      if (data && !error && user.id) {
+        setCacheWithExpiry(user.id, undefined, data, CACHE_TTL_MEDIUM);
+      }
+      
+      return { data, error }
+    }
+    
+    // Update existing profile
     const { data, error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id)
       .select()
-      .maybeSingle()
+      .single()
 
     // Update cache with new profile data
     if (data && !error && user.id) {

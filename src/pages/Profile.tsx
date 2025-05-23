@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,14 +18,30 @@ const Profile = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: profile?.first_name || '',
-    lastName: profile?.last_name || '',
-    email: profile?.email || '',
-    phone: profile?.phone || '',
-    companyName: profile?.company_name || '',
-    companyLogoUrl: profile?.company_logo_url || '',
-    avatarUrl: profile?.avatar_url || ''
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    companyLogoUrl: '',
+    avatarUrl: ''
   });
+
+  // Populate form when profile loads
+  useEffect(() => {
+    if (profile) {
+      console.log('Populating form with profile data:', profile);
+      setFormData({
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        companyName: profile.company_name || '',
+        companyLogoUrl: profile.company_logo_url || '',
+        avatarUrl: profile.avatar_url || ''
+      });
+    }
+  }, [profile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -44,8 +60,10 @@ const Profile = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    console.log('Submitting profile update with data:', formData);
+
     try {
-      const { error } = await updateProfile({
+      const updateData = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
@@ -53,10 +71,17 @@ const Profile = () => {
         company_name: formData.companyName || null,
         company_logo_url: formData.companyLogoUrl || null,
         avatar_url: formData.avatarUrl || null,
-      });
+      };
+      
+      console.log('Sending update request:', updateData);
+      const { error } = await updateProfile(updateData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Profile update error:', error);
+        throw error;
+      }
 
+      console.log('Profile update successful, refreshing user data');
       await refreshUser();
       
       toast({
@@ -64,6 +89,7 @@ const Profile = () => {
         description: "Your profile has been successfully updated.",
       });
     } catch (error: any) {
+      console.error('Profile update failed:', error);
       toast({
         title: "Update failed",
         description: error.message || "Failed to update profile. Please try again.",
