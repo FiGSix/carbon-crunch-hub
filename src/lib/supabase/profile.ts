@@ -61,6 +61,7 @@ export async function updateProfile(updates: Partial<{
   last_name: string;
   company_name: string;
   company_logo_url: string;
+  avatar_url: string;
   email: string;
   phone: string;
   terms_accepted_at: string | null;
@@ -82,7 +83,7 @@ export async function updateProfile(updates: Partial<{
       .update(updates)
       .eq('id', user.id)
       .select()
-      .single()
+      .maybeSingle()
 
     // Update cache with new profile data
     if (data && !error && user.id) {

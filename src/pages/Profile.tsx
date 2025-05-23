@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile } from '@/lib/supabase/profile';
 import { CompanyLogoUpload } from '@/components/profile/CompanyLogoUpload';
+import { ProfilePictureUpload } from '@/components/profile/ProfilePictureUpload';
 import { CompanyLogo } from '@/components/profile/CompanyLogo';
 import { Building2, User } from 'lucide-react';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -22,7 +23,8 @@ const Profile = () => {
     email: profile?.email || '',
     phone: profile?.phone || '',
     companyName: profile?.company_name || '',
-    companyLogoUrl: profile?.company_logo_url || ''
+    companyLogoUrl: profile?.company_logo_url || '',
+    avatarUrl: profile?.avatar_url || ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,6 +34,10 @@ const Profile = () => {
 
   const handleCompanyLogoChange = (logoUrl: string | null) => {
     setFormData(prev => ({ ...prev, companyLogoUrl: logoUrl || '' }));
+  };
+
+  const handleAvatarChange = (avatarUrl: string | null) => {
+    setFormData(prev => ({ ...prev, avatarUrl: avatarUrl || '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +52,7 @@ const Profile = () => {
         phone: formData.phone || null,
         company_name: formData.companyName || null,
         company_logo_url: formData.companyLogoUrl || null,
+        avatar_url: formData.avatarUrl || null,
       });
 
       if (error) throw error;
@@ -66,6 +73,8 @@ const Profile = () => {
       setIsLoading(false);
     }
   };
+
+  const isAgent = userRole === 'agent';
 
   return (
     <DashboardLayout>
@@ -91,6 +100,17 @@ const Profile = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <Label>Profile Picture</Label>
+                  <div className="mt-2">
+                    <ProfilePictureUpload
+                      currentAvatarUrl={formData.avatarUrl}
+                      onAvatarUpdate={handleAvatarChange}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">First Name</Label>
@@ -144,8 +164,8 @@ const Profile = () => {
               </CardContent>
             </Card>
 
-            {/* Company Information - Only for Agents */}
-            {userRole === 'agent' && (
+            {/* Company Information - Show for Agents */}
+            {isAgent && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
