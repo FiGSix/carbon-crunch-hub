@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { upload, image, X } from 'lucide-react';
+import { Upload, Image, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -141,7 +141,7 @@ export function ProfilePictureUpload({ currentAvatarUrl, onAvatarUpdate, disable
             </div>
           ) : (
             <div className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-              <image className="h-8 w-8 text-gray-400" />
+              <Image className="h-8 w-8 text-gray-400" />
             </div>
           )}
         </div>
@@ -164,7 +164,7 @@ export function ProfilePictureUpload({ currentAvatarUrl, onAvatarUpdate, disable
               asChild
             >
               <span>
-                <upload className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4 mr-2" />
                 {uploading ? 'Uploading...' : preview ? 'Change Picture' : 'Upload Picture'}
               </span>
             </Button>

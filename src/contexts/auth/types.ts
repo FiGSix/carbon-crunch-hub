@@ -13,6 +13,7 @@ export interface UserProfile {
   phone?: string;
   company_name?: string;
   company_logo_url?: string;
+  avatar_url?: string;
   role?: UserRole;
   terms_accepted_at?: string;
   created_at?: string;
