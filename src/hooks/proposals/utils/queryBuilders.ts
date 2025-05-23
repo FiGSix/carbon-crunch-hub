@@ -65,11 +65,11 @@ export function buildProposalQuery(
   } else if (filters.sort === 'title') {
     query = query.order('title', { ascending: true });
   } else if (filters.sort === 'size-high') {
-    query = query.order('annual_energy', { ascending: false, nullsLast: true });
+    query = query.order('annual_energy', { ascending: false, nullsFirst: false });
   } else if (filters.sort === 'size-low') {
     query = query.order('annual_energy', { ascending: true, nullsFirst: true });
   } else if (filters.sort === 'revenue-high') {
-    query = query.order('carbon_credits', { ascending: false, nullsLast: true });
+    query = query.order('carbon_credits', { ascending: false, nullsFirst: false });
   } else if (filters.sort === 'revenue-low') {
     query = query.order('carbon_credits', { ascending: true, nullsFirst: true });
   } else {
