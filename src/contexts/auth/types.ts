@@ -11,6 +11,7 @@ export interface UserProfile {
   last_name?: string;
   email: string;
   company_name?: string;
+  company_logo_url?: string;
   role?: UserRole;
   terms_accepted_at?: string;
   created_at?: string;

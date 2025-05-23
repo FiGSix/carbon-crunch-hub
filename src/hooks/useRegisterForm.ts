@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signUp } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth"; // Updated import path
+import { useAuth } from "@/contexts/auth";
 
 interface RegisterFormData {
   firstName: string;
@@ -12,13 +12,14 @@ interface RegisterFormData {
   password: string;
   confirmPassword: string;
   companyName: string;
+  companyLogoUrl: string;
   role: "client" | "agent";
 }
 
 export function useRegisterForm(initialRole: "client" | "agent") {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshUser } = useAuth(); // Using modern context
+  const { refreshUser } = useAuth();
   
   const [formData, setFormData] = useState<RegisterFormData>({
     firstName: "",
@@ -27,6 +28,7 @@ export function useRegisterForm(initialRole: "client" | "agent") {
     password: "",
     confirmPassword: "",
     companyName: "",
+    companyLogoUrl: "",
     role: initialRole,
   });
   
@@ -45,11 +47,14 @@ export function useRegisterForm(initialRole: "client" | "agent") {
   const handleRoleChange = (value: string) => {
     setFormData((prev) => ({ ...prev, role: value as "client" | "agent" }));
   };
+
+  const handleCompanyLogoChange = (logoUrl: string | null) => {
+    setFormData((prev) => ({ ...prev, companyLogoUrl: logoUrl || "" }));
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -59,7 +64,6 @@ export function useRegisterForm(initialRole: "client" | "agent") {
       return;
     }
     
-    // Check if terms need to be accepted for agents
     if (formData.role === "agent" && !termsAccepted) {
       toast({
         title: "Terms & Conditions Required",
@@ -72,7 +76,6 @@ export function useRegisterForm(initialRole: "client" | "agent") {
     setIsLoading(true);
     
     try {
-      // Register the user with Supabase
       const { data, error } = await signUp(
         formData.email,
         formData.password,
@@ -81,6 +84,7 @@ export function useRegisterForm(initialRole: "client" | "agent") {
           first_name: formData.firstName,
           last_name: formData.lastName,
           company_name: formData.companyName || null,
+          company_logo_url: formData.companyLogoUrl || null,
           terms_accepted: formData.role === 'agent' ? termsAccepted : null,
           terms_accepted_at: formData.role === 'agent' && termsAccepted ? new Date().toISOString() : null,
         }
@@ -97,7 +101,6 @@ export function useRegisterForm(initialRole: "client" | "agent") {
         description: "Welcome to CrunchCarbon!",
       });
       
-      // Redirect to dashboard
       navigate("/dashboard");
       
     } catch (error: any) {
@@ -127,6 +130,7 @@ export function useRegisterForm(initialRole: "client" | "agent") {
     setPrivacyDialogOpen,
     handleChange,
     handleRoleChange,
+    handleCompanyLogoChange,
     handleSubmit,
     handleTermsAccept
   };
