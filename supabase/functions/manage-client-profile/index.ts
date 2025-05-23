@@ -3,9 +3,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { corsHeaders, ErrorResponse } from "../_shared/types.ts";
 import { verifyUserAuth, createResponse } from "./auth.ts";
-import { findExistingClient } from "./client/client-lookup.ts";
-import { createClientContact } from "./client/client-creation.ts";
-import { processClient } from "./client/client-processor.ts";
+import { processClientRequest } from "./client/client-processor.ts";
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -38,7 +36,8 @@ serve(async (req) => {
     const { userId, role } = authResult;
     
     // Parse request body
-    const { name, email, phone, companyName, existingClient } = await req.json();
+    const requestBody = await req.json();
+    const { name, email, phone, companyName, existingClient } = requestBody;
     
     if (!email) {
       return createResponse({
@@ -49,58 +48,32 @@ serve(async (req) => {
     // Connect to Supabase with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // If marked as existing, search for existing client first
-    const normalizedEmail = email.toLowerCase().trim();
-    const existingClientInfo = await findExistingClient(normalizedEmail, supabase);
-    
-    if (existingClient && !existingClientInfo) {
-      return createResponse({
-        error: "Client marked as existing but not found in database",
-        clientEmail: normalizedEmail
-      }, 404);
-    }
-    
-    // If we found an existing client, return it
-    if (existingClientInfo) {
-      return createResponse({
-        clientId: existingClientInfo.clientId,
-        isNewProfile: false,
-        isRegisteredUser: existingClientInfo.isRegisteredUser
-      });
-    }
-    
-    // Create a new client contact if we don't have an existing client
-    const clientContact = await createClientContact(
+    // Process the client request using the processClientRequest function
+    const result = await processClientRequest(
       {
+        email: email.toLowerCase().trim(),
         firstName: name?.split(' ')[0] || "",
         lastName: name?.split(' ').slice(1).join(' ') || "",
-        email: normalizedEmail,
         phone: phone || null,
-        companyName: companyName || null
+        companyName: companyName || null,
+        existingClient: existingClient || false
       },
       userId,
       supabase
     );
     
-    if (!clientContact || !clientContact.id) {
-      return createResponse({
-        error: "Failed to create client contact"
-      }, 500);
+    // Check if there was an error in processing
+    if ('error' in result) {
+      return createResponse(result, result.status || 500);
     }
     
-    // Process the client and return appropriate response
-    const processResult = await processClient(clientContact, supabase);
-    
-    return createResponse({
-      clientId: processResult.clientId,
-      isNewProfile: true,
-      isRegisteredUser: processResult.isRegisteredUser
-    });
+    // Return successful response
+    return createResponse(result);
     
   } catch (error) {
     console.error("Uncaught error in manage-client-profile:", error);
     return createResponse({
-      error: `Unexpected error: ${error.message}`
+      error: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
     }, 500);
   }
 });

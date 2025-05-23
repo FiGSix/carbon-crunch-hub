@@ -1,80 +1,60 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { ClientProfileRequest, ClientProfileResponse, ErrorResponse } from "../../_shared/types.ts";
-import { findExistingClient } from "./client-lookup.ts";
 
 // Create a new client contact
 export async function createClientContact(
   clientData: ClientProfileRequest,
-  creatorId: string,
+  createdBy: string,
   supabase: ReturnType<typeof createClient>
 ): Promise<ClientProfileResponse | ErrorResponse> {
   try {
-    // Normalize email to prevent case mismatch issues
-    const normalizedEmail = clientData.email.toLowerCase().trim();
-    console.log(`Creating new client contact with normalized email: ${normalizedEmail}`);
+    const { email, firstName, lastName, phone, companyName } = clientData;
     
-    // Parse name into first and last name
-    const nameParts = clientData.name.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+    console.log(`Creating new client contact: ${email}`);
     
-    // Create a new client contact
-    const { data: newContact, error: createError } = await supabase
+    // Insert client contact record
+    const { data, error } = await supabase
       .from('client_contacts')
       .insert({
-        first_name: firstName,
-        last_name: lastName,
-        email: normalizedEmail,
-        phone: clientData.phone,
-        company_name: clientData.companyName,
-        created_by: creatorId
+        email: email.toLowerCase().trim(),
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null,
+        company_name: companyName || null,
+        created_by: createdBy
       })
       .select('id')
       .single();
     
-    if (createError) {
-      console.error("Error creating client contact:", createError);
-      
-      // Check if the error is related to unique violation (duplicate email)
-      if (createError.message.includes('duplicate') || createError.message.includes('unique constraint')) {
-        // Try to find the existing contact one more time
-        const retryResult = await findExistingClient(normalizedEmail, supabase);
-        
-        if (retryResult) {
-          console.log("Found client on retry after duplicate error:", retryResult);
-          return {
-            clientId: retryResult.clientId,
-            isNewProfile: false,
-            isRegisteredUser: retryResult.isRegisteredUser
-          };
-        }
-      }
-      
+    if (error) {
+      console.error("Error creating client contact:", error);
       return {
-        error: `Error creating client contact: ${createError.message}`,
+        error: `Failed to create client: ${error.message}`,
         status: 500
       };
     }
     
-    if (!newContact || !newContact.id) {
-      console.error("Failed to create client contact, no ID returned");
+    if (!data || !data.id) {
+      console.error("No client ID returned from insert operation");
       return {
-        error: "Failed to create client contact, no ID returned",
+        error: `Failed to create client: No ID returned`,
         status: 500
       };
     }
     
-    console.log(`Successfully created new client contact: ${newContact.id}`);
-    return { 
-      clientId: newContact.id,
+    console.log(`Successfully created client contact with ID: ${data.id}`);
+    
+    // Return successful creation response
+    return {
+      clientId: data.id,
       isNewProfile: true,
       isRegisteredUser: false
     };
   } catch (error) {
-    console.error("Unexpected error creating client:", error);
+    console.error("Error in createClientContact:", error);
     return {
-      error: `Unexpected error creating client: ${error instanceof Error ? error.message : String(error)}`,
+      error: `Error creating client contact: ${error instanceof Error ? error.message : String(error)}`,
       status: 500
     };
   }
