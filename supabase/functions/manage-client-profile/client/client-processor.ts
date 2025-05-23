@@ -1,72 +1,76 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { ClientProfileRequest, ClientProfileResponse, ErrorResponse } from "../../_shared/types.ts";
-import { findExistingClient } from "./client-lookup.ts";
 import { createClientContact } from "./client-creation.ts";
 
-// Handle client processing logic
 export async function processClientRequest(
-  request: ClientProfileRequest,
-  userId: string,
+  clientData: ClientProfileRequest,
+  createdBy: string,
   supabase: ReturnType<typeof createClient>
 ): Promise<ClientProfileResponse | ErrorResponse> {
   try {
-    const { email, existingClient } = request;
+    const { email, existingClient } = clientData;
     
-    if (!email) {
-      console.error("Email is required");
-      return {
-        error: 'Email is required',
-        status: 400
-      };
-    }
+    console.log(`Processing client request for email: ${email}`);
     
-    // Normalize email to prevent case mismatch issues
-    const normalizedEmail = email.toLowerCase().trim();
-    
-    // For existing clients, search in the database
+    // If this is marked as an existing client, try to find them in registered users first
     if (existingClient) {
-      console.log(`Searching for existing client with email: ${normalizedEmail}`);
+      console.log("Looking for existing registered client");
       
-      const existingClient = await findExistingClient(normalizedEmail, supabase);
+      // Check if this email exists as a registered user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('email', email.toLowerCase().trim())
+        .eq('role', 'client')
+        .maybeSingle();
       
-      if (existingClient) {
-        return { 
-          clientId: existingClient.clientId,
-          isNewProfile: false,
-          isRegisteredUser: existingClient.isRegisteredUser
+      if (profileError && !profileError.message.includes('No rows found')) {
+        console.error("Error checking for existing profile:", profileError);
+        return {
+          error: `Error checking for existing client: ${profileError.message}`,
+          status: 500
         };
       }
       
-      console.error(`No existing client found with email: ${normalizedEmail}`);
-      return {
-        error: `No existing client found with email: ${normalizedEmail}`,
-        status: 404
-      };
-    } 
-    // For new clients, check if they exist first, then create if not
-    else {
-      console.log(`Processing new client with email: ${normalizedEmail}`);
-      
-      // Check if a client with this email already exists
-      const existingClient = await findExistingClient(normalizedEmail, supabase);
-      
-      if (existingClient) {
-        console.log(`Client already exists with email ${normalizedEmail}, returning existing client`);
-        return { 
-          clientId: existingClient.clientId,
+      if (profile) {
+        console.log(`Found existing registered client: ${profile.id}`);
+        return {
+          clientId: profile.id,
           isNewProfile: false,
-          isRegisteredUser: existingClient.isRegisteredUser
+          isRegisteredUser: true
         };
       }
       
-      // Create new client contact
-      return await createClientContact(
-        { ...request, email: normalizedEmail },
-        userId, 
-        supabase
-      );
+      // Check if this email exists in the clients table
+      const { data: existingClient, error: clientError } = await supabase
+        .from('clients')
+        .select('id, is_registered_user')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+      
+      if (clientError && !clientError.message.includes('No rows found')) {
+        console.error("Error checking for existing client:", clientError);
+        return {
+          error: `Error checking for existing client: ${clientError.message}`,
+          status: 500
+        };
+      }
+      
+      if (existingClient) {
+        console.log(`Found existing client: ${existingClient.id}`);
+        return {
+          clientId: existingClient.id,
+          isNewProfile: false,
+          isRegisteredUser: existingClient.is_registered_user
+        };
+      }
     }
+    
+    // No existing client found, create a new one
+    console.log("No existing client found, creating new client");
+    return await createClientContact(clientData, createdBy, supabase);
+    
   } catch (error) {
     console.error("Error in processClientRequest:", error);
     return {

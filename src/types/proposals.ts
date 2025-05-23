@@ -10,7 +10,7 @@ export interface ProposalDbRecord {
   created_at: string;
   title: string;
   client_id: string | null;
-  client_contact_id: string | null; // Added client_contact_id field
+  client_reference_id: string | null; // Updated to use client_reference_id
   agent_id: string | null;
   status: string; // Changed from union type to string to match Supabase data
   content: Json;
@@ -77,7 +77,7 @@ export interface ProposalData {
   status: string;
   content: ProposalContent;
   client_id: string | null;
-  client_contact_id: string | null; // Added client_contact_id field
+  client_reference_id: string | null; // Updated to use client_reference_id
   agent_id: string | null;
   created_at: string;
   signed_at: string | null;

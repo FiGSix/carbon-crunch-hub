@@ -12,7 +12,7 @@ export interface ClientSearchResult {
 
 /**
  * Search for clients by name, email, or company
- * Returns results from both registered users and client contacts
+ * Returns results from both registered users and the unified clients table
  */
 export async function searchClients(searchTerm: string): Promise<ClientSearchResult[]> {
   const contextLogger = logger.withContext({ 

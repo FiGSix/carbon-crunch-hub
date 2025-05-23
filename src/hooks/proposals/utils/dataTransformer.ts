@@ -1,103 +1,148 @@
 
-import { RawProposalData, ProfileData } from "../types";
-import { Proposal } from "@/components/proposals/types";
-import { fetchProfilesByIds } from "../api/fetchProfiles";
+import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
+import { ProposalListItem } from "@/types/proposals";
+import { RawProposalData, ProfileData } from "../types";
 
 /**
- * Fetches related profiles and transforms proposal data
+ * Transform raw proposal data into ProposalListItem format
  */
 export async function fetchAndTransformProposalData(
-  proposalsData: RawProposalData[]
-): Promise<Proposal[]> {
-  const transformLogger = logger.withContext({
-    component: 'DataTransformer',
-    feature: 'proposals'
+  rawProposals: RawProposalData[]
+): Promise<ProposalListItem[]> {
+  const transformLogger = logger.withContext({ 
+    component: 'DataTransformer', 
+    feature: 'proposals' 
   });
   
-  if (!proposalsData || proposalsData.length === 0) {
-    transformLogger.info("No proposals data to transform");
+  if (!rawProposals || rawProposals.length === 0) {
     return [];
   }
-  
-  transformLogger.info("Transforming proposal data", { count: proposalsData.length });
-  
-  // Extract IDs for related data
-  const clientIds = proposalsData.map(p => p.client_id).filter(Boolean);
-  const agentIds = proposalsData
-    .map(p => p.agent_id)
-    .filter((id): id is string => id !== null && id !== undefined);
-  
-  // Fetch related profiles
-  const [clientProfiles, agentProfiles] = await Promise.all([
-    fetchProfilesByIds(clientIds),
-    fetchProfilesByIds(agentIds)
-  ]);
-  
-  // Transform the proposals data using the existing helper
-  const transformedProposals = transformProposalData(
-    proposalsData,
-    clientProfiles,
-    agentProfiles
-  );
-  
-  transformLogger.info("Transformed proposals", { count: transformedProposals.length });
-  return transformedProposals;
-}
 
-/**
- * Transforms raw proposal data from the database into the Proposal interface format
- */
-export function transformProposalData(
-  proposalsData: RawProposalData[],
-  clientProfiles: Record<string, ProfileData>,
-  agentProfiles: Record<string, ProfileData>
-): Proposal[] {
-  return proposalsData.map(item => {
-    // Get client profile from our map
-    const clientProfile = clientProfiles[item.client_id];
-    
-    // Get agent profile from our map
-    const agentProfile = item.agent_id ? agentProfiles[item.agent_id] : null;
-    
-    // Handle different return types from Supabase
-    const clientName = clientProfile 
-      ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() 
-      : 'Unknown Client';
-      
-    const agentName = agentProfile 
-      ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() 
-      : 'Unassigned';
-      
-    // Parse size safely from content
-    let size = 0;
-    if (item.content && typeof item.content === 'object' && !Array.isArray(item.content)) {
-      const contentObj = item.content as Record<string, any>;
-      
-      if (contentObj.projectInfo && typeof contentObj.projectInfo === 'object') {
-        if ('size' in contentObj.projectInfo) {
-          const sizeValue = contentObj.projectInfo.size;
-          size = parseFloat(String(sizeValue) || '0');
-        }
+  try {
+    // Collect all unique user IDs from client_id and agent_id
+    const allUserIds = Array.from(new Set([
+      ...rawProposals.map(p => p.client_id).filter(Boolean),
+      ...rawProposals.map(p => p.agent_id).filter(Boolean)
+    ]));
+
+    // Collect all unique client reference IDs
+    const allClientReferenceIds = Array.from(new Set(
+      rawProposals.map(p => p.client_reference_id).filter(Boolean)
+    ));
+
+    // Fetch profiles for users (registered clients and agents)
+    let profilesData: ProfileData[] = [];
+    if (allUserIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', allUserIds);
+
+      if (profilesError) {
+        transformLogger.error("Error fetching profiles", { error: profilesError });
+      } else {
+        profilesData = profiles || [];
       }
     }
+
+    // Fetch client records for non-registered clients
+    let clientsData: any[] = [];
+    if (allClientReferenceIds.length > 0) {
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name, email, is_registered_user')
+        .in('id', allClientReferenceIds);
+
+      if (clientsError) {
+        transformLogger.error("Error fetching clients", { error: clientsError });
+      } else {
+        clientsData = clients || [];
+      }
+    }
+
+    // Transform each proposal
+    const transformedProposals = rawProposals.map((proposal): ProposalListItem => {
+      // Get client information - prioritize registered user data
+      let clientName = 'Unknown Client';
+      let clientEmail = '';
       
-    return {
-      id: item.id,
-      name: item.title,
-      client: clientName,
-      date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
-      size: size,
-      status: item.status,
-      revenue: item.carbon_credits ? item.carbon_credits * 100 : 0, // Simplified revenue calculation
-      invitation_sent_at: item.invitation_sent_at,
-      invitation_viewed_at: item.invitation_viewed_at,
-      invitation_expires_at: item.invitation_expires_at,
-      review_later_until: item.review_later_until,
-      agent_id: item.agent_id,
-      agent: agentName,
-      is_preview: item.is_preview,
-      preview_of_id: item.preview_of_id
-    };
-  });
+      if (proposal.client_id) {
+        // Look for registered user first
+        const clientProfile = profilesData.find(p => p.id === proposal.client_id);
+        if (clientProfile) {
+          clientName = `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email;
+          clientEmail = clientProfile.email;
+        }
+      }
+      
+      // If no registered user found, look in clients table
+      if (clientName === 'Unknown Client' && proposal.client_reference_id) {
+        const clientRecord = clientsData.find(c => c.id === proposal.client_reference_id);
+        if (clientRecord) {
+          clientName = `${clientRecord.first_name || ''} ${clientRecord.last_name || ''}`.trim() || clientRecord.email;
+          clientEmail = clientRecord.email;
+        }
+      }
+      
+      // Fallback to content if still no client found
+      if (clientName === 'Unknown Client' && proposal.content) {
+        try {
+          const content = typeof proposal.content === 'string' 
+            ? JSON.parse(proposal.content) 
+            : proposal.content;
+          
+          if (content?.clientInfo?.name) {
+            clientName = content.clientInfo.name;
+          } else if (content?.clientInfo?.email) {
+            clientName = content.clientInfo.email;
+            clientEmail = content.clientInfo.email;
+          }
+        } catch (error) {
+          transformLogger.warn("Error parsing proposal content", { 
+            proposalId: proposal.id, 
+            error 
+          });
+        }
+      }
+
+      // Get agent information
+      let agentName = '';
+      if (proposal.agent_id) {
+        const agentProfile = profilesData.find(p => p.id === proposal.agent_id);
+        if (agentProfile) {
+          agentName = `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() || agentProfile.email;
+        }
+      }
+
+      return {
+        id: proposal.id,
+        name: proposal.title,
+        client: clientName,
+        date: new Date(proposal.created_at).toLocaleDateString(),
+        size: proposal.annual_energy || 0,
+        status: proposal.status,
+        revenue: proposal.carbon_credits || 0,
+        invitation_sent_at: proposal.invitation_sent_at,
+        invitation_viewed_at: proposal.invitation_viewed_at,
+        invitation_expires_at: proposal.invitation_expires_at,
+        review_later_until: proposal.review_later_until,
+        agent_id: proposal.agent_id,
+        agent: agentName,
+        is_preview: proposal.is_preview,
+        preview_of_id: proposal.preview_of_id
+      };
+    });
+
+    transformLogger.info("Successfully transformed proposals", { 
+      count: transformedProposals.length,
+      profileCount: profilesData.length,
+      clientCount: clientsData.length
+    });
+
+    return transformedProposals;
+  } catch (error) {
+    transformLogger.error("Error transforming proposal data", { error });
+    throw error;
+  }
 }

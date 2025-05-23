@@ -11,7 +11,7 @@ interface ProposalUpdateOptions {
 
 interface ProposalData {
   client_id: string | null;
-  client_contact_id: string | null;
+  client_reference_id: string | null;
 }
 
 export function useProposalUpdate() {
@@ -34,10 +34,10 @@ export function useProposalUpdate() {
         userId
       });
       
-      // First, fetch the current state of the proposal to check both client IDs
+      // First, fetch the current state of the proposal to check client reference
       const { data: proposalData, error: proposalFetchError } = await supabase
         .from('proposals')
-        .select('client_id, client_contact_id')
+        .select('client_id, client_reference_id')
         .eq('id', proposalId)
         .single();
         
@@ -49,16 +49,16 @@ export function useProposalUpdate() {
         throw proposalFetchError;
       }
       
-      // Check if this email exists as a client_contact
-      const { data: clientContact, error: contactLookupError } = await supabase
-        .from('client_contacts')
+      // Check if this user exists in the clients table  
+      const { data: clientRecord, error: clientLookupError } = await supabase
+        .from('clients')
         .select('id')
-        .eq('email', userId)
+        .eq('user_id', userId)
         .maybeSingle();
         
-      if (contactLookupError && !contactLookupError.message.includes('No rows found')) {
-        updateLogger.error("Error looking up client contact", { 
-          error: contactLookupError,
+      if (clientLookupError && !clientLookupError.message.includes('No rows found')) {
+        updateLogger.error("Error looking up client record", { 
+          error: clientLookupError,
           userId
         });
       }
@@ -67,22 +67,20 @@ export function useProposalUpdate() {
       updateLogger.info("Current proposal state before update", {
         proposalId,
         currentClientId: proposalData.client_id,
-        currentClientContactId: proposalData.client_contact_id,
-        foundClientContactId: clientContact?.id
+        currentClientReferenceId: proposalData.client_reference_id,
+        foundClientRecordId: clientRecord?.id
       });
       
-      // Build the update data based on the current state
-      const updateData: { client_id: string, client_contact_id?: null } = {
+      // Build the update data - set client_id to the registered user ID
+      const updateData: { client_id: string, client_reference_id?: string } = {
         client_id: userId
       };
       
-      // If this proposal was using client_contact_id, ensure we clear it
-      // to avoid conflicting identity references
-      if (proposalData.client_contact_id || clientContact?.id) {
-        updateData.client_contact_id = null;
-        updateLogger.info("Clearing client_contact_id during update", {
-          previousContactId: proposalData.client_contact_id,
-          foundContactId: clientContact?.id
+      // If we found a corresponding client record, update the reference
+      if (clientRecord?.id) {
+        updateData.client_reference_id = clientRecord.id;
+        updateLogger.info("Setting client_reference_id during update", {
+          clientReferenceId: clientRecord.id
         });
       }
       

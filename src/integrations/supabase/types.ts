@@ -45,6 +45,48 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          first_name: string | null
+          id: string
+          is_registered_user: boolean
+          last_name: string | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          is_registered_user?: boolean
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          is_registered_user?: boolean
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -83,6 +125,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           company_name: string | null
           created_at: string
           email: string
@@ -92,8 +135,10 @@ export type Database = {
           phone: string | null
           role: string
           terms_accepted_at: string | null
+          updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           company_name?: string | null
           created_at?: string
           email: string
@@ -103,8 +148,10 @@ export type Database = {
           phone?: string | null
           role: string
           terms_accepted_at?: string | null
+          updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           company_name?: string | null
           created_at?: string
           email?: string
@@ -114,6 +161,7 @@ export type Database = {
           phone?: string | null
           role?: string
           terms_accepted_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -127,6 +175,7 @@ export type Database = {
           carbon_credits: number | null
           client_contact_id: string | null
           client_id: string | null
+          client_reference_id: string | null
           client_share_percentage: number | null
           content: Json
           created_at: string
@@ -153,6 +202,7 @@ export type Database = {
           carbon_credits?: number | null
           client_contact_id?: string | null
           client_id?: string | null
+          client_reference_id?: string | null
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
@@ -179,6 +229,7 @@ export type Database = {
           carbon_credits?: number | null
           client_contact_id?: string | null
           client_id?: string | null
+          client_reference_id?: string | null
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
@@ -216,6 +267,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_reference_id_fkey"
+            columns: ["client_reference_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
@@ -279,6 +337,10 @@ export type Database = {
       }
       mark_invitation_viewed: {
         Args: { token_param: string }
+        Returns: undefined
+      }
+      migrate_client_data: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       search_clients: {
