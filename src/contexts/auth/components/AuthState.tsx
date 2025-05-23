@@ -1,5 +1,5 @@
 
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { useAuthInitialization } from '../hooks/useAuthInitialization';
 import { useAuthRefresh } from '../hooks/useAuthRefresh';
 import { useAuthDebug } from '../hooks/useAuthDebug';

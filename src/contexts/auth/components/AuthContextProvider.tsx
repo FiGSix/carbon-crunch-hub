@@ -1,5 +1,5 @@
 
-import { createContext, ReactNode } from 'react';
+import React, { createContext, ReactNode } from 'react';
 import { AuthContextType } from '../types';
 
 // Create the auth context with an undefined default value
