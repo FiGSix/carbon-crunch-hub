@@ -98,6 +98,7 @@ const ViewProposal = () => {
         canTakeAction,
         hasClientId: !!proposal.client_id,
         hasClientContactId: !!proposal.client_contact_id,
+        hasClientReferenceId: !!proposal.client_reference_id,
         userLoggedIn: !!user,
         accessedViaToken: !!token
       });
