@@ -10,6 +10,7 @@ export interface UserProfile {
   first_name?: string;
   last_name?: string;
   email: string;
+  phone?: string;
   company_name?: string;
   company_logo_url?: string;
   role?: UserRole;

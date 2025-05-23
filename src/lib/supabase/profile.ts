@@ -60,6 +60,7 @@ export async function updateProfile(updates: Partial<{
   first_name: string;
   last_name: string;
   company_name: string;
+  company_logo_url: string;
   email: string;
   phone: string;
   terms_accepted_at: string | null;
