@@ -9,14 +9,14 @@ const tokenLogger = logger.withContext({
 });
 
 /**
- * Direct database token validation method
+ * Direct database token validation method (bypassing edge function)
  */
 export async function validateTokenDirectly(token: string): Promise<SetTokenResult> {
   try {
-    console.log("🔄 === USING DIRECT TOKEN VALIDATION ===");
-    tokenLogger.info("Using direct token validation", { tokenPrefix: token.substring(0, 8) });
+    console.log("🔄 === USING DIRECT TOKEN VALIDATION (BYPASSING EDGE FUNCTION) ===");
+    tokenLogger.info("Using direct token validation via database", { tokenPrefix: token.substring(0, 8) });
     
-    // Use the new direct validation function
+    // Use the direct validation database function
     const { data: validationData, error: validationError } = await supabase.rpc(
       'validate_token_direct',
       { token_param: token }

@@ -3,11 +3,10 @@ import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/auth";
 import { SetTokenResult } from "./types";
 import { validateTokenDirectly } from "./directValidation";
-import { testConnectivity, validateTokenViaEdgeFunction } from "./edgeFunctionService";
-import { logTokenValidationStart, logTokenValidationComplete, createTokenLogger } from "./utils";
+import { createTokenLogger } from "./utils";
 
 /**
- * Hook to manage proposal invitation tokens with direct validation
+ * Hook to manage proposal invitation tokens with direct database validation
  */
 export function useInvitationToken() {
   const [loading, setLoading] = useState(false);
@@ -17,34 +16,26 @@ export function useInvitationToken() {
   const tokenLogger = createTokenLogger();
 
   /**
-   * Persist and validate an invitation token using direct validation
+   * Persist and validate an invitation token using direct database validation
    */
   const persistToken = useCallback(async (token: string): Promise<SetTokenResult> => {
     setLoading(true);
     setError(null);
     
     try {
-      logTokenValidationStart(token);
+      console.log("🔍 === STARTING DIRECT TOKEN VALIDATION ===");
+      console.log(`🎫 Token: ${token.substring(0, 8)}...`);
       
-      // Try direct validation first
-      console.log("🔍 Attempting direct token validation...");
+      // Use direct database validation (bypassing edge function)
       const directResult = await validateTokenDirectly(token);
       
       if (directResult.success) {
-        logTokenValidationComplete(directResult.success, directResult.valid);
+        console.log("✅ Direct validation completed:", { valid: directResult.valid });
         return directResult;
       }
       
-      // If direct validation fails, try edge function as fallback
-      try {
-        const edgeFunctionResult = await validateTokenViaEdgeFunction(token, user?.email);
-        logTokenValidationComplete(true, edgeFunctionResult.valid);
-        return edgeFunctionResult;
-        
-      } catch (edgeFunctionError) {
-        // Return the direct validation result if edge function fails
-        return directResult;
-      }
+      // If direct validation fails completely, return the error
+      return directResult;
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error validating invitation token";
@@ -61,11 +52,10 @@ export function useInvitationToken() {
     } finally {
       setLoading(false);
     }
-  }, [tokenLogger, user?.email]);
+  }, [tokenLogger]);
 
   return {
     persistToken,
-    testConnectivity,
     loading,
     error
   };

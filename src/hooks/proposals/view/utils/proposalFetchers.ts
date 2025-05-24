@@ -10,18 +10,18 @@ const proposalLogger = logger.withContext({
 });
 
 /**
- * Fetch proposal by token using direct validation
+ * Fetch proposal by token using direct database function
  */
 export async function fetchProposalByToken(invitationToken: string): Promise<{ proposal: ProposalData; clientEmail: string | null }> {
   try {
-    proposalLogger.info("🎫 Fetching proposal by token directly", { 
+    proposalLogger.info("🎫 Fetching proposal by token directly via database", { 
       tokenPrefix: invitationToken.substring(0, 8)
     });
     
-    console.log("🎫 === FETCHING PROPOSAL BY TOKEN DIRECTLY ===");
+    console.log("🎫 === FETCHING PROPOSAL BY TOKEN DIRECTLY (BYPASSING EDGE FUNCTION) ===");
     console.log(`🎫 Token: ${invitationToken.substring(0, 8)}...`);
     
-    // Use the new direct function to get proposal by token
+    // Use the direct database function to get proposal by token
     const { data, error: fetchError } = await supabase.rpc(
       'get_proposal_by_token_direct',
       { token_param: invitationToken }
@@ -58,7 +58,7 @@ export async function fetchProposalByToken(invitationToken: string): Promise<{ p
     const typedProposal = transformToProposalData(proposalData);
     const clientEmail = proposalData.client_email || null;
     
-    proposalLogger.info("✅ Proposal fetched via direct token", { 
+    proposalLogger.info("✅ Proposal fetched via direct database call", { 
       proposalId: typedProposal.id,
       status: typedProposal.status,
       clientEmail: proposalData.client_email
@@ -70,7 +70,7 @@ export async function fetchProposalByToken(invitationToken: string): Promise<{ p
       title: typedProposal.title
     });
     
-    // Mark the invitation as viewed in a separate call
+    // Mark the invitation as viewed in a separate call (non-blocking)
     supabase.rpc('mark_invitation_viewed', { token_param: invitationToken })
       .then(({ error }) => {
         if (error) {
