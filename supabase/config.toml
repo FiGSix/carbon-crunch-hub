@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.send-proposal-invitation]
 verify_jwt = true
+
+[functions.health-check]
+verify_jwt = false

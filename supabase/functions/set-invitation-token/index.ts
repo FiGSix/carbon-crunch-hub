@@ -21,28 +21,28 @@ interface ResponseBody {
 
 const handler = async (req: Request): Promise<Response> => {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] === SET-INVITATION-TOKEN FUNCTION CALLED ===`);
+  console.log(`[${timestamp}] 🚀 EDGE FUNCTION INVOKED - set-invitation-token`);
   console.log(`[${timestamp}] Method: ${req.method}`);
   console.log(`[${timestamp}] URL: ${req.url}`);
   console.log(`[${timestamp}] Headers:`, Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log(`[${timestamp}] Handling CORS preflight request`);
+    console.log(`[${timestamp}] ✅ Handling CORS preflight request`);
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log(`[${timestamp}] 🚀 Processing invitation token request...`);
+    console.log(`[${timestamp}] 🔄 Processing invitation token request...`);
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
-    console.log(`[${timestamp}] Environment check:`, {
+    console.log(`[${timestamp}] 🔧 Environment check:`, {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseAnonKey: !!supabaseAnonKey,
-      supabaseUrlPrefix: supabaseUrl?.substring(0, 20) + '...'
+      supabaseUrlPrefix: supabaseUrl?.substring(0, 30) + '...'
     });
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -61,9 +61,9 @@ const handler = async (req: Request): Promise<Response> => {
     let requestBody: RequestBody;
     try {
       const rawBody = await req.text();
-      console.log(`[${timestamp}] Raw request body:`, rawBody);
+      console.log(`[${timestamp}] 📥 Raw request body length:`, rawBody.length);
       requestBody = JSON.parse(rawBody) as RequestBody;
-      console.log(`[${timestamp}] ✅ Request body parsed successfully:`, {
+      console.log(`[${timestamp}] ✅ Request body parsed:`, {
         hasToken: !!requestBody.token,
         tokenLength: requestBody.token?.length,
         tokenPrefix: requestBody.token?.substring(0, 8) + '...'

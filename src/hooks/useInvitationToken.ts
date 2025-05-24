@@ -25,6 +25,32 @@ export function useInvitationToken() {
   });
 
   /**
+   * Test edge function connectivity
+   */
+  const testConnectivity = useCallback(async (): Promise<boolean> => {
+    try {
+      tokenLogger.info("🩺 Testing edge function connectivity");
+      console.log("🩺 Testing edge function connectivity...");
+      
+      const { data, error: healthError } = await supabase.functions.invoke('health-check');
+      
+      if (healthError) {
+        console.error("❌ Health check failed:", healthError);
+        tokenLogger.error("❌ Health check failed", { error: healthError });
+        return false;
+      }
+      
+      console.log("✅ Health check passed:", data);
+      tokenLogger.info("✅ Health check passed", { data });
+      return true;
+    } catch (error) {
+      console.error("💥 Health check exception:", error);
+      tokenLogger.error("💥 Health check exception", { error });
+      return false;
+    }
+  }, [tokenLogger]);
+
+  /**
    * Persist and validate an invitation token
    */
   const persistToken = useCallback(async (token: string): Promise<SetTokenResult> => {
@@ -43,7 +69,22 @@ export function useInvitationToken() {
       console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
       
       // Test edge function connectivity first
-      console.log("🔗 Testing edge function connectivity...");
+      console.log("🩺 Testing edge function connectivity...");
+      const isHealthy = await testConnectivity();
+      
+      if (!isHealthy) {
+        const errorMessage = "Edge function connectivity test failed. The function may not be properly deployed.";
+        console.error("❌ === CONNECTIVITY TEST FAILED ===");
+        tokenLogger.error("❌ Connectivity test failed");
+        setError(errorMessage);
+        return {
+          success: false,
+          valid: false,
+          error: errorMessage
+        };
+      }
+      
+      console.log("✅ Edge function connectivity confirmed");
       
       // Call the edge function to set the token in the session
       tokenLogger.info("📡 Invoking set-invitation-token edge function", { 
@@ -162,10 +203,11 @@ export function useInvitationToken() {
     } finally {
       setLoading(false);
     }
-  }, [tokenLogger]);
+  }, [tokenLogger, testConnectivity]);
 
   return {
     persistToken,
+    testConnectivity,
     loading,
     error
   };
