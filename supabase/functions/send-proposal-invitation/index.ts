@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     console.log("Received invitation request data:", JSON.stringify({
       ...requestData,
-      invitationToken: requestData.invitationToken ? "[REDACTED]" : undefined,
+      invitationToken: requestData.invitationToken ? `${requestData.invitationToken.substring(0, 8)}...` : undefined,
     }));
     
     // Validate required fields
@@ -63,15 +63,48 @@ const handler = async (req: Request): Promise<Response> => {
     if (!emailRegex.test(clientEmail)) {
       throw new Error("Invalid email format");
     }
+
+    // CRITICAL: Verify the token from the request matches what's stored in the database
+    console.log(`Verifying token consistency for proposal ${proposalId}`);
+    console.log(`Token from request: ${invitationToken.substring(0, 8)}...`);
+    
+    const { data: proposalData, error: proposalError } = await supabase
+      .from('proposals')
+      .select('invitation_token, status, title')
+      .eq('id', proposalId)
+      .single();
+    
+    if (proposalError) {
+      console.error("Error fetching proposal for token verification:", proposalError);
+      throw new Error(`Failed to verify proposal: ${proposalError.message}`);
+    }
+    
+    if (!proposalData.invitation_token) {
+      console.error("No invitation token found in database for proposal:", proposalId);
+      throw new Error("No invitation token found for this proposal");
+    }
+    
+    console.log(`Token from database: ${proposalData.invitation_token.substring(0, 8)}...`);
+    
+    // Verify tokens match
+    if (proposalData.invitation_token !== invitationToken) {
+      console.error("TOKEN MISMATCH DETECTED!");
+      console.error(`Request token: ${invitationToken}`);
+      console.error(`Database token: ${proposalData.invitation_token}`);
+      throw new Error("Token mismatch between request and database. This indicates a data consistency issue.");
+    }
+    
+    console.log("✅ Token verification successful - tokens match");
     
     // Get site URL from environment variable, with fallback
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
 
-    // Construct invitation link
-    const invitationLink = `${siteUrl}/proposals/view?token=${invitationToken}`;
+    // Use the VERIFIED token from the database to construct invitation link
+    const invitationLink = `${siteUrl}/proposals/view?token=${proposalData.invitation_token}`;
 
     console.log(`Sending invitation email to ${clientEmail} for project ${projectName}`);
     console.log(`Invitation link: ${invitationLink}`);
+    console.log(`Using verified token: ${proposalData.invitation_token.substring(0, 8)}...`);
 
     // Send email with proper error handling
     try {
@@ -90,6 +123,12 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             <p>This invitation is valid for 48 hours. If you did not expect this invitation, please ignore this email.</p>
             <p>Best regards,<br>Your Carbon Credit Team</p>
+            
+            <!-- Debug info (hidden) -->
+            <div style="display: none;">
+              <!-- Token: ${proposalData.invitation_token.substring(0, 8)}... -->
+              <!-- Proposal: ${proposalId} -->
+            </div>
           </div>
         `,
       });
@@ -117,11 +156,17 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      console.log("Invitation email sent successfully:", emailResponse);
+      console.log("✅ Invitation email sent successfully:", emailResponse);
+      console.log(`✅ Email sent with verified token: ${proposalData.invitation_token.substring(0, 8)}...`);
 
       return new Response(JSON.stringify({
         success: true,
-        data: emailResponse
+        data: emailResponse,
+        debug: {
+          tokenUsed: proposalData.invitation_token.substring(0, 8) + "...",
+          proposalId: proposalId,
+          invitationLink: invitationLink
+        }
       }), {
         status: 200,
         headers: {
