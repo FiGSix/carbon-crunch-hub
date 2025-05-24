@@ -1,30 +1,15 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// DEPLOYMENT VERIFICATION - Force new deployment with version tracking
-const FUNCTION_VERSION = "v3.0.0";
-const DEPLOYMENT_TIMESTAMP = new Date().toISOString();
-
-interface RequestBody {
-  token: string;
-  email?: string;
-}
-
-interface ResponseBody {
-  success: boolean;
-  valid: boolean;
-  proposalId?: string;
-  clientEmail?: string;
-  error?: string;
-  version?: string;
-  deploymentTime?: string;
-}
+import { parseRequest, validateToken } from "./request-parser.ts";
+import { validateTokenDirect, markInvitationAsViewed } from "./validation.ts";
+import { 
+  createCorsResponse, 
+  createErrorResponse, 
+  createSuccessResponse,
+  FUNCTION_VERSION,
+  DEPLOYMENT_TIMESTAMP
+} from "./responses.ts";
 
 const handler = async (req: Request): Promise<Response> => {
   const timestamp = new Date().toISOString();
@@ -37,7 +22,7 @@ const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log(`[${timestamp}] [${requestId}] ✅ CORS preflight handled`);
-    return new Response(null, { headers: corsHeaders });
+    return createCorsResponse();
   }
 
   try {
@@ -63,155 +48,52 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    // Parse request body
-    let requestBody: RequestBody;
+    // Parse and validate request
+    let requestBody;
     try {
-      const contentType = req.headers.get('content-type');
-      const contentLength = req.headers.get('content-length');
-      
-      console.log(`[${timestamp}] [${requestId}] 📋 Request headers:`, {
-        contentType,
-        contentLength,
-        hasAuth: !!req.headers.get('Authorization')
-      });
-
-      const rawBody = await req.text();
-      console.log(`[${timestamp}] [${requestId}] 📥 Raw body length: ${rawBody.length}`);
-      
-      if (!rawBody || rawBody.trim() === '') {
-        console.error(`[${timestamp}] [${requestId}] ❌ Empty request body received`);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            valid: false,
-            error: 'Empty request body. Please ensure you are sending a valid JSON payload with a token field.',
-            version: FUNCTION_VERSION,
-            deploymentTime: DEPLOYMENT_TIMESTAMP
-          } as ResponseBody),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-      
-      console.log(`[${timestamp}] [${requestId}] 📥 Body preview: ${rawBody.substring(0, 50)}${rawBody.length > 50 ? '...' : ''}`);
-      
-      requestBody = JSON.parse(rawBody) as RequestBody;
-      console.log(`[${timestamp}] [${requestId}] ✅ Body parsed:`, {
-        hasToken: !!requestBody.token,
-        tokenLength: requestBody.token?.length,
-        tokenPrefix: requestBody.token?.substring(0, 8) + '...',
-        hasEmail: !!requestBody.email,
-        email: requestBody.email ? requestBody.email.substring(0, 3) + '***' : 'none'
-      });
+      requestBody = await parseRequest(req, requestId);
     } catch (parseError) {
       console.error(`[${timestamp}] [${requestId}] ❌ Parse error:`, parseError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          valid: false,
-          error: `Invalid request body format: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`,
-          version: FUNCTION_VERSION,
-          deploymentTime: DEPLOYMENT_TIMESTAMP
-        } as ResponseBody),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
+      return createErrorResponse(
+        parseError instanceof Error ? parseError.message : 'Invalid request format'
       );
     }
 
     const { token, email } = requestBody;
 
-    if (!token || token.trim() === '') {
-      console.error(`[${timestamp}] [${requestId}] ❌ No token provided`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          valid: false,
-          error: 'No token provided in request body',
-          version: FUNCTION_VERSION,
-          deploymentTime: DEPLOYMENT_TIMESTAMP
-        } as ResponseBody),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
+    try {
+      validateToken(token);
+    } catch (tokenError) {
+      console.error(`[${timestamp}] [${requestId}] ❌ Token validation error:`, tokenError);
+      return createErrorResponse(
+        tokenError instanceof Error ? tokenError.message : 'Invalid token'
       );
     }
 
     console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}... ${email ? `for email: ${email.substring(0, 3)}***` : '(no email provided)'}`);
 
-    // Use the new direct validation function instead of session-based approach
-    console.log(`[${timestamp}] [${requestId}] 🔍 Validating token directly...`);
-    const { data: validationData, error: validationError } = await supabaseClient.rpc(
-      'validate_token_direct',
-      { token_param: token }
-    );
+    // Validate token using direct validation
+    const validationResult = await validateTokenDirect(token, supabaseClient);
 
-    if (validationError) {
-      console.error(`[${timestamp}] [${requestId}] ❌ Validation error:`, validationError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          valid: false,
-          error: `Token validation failed: ${validationError.message}`,
-          version: FUNCTION_VERSION,
-          deploymentTime: DEPLOYMENT_TIMESTAMP
-        } as ResponseBody),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-
-    console.log(`[${timestamp}] [${requestId}] 📊 Validation result:`, validationData);
-
-    const result = validationData?.[0];
-    if (!result || !result.is_valid) {
+    if (!validationResult.is_valid) {
       console.log(`[${timestamp}] [${requestId}] ⚠️ Invalid token`);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          valid: false,
-          error: 'This invitation link is invalid or has expired',
-          version: FUNCTION_VERSION,
-          deploymentTime: DEPLOYMENT_TIMESTAMP
-        } as ResponseBody),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
+      return createSuccessResponse(
+        false,
+        undefined,
+        undefined,
+        'This invitation link is invalid or has expired'
       );
     }
 
     // Mark invitation as viewed (non-blocking)
-    supabaseClient.rpc('mark_invitation_viewed', { token_param: token })
-      .then(({ error }) => {
-        if (error) {
-          console.error(`[${timestamp}] [${requestId}] ⚠️ Failed to mark as viewed:`, error);
-        } else {
-          console.log(`[${timestamp}] [${requestId}] ✅ Marked invitation as viewed`);
-        }
-      });
+    markInvitationAsViewed(token, supabaseClient);
 
-    console.log(`[${timestamp}] [${requestId}] 🎉 SUCCESS - proposal: ${result.proposal_id}, client: ${result.client_email}`);
+    console.log(`[${timestamp}] [${requestId}] 🎉 SUCCESS - proposal: ${validationResult.proposal_id}, client: ${validationResult.client_email}`);
     
-    return new Response(
-      JSON.stringify({
-        success: true,
-        valid: true,
-        proposalId: result.proposal_id,
-        clientEmail: result.client_email,
-        version: FUNCTION_VERSION,
-        deploymentTime: DEPLOYMENT_TIMESTAMP
-      } as ResponseBody),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    return createSuccessResponse(
+      true,
+      validationResult.proposal_id,
+      validationResult.client_email
     );
 
   } catch (error) {
@@ -220,19 +102,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     
-    return new Response(
-      JSON.stringify({
-        success: false,
-        valid: false,
-        error: errorMessage,
-        version: FUNCTION_VERSION,
-        deploymentTime: DEPLOYMENT_TIMESTAMP
-      } as ResponseBody),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
+    return createErrorResponse(errorMessage, 500);
   }
 };
 
