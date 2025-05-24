@@ -150,7 +150,8 @@ const user = session?.user;
       
       // First attempt: Edge function
       console.log("📡 Attempting edge function call...");
-      
+
+      console.log("📨 Edge function input:", { token, email: user?.email });
       try {
         const { data, error: functionError } = await supabase.functions.invoke(
   'set-invitation-token',
