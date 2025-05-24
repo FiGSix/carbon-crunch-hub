@@ -49,7 +49,7 @@ export function DashboardLayout({
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <Sidebar>
-          <DashboardSidebar userRole={userRole || 'client'} />
+          <DashboardSidebar />
         </Sidebar>
         
         <div className="flex-1 flex flex-col bg-gradient-to-br from-white to-gray-50">
