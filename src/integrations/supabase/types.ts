@@ -371,7 +371,7 @@ export type Database = {
         }[]
       }
       set_request_invitation_token: {
-        Args: { token: string }
+        Args: { email_input: string; token_input: string } | { token: string }
         Returns: boolean
       }
       validate_invitation_token: {

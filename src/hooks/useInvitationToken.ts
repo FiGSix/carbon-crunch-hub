@@ -1,7 +1,6 @@
-
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@supabase/auth-helpers-react";
+import { useAuth } from "@/contexts/auth";
 import { logger } from "@/lib/logger";
 
 interface SetTokenResult {
@@ -20,8 +19,7 @@ interface SetTokenResult {
 export function useInvitationToken() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: session } = useSession();
-const user = session?.user;
+  const { user } = useAuth();
   
   const tokenLogger = logger.withContext({
     component: 'useInvitationToken',
