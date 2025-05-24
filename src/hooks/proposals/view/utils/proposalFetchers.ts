@@ -95,6 +95,11 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
     proposalLogger.info("🔄 Fetching proposal by ID", { proposalId });
     console.log("🔄 === FETCHING PROPOSAL BY ID ===", proposalId);
     
+    // Add validation for proposalId format
+    if (!proposalId || typeof proposalId !== 'string' || proposalId.trim() === '') {
+      throw new Error("Invalid proposal ID provided. Please check the URL and try again.");
+    }
+    
     const { data, error: fetchError } = await supabase
       .from('proposals')
       .select('*')
@@ -112,7 +117,9 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
       console.error("❌ === PROPOSAL FETCH BY ID ERROR ===", {
         error: fetchError,
         proposalId,
-        errorCode: fetchError.code
+        errorCode: fetchError.code,
+        errorDetails: fetchError.details,
+        errorHint: fetchError.hint
       });
       
       if (fetchError.code === 'PGRST116') {
@@ -125,6 +132,7 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
     }
     
     if (!data) {
+      console.error("❌ No data returned from query for ID:", proposalId);
       throw new Error("No proposal found with this ID. It may have been deleted or you may not have permission to view it.");
     }
     
