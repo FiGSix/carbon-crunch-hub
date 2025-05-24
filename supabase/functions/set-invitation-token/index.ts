@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 // DEPLOYMENT VERIFICATION - Force new deployment with version tracking
-const FUNCTION_VERSION = "v2.3.0";
+const FUNCTION_VERSION = "v3.0.0";
 const DEPLOYMENT_TIMESTAMP = new Date().toISOString();
 
 interface RequestBody {
@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Create Supabase client with enhanced error handling
+    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
@@ -63,10 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    // Enhanced request body parsing with better error handling
+    // Parse request body
     let requestBody: RequestBody;
     try {
-      // Log request details for debugging
       const contentType = req.headers.get('content-type');
       const contentLength = req.headers.get('content-length');
       
@@ -96,7 +95,6 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
       
-      // Log first few characters for debugging (be careful not to log sensitive data)
       console.log(`[${timestamp}] [${requestId}] 📥 Body preview: ${rawBody.substring(0, 50)}${rawBody.length > 50 ? '...' : ''}`);
       
       requestBody = JSON.parse(rawBody) as RequestBody;
@@ -145,65 +143,35 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}... ${email ? `for email: ${email.substring(0, 3)}***` : '(no email provided)'}`);
 
-    // Step 1: Set token in session
-    console.log(`[${timestamp}] [${requestId}] 📝 Setting token in session...`);
-    const { data: tokenSetResult, error: tokenError } = await supabaseClient.rpc(
-      'set_request_invitation_token',
-      { token }
-    );
-
-    if (tokenError) {
-      console.error(`[${timestamp}] [${requestId}] ❌ Token set error:`, tokenError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          valid: false,
-          error: `Failed to set token: ${tokenError.message}`,
-          version: FUNCTION_VERSION,
-          deploymentTime: DEPLOYMENT_TIMESTAMP
-        } as ResponseBody),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    console.log(`[${timestamp}] [${requestId}] ✅ Token set successfully:`, tokenSetResult);
-
-    // Step 2: Validate token
-    console.log(`[${timestamp}] [${requestId}] 🔍 Validating token...`);
+    // Use the new direct validation function instead of session-based approach
+    console.log(`[${timestamp}] [${requestId}] 🔍 Validating token directly...`);
     const { data: validationData, error: validationError } = await supabaseClient.rpc(
-      'validate_invitation_token',
-      { token }
+      'validate_token_direct',
+      { token_param: token }
     );
 
     if (validationError) {
       console.error(`[${timestamp}] [${requestId}] ❌ Validation error:`, validationError);
       return new Response(
         JSON.stringify({
-          success: true,
+          success: false,
           valid: false,
-          error: 'Invalid or expired invitation token',
+          error: `Token validation failed: ${validationError.message}`,
           version: FUNCTION_VERSION,
           deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
+          status: 500
         }
       );
     }
 
     console.log(`[${timestamp}] [${requestId}] 📊 Validation result:`, validationData);
 
-    // Extract proposal data
-    const proposalId = validationData?.[0]?.proposal_id;
-    const clientEmail = validationData?.[0]?.client_email;
-    const valid = !!proposalId;
-
-    if (!valid) {
-      console.log(`[${timestamp}] [${requestId}] ⚠️ No proposal found for token`);
+    const result = validationData?.[0];
+    if (!result || !result.is_valid) {
+      console.log(`[${timestamp}] [${requestId}] ⚠️ Invalid token`);
       return new Response(
         JSON.stringify({
           success: true,
@@ -219,7 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Step 3: Mark invitation as viewed (non-blocking)
+    // Mark invitation as viewed (non-blocking)
     supabaseClient.rpc('mark_invitation_viewed', { token_param: token })
       .then(({ error }) => {
         if (error) {
@@ -229,14 +197,14 @@ const handler = async (req: Request): Promise<Response> => {
         }
       });
 
-    console.log(`[${timestamp}] [${requestId}] 🎉 SUCCESS - proposal: ${proposalId}, client: ${clientEmail}`);
+    console.log(`[${timestamp}] [${requestId}] 🎉 SUCCESS - proposal: ${result.proposal_id}, client: ${result.client_email}`);
     
     return new Response(
       JSON.stringify({
         success: true,
         valid: true,
-        proposalId,
-        clientEmail,
+        proposalId: result.proposal_id,
+        clientEmail: result.client_email,
         version: FUNCTION_VERSION,
         deploymentTime: DEPLOYMENT_TIMESTAMP
       } as ResponseBody),

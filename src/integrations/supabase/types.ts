@@ -348,6 +348,30 @@ export type Database = {
           invitation_expires_at: string
         }[]
       }
+      get_proposal_by_token_direct: {
+        Args: { token_param: string }
+        Returns: {
+          id: string
+          title: string
+          status: string
+          content: Json
+          agent_id: string
+          client_id: string
+          client_contact_id: string
+          signed_at: string
+          created_at: string
+          archived_at: string
+          review_later_until: string
+          is_preview: boolean
+          preview_of_id: string
+          client_email: string
+          invitation_token: string
+          invitation_expires_at: string
+          annual_energy: number
+          carbon_credits: number
+          client_share_percentage: number
+        }[]
+      }
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
@@ -381,6 +405,16 @@ export type Database = {
           client_email: string
           client_id: string
           client_contact_id: string
+        }[]
+      }
+      validate_token_direct: {
+        Args: { token_param: string }
+        Returns: {
+          proposal_id: string
+          client_email: string
+          client_id: string
+          client_contact_id: string
+          is_valid: boolean
         }[]
       }
     }

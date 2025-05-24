@@ -15,7 +15,7 @@ interface SetTokenResult {
 }
 
 /**
- * Hook to manage proposal invitation tokens with fallback support
+ * Hook to manage proposal invitation tokens with direct validation
  */
 export function useInvitationToken() {
   const [loading, setLoading] = useState(false);
@@ -54,48 +54,33 @@ export function useInvitationToken() {
   }, [tokenLogger]);
 
   /**
-   * Direct database fallback method
+   * Direct database token validation method
    */
-  const persistTokenDirectly = useCallback(async (token: string): Promise<SetTokenResult> => {
+  const validateTokenDirectly = useCallback(async (token: string): Promise<SetTokenResult> => {
     try {
-      console.log("🔄 === USING DIRECT DATABASE FALLBACK ===");
-      tokenLogger.info("Using direct database fallback for token", { tokenPrefix: token.substring(0, 8) });
+      console.log("🔄 === USING DIRECT TOKEN VALIDATION ===");
+      tokenLogger.info("Using direct token validation", { tokenPrefix: token.substring(0, 8) });
       
-      // Step 1: Set token in session
-      const { data: tokenSetResult, error: tokenError } = await supabase.rpc(
-        'set_request_invitation_token',
-        { token }
-      );
-
-      if (tokenError) {
-        console.error("❌ Direct token set failed:", tokenError);
-        throw new Error(`Failed to set token: ${tokenError.message}`);
-      }
-
-      console.log("✅ Direct token set successful:", tokenSetResult);
-
-      // Step 2: Validate token
+      // Use the new direct validation function
       const { data: validationData, error: validationError } = await supabase.rpc(
-        'validate_invitation_token',
-        { token }
+        'validate_token_direct',
+        { token_param: token }
       );
 
       if (validationError) {
         console.error("❌ Direct validation failed:", validationError);
+        tokenLogger.error("❌ Direct validation failed", { error: validationError });
         return {
-          success: true,
+          success: false,
           valid: false,
-          error: 'Invalid or expired invitation token'
+          error: `Token validation failed: ${validationError.message}`
         };
       }
 
       console.log("✅ Direct validation successful:", validationData);
 
-      const proposalId = validationData?.[0]?.proposal_id;
-      const clientEmail = validationData?.[0]?.client_email;
-      const valid = !!proposalId;
-
-      if (!valid) {
+      const result = validationData?.[0];
+      if (!result || !result.is_valid) {
         return {
           success: true,
           valid: false,
@@ -116,13 +101,13 @@ export function useInvitationToken() {
       return {
         success: true,
         valid: true,
-        proposalId,
-        clientEmail
+        proposalId: result.proposal_id,
+        clientEmail: result.client_email
       };
 
     } catch (error) {
-      console.error("💥 Direct database fallback failed:", error);
-      const errorMessage = error instanceof Error ? error.message : "Database fallback failed";
+      console.error("💥 Direct token validation failed:", error);
+      const errorMessage = error instanceof Error ? error.message : "Token validation failed";
       return {
         success: false,
         valid: false,
@@ -132,25 +117,38 @@ export function useInvitationToken() {
   }, [tokenLogger]);
 
   /**
-   * Persist and validate an invitation token with automatic fallback
+   * Persist and validate an invitation token using direct validation
    */
   const persistToken = useCallback(async (token: string): Promise<SetTokenResult> => {
     setLoading(true);
     setError(null);
     
     try {
-      tokenLogger.info("🚀 Starting token persistence", { 
+      tokenLogger.info("🚀 Starting token validation", { 
         tokenPrefix: token.substring(0, 8),
         timestamp: new Date().toISOString()
       });
       
-      console.log("🚀 === STARTING TOKEN PERSISTENCE ===");
+      console.log("🚀 === STARTING TOKEN VALIDATION ===");
       console.log(`📋 Token: ${token.substring(0, 8)}... (length: ${token.length})`);
       
-      // First attempt: Edge function
-      console.log("📡 Attempting edge function call...");
-
-      // Prepare the request body - ensure it's valid JSON
+      // Try direct validation first
+      console.log("🔍 Attempting direct token validation...");
+      const directResult = await validateTokenDirectly(token);
+      
+      if (directResult.success) {
+        console.log("✅ Direct validation successful:", directResult);
+        tokenLogger.info("✅ Direct validation successful", { 
+          success: directResult.success,
+          valid: directResult.valid
+        });
+        
+        return directResult;
+      }
+      
+      // If direct validation fails, try edge function as fallback
+      console.log("📡 Trying edge function fallback...");
+      
       const requestBody = { 
         token, 
         email: user?.email || undefined 
@@ -170,11 +168,11 @@ export function useInvitationToken() {
         );
         
         if (functionError) {
-          console.warn("⚠️ Edge function failed, using fallback:", functionError);
-          tokenLogger.warn("Edge function failed, using database fallback", { error: functionError });
+          console.warn("⚠️ Edge function failed:", functionError);
+          tokenLogger.warn("Edge function failed", { error: functionError });
           
-          // Fallback to direct database method
-          return await persistTokenDirectly(token);
+          // Return the direct validation result even if edge function fails
+          return directResult;
         }
         
         const result = data as SetTokenResult;
@@ -190,17 +188,17 @@ export function useInvitationToken() {
         return result;
         
       } catch (edgeFunctionError) {
-        console.warn("⚠️ Edge function exception, using fallback:", edgeFunctionError);
-        tokenLogger.warn("Edge function exception, using database fallback", { error: edgeFunctionError });
+        console.warn("⚠️ Edge function exception:", edgeFunctionError);
+        tokenLogger.warn("Edge function exception", { error: edgeFunctionError });
         
-        // Fallback to direct database method
-        return await persistTokenDirectly(token);
+        // Return the direct validation result
+        return directResult;
       }
       
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error setting invitation token";
-      console.error("💥 Complete token persistence failed:", error);
-      tokenLogger.error("💥 Complete token persistence failed", { error });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error validating invitation token";
+      console.error("💥 Complete token validation failed:", error);
+      tokenLogger.error("💥 Complete token validation failed", { error });
       
       setError(errorMessage);
       
@@ -212,7 +210,7 @@ export function useInvitationToken() {
     } finally {
       setLoading(false);
     }
-  }, [tokenLogger, persistTokenDirectly, user?.email]);
+  }, [tokenLogger, validateTokenDirectly, user?.email]);
 
   return {
     persistToken,
