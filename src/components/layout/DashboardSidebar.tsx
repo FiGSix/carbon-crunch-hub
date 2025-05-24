@@ -17,7 +17,6 @@ import { useAuth } from '@/contexts/auth';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -25,7 +24,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { useState } from 'react';
 
 const navigation = [
@@ -35,6 +33,7 @@ const navigation = [
   { name: 'Calculator', href: '/calculator', icon: Calculator, roles: ['client', 'admin'] },
   { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['client', 'admin'] },
   { name: 'Profile', href: '/profile', icon: Settings },
+  { name: 'Sign out', href: '#', icon: LogOut, isSignOut: true },
 ];
 
 export function DashboardSidebar() {
@@ -77,6 +76,33 @@ export function DashboardSidebar() {
             <SidebarMenu className="px-4 py-4 space-y-2">
               {filteredNavigation.map((item) => {
                 const isActive = location.pathname === item.href;
+                const isSignOutItem = item.isSignOut;
+                
+                if (isSignOutItem) {
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <SidebarMenuButton asChild>
+                        <button
+                          onClick={handleLogout}
+                          disabled={isLoggingOut}
+                          className={cn(
+                            'group flex gap-x-3 rounded-lg p-3 text-sm leading-6 font-medium transition-all duration-200 w-full',
+                            'text-gray-700 hover:text-red-600 hover:bg-red-50',
+                            isLoggingOut && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          {isLoggingOut ? (
+                            <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                          ) : (
+                            <item.icon className="h-5 w-5 shrink-0 transition-colors text-gray-500 group-hover:text-red-600" />
+                          )}
+                          <span className="truncate">{isLoggingOut ? 'Signing out...' : item.name}</span>
+                        </button>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                }
+
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton asChild>
@@ -103,26 +129,6 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      <SidebarFooter className="border-t border-gray-200 p-4">
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className={cn(
-            "w-full justify-start gap-x-3 text-sm font-medium transition-all duration-200",
-            "text-gray-700 hover:text-red-600 hover:bg-red-50",
-            isLoggingOut && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {isLoggingOut ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <LogOut className="h-5 w-5" />
-          )}
-          <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
-        </Button>
-      </SidebarFooter>
     </div>
   );
 }
