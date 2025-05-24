@@ -32,8 +32,8 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Proposals', href: '/proposals', icon: FileText },
   { name: 'My Clients', href: '/clients', icon: Users, roles: ['agent', 'admin'] },
-  { name: 'Calculator', href: '/calculator', icon: Calculator },
-  { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Calculator', href: '/calculator', icon: Calculator, roles: ['client', 'admin'] },
+  { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['client', 'admin'] },
   { name: 'Profile', href: '/profile', icon: Settings },
 ];
 
