@@ -8,11 +8,12 @@ const corsHeaders = {
 };
 
 // DEPLOYMENT VERIFICATION - Force new deployment with version tracking
-const FUNCTION_VERSION = "v2.1.0";
+const FUNCTION_VERSION = "v2.2.0";
 const DEPLOYMENT_TIMESTAMP = new Date().toISOString();
 
 interface RequestBody {
   token: string;
+  email?: string;
 }
 
 interface ResponseBody {
@@ -76,7 +77,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`[${timestamp}] [${requestId}] ✅ Body parsed:`, {
         hasToken: !!requestBody.token,
         tokenLength: requestBody.token?.length,
-        tokenPrefix: requestBody.token?.substring(0, 8) + '...'
+        tokenPrefix: requestBody.token?.substring(0, 8) + '...',
+        hasEmail: !!requestBody.email,
+        email: requestBody.email ? requestBody.email.substring(0, 3) + '***' : 'none'
       });
     } catch (parseError) {
       console.error(`[${timestamp}] [${requestId}] ❌ Parse error:`, parseError);
@@ -95,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { token } = requestBody;
+    const { token, email } = requestBody;
 
     if (!token || token.trim() === '') {
       console.error(`[${timestamp}] [${requestId}] ❌ No token provided`);
@@ -114,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}...`);
+    console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}... ${email ? `for email: ${email.substring(0, 3)}***` : '(no email provided)'}`);
 
     // Step 1: Set token in session
     console.log(`[${timestamp}] [${requestId}] 📝 Setting token in session...`);
