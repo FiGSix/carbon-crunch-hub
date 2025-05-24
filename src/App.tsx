@@ -64,6 +64,8 @@ function App() {
                   <ViewProposal />
                 </PrivateRoute>
               } />
+              {/* New route for proposal viewing with query token */}
+              <Route path="/proposals/view" element={<ViewProposal />} />
               <Route path="/clients" element={
                 <PrivateRoute>
                   <MyClients />
