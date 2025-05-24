@@ -1,45 +1,51 @@
 
-import { RequestBody } from "./types.ts";
-
-export async function parseRequest(req: Request, requestId: string): Promise<RequestBody> {
-  const timestamp = new Date().toISOString();
+export async function parseRequest(req: Request): Promise<{ token: string; email?: string }> {
+  const requestId = crypto.randomUUID().substring(0, 8);
+  console.log(`[${new Date().toISOString()}] [${requestId}] 📥 Parsing request...`);
   
-  const contentType = req.headers.get('content-type');
-  const contentLength = req.headers.get('content-length');
-  
-  console.log(`[${timestamp}] [${requestId}] 📋 Request headers:`, {
-    contentType,
-    contentLength,
-    hasAuth: !!req.headers.get('Authorization')
+  // Log request details for debugging
+  console.log(`[${new Date().toISOString()}] [${requestId}] 📋 Request headers:`, {
+    contentType: req.headers.get('content-type'),
+    contentLength: req.headers.get('content-length'),
+    hasAuth: !!req.headers.get('authorization')
   });
-
-  const rawBody = await req.text();
-  console.log(`[${timestamp}] [${requestId}] 📥 Raw body length: ${rawBody.length}`);
   
-  if (!rawBody || rawBody.trim() === '') {
-    throw new Error('Empty request body. Please ensure you are sending a valid JSON payload with a token field.');
-  }
-  
-  console.log(`[${timestamp}] [${requestId}] 📥 Body preview: ${rawBody.substring(0, 50)}${rawBody.length > 50 ? '...' : ''}`);
-  
+  let rawBody = '';
   try {
-    const requestBody = JSON.parse(rawBody) as RequestBody;
-    console.log(`[${timestamp}] [${requestId}] ✅ Body parsed:`, {
-      hasToken: !!requestBody.token,
-      tokenLength: requestBody.token?.length,
-      tokenPrefix: requestBody.token?.substring(0, 8) + '...',
-      hasEmail: !!requestBody.email,
-      email: requestBody.email ? requestBody.email.substring(0, 3) + '***' : 'none'
+    rawBody = await req.text();
+    console.log(`[${new Date().toISOString()}] [${requestId}] 📥 Raw body length: ${rawBody.length}`);
+    
+    if (!rawBody || rawBody.trim() === '') {
+      console.error(`[${new Date().toISOString()}] [${requestId}] ❌ Empty request body received`);
+      throw new Error("Empty request body. Please ensure you are sending a valid JSON payload with a token field.");
+    }
+    
+    const body = JSON.parse(rawBody);
+    console.log(`[${new Date().toISOString()}] [${requestId}] 📦 Parsed body:`, {
+      hasToken: !!body.token,
+      hasEmail: !!body.email,
+      tokenLength: body.token?.length || 0
     });
     
-    return requestBody;
-  } catch (parseError) {
-    throw new Error(`Invalid request body format: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
-  }
-}
-
-export function validateToken(token: string): void {
-  if (!token || token.trim() === '') {
-    throw new Error('No token provided in request body');
+    if (!body.token) {
+      throw new Error("Missing required field 'token' in request body.");
+    }
+    
+    if (typeof body.token !== 'string' || body.token.trim() === '') {
+      throw new Error("Token must be a non-empty string.");
+    }
+    
+    return {
+      token: body.token.trim(),
+      email: body.email || undefined
+    };
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] [${requestId}] ❌ Parse error:`, error);
+    
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON format in request body. Raw body: ${rawBody.substring(0, 100)}...`);
+    }
+    
+    throw error;
   }
 }
