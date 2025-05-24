@@ -309,6 +309,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_agent_clients: {
+        Args: { agent_id_param?: string }
+        Returns: {
+          client_id: string
+          client_name: string
+          client_email: string
+          company_name: string
+          is_registered: boolean
+          project_count: number
+          total_mwp: number
+          agent_id: string
+          agent_name: string
+        }[]
+      }
       get_client_email: {
         Args: Record<PropertyKey, never>
         Returns: string

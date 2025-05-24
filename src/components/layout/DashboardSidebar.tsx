@@ -1,153 +1,65 @@
 
-import { SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart, Users, Settings, LogOut, StepBack, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useAuth } from "@/contexts/auth";
-import { motion } from "framer-motion";
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  UserPlus, 
+  Settings, 
+  Bell,
+  Users,
+  Calculator
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth';
 
-interface DashboardSidebarProps {
-  userRole: 'client' | 'agent' | 'admin';
-}
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Proposals', href: '/proposals', icon: FileText },
+  { name: 'My Clients', href: '/clients', icon: Users, roles: ['agent', 'admin'] },
+  { name: 'Calculator', href: '/calculator', icon: Calculator },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Profile', href: '/profile', icon: Settings },
+];
 
-export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { signOut } = useAuth();
+export function DashboardSidebar() {
+  const location = useLocation();
+  const { userRole } = useAuth();
 
-  const clientMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: FileText, label: "My Proposals", path: "/proposals" },
-    { icon: BarChart, label: "Carbon Reports", path: "/reports" },
-    { icon: User, label: "Profile", path: "/profile" },
-    { icon: Settings, label: "Settings", path: "/settings" },
-  ];
-
-  const agentMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: FileText, label: "Proposals", path: "/proposals" },
-    { icon: Users, label: "My Clients", path: "/clients" },
-    { icon: User, label: "Profile", path: "/profile" },
-  ];
-
-  const adminMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: FileText, label: "All Proposals", path: "/proposals" },
-    { icon: Users, label: "User Management", path: "/users" },
-    { icon: BarChart, label: "Reports", path: "/reports" },
-    { icon: User, label: "Profile", path: "/profile" },
-    { icon: Settings, label: "System Settings", path: "/settings" },
-  ];
-
-  let menuItems;
-  switch (userRole) {
-    case 'agent':
-      menuItems = agentMenuItems;
-      break;
-    case 'admin':
-      menuItems = adminMenuItems;
-      break;
-    default:
-      menuItems = clientMenuItems;
-  }
-
-  const handleLogout = async () => {
-    if (isLoggingOut) return; // Prevent multiple clicks
-    
-    try {
-      setIsLoggingOut(true);
-      
-      // Use the context's signOut method, which clears state first
-      const success = await signOut();
-      
-      if (!success) {
-        toast({
-          title: "Error logging out",
-          description: "There was a problem logging out. Try using Force Logout.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Show success toast
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
-      
-      // Add a significant delay before navigation to ensure state clearing completes
-      setTimeout(() => {
-        // Navigate to login page
-        navigate("/login");
-      }, 500); // Increased from 100ms to 500ms for better reliability
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "There was a problem logging out. Try using Force Logout.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
-  const handleExitPreview = () => {
-    navigate("/dashboard");
-  };
+  const filteredNavigation = navigation.filter(item => 
+    !item.roles || item.roles.includes(userRole || '')
+  );
 
   return (
-    <SidebarContent 
-      className="pt-4 bg-white dark:bg-[#1A1F2C] border-r border-crunch-black/10 text-crunch-black dark:text-white"
-    >
-      <div className="px-3 mb-8">
-        <div className="flex items-center justify-center">
-          <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12" />
-        </div>
+    <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">
+      <div className="flex h-16 shrink-0 items-center px-6">
+        <Link to="/" className="text-xl font-semibold text-carbon-primary">
+          CrunchCarbon
+        </Link>
       </div>
-      
-      <SidebarMenu>
-        <div className="px-3 py-2 text-xs uppercase text-crunch-black/50 dark:text-white/50 tracking-wider">Navigation</div>
-
-        {menuItems.map((item, index) => (
-          <motion.div 
-            key={item.path}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-          >
-            <SidebarMenuItem key={item.path}>
-              <SidebarMenuButton
-                onClick={() => navigate(item.path)}
-                className="w-full flex gap-2 items-center py-2 px-3 hover:bg-crunch-yellow/10 dark:hover:bg-white/10 rounded-md transition-colors"
-              >
-                <item.icon className="h-5 w-5 text-crunch-yellow dark:text-white/70" />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </motion.div>
-        ))}
-        
-        <div className="mt-8 px-3">
-          <div className="py-2 text-xs uppercase text-crunch-black/50 dark:text-white/50 tracking-wider">Account</div>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="w-full flex gap-2 items-center py-2 px-3 text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20 hover:text-red-600 rounded-md transition-colors"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <LogOut className="h-5 w-5" />
-              )}
-              <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </div>
-      </SidebarMenu>
-    </SidebarContent>
+      <nav className="flex flex-1 flex-col px-6 py-4">
+        <ul role="list" className="flex flex-1 flex-col gap-y-2">
+          {filteredNavigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <li key={item.name}>
+                <Link
+                  to={item.href}
+                  className={cn(
+                    'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors',
+                    isActive
+                      ? 'bg-carbon-primary text-white'
+                      : 'text-carbon-gray-700 hover:text-carbon-primary hover:bg-carbon-gray-50'
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {item.name}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
   );
 }
