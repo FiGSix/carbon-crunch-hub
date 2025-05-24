@@ -29,10 +29,7 @@ export function TokenTester() {
       console.log("📡 Testing function deployment with payload:", payload);
       
       const { data, error } = await supabase.functions.invoke('set-invitation-token', {
-        body: payload,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        body: JSON.stringify(payload)
       });
       
       if (error) {
@@ -94,10 +91,7 @@ export function TokenTester() {
       });
       
       const { data, error } = await supabase.functions.invoke('set-invitation-token', {
-        body: payload,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        body: JSON.stringify(payload)
       });
       
       if (error) {
