@@ -33,43 +33,56 @@ export function useProposalData(id?: string, token?: string | null) {
     try {
       setLoading(true);
       setError(null);
-      proposalLogger.info("Fetching proposal", { 
+      proposalLogger.info("🔄 Fetching proposal", { 
         proposalId, 
         hasToken: !!invitationToken,
         tokenPrefix: invitationToken ? invitationToken.substring(0, 8) : null
       });
       
+      console.log("🔄 === FETCHING PROPOSAL ===");
+      console.log(`📋 Proposal ID: ${proposalId}`);
+      console.log(`🎫 Has token: ${!!invitationToken}`);
+      console.log(`🎫 Token prefix: ${invitationToken ? invitationToken.substring(0, 8) : 'none'}`);
+      
       if (invitationToken) {
         // First, persist the token in the session to ensure it's available for RLS policies
-        proposalLogger.info("Using invitation token to fetch proposal", { 
+        proposalLogger.info("🎫 Using invitation token to fetch proposal", { 
           tokenPrefix: invitationToken.substring(0, 8)
         });
         
+        console.log("🎫 === PROCESSING INVITATION TOKEN ===");
+        console.log(`🎫 Token: ${invitationToken.substring(0, 8)}...`);
+        
         const tokenResult = await persistToken(invitationToken);
+        
+        console.log("🎫 === TOKEN PROCESSING RESULT ===", tokenResult);
         
         if (!tokenResult.success) {
           const errorMsg = tokenResult.error || "Failed to process invitation token";
-          proposalLogger.error("Token processing failed", { 
+          proposalLogger.error("❌ Token processing failed", { 
             success: tokenResult.success,
             valid: tokenResult.valid,
             error: tokenResult.error
           });
+          console.error("❌ === TOKEN PROCESSING FAILED ===", errorMsg);
           throw new Error(errorMsg);
         }
         
         if (!tokenResult.valid) {
           const errorMsg = tokenResult.error || "This invitation link is invalid or has expired";
-          proposalLogger.error("Token validation failed", { 
+          proposalLogger.error("❌ Token validation failed", { 
             success: tokenResult.success,
             valid: tokenResult.valid,
             error: tokenResult.error
           });
+          console.error("❌ === TOKEN VALIDATION FAILED ===", errorMsg);
           throw new Error(errorMsg);
         }
         
         // Get the proposal by ID (the token is already set in the session context)
         if (tokenResult.proposalId) {
-          proposalLogger.info("Using proposal ID from token validation", { proposalId: tokenResult.proposalId });
+          proposalLogger.info("✅ Using proposal ID from token validation", { proposalId: tokenResult.proposalId });
+          console.log("✅ === FETCHING PROPOSAL BY TOKEN ID ===", tokenResult.proposalId);
           
           const { data, error: fetchError } = await supabase
             .from('proposals')
@@ -78,11 +91,17 @@ export function useProposalData(id?: string, token?: string | null) {
             .single();
           
           if (fetchError) {
-            proposalLogger.error("Error fetching proposal with token", { 
+            proposalLogger.error("❌ Error fetching proposal with token", { 
               error: fetchError,
               proposalId: tokenResult.proposalId,
               errorCode: fetchError.code,
               errorMessage: fetchError.message
+            });
+            
+            console.error("❌ === PROPOSAL FETCH ERROR ===", {
+              error: fetchError,
+              proposalId: tokenResult.proposalId,
+              errorCode: fetchError.code
             });
             
             // Provide more specific error messages based on the error type
@@ -105,10 +124,16 @@ export function useProposalData(id?: string, token?: string | null) {
             null
           );
           
-          proposalLogger.info("Proposal fetched via token", { 
+          proposalLogger.info("✅ Proposal fetched via token", { 
             proposalId: typedProposal.id,
             status: typedProposal.status,
             clientEmail: tokenResult.clientEmail
+          });
+          
+          console.log("✅ === PROPOSAL SUCCESSFULLY LOADED ===", {
+            id: typedProposal.id,
+            status: typedProposal.status,
+            title: typedProposal.title
           });
           
           setProposal(typedProposal);
@@ -128,7 +153,9 @@ export function useProposalData(id?: string, token?: string | null) {
         }
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
-        proposalLogger.info("Fetching proposal by ID", { proposalId });
+        proposalLogger.info("🔄 Fetching proposal by ID", { proposalId });
+        console.log("🔄 === FETCHING PROPOSAL BY ID ===", proposalId);
+        
         const { data, error: fetchError } = await supabase
           .from('proposals')
           .select('*')
@@ -136,11 +163,17 @@ export function useProposalData(id?: string, token?: string | null) {
           .single();
         
         if (fetchError) {
-          proposalLogger.error("Error fetching proposal by ID", { 
+          proposalLogger.error("❌ Error fetching proposal by ID", { 
             error: fetchError,
             proposalId,
             errorCode: fetchError.code,
             errorMessage: fetchError.message
+          });
+          
+          console.error("❌ === PROPOSAL FETCH BY ID ERROR ===", {
+            error: fetchError,
+            proposalId,
+            errorCode: fetchError.code
           });
           
           // Provide more specific error messages
@@ -155,10 +188,17 @@ export function useProposalData(id?: string, token?: string | null) {
         
         // Transform to our standard ProposalData type
         const typedProposal = transformToProposalData(data);
-        proposalLogger.info("Proposal fetched successfully", { 
+        proposalLogger.info("✅ Proposal fetched successfully", { 
           proposalId,
           status: typedProposal.status
         });
+        
+        console.log("✅ === PROPOSAL LOADED BY ID ===", {
+          id: typedProposal.id,
+          status: typedProposal.status,
+          title: typedProposal.title
+        });
+        
         setProposal(typedProposal);
       } else {
         throw new Error("No proposal ID or invitation token provided.");
@@ -174,7 +214,14 @@ export function useProposalData(id?: string, token?: string | null) {
       }
       
       setError(errorMessage);
-      proposalLogger.error("Error fetching proposal", { 
+      proposalLogger.error("❌ Error fetching proposal", { 
+        error: err,
+        errorMessage,
+        hasToken: !!invitationToken,
+        hasProposalId: !!proposalId
+      });
+      
+      console.error("❌ === PROPOSAL FETCH FAILED ===", {
         error: err,
         errorMessage,
         hasToken: !!invitationToken,

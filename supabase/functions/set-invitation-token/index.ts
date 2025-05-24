@@ -21,9 +21,10 @@ interface ResponseBody {
 
 const handler = async (req: Request): Promise<Response> => {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] set-invitation-token function called with method: ${req.method}`);
-  console.log(`[${timestamp}] Request URL: ${req.url}`);
-  console.log(`[${timestamp}] Request headers:`, Object.fromEntries(req.headers.entries()));
+  console.log(`[${timestamp}] === SET-INVITATION-TOKEN FUNCTION CALLED ===`);
+  console.log(`[${timestamp}] Method: ${req.method}`);
+  console.log(`[${timestamp}] URL: ${req.url}`);
+  console.log(`[${timestamp}] Headers:`, Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -32,6 +33,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log(`[${timestamp}] 🚀 Processing invitation token request...`);
+
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -44,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!supabaseUrl || !supabaseAnonKey) {
       const error = 'Missing required environment variables';
-      console.error(`[${timestamp}] ${error}`);
+      console.error(`[${timestamp}] ❌ ${error}`);
       throw new Error(error);
     }
 
@@ -57,14 +60,16 @@ const handler = async (req: Request): Promise<Response> => {
     // Parse request body
     let requestBody: RequestBody;
     try {
-      requestBody = await req.json() as RequestBody;
-      console.log(`[${timestamp}] Request body parsed successfully:`, {
+      const rawBody = await req.text();
+      console.log(`[${timestamp}] Raw request body:`, rawBody);
+      requestBody = JSON.parse(rawBody) as RequestBody;
+      console.log(`[${timestamp}] ✅ Request body parsed successfully:`, {
         hasToken: !!requestBody.token,
         tokenLength: requestBody.token?.length,
         tokenPrefix: requestBody.token?.substring(0, 8) + '...'
       });
     } catch (parseError) {
-      console.error(`[${timestamp}] Error parsing request body:`, parseError);
+      console.error(`[${timestamp}] ❌ Error parsing request body:`, parseError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -81,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { token } = requestBody;
 
     if (!token) {
-      console.error(`[${timestamp}] No token provided in request body`);
+      console.error(`[${timestamp}] ❌ No token provided in request body`);
       return new Response(
         JSON.stringify({
           success: false,
@@ -95,17 +100,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] Processing invitation token: ${token.substring(0, 8)}...`);
+    console.log(`[${timestamp}] 🔍 Processing invitation token: ${token.substring(0, 8)}...`);
 
     // Set the token in the session using RPC
-    console.log(`[${timestamp}] Setting token in session via RPC...`);
+    console.log(`[${timestamp}] 📝 Setting token in session via RPC...`);
     const { data: tokenSetResult, error: tokenError } = await supabaseClient.rpc(
       'set_request_invitation_token',
       { token }
     );
 
     if (tokenError) {
-      console.error(`[${timestamp}] Error setting token in session:`, tokenError);
+      console.error(`[${timestamp}] ❌ Error setting token in session:`, tokenError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -119,17 +124,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] Token set in session successfully:`, tokenSetResult);
+    console.log(`[${timestamp}] ✅ Token set in session successfully:`, tokenSetResult);
 
     // Validate the token to check if it corresponds to a valid proposal
-    console.log(`[${timestamp}] Validating token...`);
+    console.log(`[${timestamp}] 🔍 Validating token...`);
     const { data: validationData, error: validationError } = await supabaseClient.rpc(
       'validate_invitation_token',
       { token }
     );
 
     if (validationError) {
-      console.error(`[${timestamp}] Token validation error:`, validationError);
+      console.error(`[${timestamp}] ❌ Token validation error:`, validationError);
       return new Response(
         JSON.stringify({
           success: true,
@@ -143,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] Validation result:`, validationData);
+    console.log(`[${timestamp}] 📊 Validation result:`, validationData);
 
     // Check if validation returned a proposal ID
     const proposalId = validationData?.[0]?.proposal_id;
@@ -151,7 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
     const valid = !!proposalId;
 
     if (!valid) {
-      console.log(`[${timestamp}] Token validation failed - no proposal found`);
+      console.log(`[${timestamp}] ⚠️ Token validation failed - no proposal found`);
       return new Response(
         JSON.stringify({
           success: true,
@@ -165,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] Token validation successful - proposal: ${proposalId}, client: ${clientEmail}`);
+    console.log(`[${timestamp}] 🎉 Token validation successful - proposal: ${proposalId}, client: ${clientEmail}`);
     
     return new Response(
       JSON.stringify({
@@ -181,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error) {
-    console.error(`[${timestamp}] Unexpected error in set-invitation-token function:`, error);
+    console.error(`[${timestamp}] 💥 Unexpected error in set-invitation-token function:`, error);
     console.error(`[${timestamp}] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
