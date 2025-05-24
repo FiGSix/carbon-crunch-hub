@@ -47,13 +47,24 @@ export function useProposalData(id?: string, token?: string | null) {
         
         const tokenResult = await persistToken(invitationToken);
         
-        if (!tokenResult.success || !tokenResult.valid) {
+        if (!tokenResult.success) {
+          const errorMsg = tokenResult.error || "Failed to process invitation token";
+          proposalLogger.error("Token processing failed", { 
+            success: tokenResult.success,
+            valid: tokenResult.valid,
+            error: tokenResult.error
+          });
+          throw new Error(errorMsg);
+        }
+        
+        if (!tokenResult.valid) {
+          const errorMsg = tokenResult.error || "This invitation link is invalid or has expired";
           proposalLogger.error("Token validation failed", { 
             success: tokenResult.success,
             valid: tokenResult.valid,
             error: tokenResult.error
           });
-          throw new Error(tokenResult.error || "This invitation link is invalid or has expired.");
+          throw new Error(errorMsg);
         }
         
         // Get the proposal by ID (the token is already set in the session context)
@@ -69,9 +80,19 @@ export function useProposalData(id?: string, token?: string | null) {
           if (fetchError) {
             proposalLogger.error("Error fetching proposal with token", { 
               error: fetchError,
-              proposalId: tokenResult.proposalId
+              proposalId: tokenResult.proposalId,
+              errorCode: fetchError.code,
+              errorMessage: fetchError.message
             });
-            throw new Error(fetchError.message || "Error loading proposal. Please try again.");
+            
+            // Provide more specific error messages based on the error type
+            if (fetchError.code === 'PGRST116') {
+              throw new Error("This proposal could not be found. It may have been deleted.");
+            } else if (fetchError.code === '42501' || fetchError.message?.includes('permission')) {
+              throw new Error("You don't have permission to view this proposal.");
+            } else {
+              throw new Error(`Error loading proposal: ${fetchError.message || "Please try again."}`);
+            }
           }
           
           // Transform to our standard ProposalData type
@@ -117,9 +138,19 @@ export function useProposalData(id?: string, token?: string | null) {
         if (fetchError) {
           proposalLogger.error("Error fetching proposal by ID", { 
             error: fetchError,
-            proposalId
+            proposalId,
+            errorCode: fetchError.code,
+            errorMessage: fetchError.message
           });
-          throw fetchError;
+          
+          // Provide more specific error messages
+          if (fetchError.code === 'PGRST116') {
+            throw new Error("This proposal could not be found. It may have been deleted.");
+          } else if (fetchError.code === '42501' || fetchError.message?.includes('permission')) {
+            throw new Error("You don't have permission to view this proposal.");
+          } else {
+            throw new Error(`Error loading proposal: ${fetchError.message || "Please try again."}`);
+          }
         }
         
         // Transform to our standard ProposalData type
@@ -133,9 +164,22 @@ export function useProposalData(id?: string, token?: string | null) {
         throw new Error("No proposal ID or invitation token provided.");
       }
     } catch (err) {
-      const errorState = handleError(err, "Failed to load the proposal");
-      setError(errorState.message || "Failed to load the proposal. It may have been deleted or you don't have permission to view it.");
-      proposalLogger.error("Error fetching proposal", { error: err });
+      // More specific error handling
+      let errorMessage = "Failed to load the proposal. Please try again.";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
+      proposalLogger.error("Error fetching proposal", { 
+        error: err,
+        errorMessage,
+        hasToken: !!invitationToken,
+        hasProposalId: !!proposalId
+      });
     } finally {
       setLoading(false);
     }

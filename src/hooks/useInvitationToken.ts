@@ -7,7 +7,7 @@ interface SetTokenResult {
   success: boolean;
   valid: boolean;
   proposalId?: string;
-  clientEmail?: string; // Added clientEmail property to interface
+  clientEmail?: string;
   error?: string;
 }
 
@@ -43,7 +43,7 @@ export function useInvitationToken() {
       const { data, error: functionError } = await supabase.functions.invoke(
         'set-invitation-token',
         { 
-          body: JSON.stringify({ token }) 
+          body: { token } 
         }
       );
       
@@ -51,15 +51,24 @@ export function useInvitationToken() {
         tokenLogger.error("Error invoking set-invitation-token function", { 
           error: functionError,
           message: functionError.message,
-          status: functionError.status,
-          name: functionError.name
+          details: functionError.details
         });
         
-        setError(functionError.message);
+        // Provide more specific error messages
+        let errorMessage = "Failed to process invitation token";
+        if (functionError.message?.includes('Invalid or expired')) {
+          errorMessage = "This invitation link is invalid or has expired";
+        } else if (functionError.message?.includes('network')) {
+          errorMessage = "Network error. Please check your connection and try again";
+        } else if (functionError.message) {
+          errorMessage = functionError.message;
+        }
+        
+        setError(errorMessage);
         return {
           success: false,
           valid: false,
-          error: functionError.message
+          error: errorMessage
         };
       }
       
@@ -69,18 +78,22 @@ export function useInvitationToken() {
         success: result.success,
         valid: result.valid,
         hasError: !!result.error,
-        errorMessage: result.error
+        errorMessage: result.error,
+        hasProposalId: !!result.proposalId,
+        hasClientEmail: !!result.clientEmail
       });
       
       if (!result.success) {
-        tokenLogger.error("Token persistence failed", { error: result.error });
-        setError(result.error || "Failed to set invitation token");
+        const errorMessage = result.error || "Failed to set invitation token";
+        tokenLogger.error("Token persistence failed", { error: errorMessage });
+        setError(errorMessage);
         return result;
       }
       
       if (!result.valid) {
-        tokenLogger.warn("Token was persisted but is invalid", { error: result.error });
-        setError(result.error || "Invalid invitation token");
+        const errorMessage = result.error || "Invalid invitation token";
+        tokenLogger.warn("Token was persisted but is invalid", { error: errorMessage });
+        setError(errorMessage);
         return result;
       }
       
