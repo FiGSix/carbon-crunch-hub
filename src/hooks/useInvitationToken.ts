@@ -153,12 +153,12 @@ const user = session?.user;
       
       try {
         const { data, error: functionError } = await supabase.functions.invoke(
-          'set-invitation-token',
-          { 
-            body: { token },
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
+  'set-invitation-token',
+  {
+    body: { token, email: user?.email },
+    headers: { 'Content-Type': 'application/json' }
+  }
+);
         
         if (functionError) {
           console.warn("⚠️ Edge function failed, using fallback:", functionError);
