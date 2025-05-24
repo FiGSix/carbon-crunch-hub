@@ -52,15 +52,19 @@ export function useProposalData(id?: string, token?: string | null) {
         throw new Error("No proposal ID or invitation token provided. Please check the URL and try again.");
       }
     } catch (err) {
+      console.error("Error in fetchProposal:", err);
       const errorMessage = logProposalFetchError(err, proposalId, invitationToken);
       setError(errorMessage);
+      setProposal(null); // Clear any existing proposal data
     } finally {
       setLoading(false);
     }
-  }, [handleError, setProposal, setClientEmail, setLoading, setError]);
+  }, [setProposal, setClientEmail, setLoading, setError]);
 
   useEffect(() => {
-    fetchProposal(id, token);
+    if (id || token) {
+      fetchProposal(id, token);
+    }
   }, [id, token, fetchProposal]);
 
   return {

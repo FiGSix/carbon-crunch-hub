@@ -21,6 +21,15 @@ const ViewProposal = () => {
     feature: 'proposals' 
   });
   
+  // Debug log the current route and parameters
+  useEffect(() => {
+    console.log("=== ViewProposal Component Mounted ===");
+    console.log("Proposal ID:", id);
+    console.log("Token:", token ? `${token.substring(0, 8)}...` : "No token");
+    console.log("User:", user ? user.id : "Not authenticated");
+    console.log("URL:", window.location.href);
+  }, [id, token, user]);
+  
   const {
     proposal,
     loading,
@@ -90,6 +99,12 @@ const ViewProposal = () => {
   
   // Debug logging
   useEffect(() => {
+    console.log("=== ViewProposal State Update ===");
+    console.log("Loading:", loading);
+    console.log("Error:", error);
+    console.log("Proposal:", proposal ? { id: proposal.id, title: proposal.title, status: proposal.status } : null);
+    console.log("Client Email:", clientEmail);
+    
     if (proposal) {
       viewLogger.info("ViewProposal - Current proposal state", { 
         id: proposal.id,
@@ -103,9 +118,10 @@ const ViewProposal = () => {
         accessedViaToken: !!token
       });
     }
-  }, [proposal, isClient, canTakeAction, viewLogger, user, token]);
+  }, [proposal, isClient, canTakeAction, viewLogger, user, token, loading, error, clientEmail]);
   
   if (loading) {
+    console.log("=== Showing Loading State ===");
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <ProposalSkeleton />
@@ -114,6 +130,7 @@ const ViewProposal = () => {
   }
   
   if (error) {
+    console.log("=== Showing Error State ===", error);
     viewLogger.error("Error loading proposal", { error, id, hasToken: !!token });
     return <ProposalError errorMessage={error} onRetry={handleRetry} />;
   }
@@ -140,9 +157,11 @@ const ViewProposal = () => {
   }
   
   if (!proposal) {
+    console.log("=== No Proposal Found ===");
     viewLogger.warn("No proposal found", { 
       path: window.location.pathname,
-      hasToken: !!token
+      hasToken: !!token,
+      hasId: !!id
     });
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
@@ -152,6 +171,8 @@ const ViewProposal = () => {
       </div>
     );
   }
+  
+  console.log("=== Showing Proposal Content ===", { id: proposal.id, title: proposal.title });
   
   // Determine if we should show the sign-in prompt - token access but not logged in
   const showSignInPrompt = !user && token && clientEmail && 

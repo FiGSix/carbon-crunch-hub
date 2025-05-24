@@ -124,6 +124,10 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
       }
     }
     
+    if (!data) {
+      throw new Error("No proposal found with this ID. It may have been deleted or you may not have permission to view it.");
+    }
+    
     const typedProposal = transformToProposalData(data);
     proposalLogger.info("✅ Proposal fetched successfully", { 
       proposalId,
