@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 // DEPLOYMENT VERIFICATION - Force new deployment with version tracking
-const FUNCTION_VERSION = "v2.2.0";
+const FUNCTION_VERSION = "v2.3.0";
 const DEPLOYMENT_TIMESTAMP = new Date().toISOString();
 
 interface RequestBody {
@@ -63,15 +63,41 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    // Enhanced request body parsing
+    // Enhanced request body parsing with better error handling
     let requestBody: RequestBody;
     try {
+      // Log request details for debugging
+      const contentType = req.headers.get('content-type');
+      const contentLength = req.headers.get('content-length');
+      
+      console.log(`[${timestamp}] [${requestId}] 📋 Request headers:`, {
+        contentType,
+        contentLength,
+        hasAuth: !!req.headers.get('Authorization')
+      });
+
       const rawBody = await req.text();
       console.log(`[${timestamp}] [${requestId}] 📥 Raw body length: ${rawBody.length}`);
       
       if (!rawBody || rawBody.trim() === '') {
-        throw new Error('Empty request body');
+        console.error(`[${timestamp}] [${requestId}] ❌ Empty request body received`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            valid: false,
+            error: 'Empty request body. Please ensure you are sending a valid JSON payload with a token field.',
+            version: FUNCTION_VERSION,
+            deploymentTime: DEPLOYMENT_TIMESTAMP
+          } as ResponseBody),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
       }
+      
+      // Log first few characters for debugging (be careful not to log sensitive data)
+      console.log(`[${timestamp}] [${requestId}] 📥 Body preview: ${rawBody.substring(0, 50)}${rawBody.length > 50 ? '...' : ''}`);
       
       requestBody = JSON.parse(rawBody) as RequestBody;
       console.log(`[${timestamp}] [${requestId}] ✅ Body parsed:`, {
@@ -87,7 +113,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({
           success: false,
           valid: false,
-          error: 'Invalid request body format',
+          error: `Invalid request body format: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`,
           version: FUNCTION_VERSION,
           deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
@@ -106,7 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({
           success: false,
           valid: false,
-          error: 'No token provided',
+          error: 'No token provided in request body',
           version: FUNCTION_VERSION,
           deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),

@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/auth";
@@ -149,15 +150,24 @@ export function useInvitationToken() {
       // First attempt: Edge function
       console.log("📡 Attempting edge function call...");
 
-      console.log("📨 Edge function input:", { token, email: user?.email });
+      // Prepare the request body - ensure it's valid JSON
+      const requestBody = { 
+        token, 
+        email: user?.email || undefined 
+      };
+      
+      console.log("📨 Edge function input:", requestBody);
+      
       try {
         const { data, error: functionError } = await supabase.functions.invoke(
-  'set-invitation-token',
-  {
-    body: { token, email: user?.email },
-    headers: { 'Content-Type': 'application/json' }
-  }
-);
+          'set-invitation-token',
+          {
+            body: requestBody,
+            headers: { 
+              'Content-Type': 'application/json'
+            }
+          }
+        );
         
         if (functionError) {
           console.warn("⚠️ Edge function failed, using fallback:", functionError);
@@ -202,7 +212,7 @@ export function useInvitationToken() {
     } finally {
       setLoading(false);
     }
-  }, [tokenLogger, persistTokenDirectly]);
+  }, [tokenLogger, persistTokenDirectly, user?.email]);
 
   return {
     persistToken,

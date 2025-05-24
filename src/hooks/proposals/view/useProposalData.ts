@@ -106,11 +106,11 @@ export function useProposalData(id?: string, token?: string | null) {
             
             // Provide more specific error messages based on the error type
             if (fetchError.code === 'PGRST116') {
-              throw new Error("This proposal could not be found. It may have been deleted.");
+              throw new Error("This proposal could not be found. It may have been deleted or the invitation link is no longer valid.");
             } else if (fetchError.code === '42501' || fetchError.message?.includes('permission')) {
-              throw new Error("You don't have permission to view this proposal.");
+              throw new Error("You don't have permission to view this proposal. Please make sure you're using the correct invitation link.");
             } else {
-              throw new Error(`Error loading proposal: ${fetchError.message || "Please try again."}`);
+              throw new Error(`Error loading proposal: ${fetchError.message || "Please try again or contact support if the issue persists."}`);
             }
           }
           
@@ -149,7 +149,7 @@ export function useProposalData(id?: string, token?: string | null) {
               }
             });
         } else {
-          throw new Error("No proposal ID was returned from token validation.");
+          throw new Error("No proposal ID was returned from token validation. The invitation link may be corrupted.");
         }
       } else if (proposalId) {
         // Regular fetch by ID (for authenticated users)
@@ -178,11 +178,11 @@ export function useProposalData(id?: string, token?: string | null) {
           
           // Provide more specific error messages
           if (fetchError.code === 'PGRST116') {
-            throw new Error("This proposal could not be found. It may have been deleted.");
+            throw new Error("This proposal could not be found. It may have been deleted or you may not have the correct proposal ID.");
           } else if (fetchError.code === '42501' || fetchError.message?.includes('permission')) {
-            throw new Error("You don't have permission to view this proposal.");
+            throw new Error("You don't have permission to view this proposal. Please make sure you're signed in with the correct account.");
           } else {
-            throw new Error(`Error loading proposal: ${fetchError.message || "Please try again."}`);
+            throw new Error(`Error loading proposal: ${fetchError.message || "Please try again or contact support if the issue persists."}`);
           }
         }
         
@@ -201,7 +201,7 @@ export function useProposalData(id?: string, token?: string | null) {
         
         setProposal(typedProposal);
       } else {
-        throw new Error("No proposal ID or invitation token provided.");
+        throw new Error("No proposal ID or invitation token provided. Please check the URL and try again.");
       }
     } catch (err) {
       // More specific error handling
