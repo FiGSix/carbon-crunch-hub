@@ -20,6 +20,8 @@ interface SetTokenResult {
 export function useInvitationToken() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
+const user = session?.user;
   
   const tokenLogger = logger.withContext({
     component: 'useInvitationToken',
