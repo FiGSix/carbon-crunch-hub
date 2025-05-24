@@ -7,6 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// DEPLOYMENT VERIFICATION - Force new deployment with version tracking
+const FUNCTION_VERSION = "v2.1.0";
+const DEPLOYMENT_TIMESTAMP = new Date().toISOString();
+
 interface RequestBody {
   token: string;
 }
@@ -17,28 +21,26 @@ interface ResponseBody {
   proposalId?: string;
   clientEmail?: string;
   error?: string;
+  version?: string;
+  deploymentTime?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
   const timestamp = new Date().toISOString();
   const requestId = crypto.randomUUID().substring(0, 8);
   
-  console.log(`[${timestamp}] [${requestId}] 🚀 EDGE FUNCTION INVOKED - set-invitation-token`);
-  console.log(`[${timestamp}] [${requestId}] Method: ${req.method}`);
-  console.log(`[${timestamp}] [${requestId}] URL: ${req.url}`);
-  console.log(`[${timestamp}] [${requestId}] Headers:`, Object.fromEntries(req.headers.entries()));
-  console.log(`[${timestamp}] [${requestId}] 🔥 DEPLOYMENT STATUS: ACTIVE AND ACCESSIBLE`);
+  console.log(`[${timestamp}] [${requestId}] 🚀 FUNCTION START - set-invitation-token ${FUNCTION_VERSION}`);
+  console.log(`[${timestamp}] [${requestId}] 🔧 DEPLOYMENT TIME: ${DEPLOYMENT_TIMESTAMP}`);
+  console.log(`[${timestamp}] [${requestId}] Method: ${req.method}, URL: ${req.url}`);
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log(`[${timestamp}] [${requestId}] ✅ Handling CORS preflight request`);
+    console.log(`[${timestamp}] [${requestId}] ✅ CORS preflight handled`);
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log(`[${timestamp}] [${requestId}] 🔄 Processing invitation token request...`);
-
-    // Create Supabase client
+    // Create Supabase client with enhanced error handling
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
@@ -60,24 +62,31 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    // Parse request body
+    // Enhanced request body parsing
     let requestBody: RequestBody;
     try {
       const rawBody = await req.text();
-      console.log(`[${timestamp}] [${requestId}] 📥 Raw request body length:`, rawBody.length);
+      console.log(`[${timestamp}] [${requestId}] 📥 Raw body length: ${rawBody.length}`);
+      
+      if (!rawBody || rawBody.trim() === '') {
+        throw new Error('Empty request body');
+      }
+      
       requestBody = JSON.parse(rawBody) as RequestBody;
-      console.log(`[${timestamp}] [${requestId}] ✅ Request body parsed:`, {
+      console.log(`[${timestamp}] [${requestId}] ✅ Body parsed:`, {
         hasToken: !!requestBody.token,
         tokenLength: requestBody.token?.length,
         tokenPrefix: requestBody.token?.substring(0, 8) + '...'
       });
     } catch (parseError) {
-      console.error(`[${timestamp}] [${requestId}] ❌ Error parsing request body:`, parseError);
+      console.error(`[${timestamp}] [${requestId}] ❌ Parse error:`, parseError);
       return new Response(
         JSON.stringify({
           success: false,
           valid: false,
-          error: 'Invalid request body format'
+          error: 'Invalid request body format',
+          version: FUNCTION_VERSION,
+          deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -88,13 +97,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { token } = requestBody;
 
-    if (!token) {
-      console.error(`[${timestamp}] [${requestId}] ❌ No token provided in request body`);
+    if (!token || token.trim() === '') {
+      console.error(`[${timestamp}] [${requestId}] ❌ No token provided`);
       return new Response(
         JSON.stringify({
           success: false,
           valid: false,
-          error: 'No token provided'
+          error: 'No token provided',
+          version: FUNCTION_VERSION,
+          deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,22 +114,24 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] [${requestId}] 🔍 Processing invitation token: ${token.substring(0, 8)}...`);
+    console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}...`);
 
-    // Set the token in the session using RPC
-    console.log(`[${timestamp}] [${requestId}] 📝 Setting token in session via RPC...`);
+    // Step 1: Set token in session
+    console.log(`[${timestamp}] [${requestId}] 📝 Setting token in session...`);
     const { data: tokenSetResult, error: tokenError } = await supabaseClient.rpc(
       'set_request_invitation_token',
       { token }
     );
 
     if (tokenError) {
-      console.error(`[${timestamp}] [${requestId}] ❌ Error setting token in session:`, tokenError);
+      console.error(`[${timestamp}] [${requestId}] ❌ Token set error:`, tokenError);
       return new Response(
         JSON.stringify({
           success: false,
           valid: false,
-          error: `Failed to set token: ${tokenError.message}`
+          error: `Failed to set token: ${tokenError.message}`,
+          version: FUNCTION_VERSION,
+          deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -127,9 +140,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] [${requestId}] ✅ Token set in session successfully:`, tokenSetResult);
+    console.log(`[${timestamp}] [${requestId}] ✅ Token set successfully:`, tokenSetResult);
 
-    // Validate the token to check if it corresponds to a valid proposal
+    // Step 2: Validate token
     console.log(`[${timestamp}] [${requestId}] 🔍 Validating token...`);
     const { data: validationData, error: validationError } = await supabaseClient.rpc(
       'validate_invitation_token',
@@ -137,12 +150,14 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     if (validationError) {
-      console.error(`[${timestamp}] [${requestId}] ❌ Token validation error:`, validationError);
+      console.error(`[${timestamp}] [${requestId}] ❌ Validation error:`, validationError);
       return new Response(
         JSON.stringify({
           success: true,
           valid: false,
-          error: 'Invalid or expired invitation token'
+          error: 'Invalid or expired invitation token',
+          version: FUNCTION_VERSION,
+          deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -153,18 +168,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[${timestamp}] [${requestId}] 📊 Validation result:`, validationData);
 
-    // Check if validation returned a proposal ID
+    // Extract proposal data
     const proposalId = validationData?.[0]?.proposal_id;
     const clientEmail = validationData?.[0]?.client_email;
     const valid = !!proposalId;
 
     if (!valid) {
-      console.log(`[${timestamp}] [${requestId}] ⚠️ Token validation failed - no proposal found`);
+      console.log(`[${timestamp}] [${requestId}] ⚠️ No proposal found for token`);
       return new Response(
         JSON.stringify({
           success: true,
           valid: false,
-          error: 'This invitation link is invalid or has expired'
+          error: 'This invitation link is invalid or has expired',
+          version: FUNCTION_VERSION,
+          deploymentTime: DEPLOYMENT_TIMESTAMP
         } as ResponseBody),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -173,15 +190,26 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[${timestamp}] [${requestId}] 🎉 Token validation successful - proposal: ${proposalId}, client: ${clientEmail}`);
-    console.log(`[${timestamp}] [${requestId}] 🏁 FUNCTION EXECUTION COMPLETED SUCCESSFULLY`);
+    // Step 3: Mark invitation as viewed (non-blocking)
+    supabaseClient.rpc('mark_invitation_viewed', { token_param: token })
+      .then(({ error }) => {
+        if (error) {
+          console.error(`[${timestamp}] [${requestId}] ⚠️ Failed to mark as viewed:`, error);
+        } else {
+          console.log(`[${timestamp}] [${requestId}] ✅ Marked invitation as viewed`);
+        }
+      });
+
+    console.log(`[${timestamp}] [${requestId}] 🎉 SUCCESS - proposal: ${proposalId}, client: ${clientEmail}`);
     
     return new Response(
       JSON.stringify({
         success: true,
         valid: true,
         proposalId,
-        clientEmail
+        clientEmail,
+        version: FUNCTION_VERSION,
+        deploymentTime: DEPLOYMENT_TIMESTAMP
       } as ResponseBody),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -190,8 +218,8 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error) {
-    console.error(`[${timestamp}] [${requestId}] 💥 Unexpected error in set-invitation-token function:`, error);
-    console.error(`[${timestamp}] [${requestId}] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+    console.error(`[${timestamp}] [${requestId}] 💥 Unexpected error:`, error);
+    console.error(`[${timestamp}] [${requestId}] Error stack:`, error instanceof Error ? error.stack : 'No stack');
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     
@@ -199,7 +227,9 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({
         success: false,
         valid: false,
-        error: errorMessage
+        error: errorMessage,
+        version: FUNCTION_VERSION,
+        deploymentTime: DEPLOYMENT_TIMESTAMP
       } as ResponseBody),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

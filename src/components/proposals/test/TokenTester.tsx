@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +27,7 @@ export function TokenTester() {
     setDeploymentStatus('testing');
     
     try {
-      // Test direct function invocation to verify deployment
-      const testPayload = { token: 'test-deployment-verification' };
+      const testPayload = { token: 'deployment-test-' + Date.now() };
       console.log(`📡 Testing function deployment with payload:`, testPayload);
       
       const { data, error: functionError } = await supabase.functions.invoke(
@@ -43,7 +43,13 @@ export function TokenTester() {
         setDeploymentStatus(`failed: ${functionError.message}`);
       } else {
         console.log(`✅ Function responded - deployment verified:`, data);
-        setDeploymentStatus('verified');
+        
+        // Check for version info to confirm new deployment
+        if (data?.version && data?.deploymentTime) {
+          setDeploymentStatus(`verified: ${data.version} (deployed: ${data.deploymentTime})`);
+        } else {
+          setDeploymentStatus('verified: response received');
+        }
       }
     } catch (error) {
       console.error(`💥 Deployment verification error:`, error);
@@ -61,18 +67,16 @@ export function TokenTester() {
     const result = await persistToken(testToken);
     setResult(result);
     
-    // Add to test history
     setTestHistory(prev => [{
       timestamp,
       token: testToken.substring(0, 8) + '...',
       result
-    }, ...prev.slice(0, 4)]); // Keep last 5 tests
+    }, ...prev.slice(0, 4)]);
     
     console.log(`🧪 === TOKEN TEST COMPLETED === ${timestamp}`, result);
   };
 
   const handleTestKnownToken = () => {
-    // Use the token from the logs that we know exists
     setTestToken('950f0c91d41141a0b67b8e0064a6aefc5daf17dac2c44195a9c40414e91110dc');
   };
 
@@ -83,11 +87,6 @@ export function TokenTester() {
     console.log(`Step 1: Testing connectivity...`);
     const isHealthy = await testConnectivity();
     setConnectivityResult(isHealthy);
-    
-    if (!isHealthy) {
-      console.error(`❌ Full flow test aborted - connectivity failed`);
-      return;
-    }
     
     // Step 2: Deployment verification
     console.log(`Step 2: Verifying deployment...`);
@@ -107,10 +106,41 @@ export function TokenTester() {
     });
   };
 
+  // Test the proposal viewing flow directly
+  const testProposalFlow = async () => {
+    if (!testToken) {
+      alert('Please enter a token first');
+      return;
+    }
+    
+    console.log(`🔗 === TESTING PROPOSAL VIEWING FLOW ===`);
+    
+    try {
+      // First persist the token
+      const tokenResult = await persistToken(testToken);
+      console.log('Token persistence result:', tokenResult);
+      
+      if (tokenResult.success && tokenResult.valid && tokenResult.proposalId) {
+        // Simulate opening the proposal view
+        const proposalUrl = `/proposals/view/${tokenResult.proposalId}?token=${testToken}`;
+        console.log('✅ Proposal should be accessible at:', proposalUrl);
+        
+        // Open in new tab for testing
+        window.open(proposalUrl, '_blank');
+      } else {
+        console.error('❌ Token validation failed, cannot test proposal flow');
+        alert(`Token validation failed: ${tokenResult.error}`);
+      }
+    } catch (error) {
+      console.error('💥 Proposal flow test failed:', error);
+      alert(`Proposal flow test failed: ${error}`);
+    }
+  };
+
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>🧪 Enhanced Token Tester & Deployment Verifier</CardTitle>
+        <CardTitle>🧪 Enhanced Token Tester & Deployment Verifier v2.1</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
@@ -130,7 +160,7 @@ export function TokenTester() {
             <Alert variant={deploymentStatus.includes('verified') ? "default" : "destructive"}>
               <AlertDescription>
                 Deployment Status: {
-                  deploymentStatus === 'verified' ? '✅ DEPLOYED & ACCESSIBLE' :
+                  deploymentStatus.includes('verified') ? `✅ ${deploymentStatus.toUpperCase()}` :
                   deploymentStatus === 'testing' ? '🔄 TESTING...' :
                   `❌ ${deploymentStatus.toUpperCase()}`
                 }
@@ -197,6 +227,17 @@ export function TokenTester() {
               {loading ? 'Running...' : 'Run Full Flow Test'}
             </Button>
           </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              onClick={testProposalFlow} 
+              disabled={loading || !testToken}
+              variant="outline"
+              className="flex-1"
+            >
+              🔗 Test Complete Proposal Flow
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -228,6 +269,7 @@ export function TokenTester() {
                   <div className={`p-1 rounded ${test.result.success ? 'bg-green-100' : 'bg-red-100'}`}>
                     Success: {test.result.success ? '✅' : '❌'} | 
                     Valid: {test.result.valid ? '✅' : '❌'}
+                    {test.result.version && ` | Version: ${test.result.version}`}
                     {test.result.error && ` | Error: ${test.result.error}`}
                   </div>
                 </div>
@@ -238,12 +280,12 @@ export function TokenTester() {
 
         <Alert>
           <AlertDescription>
-            💡 <strong>Deployment Verification Guide:</strong><br/>
-            • Use "Verify Function Deployment" to confirm the function is accessible<br/>
-            • Run "Test Health Check Function" to verify edge function infrastructure<br/>
-            • "Run Full Flow Test" executes all verification steps sequentially<br/>
-            • Check browser console for detailed execution logs from the deployed function<br/>
-            • If deployment verification fails, the function needs redeployment
+            💡 <strong>Enhanced Testing Guide:</strong><br/>
+            • Use "Verify Function Deployment" to check if the new version is deployed<br/>
+            • "Test Complete Proposal Flow" will test the entire proposal viewing process<br/>
+            • The system now includes automatic fallback to direct database calls<br/>
+            • Check browser console for detailed execution logs and version information<br/>
+            • Version tracking helps confirm successful deployments
           </AlertDescription>
         </Alert>
       </CardContent>

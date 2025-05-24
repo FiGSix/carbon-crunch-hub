@@ -9,23 +9,24 @@ interface SetTokenResult {
   proposalId?: string;
   clientEmail?: string;
   error?: string;
+  version?: string;
+  deploymentTime?: string;
 }
 
 /**
- * Hook to manage proposal invitation tokens
+ * Hook to manage proposal invitation tokens with fallback support
  */
 export function useInvitationToken() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Create a contextualized logger
   const tokenLogger = logger.withContext({
     component: 'useInvitationToken',
     feature: 'proposals'
   });
 
   /**
-   * Test edge function connectivity
+   * Test edge function connectivity with deployment verification
    */
   const testConnectivity = useCallback(async (): Promise<boolean> => {
     try {
@@ -51,147 +52,143 @@ export function useInvitationToken() {
   }, [tokenLogger]);
 
   /**
-   * Persist and validate an invitation token
+   * Direct database fallback method
+   */
+  const persistTokenDirectly = useCallback(async (token: string): Promise<SetTokenResult> => {
+    try {
+      console.log("🔄 === USING DIRECT DATABASE FALLBACK ===");
+      tokenLogger.info("Using direct database fallback for token", { tokenPrefix: token.substring(0, 8) });
+      
+      // Step 1: Set token in session
+      const { data: tokenSetResult, error: tokenError } = await supabase.rpc(
+        'set_request_invitation_token',
+        { token }
+      );
+
+      if (tokenError) {
+        console.error("❌ Direct token set failed:", tokenError);
+        throw new Error(`Failed to set token: ${tokenError.message}`);
+      }
+
+      console.log("✅ Direct token set successful:", tokenSetResult);
+
+      // Step 2: Validate token
+      const { data: validationData, error: validationError } = await supabase.rpc(
+        'validate_invitation_token',
+        { token }
+      );
+
+      if (validationError) {
+        console.error("❌ Direct validation failed:", validationError);
+        return {
+          success: true,
+          valid: false,
+          error: 'Invalid or expired invitation token'
+        };
+      }
+
+      console.log("✅ Direct validation successful:", validationData);
+
+      const proposalId = validationData?.[0]?.proposal_id;
+      const clientEmail = validationData?.[0]?.client_email;
+      const valid = !!proposalId;
+
+      if (!valid) {
+        return {
+          success: true,
+          valid: false,
+          error: 'This invitation link is invalid or has expired'
+        };
+      }
+
+      // Mark as viewed (non-blocking)
+      supabase.rpc('mark_invitation_viewed', { token_param: token })
+        .then(({ error }) => {
+          if (error) {
+            console.error("⚠️ Failed to mark as viewed:", error);
+          } else {
+            console.log("✅ Marked invitation as viewed");
+          }
+        });
+
+      return {
+        success: true,
+        valid: true,
+        proposalId,
+        clientEmail
+      };
+
+    } catch (error) {
+      console.error("💥 Direct database fallback failed:", error);
+      const errorMessage = error instanceof Error ? error.message : "Database fallback failed";
+      return {
+        success: false,
+        valid: false,
+        error: errorMessage
+      };
+    }
+  }, [tokenLogger]);
+
+  /**
+   * Persist and validate an invitation token with automatic fallback
    */
   const persistToken = useCallback(async (token: string): Promise<SetTokenResult> => {
     setLoading(true);
     setError(null);
     
     try {
-      tokenLogger.info("🚀 Starting token persistence process", { 
+      tokenLogger.info("🚀 Starting token persistence", { 
         tokenPrefix: token.substring(0, 8),
-        timestamp: new Date().toISOString(),
-        tokenLength: token.length
+        timestamp: new Date().toISOString()
       });
       
-      console.log("🚀 === STARTING TOKEN PERSISTENCE PROCESS ===");
-      console.log(`📋 Token to persist: ${token.substring(0, 8)}... (length: ${token.length})`);
-      console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+      console.log("🚀 === STARTING TOKEN PERSISTENCE ===");
+      console.log(`📋 Token: ${token.substring(0, 8)}... (length: ${token.length})`);
       
-      // Test edge function connectivity first
-      console.log("🩺 Testing edge function connectivity...");
-      const isHealthy = await testConnectivity();
+      // First attempt: Edge function
+      console.log("📡 Attempting edge function call...");
       
-      if (!isHealthy) {
-        const errorMessage = "Edge function connectivity test failed. The function may not be properly deployed.";
-        console.error("❌ === CONNECTIVITY TEST FAILED ===");
-        tokenLogger.error("❌ Connectivity test failed");
-        setError(errorMessage);
-        return {
-          success: false,
-          valid: false,
-          error: errorMessage
-        };
-      }
-      
-      console.log("✅ Edge function connectivity confirmed");
-      
-      // Call the edge function to set the token in the session
-      tokenLogger.info("📡 Invoking set-invitation-token edge function", { 
-        tokenPrefix: token.substring(0, 8),
-        functionUrl: 'set-invitation-token'
-      });
-      
-      console.log("📡 Calling set-invitation-token edge function...");
-      console.log(`📋 Function payload: { token: "${token.substring(0, 8)}..." }`);
-      
-      const { data, error: functionError } = await supabase.functions.invoke(
-        'set-invitation-token',
-        { 
-          body: { token },
-          headers: {
-            'Content-Type': 'application/json'
+      try {
+        const { data, error: functionError } = await supabase.functions.invoke(
+          'set-invitation-token',
+          { 
+            body: { token },
+            headers: { 'Content-Type': 'application/json' }
           }
+        );
+        
+        if (functionError) {
+          console.warn("⚠️ Edge function failed, using fallback:", functionError);
+          tokenLogger.warn("Edge function failed, using database fallback", { error: functionError });
+          
+          // Fallback to direct database method
+          return await persistTokenDirectly(token);
         }
-      );
-      
-      console.log("📡 === EDGE FUNCTION RESPONSE ===", { 
-        hasData: !!data, 
-        hasError: !!functionError,
-        dataContent: data,
-        errorDetails: functionError 
-      });
-      
-      if (functionError) {
-        console.error("❌ === EDGE FUNCTION ERROR ===", functionError);
-        tokenLogger.error("❌ Error invoking set-invitation-token function", { 
-          error: functionError,
-          message: functionError.message,
-          details: functionError.details,
-          context: functionError.context
+        
+        const result = data as SetTokenResult;
+        console.log("✅ Edge function successful:", result);
+        
+        tokenLogger.info("✅ Edge function successful", { 
+          success: result.success,
+          valid: result.valid,
+          version: result.version,
+          deploymentTime: result.deploymentTime
         });
         
-        // Provide more specific error messages based on the error type
-        let errorMessage = "Failed to process invitation token";
-        
-        if (functionError.message?.includes('Invalid or expired')) {
-          errorMessage = "This invitation link is invalid or has expired";
-        } else if (functionError.message?.includes('network') || functionError.message?.includes('fetch')) {
-          errorMessage = "Network error. Please check your connection and try again";
-        } else if (functionError.message?.includes('FunctionsRelayError')) {
-          errorMessage = "Service temporarily unavailable. Please try again in a moment";
-        } else if (functionError.message?.includes('FunctionsHttpError')) {
-          errorMessage = "Edge function error. Please contact support if this persists";
-        } else if (functionError.message) {
-          errorMessage = functionError.message;
-        }
-        
-        setError(errorMessage);
-        return {
-          success: false,
-          valid: false,
-          error: errorMessage
-        };
-      }
-      
-      // Parse the response
-      const result = data as SetTokenResult;
-      console.log("✅ === PARSED EDGE FUNCTION RESULT ===", result);
-      
-      tokenLogger.info("✅ Received response from set-invitation-token function", { 
-        success: result.success,
-        valid: result.valid,
-        hasError: !!result.error,
-        errorMessage: result.error,
-        hasProposalId: !!result.proposalId,
-        hasClientEmail: !!result.clientEmail,
-        proposalIdPrefix: result.proposalId?.substring(0, 8)
-      });
-      
-      if (!result.success) {
-        const errorMessage = result.error || "Failed to set invitation token";
-        console.error("❌ === TOKEN PERSISTENCE FAILED ===", errorMessage);
-        tokenLogger.error("❌ Token persistence failed", { error: errorMessage });
-        setError(errorMessage);
         return result;
+        
+      } catch (edgeFunctionError) {
+        console.warn("⚠️ Edge function exception, using fallback:", edgeFunctionError);
+        tokenLogger.warn("Edge function exception, using database fallback", { error: edgeFunctionError });
+        
+        // Fallback to direct database method
+        return await persistTokenDirectly(token);
       }
-      
-      if (!result.valid) {
-        const errorMessage = result.error || "Invalid invitation token";
-        console.warn("⚠️ === TOKEN INVALID ===", errorMessage);
-        tokenLogger.warn("⚠️ Token was persisted but is invalid", { error: errorMessage });
-        setError(errorMessage);
-        return result;
-      }
-      
-      console.log("🎉 === TOKEN SUCCESSFULLY VALIDATED ===");
-      tokenLogger.info("🎉 Token successfully persisted and validated", { 
-        valid: result.valid,
-        hasProposalId: !!result.proposalId,
-        hasClientEmail: !!result.clientEmail,
-        proposalIdPrefix: result.proposalId?.substring(0, 8)
-      });
-      
-      return result;
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error setting invitation token";
-      console.error("💥 === UNEXPECTED ERROR ===", error);
-      tokenLogger.error("💥 Unexpected error persisting token", { 
-        error,
-        message: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error("💥 Complete token persistence failed:", error);
+      tokenLogger.error("💥 Complete token persistence failed", { error });
       
       setError(errorMessage);
       
@@ -203,7 +200,7 @@ export function useInvitationToken() {
     } finally {
       setLoading(false);
     }
-  }, [tokenLogger, testConnectivity]);
+  }, [tokenLogger, persistTokenDirectly]);
 
   return {
     persistToken,
