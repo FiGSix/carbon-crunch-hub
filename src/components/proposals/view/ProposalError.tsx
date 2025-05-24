@@ -22,6 +22,9 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
                            errorMessage.toLowerCase().includes('access') ||
                            errorMessage.toLowerCase().includes('unauthorized');
 
+  // Create the support email URL
+  const supportEmailUrl = `mailto:support@crunchcarbon.app?subject=Proposal Loading Error&body=I'm having trouble loading a proposal. Error: ${encodeURIComponent(errorMessage)}`;
+
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
       <Card className="border border-red-200 bg-red-50 shadow-sm">
@@ -61,7 +64,7 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
             <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-800 mb-4">
               <p className="font-medium mb-1">💡 If you received this link via email:</p>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Make sure you're using the complete link from the email</li>
+                <li>Make sure you&apos;re using the complete link from the email</li>
                 <li>Try copying and pasting the link directly into your browser</li>
                 <li>Contact the person who sent you the proposal for a new link</li>
               </ul>
@@ -90,7 +93,7 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
 
           <Button variant="outline" asChild>
             <a 
-              href="mailto:support@crunchcarbon.app?subject=Proposal Loading Error&body=I'm having trouble loading a proposal. Error: " + encodeURIComponent(errorMessage)
+              href={supportEmailUrl}
               target="_blank" 
               rel="noopener noreferrer"
             >
