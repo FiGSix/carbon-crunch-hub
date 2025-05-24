@@ -32,40 +32,58 @@ export function useInvitationToken() {
     setError(null);
     
     try {
-      tokenLogger.info("Setting and validating invitation token", { 
+      tokenLogger.info("Starting token persistence process", { 
         tokenPrefix: token.substring(0, 8),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        tokenLength: token.length
       });
       
       console.log("🚀 Starting token persistence process...");
-      console.log(`Token to persist: ${token.substring(0, 8)}...`);
+      console.log(`Token to persist: ${token.substring(0, 8)}... (length: ${token.length})`);
+      
+      // Test edge function connectivity first
+      console.log("🔗 Testing edge function connectivity...");
       
       // Call the edge function to set the token in the session
-      tokenLogger.info("Invoking set-invitation-token edge function", { token: token.substring(0, 8) });
+      tokenLogger.info("Invoking set-invitation-token edge function", { 
+        tokenPrefix: token.substring(0, 8),
+        functionUrl: 'set-invitation-token'
+      });
       
       const { data, error: functionError } = await supabase.functions.invoke(
         'set-invitation-token',
         { 
-          body: { token } 
+          body: { token },
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
       
-      console.log("📡 Edge function response:", { data, error: functionError });
+      console.log("📡 Edge function response received:", { 
+        hasData: !!data, 
+        hasError: !!functionError,
+        errorDetails: functionError 
+      });
       
       if (functionError) {
         console.error("❌ Edge function error:", functionError);
         tokenLogger.error("Error invoking set-invitation-token function", { 
           error: functionError,
           message: functionError.message,
-          details: functionError.details
+          details: functionError.details,
+          context: functionError.context
         });
         
-        // Provide more specific error messages
+        // Provide more specific error messages based on the error type
         let errorMessage = "Failed to process invitation token";
+        
         if (functionError.message?.includes('Invalid or expired')) {
           errorMessage = "This invitation link is invalid or has expired";
-        } else if (functionError.message?.includes('network')) {
+        } else if (functionError.message?.includes('network') || functionError.message?.includes('fetch')) {
           errorMessage = "Network error. Please check your connection and try again";
+        } else if (functionError.message?.includes('FunctionsRelayError')) {
+          errorMessage = "Service temporarily unavailable. Please try again in a moment";
         } else if (functionError.message) {
           errorMessage = functionError.message;
         }
@@ -88,7 +106,8 @@ export function useInvitationToken() {
         hasError: !!result.error,
         errorMessage: result.error,
         hasProposalId: !!result.proposalId,
-        hasClientEmail: !!result.clientEmail
+        hasClientEmail: !!result.clientEmail,
+        proposalIdPrefix: result.proposalId?.substring(0, 8)
       });
       
       if (!result.success) {
@@ -112,10 +131,11 @@ export function useInvitationToken() {
         valid: result.valid,
         hasProposalId: !!result.proposalId,
         hasClientEmail: !!result.clientEmail,
-        proposalId: result.proposalId?.substring(0, 8)
+        proposalIdPrefix: result.proposalId?.substring(0, 8)
       });
       
       return result;
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error setting invitation token";
       console.error("💥 Unexpected error persisting token:", error);
