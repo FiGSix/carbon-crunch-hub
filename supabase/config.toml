@@ -1,12 +1,14 @@
 
-# Update the config with our manage-client-profile edge function
 project_id = "uyjryuopuqgmsvayiccl"
+
 [api]
 enabled = true
-[functions]
+
 [functions.manage-client-profile]
 verify_jwt = true
+
 [functions.set-invitation-token]
 verify_jwt = false
+
 [functions.send-proposal-invitation]
 verify_jwt = true

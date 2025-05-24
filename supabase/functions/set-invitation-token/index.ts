@@ -1,12 +1,11 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0"
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 
-// Define CORS headers for cross-origin requests
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface RequestBody {
   token: string;
@@ -16,56 +15,69 @@ interface ResponseBody {
   success: boolean;
   valid: boolean;
   proposalId?: string;
-  clientEmail?: string; // Ensure this property is defined in the response interface
+  clientEmail?: string;
   error?: string;
 }
 
-serve(async (req) => {
+const handler = async (req: Request): Promise<Response> => {
+  console.log(`[${new Date().toISOString()}] set-invitation-token function called with method: ${req.method}`);
+
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+  if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: { 
-          headers: { Authorization: req.headers.get("Authorization") ?? "" } 
-        }
-      }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseAnonKey: !!supabaseAnonKey
+    });
 
-    // Get token from request body
-    const { token } = await req.json() as RequestBody;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing required environment variables');
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { 
+        headers: { Authorization: req.headers.get('Authorization') ?? '' } 
+      }
+    });
+
+    // Parse request body
+    const requestBody = await req.json() as RequestBody;
+    const { token } = requestBody;
+
+    console.log(`Processing invitation token: ${token ? token.substring(0, 8) + '...' : 'undefined'}`);
 
     if (!token) {
-      console.error("No token provided");
+      console.error('No token provided in request body');
       return new Response(
         JSON.stringify({
           success: false,
           valid: false,
-          error: "No token provided"
+          error: 'No token provided'
         } as ResponseBody),
         { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
         }
-      )
+      );
     }
 
-    console.log(`Processing invitation token: ${token.substring(0, 8)}...`);
-
     // Set the token in the session using RPC
-    const { data: tokenSet, error: tokenError } = await supabaseClient.rpc(
+    console.log('Setting token in session via RPC...');
+    const { data: tokenSetResult, error: tokenError } = await supabaseClient.rpc(
       'set_request_invitation_token',
       { token }
-    )
+    );
 
     if (tokenError) {
-      console.error("Error setting token:", tokenError);
+      console.error('Error setting token in session:', tokenError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -73,32 +85,37 @@ serve(async (req) => {
           error: `Failed to set token: ${tokenError.message}`
         } as ResponseBody),
         { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
-      )
+      );
     }
 
+    console.log('Token set in session successfully:', tokenSetResult);
+
     // Validate the token to check if it corresponds to a valid proposal
+    console.log('Validating token...');
     const { data: validationData, error: validationError } = await supabaseClient.rpc(
       'validate_invitation_token',
       { token }
-    )
+    );
 
     if (validationError) {
-      console.error("Token validation error:", validationError);
+      console.error('Token validation error:', validationError);
       return new Response(
         JSON.stringify({
           success: true,
           valid: false,
-          error: "Invalid or expired invitation token"
+          error: 'Invalid or expired invitation token'
         } as ResponseBody),
         { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200
         }
-      )
+      );
     }
+
+    console.log('Validation result:', validationData);
 
     // Check if validation returned a proposal ID
     const proposalId = validationData?.[0]?.proposal_id;
@@ -106,23 +123,22 @@ serve(async (req) => {
     const valid = !!proposalId;
 
     if (!valid) {
-      console.log("Token validation failed - no proposal found");
+      console.log('Token validation failed - no proposal found');
       return new Response(
         JSON.stringify({
           success: true,
           valid: false,
-          error: "This invitation link is invalid or has expired"
+          error: 'This invitation link is invalid or has expired'
         } as ResponseBody),
         { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
         }
-      )
+      );
     }
 
-    console.log(`Token validation successful for proposal: ${proposalId}, client email: ${clientEmail}`);
+    console.log(`Token validation successful - proposal: ${proposalId}, client: ${clientEmail}`);
     
-    // Return success response with all needed data
     return new Response(
       JSON.stringify({
         success: true,
@@ -131,23 +147,28 @@ serve(async (req) => {
         clientEmail
       } as ResponseBody),
       { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
-    )
+    );
+
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error('Unexpected error in set-invitation-token function:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     
     return new Response(
       JSON.stringify({
         success: false,
         valid: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
+        error: errorMessage
       } as ResponseBody),
       { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
-    )
+    );
   }
-})
+};
+
+serve(handler);

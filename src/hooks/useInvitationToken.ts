@@ -37,6 +37,9 @@ export function useInvitationToken() {
         timestamp: new Date().toISOString()
       });
       
+      console.log("🚀 Starting token persistence process...");
+      console.log(`Token to persist: ${token.substring(0, 8)}...`);
+      
       // Call the edge function to set the token in the session
       tokenLogger.info("Invoking set-invitation-token edge function", { token: token.substring(0, 8) });
       
@@ -47,7 +50,10 @@ export function useInvitationToken() {
         }
       );
       
+      console.log("📡 Edge function response:", { data, error: functionError });
+      
       if (functionError) {
+        console.error("❌ Edge function error:", functionError);
         tokenLogger.error("Error invoking set-invitation-token function", { 
           error: functionError,
           message: functionError.message,
@@ -74,6 +80,8 @@ export function useInvitationToken() {
       
       // Parse the response
       const result = data as SetTokenResult;
+      console.log("✅ Parsed edge function result:", result);
+      
       tokenLogger.info("Received response from set-invitation-token function", { 
         success: result.success,
         valid: result.valid,
@@ -85,6 +93,7 @@ export function useInvitationToken() {
       
       if (!result.success) {
         const errorMessage = result.error || "Failed to set invitation token";
+        console.error("❌ Token persistence failed:", errorMessage);
         tokenLogger.error("Token persistence failed", { error: errorMessage });
         setError(errorMessage);
         return result;
@@ -92,11 +101,13 @@ export function useInvitationToken() {
       
       if (!result.valid) {
         const errorMessage = result.error || "Invalid invitation token";
+        console.warn("⚠️ Token was persisted but is invalid:", errorMessage);
         tokenLogger.warn("Token was persisted but is invalid", { error: errorMessage });
         setError(errorMessage);
         return result;
       }
       
+      console.log("🎉 Token successfully persisted and validated!");
       tokenLogger.info("Token successfully persisted and validated", { 
         valid: result.valid,
         hasProposalId: !!result.proposalId,
@@ -107,6 +118,7 @@ export function useInvitationToken() {
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error setting invitation token";
+      console.error("💥 Unexpected error persisting token:", error);
       tokenLogger.error("Unexpected error persisting token", { 
         error,
         message: errorMessage,
