@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
-import { parseRequest, validateToken } from "./request-parser.ts";
+import { parseRequest } from "./request-parser.ts";
 import { validateTokenDirect, markInvitationAsViewed } from "./validation.ts";
 import { 
   createCorsResponse, 
@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Parse and validate request
     let requestBody;
     try {
-      requestBody = await parseRequest(req, requestId);
+      requestBody = await parseRequest(req);
     } catch (parseError) {
       console.error(`[${timestamp}] [${requestId}] ❌ Parse error:`, parseError);
       return createErrorResponse(
@@ -61,13 +61,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { token, email } = requestBody;
 
-    try {
-      validateToken(token);
-    } catch (tokenError) {
-      console.error(`[${timestamp}] [${requestId}] ❌ Token validation error:`, tokenError);
-      return createErrorResponse(
-        tokenError instanceof Error ? tokenError.message : 'Invalid token'
-      );
+    // Basic token validation
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      console.error(`[${timestamp}] [${requestId}] ❌ Invalid token provided`);
+      return createErrorResponse('Token must be a non-empty string');
     }
 
     console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}... ${email ? `for email: ${email.substring(0, 3)}***` : '(no email provided)'}`);
