@@ -47,20 +47,18 @@ export function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <Sidebar>
-          <DashboardSidebar />
-        </Sidebar>
+      <div className="min-h-screen flex w-full bg-gray-50">
+        <DashboardSidebar />
         
-        <div className="flex-1 flex flex-col bg-gradient-to-br from-white to-gray-50">
+        <div className="flex-1 flex flex-col">
           <motion.header 
-            className="h-16 border-b border-crunch-black/5 flex items-center px-4 backdrop-blur-xl bg-white/80 shadow-sm"
+            className="h-16 border-b border-gray-200 flex items-center px-4 bg-white shadow-sm"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <SidebarTrigger className="hover:bg-crunch-yellow/10 rounded-full p-2 transition-colors duration-200" />
-            <div className="ml-4 text-lg font-bold uppercase tracking-wide bg-gradient-to-r from-crunch-black to-crunch-black/80 bg-clip-text text-transparent">
+            <SidebarTrigger className="hover:bg-crunch-yellow/10 rounded-lg p-2 transition-colors duration-200" />
+            <div className="ml-4 text-lg font-bold uppercase tracking-wide text-crunch-black">
               {userRole === 'client' && 'CLIENT DASHBOARD'}
               {userRole === 'agent' && 'AGENT DASHBOARD'}
               {userRole === 'admin' && 'ADMIN DASHBOARD'}
@@ -70,11 +68,11 @@ export function DashboardLayout({
               <Button 
                 variant="ghost" 
                 size="sm"
-                className="rounded-full p-0 h-9 w-9 flex items-center justify-center"
+                className="rounded-full p-0 h-9 w-9 flex items-center justify-center hover:bg-crunch-yellow/10"
                 onClick={() => navigate('/profile')}
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-crunch-yellow/10 text-crunch-black">
+                  <AvatarFallback className="bg-crunch-yellow/20 text-crunch-black font-medium">
                     {profile?.first_name?.[0]?.toUpperCase() || profile?.role?.[0]?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
@@ -83,7 +81,7 @@ export function DashboardLayout({
           </motion.header>
           
           <motion.main 
-            className={cn("flex-1 p-4 md:p-6 lg:p-8")}
+            className={cn("flex-1 p-4 md:p-6 lg:p-8 bg-gray-50")}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.1 }}
