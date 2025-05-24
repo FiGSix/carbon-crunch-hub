@@ -1,28 +1,22 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 import { supabase } from "../_shared/supabase-client.ts";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface InvitationRequest {
-  proposalId: string;
-  clientEmail: string;
-  clientName: string;
-  invitationToken: string;
-  projectName: string;
-  clientId?: string;
-}
+import { validateInvitationRequest } from "./validation.ts";
+import { verifyTokenConsistency } from "./token-verification.ts";
+import { EmailService } from "./email-service.ts";
+import { createClientNotification } from "./notification-service.ts";
+import { 
+  createCorsResponse, 
+  createSuccessResponse, 
+  createEmailErrorResponse, 
+  createGeneralErrorResponse 
+} from "./responses.ts";
+import type { InvitationRequest, EmailTemplateData } from "./types.ts";
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return createCorsResponse();
   }
 
   try {
@@ -41,178 +35,67 @@ const handler = async (req: Request): Promise<Response> => {
       invitationToken: requestData.invitationToken ? `${requestData.invitationToken.substring(0, 8)}...` : undefined,
     }));
     
-    // Validate required fields
-    const requiredFields = ['proposalId', 'clientEmail', 'invitationToken'];
-    const missingFields = requiredFields.filter(field => !requestData[field]);
-    
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-    }
-    
+    const validatedRequest: InvitationRequest = validateInvitationRequest(requestData);
     const { 
       proposalId, 
       clientEmail, 
-      clientName = 'Client', 
+      clientName, 
       invitationToken,
-      projectName = 'Carbon Credit Project',
+      projectName,
       clientId 
-    }: InvitationRequest = requestData;
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(clientEmail)) {
-      throw new Error("Invalid email format");
-    }
+    } = validatedRequest;
 
     // CRITICAL: Verify the token from the request matches what's stored in the database
-    console.log(`Verifying token consistency for proposal ${proposalId}`);
-    console.log(`Token from request: ${invitationToken.substring(0, 8)}...`);
-    
-    const { data: proposalData, error: proposalError } = await supabase
-      .from('proposals')
-      .select('invitation_token, status, title')
-      .eq('id', proposalId)
-      .single();
-    
-    if (proposalError) {
-      console.error("Error fetching proposal for token verification:", proposalError);
-      throw new Error(`Failed to verify proposal: ${proposalError.message}`);
-    }
-    
-    if (!proposalData.invitation_token) {
-      console.error("No invitation token found in database for proposal:", proposalId);
-      throw new Error("No invitation token found for this proposal");
-    }
-    
-    console.log(`Token from database: ${proposalData.invitation_token.substring(0, 8)}...`);
-    
-    // Verify tokens match
-    if (proposalData.invitation_token !== invitationToken) {
-      console.error("TOKEN MISMATCH DETECTED!");
-      console.error(`Request token: ${invitationToken}`);
-      console.error(`Database token: ${proposalData.invitation_token}`);
-      throw new Error("Token mismatch between request and database. This indicates a data consistency issue.");
-    }
-    
-    console.log("✅ Token verification successful - tokens match");
+    const verifiedToken = await verifyTokenConsistency(proposalId, invitationToken, supabase);
     
     // Get site URL from environment variable, with fallback
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
 
     // Use the VERIFIED token from the database to construct invitation link
-    const invitationLink = `${siteUrl}/proposals/view?token=${proposalData.invitation_token}`;
+    const invitationLink = `${siteUrl}/proposals/view?token=${verifiedToken}`;
 
     console.log(`Sending invitation email to ${clientEmail} for project ${projectName}`);
     console.log(`Invitation link: ${invitationLink}`);
-    console.log(`Using verified token: ${proposalData.invitation_token.substring(0, 8)}...`);
+    console.log(`Using verified token: ${verifiedToken.substring(0, 8)}...`);
 
-    // Send email with proper error handling
+    // Initialize email service and send email
+    const emailService = new EmailService(Deno.env.get("RESEND_API_KEY")!);
+    
+    const emailTemplateData: EmailTemplateData = {
+      clientName,
+      projectName,
+      invitationLink,
+      tokenPreview: verifiedToken.substring(0, 8) + "...",
+      proposalId
+    };
+    
+    const emailTemplate = emailService.generateEmailTemplate(emailTemplateData);
+
     try {
-      const emailResponse = await resend.emails.send({
-        from: "Carbon Credit Proposals <proposals@crunchcarbon.app>",
-        to: [clientEmail],
-        subject: `Proposal Invitation for ${projectName}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1>Proposal Invitation</h1>
-            <p>Hello ${clientName},</p>
-            <p>You have been invited to review a carbon credit proposal for the project: <strong>${projectName}</strong>.</p>
-            <p>To view the proposal, please click the link below:</p>
-            <p style="text-align: center;">
-              <a href="${invitationLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Proposal</a>
-            </p>
-            <p>This invitation is valid for 48 hours. If you did not expect this invitation, please ignore this email.</p>
-            <p>Best regards,<br>Your Carbon Credit Team</p>
-            
-            <!-- Debug info (hidden) -->
-            <div style="display: none;">
-              <!-- Token: ${proposalData.invitation_token.substring(0, 8)}... -->
-              <!-- Proposal: ${proposalId} -->
-            </div>
-          </div>
-        `,
-      });
+      const emailResponse = await emailService.sendInvitationEmail(
+        clientEmail,
+        projectName,
+        emailTemplate
+      );
 
       // Create a notification for the client if we have their ID
       if (clientId) {
-        try {
-          await supabase
-            .from('notifications')
-            .insert({
-              user_id: clientId,
-              title: "New Proposal Invitation",
-              message: `You have been invited to review a proposal for project: ${projectName}`,
-              type: "info",
-              related_id: proposalId,
-              related_type: "proposal",
-              read: false,
-              created_at: new Date().toISOString()
-            });
-            
-          console.log("Client notification created successfully");
-        } catch (notificationError) {
-          console.error("Failed to create client notification:", notificationError);
-          // We don't want to fail the whole request if just the notification fails
-        }
+        await createClientNotification(clientId, projectName, proposalId, supabase);
       }
 
       console.log("✅ Invitation email sent successfully:", emailResponse);
-      console.log(`✅ Email sent with verified token: ${proposalData.invitation_token.substring(0, 8)}...`);
+      console.log(`✅ Email sent with verified token: ${verifiedToken.substring(0, 8)}...`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        data: emailResponse,
-        debug: {
-          tokenUsed: proposalData.invitation_token.substring(0, 8) + "...",
-          proposalId: proposalId,
-          invitationLink: invitationLink
-        }
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
+      return createSuccessResponse(emailResponse, {
+        tokenUsed: verifiedToken.substring(0, 8) + "...",
+        proposalId: proposalId,
+        invitationLink: invitationLink
       });
     } catch (emailError: any) {
-      console.error("Email service error:", emailError);
-      console.error("Error details:", JSON.stringify({
-        message: emailError.message,
-        code: emailError.statusCode,
-        name: emailError.name
-      }));
-      
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Email sending failed", 
-          details: emailError.message,
-          code: emailError.statusCode
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        }
-      );
+      return createEmailErrorResponse(emailError);
     }
   } catch (error: any) {
-    console.error("Error in send-proposal-invitation function:", error);
-    console.error("Error details:", JSON.stringify({
-      message: error.message,
-      stack: error.stack
-    }));
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      }
-    );
+    return createGeneralErrorResponse(error);
   }
 };
 
