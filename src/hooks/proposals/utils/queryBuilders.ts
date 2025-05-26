@@ -11,7 +11,7 @@ export function buildProposalQuery(
   userRole: string | null,
   userId: string | null
 ) {
-  // Base query with all needed fields - removed client_contact_id since it doesn't exist
+  // Base query with all needed fields - completely removed client_contact_id
   let query = supabase
     .from('proposals')
     .select(`
