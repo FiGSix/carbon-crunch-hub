@@ -14,6 +14,7 @@ export interface ClientData {
   total_mwp: number;
   agent_id: string;
   agent_name: string;
+  client_stage: string; // Added client stage
 }
 
 export function useMyClients() {
@@ -24,7 +25,11 @@ export function useMyClients() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      setError('User not authenticated');
+      return;
+    }
 
     const fetchClients = async () => {
       try {
@@ -46,6 +51,7 @@ export function useMyClients() {
         setClients(data || []);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clients';
+        console.error('Client fetch error:', err);
         setError(errorMessage);
         toast({
           title: "Error",

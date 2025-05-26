@@ -321,6 +321,7 @@ export type Database = {
           total_mwp: number
           agent_id: string
           agent_name: string
+          client_stage: string
         }[]
       }
       get_client_email: {
