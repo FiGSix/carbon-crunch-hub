@@ -1,7 +1,6 @@
 
 import React from "react";
 import { CheckCircle2, Archive, ChevronLeft } from "lucide-react";
-import { ProposalExportButton } from "@/components/proposals/components/ProposalExportButton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
@@ -115,14 +114,6 @@ export function ProposalHeader({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        )}
-        
-        {/* Only show export button for agents */}
-        {userRole === "agent" && projectSize && projectName && (
-          <ProposalExportButton 
-            systemSize={projectSize} 
-            projectName={projectName}
-          />
         )}
       </div>
     </div>
