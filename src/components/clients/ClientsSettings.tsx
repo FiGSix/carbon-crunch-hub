@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Settings, RotateCcw, Zap } from 'lucide-react';
+import { Settings, RotateCcw, Zap, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,11 +28,11 @@ interface ClientsSettingsProps {
 }
 
 const intervalOptions = [
-  { value: 10000, label: '10 seconds' },
   { value: 30000, label: '30 seconds' },
   { value: 60000, label: '1 minute' },
   { value: 120000, label: '2 minutes' },
   { value: 300000, label: '5 minutes' },
+  { value: 600000, label: '10 minutes' },
 ];
 
 export function ClientsSettings({
@@ -97,17 +97,22 @@ export function ClientsSettings({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Shorter intervals may impact performance
+                </p>
               </div>
             )}
           </div>
 
           <div className="rounded-lg border p-3 bg-blue-50 border-blue-200">
             <div className="flex items-center gap-2 text-blue-700 mb-1">
-              <Zap className="h-4 w-4" />
-              <span className="text-sm font-medium">Real-time Updates</span>
+              <Info className="h-4 w-4" />
+              <span className="text-sm font-medium">Performance Tips</span>
             </div>
             <p className="text-xs text-blue-600">
-              Client data also updates automatically when changes are detected in real-time.
+              • Auto-refresh is disabled by default for better performance<br/>
+              • Use manual refresh for on-demand updates<br/>
+              • Real-time updates work independently of auto-refresh
             </p>
           </div>
         </div>

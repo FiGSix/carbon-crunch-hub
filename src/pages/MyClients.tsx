@@ -19,16 +19,14 @@ const MyClients = () => {
     refreshInterval,
     setRefreshInterval
   } = useMyClients();
+  
   const isAdmin = userRole === 'admin';
 
   console.log('=== MyClients Page Render ===');
-  console.log('User Role:', userRole);
-  console.log('Is Admin:', isAdmin);
-  console.log('Loading:', isLoading);
-  console.log('Refreshing:', isRefreshing);
-  console.log('Error:', error);
-  console.log('Clients:', clients);
-  console.log('Auto-refresh enabled:', autoRefreshEnabled);
+  console.log('User Role:', userRole, 'Is Admin:', isAdmin);
+  console.log('Loading:', isLoading, 'Refreshing:', isRefreshing);
+  console.log('Error:', error, 'Clients:', clients.length);
+  console.log('Auto-refresh enabled:', autoRefreshEnabled, 'Interval:', refreshInterval);
 
   return (
     <DashboardLayout>
@@ -45,9 +43,17 @@ const MyClients = () => {
                   : 'View your client relationships and project data'
                 }
               </p>
-              {/* Debug info */}
-              <div className="text-xs text-gray-400 mt-1">
-                Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'} | Refreshing: {isRefreshing ? 'Yes' : 'No'} | Clients: {clients.length} | Auto-refresh: {autoRefreshEnabled ? 'On' : 'Off'}
+              {/* Debug info - can be removed in production */}
+              <div className="text-xs text-gray-400 mt-1 space-x-2">
+                <span>Role: {userRole}</span>
+                <span>•</span>
+                <span>Loading: {isLoading ? 'Yes' : 'No'}</span>
+                <span>•</span>
+                <span>Refreshing: {isRefreshing ? 'Yes' : 'No'}</span>
+                <span>•</span>
+                <span>Clients: {clients.length}</span>
+                <span>•</span>
+                <span>Auto-refresh: {autoRefreshEnabled ? 'On' : 'Off'}</span>
               </div>
             </div>
             
@@ -66,6 +72,7 @@ const MyClients = () => {
             error={error}
             isAdmin={isAdmin}
             onRefresh={refreshClients}
+            autoRefreshEnabled={autoRefreshEnabled}
           />
         </div>
       </div>

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, RefreshCw, Zap } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle } from 'lucide-react';
 import { ClientData } from '@/hooks/useMyClients';
 
 interface ClientsTableContentProps {
@@ -19,6 +19,7 @@ interface ClientsTableContentProps {
   isRefreshing?: boolean;
   autoRefreshEnabled?: boolean;
   onRefresh?: () => void;
+  error?: string | null;
 }
 
 export function ClientsTableContent({ 
@@ -26,9 +27,11 @@ export function ClientsTableContent({
   isAdmin, 
   isRefreshing = false, 
   autoRefreshEnabled = false, 
-  onRefresh 
+  onRefresh,
+  error = null
 }: ClientsTableContentProps) {
   console.log('Rendering clients table with', clients.length, 'clients');
+  console.log('Error state:', error, 'Refreshing:', isRefreshing);
   
   return (
     <Card>
@@ -64,7 +67,32 @@ export function ClientsTableContent({
         </div>
       </CardHeader>
       <CardContent>
-        {isRefreshing && (
+        {/* Show inline error notification if there's an error but we have cached data */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center text-red-700">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              <span className="text-sm">
+                Failed to refresh: {error}
+              </span>
+              {onRefresh && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onRefresh}
+                  disabled={isRefreshing}
+                  className="ml-auto"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Retry
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Show refreshing notification */}
+        {isRefreshing && !error && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <div className="flex items-center text-blue-700">
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
