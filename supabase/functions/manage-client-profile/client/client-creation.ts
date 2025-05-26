@@ -2,7 +2,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { ClientProfileRequest, ClientProfileResponse, ErrorResponse } from "../../_shared/types.ts";
 
-// Create a new client in the unified clients table
 export async function createClientContact(
   clientData: ClientProfileRequest,
   createdBy: string,
@@ -11,51 +10,50 @@ export async function createClientContact(
   try {
     const { email, firstName, lastName, phone, companyName } = clientData;
     
-    console.log(`Creating new client in unified clients table: ${email}`);
+    console.log(`Creating new client contact for email: ${email}`);
     
-    // Insert client record into the unified clients table
-    const { data, error } = await supabase
+    // Create a new client contact record
+    const { data: newClient, error: insertError } = await supabase
       .from('clients')
       .insert({
+        first_name: firstName,
+        last_name: lastName,
         email: email.toLowerCase().trim(),
-        first_name: firstName || null,
-        last_name: lastName || null,
         phone: phone || null,
         company_name: companyName || null,
-        is_registered_user: false, // This is for non-registered clients
-        created_by: createdBy
+        created_by: createdBy,
+        user_id: null // Not a registered user
       })
-      .select('id')
+      .select()
       .single();
     
-    if (error) {
-      console.error("Error creating client:", error);
+    if (insertError) {
+      console.error("Error creating client contact:", insertError);
       return {
-        error: `Failed to create client: ${error.message}`,
+        error: `Failed to create client contact: ${insertError.message}`,
         status: 500
       };
     }
     
-    if (!data || !data.id) {
-      console.error("No client ID returned from insert operation");
+    if (!newClient) {
+      console.error("No client data returned after insert");
       return {
-        error: `Failed to create client: No ID returned`,
+        error: "Failed to create client contact - no data returned",
         status: 500
       };
     }
     
-    console.log(`Successfully created client with ID: ${data.id}`);
+    console.log(`Successfully created client contact: ${newClient.id}`);
     
-    // Return successful creation response
     return {
-      clientId: data.id,
+      clientId: newClient.id,
       isNewProfile: true,
       isRegisteredUser: false
     };
   } catch (error) {
     console.error("Error in createClientContact:", error);
     return {
-      error: `Error creating client: ${error instanceof Error ? error.message : String(error)}`,
+      error: `Error creating client contact: ${error instanceof Error ? error.message : String(error)}`,
       status: 500
     };
   }

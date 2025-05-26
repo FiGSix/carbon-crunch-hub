@@ -19,7 +19,6 @@ export interface Database {
           email: string
           phone: string | null
           company_name: string | null
-          is_registered_user: boolean
           created_at: string
           created_by: string | null
           updated_at: string | null
@@ -32,7 +31,6 @@ export interface Database {
           email: string
           phone?: string | null
           company_name?: string | null
-          is_registered_user?: boolean
           created_at?: string
           created_by?: string | null
           updated_at?: string | null
@@ -45,7 +43,6 @@ export interface Database {
           email?: string
           phone?: string | null
           company_name?: string | null
-          is_registered_user?: boolean
           created_at?: string
           created_by?: string | null
           updated_at?: string | null

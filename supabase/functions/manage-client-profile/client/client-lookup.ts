@@ -35,7 +35,7 @@ export async function findExistingClient(
     // If not found in profiles, search in unified clients table
     const { data: existingClient, error: clientSearchError } = await supabase
       .from('clients')
-      .select('id, is_registered_user')
+      .select('id, user_id')
       .eq('email', normalizedEmail)
       .maybeSingle();
     
@@ -47,7 +47,7 @@ export async function findExistingClient(
       console.log(`Found existing client in unified table: ${existingClient.id}`);
       return { 
         clientId: existingClient.id, 
-        isRegisteredUser: existingClient.is_registered_user 
+        isRegisteredUser: existingClient.user_id !== null
       };
     }
     

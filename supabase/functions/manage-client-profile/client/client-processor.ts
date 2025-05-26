@@ -45,7 +45,7 @@ export async function processClientRequest(
       // Check if this email exists in the unified clients table
       const { data: existingClient, error: clientError } = await supabase
         .from('clients')
-        .select('id, is_registered_user')
+        .select('id, user_id')
         .eq('email', email.toLowerCase().trim())
         .maybeSingle();
       
@@ -62,7 +62,7 @@ export async function processClientRequest(
         return {
           clientId: existingClient.id,
           isNewProfile: false,
-          isRegisteredUser: existingClient.is_registered_user
+          isRegisteredUser: existingClient.user_id !== null
         };
       }
     }

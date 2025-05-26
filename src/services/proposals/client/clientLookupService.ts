@@ -50,7 +50,7 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
     // If not found in profiles, search in unified clients table
     const { data: existingClient, error: clientError } = await supabase
       .from('clients')
-      .select('id, email, is_registered_user')
+      .select('id, email, user_id')
       .eq('email', normalizedEmail)
       .maybeSingle();
     
@@ -64,11 +64,11 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
       contextLogger.info("Found existing client in unified table", { 
         id: existingClient.id,
         email: existingClient.email,
-        isRegisteredUser: existingClient.is_registered_user
+        isRegisteredUser: existingClient.user_id !== null
       });
       return {
         clientId: existingClient.id,
-        isRegisteredUser: existingClient.is_registered_user
+        isRegisteredUser: existingClient.user_id !== null
       };
     }
     
