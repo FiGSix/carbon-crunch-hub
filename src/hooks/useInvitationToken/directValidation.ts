@@ -57,7 +57,9 @@ export async function validateTokenDirectly(token: string): Promise<SetTokenResu
       success: true,
       valid: true,
       proposalId: result.proposal_id,
-      clientEmail: result.client_email
+      clientEmail: result.client_email,
+      clientId: result.client_id,
+      clientReferenceId: result.client_reference_id
     };
 
   } catch (error) {

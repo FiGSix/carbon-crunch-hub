@@ -4,6 +4,8 @@ export interface SetTokenResult {
   valid: boolean;
   proposalId?: string;
   clientEmail?: string;
+  clientId?: string;
+  clientReferenceId?: string;
   error?: string;
   version?: string;
   deploymentTime?: string;

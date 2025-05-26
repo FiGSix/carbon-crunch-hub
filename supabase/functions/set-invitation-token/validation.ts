@@ -1,45 +1,70 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
-import { ValidationResult } from "./types.ts";
 
 export async function validateTokenDirect(
   token: string,
-  supabaseClient: ReturnType<typeof createClient>
-): Promise<ValidationResult> {
-  console.log(`🔍 Validating token directly...`);
-  
-  const { data: validationData, error: validationError } = await supabaseClient.rpc(
-    'validate_token_direct',
-    { token_param: token }
-  );
+  supabase: ReturnType<typeof createClient>
+): Promise<{
+  is_valid: boolean;
+  proposal_id?: string;
+  client_email?: string;
+  client_id?: string;
+  client_reference_id?: string;
+}> {
+  try {
+    console.log(`Validating token directly: ${token.substring(0, 8)}...`);
+    
+    const { data, error } = await supabase.rpc('validate_token_direct', {
+      token_param: token
+    });
 
-  if (validationError) {
-    console.error(`❌ Validation error:`, validationError);
-    throw new Error(`Token validation failed: ${validationError.message}`);
+    if (error) {
+      console.error("Direct token validation error:", error);
+      return { is_valid: false };
+    }
+
+    const result = data?.[0];
+    if (!result) {
+      console.log("No result from token validation");
+      return { is_valid: false };
+    }
+
+    console.log("Token validation result:", {
+      is_valid: result.is_valid,
+      proposal_id: result.proposal_id,
+      has_client_email: !!result.client_email
+    });
+
+    return {
+      is_valid: result.is_valid || false,
+      proposal_id: result.proposal_id,
+      client_email: result.client_email,
+      client_id: result.client_id,
+      client_reference_id: result.client_reference_id
+    };
+  } catch (error) {
+    console.error("Exception during token validation:", error);
+    return { is_valid: false };
   }
-
-  console.log(`📊 Validation result:`, validationData);
-
-  const result = validationData?.[0];
-  return {
-    proposal_id: result?.proposal_id,
-    client_email: result?.client_email,
-    is_valid: result?.is_valid || false
-  };
 }
 
 export async function markInvitationAsViewed(
   token: string,
-  supabaseClient: ReturnType<typeof createClient>
+  supabase: ReturnType<typeof createClient>
 ): Promise<void> {
   try {
-    const { error } = await supabaseClient.rpc('mark_invitation_viewed', { token_param: token });
+    console.log(`Marking invitation as viewed for token: ${token.substring(0, 8)}...`);
+    
+    const { error } = await supabase.rpc('mark_invitation_viewed', {
+      token_param: token
+    });
+
     if (error) {
-      console.error(`⚠️ Failed to mark as viewed:`, error);
+      console.error("Error marking invitation as viewed:", error);
     } else {
-      console.log(`✅ Marked invitation as viewed`);
+      console.log("Successfully marked invitation as viewed");
     }
   } catch (error) {
-    console.error(`⚠️ Exception marking as viewed:`, error);
+    console.error("Exception marking invitation as viewed:", error);
   }
 }

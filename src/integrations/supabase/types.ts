@@ -311,7 +311,7 @@ export type Database = {
           content: Json
           agent_id: string
           client_id: string
-          client_contact_id: string
+          client_reference_id: string
           signed_at: string
           created_at: string
           archived_at: string
@@ -358,7 +358,7 @@ export type Database = {
           proposal_id: string
           client_email: string
           client_id: string
-          client_contact_id: string
+          client_reference_id: string
         }[]
       }
       validate_token_direct: {
@@ -367,7 +367,7 @@ export type Database = {
           proposal_id: string
           client_email: string
           client_id: string
-          client_contact_id: string
+          client_reference_id: string
           is_valid: boolean
         }[]
       }

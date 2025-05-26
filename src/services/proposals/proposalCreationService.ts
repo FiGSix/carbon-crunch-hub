@@ -108,7 +108,7 @@ export async function createProposal(
     // Client validation before insert
     const clientValidation = validateClientId(
       proposalData.client_id, 
-      proposalData.client_contact_id,
+      proposalData.client_reference_id,
       proposalLogger
     );
 
@@ -123,7 +123,7 @@ export async function createProposal(
     proposalLogger.info("Prepared proposal data", {
       title: proposalData.title,
       clientId: proposalData.client_id,
-      clientContactId: proposalData.client_contact_id
+      clientReferenceId: proposalData.client_reference_id
     });
 
     // Step 3: Insert proposal into database
