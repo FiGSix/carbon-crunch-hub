@@ -14,7 +14,7 @@ import {
 interface ProposalPDFButtonProps {
   proposal: {
     id: string;
-    title: string;
+    name: string; // Changed from title to name to match ProposalListItem
     pdf_url?: string | null;
     pdf_generation_status?: string | null;
   };
@@ -72,7 +72,7 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
     setIsDownloading(true);
     
     try {
-      const fileName = `crunch-carbon-proposal-${proposal.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+      const fileName = `crunch-carbon-proposal-${proposal.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
       await downloadProposalPDF(proposal.pdf_url, fileName);
       
       toast({
