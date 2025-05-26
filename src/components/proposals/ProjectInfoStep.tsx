@@ -7,7 +7,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { ProjectInfoForm } from "@/components/proposals/project-info/ProjectInfoForm";
+import { ProjectInfoFormWithConflictCheck } from "@/components/proposals/project-info/ProjectInfoFormWithConflictCheck";
 import { ProjectInfoHelpCard } from "@/components/proposals/project-info/ProjectInfoHelpCard";
 import { ProjectInfoStepFooter } from "@/components/proposals/project-info/ProjectInfoStepFooter";
 import { ProjectInformation } from "@/types/proposals";
@@ -74,7 +74,7 @@ export function ProjectInfoStep({
       
       <CardContent>
         <div className="space-y-4">
-          <ProjectInfoForm 
+          <ProjectInfoFormWithConflictCheck 
             projectInfo={projectInfo} 
             updateProjectInfo={updateProjectInfo} 
             handleAddressChange={handleAddressChange}

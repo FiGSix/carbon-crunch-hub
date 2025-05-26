@@ -45,29 +45,24 @@ export async function checkAddressConflict({
       excludeProposalId
     });
 
-    // Build the query to check for existing proposals with the same address
+    // Build the query to check for existing proposals with the same address in project_info JSON
     let query = supabase
       .from('proposals')
       .select(`
         id,
-        project_street,
-        project_city,
-        project_state,
-        project_zip_code,
+        project_info,
         status,
         created_at,
         profiles!proposals_agent_id_fkey (
           first_name,
           last_name
         ),
-        clients (
-          client_name
+        clients!proposals_client_reference_id_fkey (
+          company_name,
+          first_name,
+          last_name
         )
       `)
-      .eq('project_street', street.trim())
-      .eq('project_city', city.trim())
-      .eq('project_state', state.trim())
-      .eq('project_zip_code', zipCode.trim())
       .neq('status', 'archived'); // Don't check archived proposals
 
     // Exclude current proposal if editing
@@ -83,17 +78,45 @@ export async function checkAddressConflict({
     }
 
     if (!existingProposals || existingProposals.length === 0) {
+      conflictLogger.info('No proposals found to check');
+      return { hasConflict: false };
+    }
+
+    // Filter proposals by matching address from project_info JSON
+    const conflictingProposal = existingProposals.find(proposal => {
+      const projectInfo = proposal.project_info as any;
+      
+      // Extract address components from the project_info JSON
+      const proposalAddress = projectInfo?.address || '';
+      
+      // For now, we'll do a simple address string comparison
+      // This could be enhanced with more sophisticated address parsing
+      const inputAddress = `${street} ${city} ${state} ${zipCode}`.toLowerCase().trim();
+      const existingAddress = proposalAddress.toLowerCase().trim();
+      
+      // Check if addresses are similar (contains all components)
+      return inputAddress === existingAddress || 
+             (proposalAddress.includes(street) && 
+              proposalAddress.includes(city) && 
+              proposalAddress.includes(state) && 
+              proposalAddress.includes(zipCode));
+    });
+
+    if (!conflictingProposal) {
       conflictLogger.info('No address conflict found');
       return { hasConflict: false };
     }
 
-    // Found a conflict - return details of the first matching proposal
-    const conflictingProposal = existingProposals[0];
-    const agentName = conflictingProposal.profiles 
-      ? `${conflictingProposal.profiles.first_name} ${conflictingProposal.profiles.last_name}`
+    // Found a conflict - return details of the conflicting proposal
+    const agentProfile = conflictingProposal.profiles;
+    const agentName = agentProfile 
+      ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim()
       : 'Unknown Agent';
     
-    const clientName = conflictingProposal.clients?.client_name || 'Unknown Client';
+    const clientData = conflictingProposal.clients;
+    const clientName = clientData
+      ? clientData.company_name || `${clientData.first_name || ''} ${clientData.last_name || ''}`.trim()
+      : 'Unknown Client';
 
     conflictLogger.warn('Address conflict detected', {
       conflictingProposalId: conflictingProposal.id,

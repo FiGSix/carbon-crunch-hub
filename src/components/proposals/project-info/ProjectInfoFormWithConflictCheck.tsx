@@ -4,13 +4,22 @@ import { useFormContext } from 'react-hook-form';
 import { useAddressConflictCheck } from '@/hooks/useAddressConflictCheck';
 import { AddressConflictWarning } from './AddressConflictWarning';
 import { ProjectInfoForm } from './ProjectInfoForm';
+import { ProjectInformation } from '@/types/proposals';
 import { debounce } from 'lodash';
 
 interface ProjectInfoFormWithConflictCheckProps {
   proposalId?: string;
+  projectInfo: ProjectInformation;
+  updateProjectInfo: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  handleAddressChange: (address: string) => void;
 }
 
-export function ProjectInfoFormWithConflictCheck({ proposalId }: ProjectInfoFormWithConflictCheckProps) {
+export function ProjectInfoFormWithConflictCheck({ 
+  proposalId,
+  projectInfo,
+  updateProjectInfo,
+  handleAddressChange
+}: ProjectInfoFormWithConflictCheckProps) {
   const { watch } = useFormContext();
   const {
     isChecking,
@@ -23,11 +32,8 @@ export function ProjectInfoFormWithConflictCheck({ proposalId }: ProjectInfoForm
     clearConflict
   } = useAddressConflictCheck();
 
-  // Watch address fields
-  const street = watch('project_street');
-  const city = watch('project_city');
-  const state = watch('project_state');
-  const zipCode = watch('project_zip_code');
+  // Watch address field - using the address from projectInfo since that's what the form uses
+  const address = projectInfo.address;
 
   // Debounced conflict check
   const debouncedCheckConflict = useMemo(
@@ -37,16 +43,31 @@ export function ProjectInfoFormWithConflictCheck({ proposalId }: ProjectInfoForm
     [checkConflict]
   );
 
-  // Check for conflicts when address changes
+  // Parse address into components for conflict checking
   useEffect(() => {
-    if (street && city && state && zipCode) {
-      debouncedCheckConflict({
-        street,
-        city,
-        state,
-        zipCode,
-        excludeProposalId: proposalId
-      });
+    if (address && address.trim().length > 10) { // Only check if address is substantial
+      // Simple address parsing - this could be enhanced with a proper address parser
+      const addressParts = address.split(',').map(part => part.trim());
+      
+      if (addressParts.length >= 3) {
+        // Assume format: Street, City, State Zip
+        const street = addressParts[0] || '';
+        const city = addressParts[1] || '';
+        const stateZip = addressParts[2] || '';
+        const stateZipParts = stateZip.split(' ');
+        const state = stateZipParts[0] || '';
+        const zipCode = stateZipParts[stateZipParts.length - 1] || '';
+
+        if (street && city && state && zipCode) {
+          debouncedCheckConflict({
+            street,
+            city,
+            state,
+            zipCode,
+            excludeProposalId: proposalId
+          });
+        }
+      }
     } else {
       clearConflict();
     }
@@ -54,7 +75,7 @@ export function ProjectInfoFormWithConflictCheck({ proposalId }: ProjectInfoForm
     return () => {
       debouncedCheckConflict.cancel();
     };
-  }, [street, city, state, zipCode, proposalId, debouncedCheckConflict, clearConflict]);
+  }, [address, proposalId, debouncedCheckConflict, clearConflict]);
 
   return (
     <div className="space-y-4">
@@ -76,7 +97,11 @@ export function ProjectInfoFormWithConflictCheck({ proposalId }: ProjectInfoForm
       )}
 
       {/* Original form */}
-      <ProjectInfoForm />
+      <ProjectInfoForm 
+        projectInfo={projectInfo}
+        updateProjectInfo={updateProjectInfo}
+        handleAddressChange={handleAddressChange}
+      />
       
       {/* Block form submission if there's a conflict without override */}
       {isBlocked && (
