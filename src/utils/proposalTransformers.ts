@@ -25,7 +25,6 @@ export function transformToProposalData(record: any): ProposalData {
     content: record.content as any,
     client_id: record.client_id,
     client_reference_id: record.client_reference_id,
-    client_contact_id: record.client_contact_id,
     agent_id: record.agent_id,
     created_at: record.created_at,
     signed_at: record.signed_at,
@@ -47,8 +46,8 @@ export function transformToProposalListItems(
   agentProfiles: Record<string, ProfileRecord>
 ): ProposalListItem[] {
   return proposalsData.map(item => {
-    // Get client profile from our map
-    const clientProfile = clientProfiles[item.client_id];
+    // Get client profile from our map - check both client_id and client_reference_id
+    const clientProfile = clientProfiles[item.client_id] || clientProfiles[item.client_reference_id];
     
     // Get agent profile from our map
     const agentProfile = item.agent_id ? agentProfiles[item.agent_id] : null;

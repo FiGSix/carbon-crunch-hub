@@ -30,10 +30,10 @@ export function useProposalStatus(proposal: ProposalData | null) {
     const userId = user?.id;
     
     // Check if current user is the client for this proposal
-    // This handles both registered clients (client_id) and client contacts
+    // Using the unified client reference system - check both client_id and client_reference_id
     const isClient = !!userId && (
       userId === proposal.client_id || 
-      userId === proposal.client_contact_id
+      userId === proposal.client_reference_id
     );
     
     // For debugging permission issues
@@ -41,7 +41,7 @@ export function useProposalStatus(proposal: ProposalData | null) {
       statusLogger.debug("Checking client status", { 
         userId,
         proposalClientId: proposal.client_id,
-        proposalClientContactId: proposal.client_contact_id,
+        proposalClientReferenceId: proposal.client_reference_id,
         isClient
       });
     }
