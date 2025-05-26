@@ -14,7 +14,6 @@ export interface ClientData {
   total_mwp: number;
   agent_id: string;
   agent_name: string;
-  client_stage: string; // Added client stage
 }
 
 export function useMyClients() {

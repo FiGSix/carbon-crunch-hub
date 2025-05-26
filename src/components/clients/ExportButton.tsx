@@ -12,7 +12,7 @@ export function ExportButton({ clients }: ExportButtonProps) {
   const exportToCSV = () => {
     if (clients.length === 0) return;
 
-    // Define CSV headers including the new client stage
+    // Define CSV headers for simplified client data
     const headers = [
       'Client Name',
       'Email',
@@ -20,7 +20,6 @@ export function ExportButton({ clients }: ExportButtonProps) {
       'Number of Projects',
       'Total MWp',
       'Status',
-      'Stage',
       'Agent Name'
     ];
 
@@ -32,7 +31,6 @@ export function ExportButton({ clients }: ExportButtonProps) {
       client.project_count.toString(),
       client.total_mwp.toFixed(3),
       client.is_registered ? 'Registered' : 'Contact',
-      client.client_stage,
       client.agent_name
     ]);
 

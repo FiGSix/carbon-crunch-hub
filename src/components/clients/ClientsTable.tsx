@@ -21,19 +21,6 @@ interface ClientsTableProps {
   isAdmin: boolean;
 }
 
-// Helper function to get stage color variant
-const getStageVariant = (stage: string) => {
-  switch (stage) {
-    case 'Onboarded':
-      return 'default'; // Green
-    case 'Agreement':
-      return 'secondary'; // Blue/gray
-    case 'Proposal':
-    default:
-      return 'outline'; // Gray outline
-  }
-};
-
 export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTableProps) {
   if (isLoading) {
     return (
@@ -111,7 +98,6 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
               <TableHead className="text-center">Projects</TableHead>
               <TableHead className="text-center">Total MWp</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Stage</TableHead>
               {isAdmin && <TableHead>Agent</TableHead>}
             </TableRow>
           </TableHeader>
@@ -138,11 +124,6 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
                 <TableCell>
                   <Badge variant={client.is_registered ? "default" : "outline"}>
                     {client.is_registered ? 'Registered' : 'Contact'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getStageVariant(client.client_stage)}>
-                    {client.client_stage}
                   </Badge>
                 </TableCell>
                 {isAdmin && (
