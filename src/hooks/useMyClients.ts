@@ -1,19 +1,13 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
+import { fetchClientsData } from './clients/clientDataProcessor';
+import { useAutoRefresh } from './clients/useAutoRefresh';
+import { useRealtimeSubscription } from './clients/useRealtimeSubscription';
+import { ClientData, UseMyClientsResult } from './clients/types';
 
-export interface ClientData {
-  client_id: string;
-  client_name: string;
-  client_email: string;
-  company_name: string;
-  total_mwp: number;
-  project_count: number;
-}
-
-export function useMyClients() {
+export function useMyClients(): UseMyClientsResult {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -22,8 +16,6 @@ export function useMyClients() {
   const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds default
   const { user, userRole } = useAuth();
   const { toast } = useToast();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const subscriptionRef = useRef<any>(null);
 
   const fetchClients = useCallback(async (isManualRefresh = false) => {
     console.log('=== useMyClients: Starting fetch ===');
@@ -46,128 +38,13 @@ export function useMyClients() {
       }
       setError(null);
 
-      // Build query similar to proposals
-      let query = supabase
-        .from('proposals')
-        .select(`
-          id,
-          content,
-          client_id,
-          client_reference_id,
-          agent_id,
-          annual_energy
-        `);
-
-      console.log('User role check:', userRole);
-
-      // Apply role-based filtering
-      if (userRole === 'admin') {
-        console.log('Admin user - fetching all proposals');
-        // Admin sees all proposals
-      } else if (userRole === 'agent' && user?.id) {
-        console.log('Agent user - filtering by agent_id:', user.id);
-        query = query.eq('agent_id', user.id);
-      } else {
-        console.log('Other role or no user ID - returning empty data');
-        setClients([]);
-        setIsLoading(false);
-        setIsRefreshing(false);
-        return;
-      }
-
-      console.log('Executing query...');
-      const { data: proposalsData, error: queryError } = await query;
-
-      if (queryError) {
-        console.error('Query error:', queryError);
-        throw queryError;
-      }
-
-      console.log('Query successful. Proposals count:', proposalsData?.length || 0);
-
-      if (!proposalsData || proposalsData.length === 0) {
-        console.log('No proposals found - setting empty clients array');
-        setClients([]);
-        setIsLoading(false);
-        setIsRefreshing(false);
-        return;
-      }
-
-      // Group by client and aggregate data
-      console.log('Processing client data...');
-      const clientMap = new Map<string, ClientData>();
-
-      proposalsData.forEach((proposal, index) => {
-        console.log(`Processing proposal ${index + 1}:`, proposal.id);
-        
-        let clientId = proposal.client_reference_id || proposal.client_id;
-        let clientName = 'Unknown Client';
-        let clientEmail = '';
-        let companyName = '';
-
-        // Extract client info from proposal content
-        try {
-          const content = proposal.content as any;
-          if (content?.clientInfo) {
-            clientName = content.clientInfo.name || clientName;
-            clientEmail = content.clientInfo.email || '';
-            companyName = content.clientInfo.companyName || '';
-            console.log(`Client info from content: ${clientName} (${clientEmail})`);
-          }
-        } catch (error) {
-          console.warn(`Error parsing proposal ${proposal.id} content:`, error);
-        }
-
-        // Use email as fallback ID if no client_id
-        if (!clientId && clientEmail) {
-          clientId = clientEmail;
-          console.log(`Using email as client ID: ${clientEmail}`);
-        }
-
-        if (!clientId) {
-          console.warn(`No client identifier found for proposal ${proposal.id} - skipping`);
-          return;
-        }
-
-        const existingClient = clientMap.get(clientId);
-        const annualEnergy = proposal.annual_energy || 0;
-
-        if (existingClient) {
-          console.log(`Updating existing client: ${clientId}`);
-          existingClient.project_count += 1;
-          existingClient.total_mwp += annualEnergy / 1000; // Convert kW to MW
-        } else {
-          console.log(`Creating new client: ${clientId} (${clientName})`);
-          clientMap.set(clientId, {
-            client_id: clientId,
-            client_name: clientName,
-            client_email: clientEmail,
-            company_name: companyName,
-            total_mwp: annualEnergy / 1000, // Convert kW to MW
-            project_count: 1
-          });
-        }
-      });
-
-      const clientsArray = Array.from(clientMap.values())
-        .filter(client => {
-          const isValid = client.client_name !== 'Unknown Client';
-          if (!isValid) {
-            console.log(`Filtering out client with unknown name: ${client.client_id}`);
-          }
-          return isValid;
-        })
-        .sort((a, b) => a.client_name.localeCompare(b.client_name));
-
-      console.log('=== Final client data ===');
-      console.log('Unique clients found:', clientsArray.length);
-
-      setClients(clientsArray);
+      const clientsData = await fetchClientsData(userRole || '', user.id);
+      setClients(clientsData);
 
       if (isManualRefresh) {
         toast({
           title: "Clients Updated",
-          description: `Found ${clientsArray.length} clients`,
+          description: `Found ${clientsData.length} clients`,
         });
       }
     } catch (err) {
@@ -195,67 +72,22 @@ export function useMyClients() {
   }, [fetchClients]);
 
   // Setup auto-refresh
-  const setupAutoRefresh = useCallback(() => {
-    if (autoRefreshEnabled && refreshInterval > 0) {
-      intervalRef.current = setInterval(() => {
-        console.log('Auto-refresh triggered');
-        fetchClients(false);
-      }, refreshInterval);
-    }
-  }, [autoRefreshEnabled, refreshInterval, fetchClients]);
+  useAutoRefresh({
+    enabled: autoRefreshEnabled,
+    interval: refreshInterval,
+    onRefresh: () => fetchClients(false)
+  });
 
   // Setup real-time subscription
-  const setupRealtimeSubscription = useCallback(() => {
-    if (!user) return;
+  useRealtimeSubscription({
+    user,
+    onDataChange: () => fetchClients(false)
+  });
 
-    console.log('Setting up real-time subscription for proposals');
-    
-    subscriptionRef.current = supabase
-      .channel('proposals-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'proposals'
-        },
-        (payload) => {
-          console.log('Real-time update received:', payload);
-          // Debounce the refresh to avoid too many updates
-          setTimeout(() => {
-            console.log('Triggering refresh from real-time update');
-            fetchClients(false);
-          }, 1000);
-        }
-      )
-      .subscribe();
-  }, [user, fetchClients]);
-
-  // Cleanup function
-  const cleanup = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
-    }
-  }, []);
-
-  // Initial fetch and setup
+  // Initial fetch
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
-
-  // Setup auto-refresh when settings change
-  useEffect(() => {
-    cleanup();
-    setupAutoRefresh();
-    setupRealtimeSubscription();
-
-    return cleanup;
-  }, [autoRefreshEnabled, refreshInterval, setupAutoRefresh, setupRealtimeSubscription, cleanup]);
 
   console.log('=== useMyClients: Current state ===');
   console.log('Loading:', isLoading);
@@ -276,3 +108,6 @@ export function useMyClients() {
     setRefreshInterval
   };
 }
+
+// Re-export types for backward compatibility
+export type { ClientData } from './clients/types';
