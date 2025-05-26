@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -96,11 +95,12 @@ export function GoogleAddressAutocomplete({
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
       
-      console.log("✨ Creating new autocomplete instance");
+      console.log("✨ Creating new autocomplete instance with South Africa restriction");
       autocompleteRef.current = new google.maps.places.Autocomplete(
         inputRef.current,
         { 
-          types: ["address"]
+          types: ["address"],
+          componentRestrictions: { country: "ZA" } // Restrict to South Africa
         }
       );
 
@@ -118,7 +118,7 @@ export function GoogleAddressAutocomplete({
         }
       });
 
-      console.log("✅ Autocomplete initialized successfully");
+      console.log("✅ Autocomplete initialized successfully with South Africa restriction");
       setError(null);
       if (onError) onError(false);
       return true;
@@ -338,7 +338,7 @@ export function GoogleAddressAutocomplete({
       
       {isLoading && (
         <p className="text-xs text-muted-foreground mt-1">
-          Loading address suggestions...
+          Loading South African address suggestions...
         </p>
       )}
     </div>
