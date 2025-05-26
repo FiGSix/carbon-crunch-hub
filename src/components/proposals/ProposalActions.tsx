@@ -1,5 +1,5 @@
 
-import { Download, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
@@ -20,13 +20,6 @@ export function ProposalActions() {
           Create New Proposal
         </Button>
       )}
-      <Button 
-        variant="outline" 
-        className="retro-button"
-      >
-        <Download className="h-5 w-5 mr-2" />
-        Export Proposals
-      </Button>
     </div>
   );
 }

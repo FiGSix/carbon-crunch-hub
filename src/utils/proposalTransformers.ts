@@ -33,7 +33,10 @@ export function transformToProposalData(record: any): ProposalData {
     archived_by: record.archived_by,
     review_later_until: record.review_later_until,
     is_preview: record.is_preview,
-    preview_of_id: record.preview_of_id
+    preview_of_id: record.preview_of_id,
+    pdf_url: record.pdf_url,
+    pdf_generated_at: record.pdf_generated_at,
+    pdf_generation_status: record.pdf_generation_status
   };
 }
 
@@ -84,7 +87,10 @@ export function transformToProposalListItems(
       agent_id: item.agent_id,
       agent: agentName,
       is_preview: item.is_preview,
-      preview_of_id: item.preview_of_id
+      preview_of_id: item.preview_of_id,
+      pdf_url: item.pdf_url,
+      pdf_generated_at: item.pdf_generated_at,
+      pdf_generation_status: item.pdf_generation_status
     };
   });
 }
