@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Users, RefreshCw } from 'lucide-react';
+import { AlertCircle, Users, RefreshCw, Zap } from 'lucide-react';
 import { ClientData } from '@/hooks/useMyClients';
 
 interface ClientsTableProps {
@@ -21,6 +21,7 @@ interface ClientsTableProps {
   error: string | null;
   isAdmin: boolean;
   onRefresh?: () => void;
+  autoRefreshEnabled?: boolean;
 }
 
 export function ClientsTable({ 
@@ -29,10 +30,11 @@ export function ClientsTable({
   isRefreshing = false,
   error, 
   isAdmin,
-  onRefresh 
+  onRefresh,
+  autoRefreshEnabled = false
 }: ClientsTableProps) {
   console.log('=== ClientsTable Render ===');
-  console.log('Props - Loading:', isLoading, 'Refreshing:', isRefreshing, 'Error:', error, 'Clients:', clients.length);
+  console.log('Props - Loading:', isLoading, 'Refreshing:', isRefreshing, 'Error:', error, 'Clients:', clients.length, 'Auto-refresh:', autoRefreshEnabled);
 
   if (isLoading) {
     console.log('Rendering loading state');
@@ -126,6 +128,12 @@ export function ClientsTable({
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Clients (0)
+              {autoRefreshEnabled && (
+                <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  <Zap className="h-3 w-3" />
+                  Auto-updating
+                </span>
+              )}
             </CardTitle>
             {onRefresh && (
               <Button 
@@ -173,9 +181,16 @@ export function ClientsTable({
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Clients ({clients.length})
+              {autoRefreshEnabled && (
+                <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  <Zap className="h-3 w-3" />
+                  Auto-updating
+                </span>
+              )}
             </CardTitle>
             <CardDescription>
               {isAdmin ? 'All clients across all agents' : 'Your client relationships and project data'}
+              {autoRefreshEnabled && ' • Real-time updates enabled'}
             </CardDescription>
           </div>
           {onRefresh && (

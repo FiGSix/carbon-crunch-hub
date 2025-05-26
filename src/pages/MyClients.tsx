@@ -3,11 +3,22 @@ import React from 'react';
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
+import { ClientsSettings } from '@/components/clients/ClientsSettings';
 import { useMyClients } from '@/hooks/useMyClients';
 
 const MyClients = () => {
   const { userRole } = useAuth();
-  const { clients, isLoading, isRefreshing, error, refreshClients } = useMyClients();
+  const { 
+    clients, 
+    isLoading, 
+    isRefreshing, 
+    error, 
+    refreshClients,
+    autoRefreshEnabled,
+    setAutoRefreshEnabled,
+    refreshInterval,
+    setRefreshInterval
+  } = useMyClients();
   const isAdmin = userRole === 'admin';
 
   console.log('=== MyClients Page Render ===');
@@ -17,6 +28,7 @@ const MyClients = () => {
   console.log('Refreshing:', isRefreshing);
   console.log('Error:', error);
   console.log('Clients:', clients);
+  console.log('Auto-refresh enabled:', autoRefreshEnabled);
 
   return (
     <DashboardLayout>
@@ -33,11 +45,18 @@ const MyClients = () => {
                   : 'View your client relationships and project data'
                 }
               </p>
-              {/* Debug info - will be visible in console and can help troubleshoot */}
+              {/* Debug info */}
               <div className="text-xs text-gray-400 mt-1">
-                Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'} | Refreshing: {isRefreshing ? 'Yes' : 'No'} | Clients: {clients.length}
+                Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'} | Refreshing: {isRefreshing ? 'Yes' : 'No'} | Clients: {clients.length} | Auto-refresh: {autoRefreshEnabled ? 'On' : 'Off'}
               </div>
             </div>
+            
+            <ClientsSettings
+              autoRefreshEnabled={autoRefreshEnabled}
+              onAutoRefreshChange={setAutoRefreshEnabled}
+              refreshInterval={refreshInterval}
+              onRefreshIntervalChange={setRefreshInterval}
+            />
           </div>
 
           <ClientsTable 

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -18,8 +18,12 @@ export function useMyClients() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds default
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const subscriptionRef = useRef<any>(null);
 
   const fetchClients = useCallback(async (isManualRefresh = false) => {
     console.log('=== useMyClients: Starting fetch ===');
@@ -190,21 +194,85 @@ export function useMyClients() {
     fetchClients(true);
   }, [fetchClients]);
 
+  // Setup auto-refresh
+  const setupAutoRefresh = useCallback(() => {
+    if (autoRefreshEnabled && refreshInterval > 0) {
+      intervalRef.current = setInterval(() => {
+        console.log('Auto-refresh triggered');
+        fetchClients(false);
+      }, refreshInterval);
+    }
+  }, [autoRefreshEnabled, refreshInterval, fetchClients]);
+
+  // Setup real-time subscription
+  const setupRealtimeSubscription = useCallback(() => {
+    if (!user) return;
+
+    console.log('Setting up real-time subscription for proposals');
+    
+    subscriptionRef.current = supabase
+      .channel('proposals-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'proposals'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Debounce the refresh to avoid too many updates
+          setTimeout(() => {
+            console.log('Triggering refresh from real-time update');
+            fetchClients(false);
+          }, 1000);
+        }
+      )
+      .subscribe();
+  }, [user, fetchClients]);
+
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+  }, []);
+
+  // Initial fetch and setup
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
+
+  // Setup auto-refresh when settings change
+  useEffect(() => {
+    cleanup();
+    setupAutoRefresh();
+    setupRealtimeSubscription();
+
+    return cleanup;
+  }, [autoRefreshEnabled, refreshInterval, setupAutoRefresh, setupRealtimeSubscription, cleanup]);
 
   console.log('=== useMyClients: Current state ===');
   console.log('Loading:', isLoading);
   console.log('Refreshing:', isRefreshing);
   console.log('Error:', error);
   console.log('Clients count:', clients.length);
+  console.log('Auto-refresh enabled:', autoRefreshEnabled);
 
   return { 
     clients, 
     isLoading, 
     isRefreshing,
     error, 
-    refreshClients 
+    refreshClients,
+    autoRefreshEnabled,
+    setAutoRefreshEnabled,
+    refreshInterval,
+    setRefreshInterval
   };
 }
