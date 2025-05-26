@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Proposal } from "../types";
 import { ProposalInviteButton } from "./ProposalInviteButton";
 import { SubmitForReviewButton } from "./SubmitForReviewButton";
+import { ProposalPDFButton } from "./ProposalPDFButton";
 import { useAuth } from "@/contexts/auth";
 
 interface ProposalActionButtonsProps {
@@ -31,6 +32,12 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
       >
         View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
+      
+      {/* PDF Generation Button - available for all users */}
+      <ProposalPDFButton 
+        proposal={proposal} 
+        onPDFGenerated={onProposalUpdate} 
+      />
       
       {/* Only show Submit button for agents with draft proposals */}
       {proposal.status === "draft" && userRole === "agent" && (

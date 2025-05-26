@@ -152,6 +152,9 @@ export type Database = {
           invitation_token: string | null
           invitation_viewed_at: string | null
           is_preview: boolean | null
+          pdf_generated_at: string | null
+          pdf_generation_status: string | null
+          pdf_url: string | null
           preview_of_id: string | null
           project_info: Json
           review_later_until: string | null
@@ -178,6 +181,9 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           is_preview?: boolean | null
+          pdf_generated_at?: string | null
+          pdf_generation_status?: string | null
+          pdf_url?: string | null
           preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
@@ -204,6 +210,9 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           is_preview?: boolean | null
+          pdf_generated_at?: string | null
+          pdf_generation_status?: string | null
+          pdf_url?: string | null
           preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null

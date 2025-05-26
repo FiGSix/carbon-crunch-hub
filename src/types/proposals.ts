@@ -1,4 +1,3 @@
-
 import { Json } from "@/types/supabase";
 
 /**
@@ -30,6 +29,9 @@ export interface ProposalDbRecord {
   agent_commission_percentage: number | null;
   eligibility_criteria: Json;
   project_info: Json;
+  pdf_url: string | null;
+  pdf_generated_at: string | null;
+  pdf_generation_status: string | null;
 }
 
 /**
@@ -87,6 +89,9 @@ export interface ProposalData {
   review_later_until: string | null;
   is_preview: boolean | null;
   preview_of_id: string | null;
+  pdf_url: string | null;
+  pdf_generated_at: string | null;
+  pdf_generation_status: string | null;
 }
 
 /**
@@ -108,6 +113,9 @@ export interface ProposalListItem {
   agent?: string;
   is_preview?: boolean | null;
   preview_of_id?: string | null;
+  pdf_url?: string | null;
+  pdf_generated_at?: string | null;
+  pdf_generation_status?: string | null;
 }
 
 /**

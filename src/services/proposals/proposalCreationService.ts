@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { findOrCreateClient } from "./clientProfileService";
@@ -5,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { isValidUUID } from "@/utils/validationUtils";
 import { buildProposalData } from "./utils/proposalBuilder";
 import { validateClientId } from "./utils/dataTransformers";
+import { generateProposalPDF } from "../pdfGenerationService";
 
 // Define the return type for consistent interface
 export interface ProposalCreationResult {
@@ -148,6 +150,39 @@ export async function createProposal(
     }
 
     proposalLogger.info("Proposal created successfully", { proposalId: proposal.id });
+
+    // Step 4: Automatically generate PDF in the background
+    try {
+      proposalLogger.info("Initiating automatic PDF generation", { proposalId: proposal.id });
+      
+      // Generate PDF asynchronously - don't wait for completion
+      generateProposalPDF(proposal.id).then((result) => {
+        if (result.success) {
+          proposalLogger.info("PDF generated successfully for new proposal", { 
+            proposalId: proposal.id,
+            pdfUrl: result.pdfUrl 
+          });
+        } else {
+          proposalLogger.warn("PDF generation failed for new proposal", { 
+            proposalId: proposal.id,
+            error: result.error 
+          });
+        }
+      }).catch((error) => {
+        proposalLogger.error("Unexpected error in PDF generation", { 
+          proposalId: proposal.id,
+          error 
+        });
+      });
+      
+    } catch (error) {
+      // Don't fail the proposal creation if PDF generation fails
+      proposalLogger.warn("Error initiating PDF generation", { 
+        proposalId: proposal.id,
+        error 
+      });
+    }
+    
     return { 
       success: true,
       proposalId: proposal.id
