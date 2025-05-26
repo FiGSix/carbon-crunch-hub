@@ -29,7 +29,7 @@ export function buildProposalData(
     agentId
   });
   
-  // Define the structure explicitly without optional fields initially
+  // Define the structure explicitly with client_reference_id instead of client_contact_id
   const proposalData: {
     title: string;
     agent_id: string;
@@ -42,7 +42,7 @@ export function buildProposalData(
     content: any;
     status: string;
     client_id?: string | null; 
-    client_contact_id?: string | null;
+    client_reference_id?: string | null;
   } = {
     title,
     agent_id: agentId,
@@ -72,10 +72,10 @@ export function buildProposalData(
     if (clientResult.isRegisteredUser) {
       // For registered users, set client_id to the user profile ID
       proposalData.client_id = clientResult.clientId;
-      proposalData.client_contact_id = null; // Ensure client_contact_id is null
+      proposalData.client_reference_id = null; // Ensure client_reference_id is null
     } else {
-      // For non-registered clients, set client_contact_id to the client contact ID
-      proposalData.client_contact_id = clientResult.clientId;
+      // For non-registered clients, set client_reference_id to the client contact ID
+      proposalData.client_reference_id = clientResult.clientId;
       proposalData.client_id = null; // Explicitly set client_id to null
     }
   } else if (selectedClientId) {
