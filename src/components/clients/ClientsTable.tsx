@@ -9,7 +9,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Users } from 'lucide-react';
 import { ClientData } from '@/hooks/useMyClients';
@@ -37,8 +36,6 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
               <div key={i} className="flex space-x-4">
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-4 w-24" />
               </div>
             ))}
@@ -95,10 +92,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
             <TableRow>
               <TableHead>Client Name</TableHead>
               <TableHead>Company</TableHead>
-              <TableHead className="text-center">Projects</TableHead>
               <TableHead className="text-center">Total MWp</TableHead>
-              <TableHead>Status</TableHead>
-              {isAdmin && <TableHead>Agent</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -113,24 +107,9 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
                 <TableCell>
                   {client.company_name || 'No Company'}
                 </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="secondary">
-                    {client.project_count}
-                  </Badge>
-                </TableCell>
                 <TableCell className="text-center font-mono">
                   {client.total_mwp.toFixed(3)} MWp
                 </TableCell>
-                <TableCell>
-                  <Badge variant={client.is_registered ? "default" : "outline"}>
-                    {client.is_registered ? 'Registered' : 'Contact'}
-                  </Badge>
-                </TableCell>
-                {isAdmin && (
-                  <TableCell>
-                    {client.agent_name}
-                  </TableCell>
-                )}
               </TableRow>
             ))}
           </TableBody>

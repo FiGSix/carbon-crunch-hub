@@ -3,11 +3,10 @@ import React from 'react';
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
-import { ExportButton } from '@/components/clients/ExportButton';
 import { useMyClients } from '@/hooks/useMyClients';
 
 const MyClients = () => {
-  const { userRole, user } = useAuth();
+  const { userRole } = useAuth();
   const { clients, isLoading, error } = useMyClients();
   const isAdmin = userRole === 'admin';
 
@@ -22,14 +21,11 @@ const MyClients = () => {
               </h1>
               <p className="text-carbon-gray-600 mt-2">
                 {isAdmin 
-                  ? 'View and manage all clients across all agents'
-                  : 'View and manage your client relationships'
+                  ? 'View all clients across all agents'
+                  : 'View your client relationships and project data'
                 }
               </p>
             </div>
-            {isAdmin && clients.length > 0 && (
-              <ExportButton clients={clients} />
-            )}
           </div>
 
           <ClientsTable 
