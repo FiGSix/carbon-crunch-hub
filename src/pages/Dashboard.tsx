@@ -50,16 +50,12 @@ const Dashboard = () => {
         totalProposals={totalProposals}
         potentialRevenue={potentialRevenue}
         co2Offset={co2Offset}
+        proposals={proposals}
+        loading={loading}
       />
       
-      {userRole === 'agent' ? (
-        <ChartsSection 
-          userRole={userRole} 
-          proposals={proposals} 
-          loading={loading}
-        />
-      ) : (
-        renderCharts(userRole) && <ChartsSection userRole={userRole} />
+      {userRole !== 'agent' && renderCharts(userRole) && (
+        <ChartsSection userRole={userRole} />
       )}
       
       <div className="grid grid-cols-1 gap-6">

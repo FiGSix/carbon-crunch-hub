@@ -2,8 +2,10 @@
 import React from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { CommissionCard } from "@/components/dashboard/preview/CommissionCard";
+import { DealStatusCard } from "@/components/dashboard/preview/DealStatusCard";
 import { FileText, TrendingUp, Wind, Leaf } from "lucide-react";
 import { UserRole } from "@/lib/supabase/types";
+import { ProposalListItem } from "@/types/proposals";
 
 interface StatsCardsSectionProps {
   userRole: string | null;
@@ -11,6 +13,8 @@ interface StatsCardsSectionProps {
   totalProposals: number;
   potentialRevenue: number;
   co2Offset: number;
+  proposals?: ProposalListItem[];
+  loading?: boolean;
 }
 
 export function StatsCardsSection({
@@ -19,42 +23,33 @@ export function StatsCardsSection({
   totalProposals,
   potentialRevenue,
   co2Offset,
+  proposals = [],
+  loading = false,
 }: StatsCardsSectionProps) {
   if (userRole === 'agent') {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
-            <StatsCard 
-              title="Portfolio Size" 
-              value={`${portfolioSize} MWp`} 
-              icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
-              trend="+14%"
-              trendDirection="up"
-              color="emerald"
-            />
-            
-            <CommissionCard portfolioSize={portfolioSize} />
-            
-            <StatsCard 
-              title="Total Proposals" 
-              value={totalProposals} 
-              icon={<FileText className="h-5 w-5 text-crunch-yellow" />}
-              trend="+3"
-              trendDirection="up"
-              color="blue"
-            />
-            
-            <StatsCard 
-              title="Potential Revenue" 
-              value={`R ${potentialRevenue.toLocaleString()}`} 
-              icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
-              trend="+12%"
-              trendDirection="up"
-              color="yellow"
-            />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+        <StatsCard 
+          title="Portfolio Size" 
+          value={`${portfolioSize} MWp`} 
+          icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
+          trend="+14%"
+          trendDirection="up"
+          color="emerald"
+        />
+        
+        <CommissionCard portfolioSize={portfolioSize} />
+        
+        <StatsCard 
+          title="Potential Revenue" 
+          value={`R ${potentialRevenue.toLocaleString()}`} 
+          icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
+          trend="+12%"
+          trendDirection="up"
+          color="yellow"
+        />
+        
+        <DealStatusCard proposals={proposals} loading={loading} />
       </div>
     );
   }
