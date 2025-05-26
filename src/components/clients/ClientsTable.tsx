@@ -21,13 +21,17 @@ interface ClientsTableProps {
 }
 
 export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTableProps) {
+  console.log('=== ClientsTable Render ===');
+  console.log('Props - Loading:', isLoading, 'Error:', error, 'Clients:', clients.length);
+
   if (isLoading) {
+    console.log('Rendering loading state');
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Clients
+            Clients (Loading...)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -46,6 +50,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
   }
 
   if (error) {
+    console.log('Rendering error state:', error);
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -60,6 +65,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
   }
 
   if (clients.length === 0) {
+    console.log('Rendering empty state');
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -75,6 +81,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
     );
   }
 
+  console.log('Rendering clients table with', clients.length, 'clients');
   return (
     <Card>
       <CardHeader>
@@ -92,6 +99,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
             <TableRow>
               <TableHead>Client Name</TableHead>
               <TableHead>Company</TableHead>
+              <TableHead className="text-center">Projects</TableHead>
               <TableHead className="text-center">Total MWp</TableHead>
             </TableRow>
           </TableHeader>
@@ -101,11 +109,16 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
                 <TableCell className="font-medium">
                   <div>
                     <p className="font-semibold">{client.client_name}</p>
-                    <p className="text-sm text-gray-500">{client.client_email}</p>
+                    {client.client_email && (
+                      <p className="text-sm text-gray-500">{client.client_email}</p>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
                   {client.company_name || 'No Company'}
+                </TableCell>
+                <TableCell className="text-center">
+                  {client.project_count}
                 </TableCell>
                 <TableCell className="text-center font-mono">
                   {client.total_mwp.toFixed(3)} MWp

@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
 
 export interface ClientData {
   client_id: string;
@@ -20,14 +20,13 @@ export function useMyClients() {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
 
-  // Create a contextualized logger
-  const clientsLogger = logger.withContext({ 
-    component: 'useMyClients', 
-    feature: 'clients' 
-  });
-
   useEffect(() => {
+    console.log('=== useMyClients: Starting effect ===');
+    console.log('User:', user?.id);
+    console.log('User Role:', userRole);
+
     if (!user) {
+      console.log('No user - setting loading to false');
       setIsLoading(false);
       setError('User not authenticated');
       return;
@@ -35,13 +34,9 @@ export function useMyClients() {
 
     const fetchClients = async () => {
       try {
+        console.log('=== Starting client fetch ===');
         setIsLoading(true);
         setError(null);
-
-        clientsLogger.info("Fetching client data from proposals", { 
-          userRole,
-          userId: user?.id 
-        });
 
         // Build query similar to proposals
         let query = supabase
@@ -55,41 +50,47 @@ export function useMyClients() {
             annual_energy
           `);
 
-        // Apply role-based filtering similar to proposals
+        console.log('User role check:', userRole);
+
+        // Apply role-based filtering
         if (userRole === 'admin') {
-          // Admin users see all proposals
-          clientsLogger.info('Admin user detected - fetching all proposals');
+          console.log('Admin user - fetching all proposals');
+          // Admin sees all proposals
         } else if (userRole === 'agent' && user?.id) {
-          // Agents see only their proposals
+          console.log('Agent user - filtering by agent_id:', user.id);
           query = query.eq('agent_id', user.id);
         } else {
-          // Other roles see no data for now
+          console.log('Other role or no user ID - returning empty data');
           setClients([]);
           setIsLoading(false);
           return;
         }
 
+        console.log('Executing query...');
         const { data: proposalsData, error: queryError } = await query;
 
         if (queryError) {
-          clientsLogger.error("Error fetching proposals for clients", { error: queryError });
+          console.error('Query error:', queryError);
           throw queryError;
         }
 
-        clientsLogger.info("Proposals data fetched", { 
-          count: proposalsData?.length || 0 
-        });
+        console.log('Query successful. Proposals count:', proposalsData?.length || 0);
+        console.log('First few proposals:', proposalsData?.slice(0, 3));
 
         if (!proposalsData || proposalsData.length === 0) {
+          console.log('No proposals found - setting empty clients array');
           setClients([]);
           setIsLoading(false);
           return;
         }
 
         // Group by client and aggregate data
+        console.log('Processing client data...');
         const clientMap = new Map<string, ClientData>();
 
-        proposalsData.forEach(proposal => {
+        proposalsData.forEach((proposal, index) => {
+          console.log(`Processing proposal ${index + 1}:`, proposal.id);
+          
           let clientId = proposal.client_reference_id || proposal.client_id;
           let clientName = 'Unknown Client';
           let clientEmail = '';
@@ -102,23 +103,20 @@ export function useMyClients() {
               clientName = content.clientInfo.name || clientName;
               clientEmail = content.clientInfo.email || '';
               companyName = content.clientInfo.companyName || '';
+              console.log(`Client info from content: ${clientName} (${clientEmail})`);
             }
           } catch (error) {
-            clientsLogger.warn("Error parsing proposal content", { 
-              proposalId: proposal.id, 
-              error 
-            });
+            console.warn(`Error parsing proposal ${proposal.id} content:`, error);
           }
 
           // Use email as fallback ID if no client_id
           if (!clientId && clientEmail) {
             clientId = clientEmail;
+            console.log(`Using email as client ID: ${clientEmail}`);
           }
 
           if (!clientId) {
-            clientsLogger.warn("No client identifier found for proposal", { 
-              proposalId: proposal.id 
-            });
+            console.warn(`No client identifier found for proposal ${proposal.id} - skipping`);
             return;
           }
 
@@ -126,9 +124,11 @@ export function useMyClients() {
           const annualEnergy = proposal.annual_energy || 0;
 
           if (existingClient) {
+            console.log(`Updating existing client: ${clientId}`);
             existingClient.project_count += 1;
             existingClient.total_mwp += annualEnergy / 1000; // Convert kW to MW
           } else {
+            console.log(`Creating new client: ${clientId} (${clientName})`);
             clientMap.set(clientId, {
               client_id: clientId,
               client_name: clientName,
@@ -141,17 +141,23 @@ export function useMyClients() {
         });
 
         const clientsArray = Array.from(clientMap.values())
-          .filter(client => client.client_name !== 'Unknown Client')
+          .filter(client => {
+            const isValid = client.client_name !== 'Unknown Client';
+            if (!isValid) {
+              console.log(`Filtering out client with unknown name: ${client.client_id}`);
+            }
+            return isValid;
+          })
           .sort((a, b) => a.client_name.localeCompare(b.client_name));
 
-        clientsLogger.info("Client data processed", { 
-          uniqueClients: clientsArray.length 
-        });
+        console.log('=== Final client data ===');
+        console.log('Unique clients found:', clientsArray.length);
+        console.log('Client names:', clientsArray.map(c => c.client_name));
 
         setClients(clientsArray);
       } catch (err) {
+        console.error('=== Client fetch error ===', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clients';
-        clientsLogger.error('Client fetch error:', err);
         setError(errorMessage);
         toast({
           title: "Error",
@@ -159,12 +165,18 @@ export function useMyClients() {
           variant: "destructive",
         });
       } finally {
+        console.log('=== Setting loading to false ===');
         setIsLoading(false);
       }
     };
 
     fetchClients();
-  }, [user, userRole, toast, clientsLogger]);
+  }, [user, userRole, toast]);
+
+  console.log('=== useMyClients: Current state ===');
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
+  console.log('Clients count:', clients.length);
 
   return { clients, isLoading, error };
 }

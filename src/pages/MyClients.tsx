@@ -10,6 +10,13 @@ const MyClients = () => {
   const { clients, isLoading, error } = useMyClients();
   const isAdmin = userRole === 'admin';
 
+  console.log('=== MyClients Page Render ===');
+  console.log('User Role:', userRole);
+  console.log('Is Admin:', isAdmin);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
+  console.log('Clients:', clients);
+
   return (
     <DashboardLayout>
       <div className="container max-w-7xl mx-auto px-4 py-8">
@@ -25,6 +32,10 @@ const MyClients = () => {
                   : 'View your client relationships and project data'
                 }
               </p>
+              {/* Debug info - will be visible in console and can help troubleshoot */}
+              <div className="text-xs text-gray-400 mt-1">
+                Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'} | Clients: {clients.length}
+              </div>
             </div>
           </div>
 
