@@ -7,13 +7,14 @@ import { useMyClients } from '@/hooks/useMyClients';
 
 const MyClients = () => {
   const { userRole } = useAuth();
-  const { clients, isLoading, error } = useMyClients();
+  const { clients, isLoading, isRefreshing, error, refreshClients } = useMyClients();
   const isAdmin = userRole === 'admin';
 
   console.log('=== MyClients Page Render ===');
   console.log('User Role:', userRole);
   console.log('Is Admin:', isAdmin);
   console.log('Loading:', isLoading);
+  console.log('Refreshing:', isRefreshing);
   console.log('Error:', error);
   console.log('Clients:', clients);
 
@@ -34,7 +35,7 @@ const MyClients = () => {
               </p>
               {/* Debug info - will be visible in console and can help troubleshoot */}
               <div className="text-xs text-gray-400 mt-1">
-                Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'} | Clients: {clients.length}
+                Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'} | Refreshing: {isRefreshing ? 'Yes' : 'No'} | Clients: {clients.length}
               </div>
             </div>
           </div>
@@ -42,8 +43,10 @@ const MyClients = () => {
           <ClientsTable 
             clients={clients}
             isLoading={isLoading}
+            isRefreshing={isRefreshing}
             error={error}
             isAdmin={isAdmin}
+            onRefresh={refreshClients}
           />
         </div>
       </div>

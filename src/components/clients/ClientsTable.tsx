@@ -10,29 +10,51 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Users, RefreshCw } from 'lucide-react';
 import { ClientData } from '@/hooks/useMyClients';
 
 interface ClientsTableProps {
   clients: ClientData[];
   isLoading: boolean;
+  isRefreshing?: boolean;
   error: string | null;
   isAdmin: boolean;
+  onRefresh?: () => void;
 }
 
-export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTableProps) {
+export function ClientsTable({ 
+  clients, 
+  isLoading, 
+  isRefreshing = false,
+  error, 
+  isAdmin,
+  onRefresh 
+}: ClientsTableProps) {
   console.log('=== ClientsTable Render ===');
-  console.log('Props - Loading:', isLoading, 'Error:', error, 'Clients:', clients.length);
+  console.log('Props - Loading:', isLoading, 'Refreshing:', isRefreshing, 'Error:', error, 'Clients:', clients.length);
 
   if (isLoading) {
     console.log('Rendering loading state');
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Clients (Loading...)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Clients (Loading...)
+            </CardTitle>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={true}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -41,6 +63,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
               </div>
             ))}
           </div>
@@ -53,11 +76,41 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
     console.log('Rendering error state:', error);
     return (
       <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Clients
+            </CardTitle>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry
+              </Button>
+            )}
+          </div>
+        </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
             <h3 className="text-lg font-semibold text-gray-900">Error loading clients</h3>
-            <p className="text-gray-500">{error}</p>
+            <p className="text-gray-500 mb-4">{error}</p>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Try Again
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -68,13 +121,43 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
     console.log('Rendering empty state');
     return (
       <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Clients (0)
+            </CardTitle>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            )}
+          </div>
+        </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
             <h3 className="text-lg font-semibold text-gray-900">No clients found</h3>
-            <p className="text-gray-500">
+            <p className="text-gray-500 mb-4">
               {isAdmin ? 'No clients have been added to the system yet.' : 'You haven\'t worked with any clients yet.'}
             </p>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Check Again
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -85,15 +168,39 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Clients ({clients.length})
-        </CardTitle>
-        <CardDescription>
-          {isAdmin ? 'All clients across all agents' : 'Your client relationships and project data'}
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Clients ({clients.length})
+            </CardTitle>
+            <CardDescription>
+              {isAdmin ? 'All clients across all agents' : 'Your client relationships and project data'}
+            </CardDescription>
+          </div>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
+        {isRefreshing && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="flex items-center text-blue-700">
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              <span className="text-sm">Refreshing client data...</span>
+            </div>
+          </div>
+        )}
+        
         <Table>
           <TableHeader>
             <TableRow>
@@ -105,7 +212,7 @@ export function ClientsTable({ clients, isLoading, error, isAdmin }: ClientsTabl
           </TableHeader>
           <TableBody>
             {clients.map((client) => (
-              <TableRow key={client.client_id}>
+              <TableRow key={client.client_id} className={isRefreshing ? 'opacity-70' : ''}>
                 <TableCell className="font-medium">
                   <div>
                     <p className="font-semibold">{client.client_name}</p>
