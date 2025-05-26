@@ -47,27 +47,28 @@ export async function directClientLookup(email: string): Promise<{ clientId: str
       };
     }
     
-    // If not found in profiles, search in client_contacts
-    const { data: existingContact, error: contactError } = await supabase
-      .from('client_contacts')
-      .select('id, email')
+    // If not found in profiles, search in unified clients table
+    const { data: existingClient, error: clientError } = await supabase
+      .from('clients')
+      .select('id, email, is_registered_user')
       .eq('email', normalizedEmail)
       .maybeSingle();
     
-    if (contactError && !contactError.message.includes('No rows found')) {
-      contextLogger.error("Error searching for client in client_contacts", { error: contactError });
-    } else if (contactError) {
-      contextLogger.info("No matching client found in client_contacts");
+    if (clientError && !clientError.message.includes('No rows found')) {
+      contextLogger.error("Error searching for client in clients table", { error: clientError });
+    } else if (clientError) {
+      contextLogger.info("No matching client found in clients table");
     }
     
-    if (existingContact?.id && isValidUUID(existingContact.id)) {
-      contextLogger.info("Found existing client contact", { 
-        id: existingContact.id,
-        email: existingContact.email
+    if (existingClient?.id && isValidUUID(existingClient.id)) {
+      contextLogger.info("Found existing client in unified table", { 
+        id: existingClient.id,
+        email: existingClient.email,
+        isRegisteredUser: existingClient.is_registered_user
       });
       return {
-        clientId: existingContact.id,
-        isRegisteredUser: false
+        clientId: existingClient.id,
+        isRegisteredUser: existingClient.is_registered_user
       };
     }
     

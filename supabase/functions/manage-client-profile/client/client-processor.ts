@@ -42,7 +42,7 @@ export async function processClientRequest(
         };
       }
       
-      // Check if this email exists in the clients table
+      // Check if this email exists in the unified clients table
       const { data: existingClient, error: clientError } = await supabase
         .from('clients')
         .select('id, is_registered_user')

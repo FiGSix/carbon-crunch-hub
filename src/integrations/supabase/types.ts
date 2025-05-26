@@ -9,42 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      client_contacts: {
-        Row: {
-          company_name: string | null
-          created_at: string
-          created_by: string | null
-          email: string
-          first_name: string | null
-          id: string
-          last_name: string | null
-          notes: string | null
-          phone: string | null
-        }
-        Insert: {
-          company_name?: string | null
-          created_at?: string
-          created_by?: string | null
-          email: string
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          notes?: string | null
-          phone?: string | null
-        }
-        Update: {
-          company_name?: string | null
-          created_at?: string
-          created_by?: string | null
-          email?: string
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          notes?: string | null
-          phone?: string | null
-        }
-        Relationships: []
-      }
       clients: {
         Row: {
           company_name: string | null
@@ -179,7 +143,6 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           carbon_credits: number | null
-          client_contact_id: string | null
           client_id: string | null
           client_reference_id: string | null
           client_share_percentage: number | null
@@ -206,7 +169,6 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           carbon_credits?: number | null
-          client_contact_id?: string | null
           client_id?: string | null
           client_reference_id?: string | null
           client_share_percentage?: number | null
@@ -233,7 +195,6 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           carbon_credits?: number | null
-          client_contact_id?: string | null
           client_id?: string | null
           client_reference_id?: string | null
           client_share_percentage?: number | null
@@ -259,13 +220,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_client_contact_id_fkey"
-            columns: ["client_contact_id"]
-            isOneToOne: false
-            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
           {

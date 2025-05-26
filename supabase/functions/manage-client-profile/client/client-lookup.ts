@@ -32,22 +32,22 @@ export async function findExistingClient(
       };
     }
     
-    // If not found in profiles, search in client_contacts
-    const { data: existingContact, error: contactSearchError } = await supabase
-      .from('client_contacts')
-      .select('id')
+    // If not found in profiles, search in unified clients table
+    const { data: existingClient, error: clientSearchError } = await supabase
+      .from('clients')
+      .select('id, is_registered_user')
       .eq('email', normalizedEmail)
       .maybeSingle();
     
-    if (contactSearchError && !contactSearchError.message.includes('No rows found')) {
-      console.error("Error searching for client in client_contacts:", contactSearchError);
+    if (clientSearchError && !clientSearchError.message.includes('No rows found')) {
+      console.error("Error searching for client in clients table:", clientSearchError);
     }
     
-    if (existingContact) {
-      console.log(`Found existing client contact: ${existingContact.id}`);
+    if (existingClient) {
+      console.log(`Found existing client in unified table: ${existingClient.id}`);
       return { 
-        clientId: existingContact.id, 
-        isRegisteredUser: false 
+        clientId: existingClient.id, 
+        isRegisteredUser: existingClient.is_registered_user 
       };
     }
     
