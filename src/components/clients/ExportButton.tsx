@@ -18,9 +18,7 @@ export function ExportButton({ clients }: ExportButtonProps) {
       'Email',
       'Company',
       'Number of Projects',
-      'Total MWp',
-      'Status',
-      'Agent Name'
+      'Total MWp'
     ];
 
     // Convert clients data to CSV format
@@ -29,9 +27,7 @@ export function ExportButton({ clients }: ExportButtonProps) {
       client.client_email,
       client.company_name || 'No Company',
       client.project_count.toString(),
-      client.total_mwp.toFixed(3),
-      client.is_registered ? 'Registered' : 'Contact',
-      client.agent_name
+      client.total_mwp.toFixed(3)
     ]);
 
     // Combine headers and data
