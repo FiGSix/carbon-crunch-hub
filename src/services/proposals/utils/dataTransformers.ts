@@ -40,12 +40,12 @@ export function convertToSupabaseJson(obj: any): any {
 }
 
 /**
- * Validates client ID (either registered user or client contact)
- * and returns relevant information about the client type
+ * Validates client ID and returns relevant information about the client type
+ * Updated to work with the unified clients table approach
  */
 export function validateClientId(
   clientId: string | undefined | null,
-  clientContactId: string | undefined | null,
+  clientReferenceId: string | undefined | null,
   contextLogger: any
 ): { 
   isValid: boolean; 
@@ -54,11 +54,11 @@ export function validateClientId(
   validClientId?: string;
 } {
   // Check if we have at least one valid ID
-  if (!clientId && !clientContactId) {
-    contextLogger.error("Missing both client_id and client_contact_id");
+  if (!clientId && !clientReferenceId) {
+    contextLogger.error("Missing both client_id and client_reference_id");
     return { 
       isValid: false, 
-      error: "Either client ID or client contact ID must be provided",
+      error: "Either client ID or client reference ID must be provided",
       isRegisteredUser: false
     };
   }
@@ -72,18 +72,18 @@ export function validateClientId(
     };
   }
   
-  // If we have a client_contact_id (non-registered client)
-  if (clientContactId && isValidUUID(clientContactId)) {
+  // If we have a client_reference_id (could be registered or non-registered)
+  if (clientReferenceId && isValidUUID(clientReferenceId)) {
     return {
       isValid: true,
-      isRegisteredUser: false,
-      validClientId: clientContactId
+      isRegisteredUser: false, // We'll determine this from the clients table
+      validClientId: clientReferenceId
     };
   }
   
   // If we get here, we have an ID but it's not valid
-  const invalidId = clientId || clientContactId;
-  contextLogger.error("Invalid client ID format", { clientId, clientContactId });
+  const invalidId = clientId || clientReferenceId;
+  contextLogger.error("Invalid client ID format", { clientId, clientReferenceId });
   return {
     isValid: false,
     error: `Invalid client ID format: ${invalidId}`,

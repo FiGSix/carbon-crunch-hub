@@ -112,7 +112,7 @@ export async function fetchProposalsCore({
       return;
     }
     
-    // Transform the raw data with proper typing
+    // Transform the raw data with proper typing - removed client_contact_id
     const typedProposalsData = proposalsData.map(item => {
       const transformedItem: RawProposalData = {
         id: item.id,
@@ -122,7 +122,6 @@ export async function fetchProposalsCore({
         created_at: item.created_at,
         client_id: item.client_id,
         client_reference_id: item.client_reference_id,
-        client_contact_id: item.client_contact_id,
         agent_id: item.agent_id,
         annual_energy: item.annual_energy,
         carbon_credits: item.carbon_credits,

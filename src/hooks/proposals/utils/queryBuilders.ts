@@ -11,7 +11,7 @@ export function buildProposalQuery(
   userRole: string | null,
   userId: string | null
 ) {
-  // Base query with all needed fields
+  // Base query with all needed fields - removed client_contact_id since it doesn't exist
   let query = supabase
     .from('proposals')
     .select(`
@@ -22,7 +22,6 @@ export function buildProposalQuery(
       created_at,
       client_id,
       client_reference_id,
-      client_contact_id,
       agent_id,
       annual_energy,
       carbon_credits,
@@ -40,8 +39,8 @@ export function buildProposalQuery(
     // Admin users see all proposals (no additional filtering)
     console.log('Admin user detected - bypassing all role-based filtering');
   } else if (userRole === 'client' && userId) {
-    // Clients can only see their own proposals
-    query = query.or(`client_id.eq.${userId},client_contact_id.eq.${userId}`);
+    // Clients can only see their own proposals - use client_reference_id or client_id
+    query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
   } else if (userRole === 'agent' && userId) {
     // Agents can see proposals assigned to them
     query = query.eq('agent_id', userId);

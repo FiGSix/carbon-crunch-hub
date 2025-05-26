@@ -11,7 +11,6 @@ export interface ProposalDbRecord {
   title: string;
   client_id: string | null;
   client_reference_id: string | null;
-  client_contact_id: string | null; // Added for legacy support
   agent_id: string | null;
   status: string;
   content: Json;
@@ -79,7 +78,6 @@ export interface ProposalData {
   content: ProposalContent;
   client_id: string | null;
   client_reference_id: string | null;
-  client_contact_id: string | null; // Added for legacy support
   agent_id: string | null;
   created_at: string;
   signed_at: string | null;

@@ -11,8 +11,7 @@ export interface RawProposalData {
   status: string;
   created_at: string;
   client_id: string;
-  client_reference_id: string | null; // Added new field
-  client_contact_id: string | null; // Added legacy field
+  client_reference_id: string | null;
   agent_id: string | null;
   annual_energy: number | null;
   carbon_credits: number | null;

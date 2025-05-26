@@ -31,11 +31,6 @@ export async function fetchAndTransformProposalData(
       rawProposals.map(p => p.client_reference_id).filter(Boolean)
     ));
 
-    // Collect all unique client contact IDs (legacy support)
-    const allClientContactIds = Array.from(new Set(
-      rawProposals.map(p => p.client_contact_id).filter(Boolean)
-    ));
-
     // Fetch profiles for users (registered clients and agents)
     let profilesData: ProfileData[] = [];
     if (allUserIds.length > 0) {
@@ -53,12 +48,11 @@ export async function fetchAndTransformProposalData(
 
     // Fetch client records for non-registered clients
     let clientsData: any[] = [];
-    const allClientIds = [...allClientReferenceIds, ...allClientContactIds];
-    if (allClientIds.length > 0) {
+    if (allClientReferenceIds.length > 0) {
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
-        .select('id, first_name, last_name, email, is_registered_user')
-        .in('id', allClientIds);
+        .select('id, first_name, last_name, email')
+        .in('id', allClientReferenceIds);
 
       if (clientsError) {
         transformLogger.error("Error fetching clients", { error: clientsError });
@@ -82,15 +76,12 @@ export async function fetchAndTransformProposalData(
         }
       }
       
-      // If no registered user found, look in clients table
-      if (clientName === 'Unknown Client') {
-        const referenceId = proposal.client_reference_id || proposal.client_contact_id;
-        if (referenceId) {
-          const clientRecord = clientsData.find(c => c.id === referenceId);
-          if (clientRecord) {
-            clientName = `${clientRecord.first_name || ''} ${clientRecord.last_name || ''}`.trim() || clientRecord.email;
-            clientEmail = clientRecord.email;
-          }
+      // If no registered user found, look in clients table using client_reference_id
+      if (clientName === 'Unknown Client' && proposal.client_reference_id) {
+        const clientRecord = clientsData.find(c => c.id === proposal.client_reference_id);
+        if (clientRecord) {
+          clientName = `${clientRecord.first_name || ''} ${clientRecord.last_name || ''}`.trim() || clientRecord.email;
+          clientEmail = clientRecord.email;
         }
       }
       
