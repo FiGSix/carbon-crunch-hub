@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth';
+import { signOut } from '@/lib/supabase/auth';
 import {
   Sidebar,
   SidebarContent,
@@ -43,18 +45,17 @@ export function DashboardSidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Add admin navigation for admin users
-  if (userRole === 'admin') {
-    navigation.push(
-      { 
-        name: 'Admin', 
-        href: '/admin', 
-        icon: Shield, 
-        current: location.pathname === '/admin' 
-      }
-    );
-  }
+  const adminNavigation = userRole === 'admin' ? [
+    { 
+      name: 'Admin', 
+      href: '/admin', 
+      icon: Shield
+    }
+  ] : [];
 
-  const filteredNavigation = navigation.filter(item => 
+  const allNavigation = [...navigation.slice(0, -1), ...adminNavigation, navigation[navigation.length - 1]];
+
+  const filteredNavigation = allNavigation.filter(item => 
     !item.roles || item.roles.includes(userRole || '')
   );
 

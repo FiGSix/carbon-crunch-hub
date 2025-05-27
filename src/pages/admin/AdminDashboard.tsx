@@ -7,9 +7,9 @@ import { useAuth } from '@/contexts/auth';
 import { Navigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-  const { userRole, loading } = useAuth();
+  const { userRole, isLoading } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
