@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Download, FileText, Loader2, RefreshCw } from "lucide-react";
+import { Download, FileText, Loader2, RefreshCw, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateProposalPDF, downloadProposalPDF, regenerateProposalPDF } from "@/services/pdfGenerationService";
@@ -14,7 +14,7 @@ import {
 interface ProposalPDFButtonProps {
   proposal: {
     id: string;
-    name: string; // Changed from title to name to match ProposalListItem
+    name: string;
     pdf_url?: string | null;
     pdf_generation_status?: string | null;
   };
@@ -35,10 +35,9 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
       if (result.success && result.pdfUrl && result.fileName) {
         toast({
           title: "Professional PDF Generated",
-          description: "Your Crunch Carbon proposal PDF has been generated successfully.",
+          description: "Your Crunch Carbon proposal PDF has been generated with professional branding.",
         });
         
-        // Notify parent component
         onPDFGenerated?.();
       } else {
         toast({
@@ -77,7 +76,7 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
       
       toast({
         title: "PDF Downloaded",
-        description: "Your proposal PDF has been downloaded successfully.",
+        description: "Your professional proposal PDF has been downloaded successfully.",
       });
     } catch (error) {
       console.error("Error downloading PDF:", error);
@@ -91,6 +90,12 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
     }
   };
 
+  const handleViewPDF = () => {
+    if (proposal.pdf_url) {
+      window.open(proposal.pdf_url, '_blank');
+    }
+  };
+
   const handleRegeneratePDF = async () => {
     setIsGenerating(true);
     
@@ -100,7 +105,7 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
       if (result.success) {
         toast({
           title: "PDF Regenerated",
-          description: "Your proposal PDF has been regenerated with the latest data.",
+          description: "Your proposal PDF has been regenerated with the latest data and professional styling.",
         });
         
         onPDFGenerated?.();
@@ -144,12 +149,16 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
             ) : (
               <>
                 <FileText className="h-4 w-4 mr-1" />
-                PDF
+                Professional PDF
               </>
             )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          <DropdownMenuItem onClick={handleViewPDF} disabled={isLoading}>
+            <Eye className="h-4 w-4 mr-2" />
+            View PDF
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleDownloadPDF} disabled={isLoading}>
             <Download className="h-4 w-4 mr-2" />
             Download PDF
@@ -174,12 +183,12 @@ export function ProposalPDFButton({ proposal, onPDFGenerated }: ProposalPDFButto
       {isLoading ? (
         <>
           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          Generating...
+          Generating Professional PDF...
         </>
       ) : (
         <>
           <FileText className="h-4 w-4 mr-1" />
-          Generate PDF
+          Generate Professional PDF
         </>
       )}
     </Button>

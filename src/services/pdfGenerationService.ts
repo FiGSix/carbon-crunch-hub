@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 
@@ -10,7 +9,7 @@ export interface PDFGenerationResult {
 }
 
 /**
- * Generate professional PDF for a proposal with Crunch Carbon branding
+ * Enhanced PDF generation service with professional Crunch Carbon branding
  */
 export async function generateProposalPDF(proposalId: string): Promise<PDFGenerationResult> {
   const pdfLogger = logger.withContext({
@@ -20,30 +19,30 @@ export async function generateProposalPDF(proposalId: string): Promise<PDFGenera
   });
 
   try {
-    pdfLogger.info("Initiating professional PDF generation", { proposalId });
+    pdfLogger.info("Initiating professional PDF generation with Crunch Carbon branding", { proposalId });
 
-    // Call the enhanced Edge Function
+    // Call the enhanced Edge Function with improved error handling
     const { data, error } = await supabase.functions.invoke('generate-proposal-pdf', {
       body: { proposalId }
     });
 
     if (error) {
-      pdfLogger.error("Edge function error", { error });
+      pdfLogger.error("Edge function error during PDF generation", { error });
       return {
         success: false,
         error: error.message || 'Failed to generate professional PDF'
       };
     }
 
-    if (!data.success) {
+    if (!data || !data.success) {
       pdfLogger.error("Professional PDF generation failed", { data });
       return {
         success: false,
-        error: data.error || 'Professional PDF generation failed'
+        error: data?.error || 'Professional PDF generation failed'
       };
     }
 
-    pdfLogger.info("Professional PDF generated successfully", { 
+    pdfLogger.info("Professional PDF generated successfully with Crunch Carbon branding", { 
       pdfUrl: data.pdfUrl,
       fileName: data.fileName 
     });
@@ -58,7 +57,7 @@ export async function generateProposalPDF(proposalId: string): Promise<PDFGenera
     pdfLogger.error("Unexpected error generating professional PDF", { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : 'Unknown error occurred during PDF generation'
     };
   }
 }
