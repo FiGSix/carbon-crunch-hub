@@ -6,7 +6,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Plus, RefreshCw, Eye } from "lucide-react";
+import { ArrowRight, Plus, RefreshCw } from "lucide-react";
 import { Proposal } from "@/components/proposals/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
@@ -42,13 +42,6 @@ export function RecentProjects({ proposals = [], loading = false, onRefresh }: R
   // Function to view a proposal
   const handleViewProposal = (id: string) => {
     navigate(`/proposals/${id}`);
-  };
-
-  // Function to view PDF
-  const handleViewPDF = (pdf_url: string) => {
-    if (pdf_url) {
-      window.open(pdf_url, '_blank');
-    }
   };
 
   // Filter to display only recent proposals (at most 4)
@@ -115,18 +108,6 @@ export function RecentProjects({ proposals = [], loading = false, onRefresh }: R
                       >
                         View <ArrowRight className="h-4 w-4 ml-1" />
                       </Button>
-                      {/* Show PDF button if PDF exists */}
-                      {project.pdf_url && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-carbon-blue-600"
-                          onClick={() => handleViewPDF(project.pdf_url)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          PDF
-                        </Button>
-                      )}
                     </div>
                   </td>
                 </tr>
