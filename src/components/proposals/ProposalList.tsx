@@ -9,7 +9,6 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { ProposalStatusBadge } from "./components/ProposalStatusBadge";
-import { InvitationStatus } from "./components/InvitationStatus";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ProposalPDFStatus } from "./components/ProposalPDFStatus";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
@@ -51,11 +50,6 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
           pdfUrl={proposal.pdf_url || undefined} 
         />
       </TableCell>
-      {userRole === "agent" && (
-        <TableCell>
-          <InvitationStatus proposal={proposal} />
-        </TableCell>
-      )}
       {userRole === "admin" && (
         <TableCell>
           {proposal.agent || "Unassigned"}
@@ -139,7 +133,6 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Size (MWp)</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>PDF</TableHead>
-            {userRole === "agent" && <TableHead>Invitation</TableHead>}
             {userRole === "admin" && <TableHead>Agent</TableHead>}
             <TableHead className="text-right">Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>

@@ -14,7 +14,7 @@ interface ProposalSubmitFormProps {
   projectInfo: ProjectInformation;
   nextStep: () => void;
   prevStep: () => void;
-  selectedClientId?: string | null; // Added selectedClientId prop
+  selectedClientId?: string | null;
 }
 
 export function ProposalSubmitForm({ 
@@ -50,13 +50,13 @@ export function ProposalSubmitForm({
         clientInfo,
         projectInfo,
         user.id,
-        selectedClientId || undefined // Pass the selectedClientId if it exists
+        selectedClientId || undefined
       );
       
       if (result.success) {
         toast({
-          title: "Proposal Created",
-          description: "Your proposal has been successfully saved.",
+          title: "Proposal Created Successfully",
+          description: "Your proposal has been created and is ready for client review. A PDF is being generated automatically.",
         });
         
         // Move to next step, which will navigate to the proposals list

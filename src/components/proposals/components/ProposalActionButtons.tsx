@@ -1,13 +1,9 @@
 
 import React from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Proposal } from "../types";
-import { ProposalInviteButton } from "./ProposalInviteButton";
-import { SubmitForReviewButton } from "./SubmitForReviewButton";
-import { ProposalPDFButton } from "./ProposalPDFButton";
-import { useAuth } from "@/contexts/auth";
 
 interface ProposalActionButtonsProps {
   proposal: Proposal;
@@ -16,10 +12,15 @@ interface ProposalActionButtonsProps {
 
 export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalActionButtonsProps) {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
   
   const handleViewProposal = (id: string) => {
     navigate(`/proposals/${id}`);
+  };
+
+  const handleViewPDF = () => {
+    if (proposal.pdf_url) {
+      window.open(proposal.pdf_url, '_blank');
+    }
   };
   
   return (
@@ -33,26 +34,18 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
         View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
       
-      {/* PDF Generation Button - available for all users */}
-      <ProposalPDFButton 
-        proposal={proposal} 
-        onPDFGenerated={onProposalUpdate} 
-      />
-      
-      {/* Only show Submit button for agents with draft proposals */}
-      {proposal.status === "draft" && userRole === "agent" && (
-        <SubmitForReviewButton 
-          proposalId={proposal.id}
-          proposalTitle={proposal.name}
-          onProposalUpdate={onProposalUpdate} 
-        />
+      {/* Simple PDF View Button - only show if PDF exists */}
+      {proposal.pdf_url && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="retro-button"
+          onClick={handleViewPDF}
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          View PDF
+        </Button>
       )}
-      
-      {/* Show invite button based on role and status */}
-      <ProposalInviteButton 
-        proposal={proposal} 
-        onProposalUpdate={onProposalUpdate} 
-      />
     </div>
   );
 }

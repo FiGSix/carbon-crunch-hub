@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
@@ -62,8 +63,8 @@ const CreateProposal = () => {
         // Navigate to proposals list after successful submission
         navigate("/proposals");
         toast({
-          title: "Success",
-          description: "Proposal has been created and saved to the database.",
+          title: "Proposal Created Successfully",
+          description: "Your proposal has been created and is ready for client review. A PDF has been automatically generated and will be available shortly.",
         });
         break;
     }

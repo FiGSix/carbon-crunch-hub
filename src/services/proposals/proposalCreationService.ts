@@ -92,7 +92,7 @@ export async function createProposal(
       });
     }
 
-    // Step 2: Build the proposal data
+    // Step 2: Build the proposal data with status set to 'pending' instead of 'draft'
     const proposalData = buildProposalData(
       title,
       agentId,
@@ -106,6 +106,9 @@ export async function createProposal(
       selectedClientId,
       clientResult
     );
+
+    // Override status to pending to skip the draft phase
+    proposalData.status = 'pending';
 
     // Client validation before insert
     const clientValidation = validateClientId(
@@ -125,7 +128,8 @@ export async function createProposal(
     proposalLogger.info("Prepared proposal data", {
       title: proposalData.title,
       clientId: proposalData.client_id,
-      clientReferenceId: proposalData.client_reference_id
+      clientReferenceId: proposalData.client_reference_id,
+      status: proposalData.status
     });
 
     // Step 3: Insert proposal into database
