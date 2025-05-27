@@ -21,16 +21,14 @@ export function AdminMenu() {
       description: 'Manage users and their roles',
       icon: Users,
       path: '/admin/users',
-      color: 'text-green-600',
-      disabled: true
+      color: 'text-green-600'
     },
     {
       title: 'Analytics',
       description: 'View system analytics and reports',
       icon: BarChart3,
       path: '/admin/analytics',
-      color: 'text-purple-600',
-      disabled: true
+      color: 'text-purple-600'
     }
   ];
 
@@ -48,10 +46,9 @@ export function AdminMenu() {
             <p className="text-sm text-gray-600 mb-4">{tool.description}</p>
             <Button 
               onClick={() => navigate(tool.path)}
-              disabled={tool.disabled}
               className="w-full"
             >
-              {tool.disabled ? 'Coming Soon' : 'Open'}
+              Open
             </Button>
           </CardContent>
         </Card>
