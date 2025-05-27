@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -10,7 +9,8 @@ import {
   Users,
   Calculator,
   LogOut,
-  Loader2
+  Loader2,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth';
@@ -39,8 +39,20 @@ const navigation = [
 export function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { userRole, signOut } = useAuth();
+  const { user, userRole } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Add admin navigation for admin users
+  if (userRole === 'admin') {
+    navigation.push(
+      { 
+        name: 'Admin', 
+        href: '/admin', 
+        icon: Shield, 
+        current: location.pathname === '/admin' 
+      }
+    );
+  }
 
   const filteredNavigation = navigation.filter(item => 
     !item.roles || item.roles.includes(userRole || '')

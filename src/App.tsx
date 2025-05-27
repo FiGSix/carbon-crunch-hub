@@ -1,96 +1,53 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./contexts/auth";
-import { PrivateRoute } from "./components/auth/PrivateRoute";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { QueryClient } from "react-query";
+import { Header } from "./components/layout/Header";
+import { Toaster } from "@/components/ui/toaster";
 import Dashboard from "./pages/Dashboard";
 import Proposals from "./pages/Proposals";
+import Clients from "./pages/Clients";
+import Settings from "./pages/Settings";
 import CreateProposal from "./pages/CreateProposal";
 import ViewProposal from "./pages/ViewProposal";
-import Profile from "./pages/Profile";
-import Calculator from "./pages/Calculator";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Agents from "./pages/Agents";
-import NotFound from "./pages/NotFound";
-import Notifications from "./pages/Notifications";
-import ForceLogout from "./pages/ForceLogout";
-import MyClients from "./pages/MyClients";
-
-const queryClient = new QueryClient();
+import PrivateRoute from "./components/auth/PrivateRoute";
+import PublicRoute from "./components/auth/PublicRoute";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Invitation from "./pages/Invitation";
+import BulkPDFGeneration from "./pages/admin/BulkPDFGeneration";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+    <Router>
+      <div className="min-h-screen bg-background">
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+          <QueryClient>
+            <Header />
+            <Toaster />
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/calculator" element={<Calculator />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/agents" element={<Agents />} />
-              <Route path="/force-logout" element={<ForceLogout />} />
-              
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              } />
-              <Route path="/proposals" element={
-                <PrivateRoute>
-                  <Proposals />
-                </PrivateRoute>
-              } />
-              <Route path="/proposals/create" element={
-                <PrivateRoute>
-                  <CreateProposal />
-                </PrivateRoute>
-              } />
-              <Route path="/proposals/:id" element={
-                <PrivateRoute>
-                  <ViewProposal />
-                </PrivateRoute>
-              } />
-              {/* New route for proposal viewing with query token */}
-              <Route path="/proposals/view" element={<ViewProposal />} />
-              <Route path="/clients" element={
-                <PrivateRoute>
-                  <MyClients />
-                </PrivateRoute>
-              } />
-              <Route path="/profile" element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              } />
-              <Route path="/notifications" element={
-                <PrivateRoute>
-                  <Notifications />
-                </PrivateRoute>
-              } />
-              
-              {/* Public proposal viewing */}
-              <Route path="/view/:token" element={<ViewProposal />} />
-              
-              <Route path="*" element={<NotFound />} />
+              <Route path="/" element={<PublicRoute><SignIn /></PublicRoute>} />
+              <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+              <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+              <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/proposals" element={<PrivateRoute><Proposals /></PrivateRoute>} />
+              <Route path="/proposals/create" element={<PrivateRoute><CreateProposal /></PrivateRoute>} />
+              <Route path="/proposals/:id" element={<PrivateRoute><ViewProposal /></PrivateRoute>} />
+              <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
+              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+              <Route path="/invitation/:token" element={<PublicRoute><Invitation /></PublicRoute>} />
+              <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+              <Route path="/admin/bulk-pdf-generation" element={<PrivateRoute><BulkPDFGeneration /></PrivateRoute>} />
             </Routes>
-          </BrowserRouter>
+          </QueryClient>
         </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+      </div>
+    </Router>
   );
 }
 

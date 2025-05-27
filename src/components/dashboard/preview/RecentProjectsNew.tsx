@@ -153,8 +153,8 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
                         >
                           <ChevronRight className="h-4 w-4" />
                         </Button>
-                        {/* Show PDF button if PDF exists */}
-                        {project.pdf_url && (
+                        {/* Show PDF button if PDF exists and is completed */}
+                        {project.pdf_url && project.pdf_generation_status === 'completed' && (
                           <Button 
                             variant="ghost" 
                             size="sm" 
