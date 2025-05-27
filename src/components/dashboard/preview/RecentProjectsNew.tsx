@@ -6,7 +6,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Plus, RefreshCw, ChevronRight, Folders } from "lucide-react";
+import { ArrowRight, Plus, RefreshCw, ChevronRight, Folders, Eye } from "lucide-react";
 import { Proposal } from "@/components/proposals/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
@@ -49,6 +49,13 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
   // Function to view a proposal
   const handleViewProposal = (id: string) => {
     navigate(`/proposals/${id}`);
+  };
+
+  // Function to view PDF
+  const handleViewPDF = (pdf_url: string) => {
+    if (pdf_url) {
+      window.open(pdf_url, '_blank');
+    }
   };
 
   // Filter to display only recent proposals (at most 4)
@@ -108,11 +115,11 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
           <div className="overflow-hidden">
             <div className="bg-gradient-to-r from-crunch-black/5 to-crunch-black/3 px-6 py-2">
               <div className="grid grid-cols-12 gap-4 text-xs font-medium text-crunch-black/60 uppercase tracking-wider">
-                <div className="col-span-5 sm:col-span-4">Project Name</div>
-                <div className="col-span-3 sm:col-span-2 text-right sm:text-left">Size</div>
+                <div className="col-span-4 sm:col-span-3">Project Name</div>
+                <div className="col-span-2 text-right sm:text-left">Size</div>
                 <div className="hidden sm:block sm:col-span-3">Client</div>
-                <div className="col-span-3 sm:col-span-2 text-center">Status</div>
-                <div className="col-span-1 text-right"></div>
+                <div className="col-span-2 text-center">Status</div>
+                <div className="col-span-4 sm:col-span-3 text-right">Actions</div>
               </div>
             </div>
             <div className="divide-y divide-crunch-black/5">
@@ -125,10 +132,10 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
                   className="px-6 py-4 transition-colors hover:bg-crunch-black/[0.02] group"
                 >
                   <div className="grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-5 sm:col-span-4 font-medium truncate">{project.name}</div>
-                    <div className="col-span-3 sm:col-span-2 text-right sm:text-left text-crunch-black/70">{project.size.toFixed(1)} MWp</div>
+                    <div className="col-span-4 sm:col-span-3 font-medium truncate">{project.name}</div>
+                    <div className="col-span-2 text-right sm:text-left text-crunch-black/70">{project.size.toFixed(1)} MWp</div>
                     <div className="hidden sm:block sm:col-span-3 text-crunch-black/70 truncate">{project.client}</div>
-                    <div className="col-span-3 sm:col-span-2 text-center">
+                    <div className="col-span-2 text-center">
                       <Badge 
                         variant="outline" 
                         className={`${statusColors[project.status as keyof typeof statusColors] || "bg-gray-50 text-gray-700"} text-xs py-0.5 px-2 border`}
@@ -136,15 +143,28 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
                         {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
                       </Badge>
                     </div>
-                    <div className="col-span-1 text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="p-0 hover:bg-transparent text-crunch-black/40 hover:text-crunch-black group-hover:text-crunch-yellow"
-                        onClick={() => handleViewProposal(project.id)}
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </Button>
+                    <div className="col-span-4 sm:col-span-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="p-1 hover:bg-transparent text-crunch-black/40 hover:text-crunch-black group-hover:text-crunch-yellow"
+                          onClick={() => handleViewProposal(project.id)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        {/* Show PDF button if PDF exists */}
+                        {project.pdf_url && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 hover:bg-transparent text-crunch-black/40 hover:text-crunch-black group-hover:text-crunch-yellow"
+                            onClick={() => handleViewPDF(project.pdf_url)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
