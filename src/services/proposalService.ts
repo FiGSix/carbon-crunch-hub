@@ -23,7 +23,7 @@ export const createProposal = async (
     const annualEnergy = parseFloat(projectInfo.size) * 1500; // kWh per year (simplified calculation)
     const carbonCredits = annualEnergy * 0.0007; // tCO2 per kWh (simplified factor)
     
-    // Prepare proposal data with proper Json typing
+    // Prepare proposal data with proper Json typing using type assertions
     const proposalData = {
       title: projectInfo.name,
       status: 'pending',
@@ -31,9 +31,9 @@ export const createProposal = async (
         eligibility,
         clientInfo,
         projectInfo
-      } as Json,
-      eligibility_criteria: eligibility as Json,
-      project_info: projectInfo as Json,
+      } as unknown as Json,
+      eligibility_criteria: eligibility as unknown as Json,
+      project_info: projectInfo as unknown as Json,
       agent_id: agentId,
       client_id: selectedClientId || null,
       client_reference_id: selectedClientId || null,
