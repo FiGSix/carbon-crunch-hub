@@ -22,14 +22,15 @@ import NotFound from "./pages/NotFound";
 import Notifications from "./pages/Notifications";
 import ForceLogout from "./pages/ForceLogout";
 import MyClients from "./pages/MyClients";
+import React from "react";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -88,8 +89,8 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
