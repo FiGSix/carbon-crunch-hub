@@ -34,8 +34,8 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
         View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
       
-      {/* Simple PDF View Button - only show if PDF exists */}
-      {proposal.pdf_url && (
+      {/* PDF View Button - show if PDF exists and is completed */}
+      {proposal.pdf_url && proposal.pdf_generation_status === 'completed' && (
         <Button 
           variant="ghost" 
           size="sm" 
