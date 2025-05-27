@@ -10,12 +10,10 @@ import {
   Users,
   Calculator,
   LogOut,
-  Loader2,
-  Shield
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth';
-import { signOut } from '@/lib/supabase/auth';
 import {
   Sidebar,
   SidebarContent,
@@ -28,15 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useState } from 'react';
 
-interface NavigationItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  roles?: string[];
-  isSignOut?: boolean;
-}
-
-const navigation: NavigationItem[] = [
+const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Proposals', href: '/proposals', icon: FileText },
   { name: 'My Clients', href: '/clients', icon: Users, roles: ['agent', 'admin'] },
@@ -49,21 +39,10 @@ const navigation: NavigationItem[] = [
 export function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { userRole, signOut } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Add admin navigation for admin users
-  const adminNavigation: NavigationItem[] = userRole === 'admin' ? [
-    { 
-      name: 'Admin', 
-      href: '/admin', 
-      icon: Shield
-    }
-  ] : [];
-
-  const allNavigation = [...navigation.slice(0, -1), ...adminNavigation, navigation[navigation.length - 1]];
-
-  const filteredNavigation = allNavigation.filter(item => 
+  const filteredNavigation = navigation.filter(item => 
     !item.roles || item.roles.includes(userRole || '')
   );
 

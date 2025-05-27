@@ -31,9 +31,9 @@ export const createProposal = async (
         eligibility,
         clientInfo,
         projectInfo
-      } as unknown as Json,
-      eligibility_criteria: eligibility as unknown as Json,
-      project_info: projectInfo as unknown as Json,
+      } as Json,
+      eligibility_criteria: eligibility as Json,
+      project_info: projectInfo as Json,
       agent_id: agentId,
       client_id: selectedClientId || null,
       client_reference_id: selectedClientId || null,
