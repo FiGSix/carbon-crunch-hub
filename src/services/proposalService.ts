@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { Json } from "@/types/supabase";
 
 export interface CreateProposalResult {
   success: boolean;
@@ -22,7 +23,7 @@ export const createProposal = async (
     const annualEnergy = parseFloat(projectInfo.size) * 1500; // kWh per year (simplified calculation)
     const carbonCredits = annualEnergy * 0.0007; // tCO2 per kWh (simplified factor)
     
-    // Prepare proposal data
+    // Prepare proposal data with proper Json typing
     const proposalData = {
       title: projectInfo.name,
       status: 'pending',
@@ -30,9 +31,9 @@ export const createProposal = async (
         eligibility,
         clientInfo,
         projectInfo
-      },
-      eligibility_criteria: eligibility,
-      project_info: projectInfo,
+      } as Json,
+      eligibility_criteria: eligibility as Json,
+      project_info: projectInfo as Json,
       agent_id: agentId,
       client_id: selectedClientId || null,
       client_reference_id: selectedClientId || null,
@@ -51,10 +52,10 @@ export const createProposal = async (
       carbonCredits
     });
 
-    // Insert the proposal
+    // Insert the proposal (single object, not array)
     const { data: proposal, error: insertError } = await supabase
       .from('proposals')
-      .insert([proposalData])
+      .insert(proposalData)
       .select()
       .single();
 
