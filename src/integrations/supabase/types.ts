@@ -87,51 +87,6 @@ export type Database = {
         }
         Relationships: []
       }
-      pdf_generation_batches: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          created_by: string
-          error_message: string | null
-          failed_generations: number
-          id: string
-          processed_proposals: number
-          started_at: string | null
-          status: string
-          successful_generations: number
-          total_proposals: number
-          updated_at: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          created_by: string
-          error_message?: string | null
-          failed_generations?: number
-          id?: string
-          processed_proposals?: number
-          started_at?: string | null
-          status?: string
-          successful_generations?: number
-          total_proposals?: number
-          updated_at?: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string
-          error_message?: string | null
-          failed_generations?: number
-          id?: string
-          processed_proposals?: number
-          started_at?: string | null
-          status?: string
-          successful_generations?: number
-          total_proposals?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -197,9 +152,6 @@ export type Database = {
           invitation_token: string | null
           invitation_viewed_at: string | null
           is_preview: boolean | null
-          pdf_generated_at: string | null
-          pdf_generation_status: string | null
-          pdf_url: string | null
           preview_of_id: string | null
           project_info: Json
           review_later_until: string | null
@@ -226,9 +178,6 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           is_preview?: boolean | null
-          pdf_generated_at?: string | null
-          pdf_generation_status?: string | null
-          pdf_url?: string | null
           preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
@@ -255,9 +204,6 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           is_preview?: boolean | null
-          pdf_generated_at?: string | null
-          pdf_generation_status?: string | null
-          pdf_url?: string | null
           preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
@@ -380,16 +326,6 @@ export type Database = {
           client_share_percentage: number
         }[]
       }
-      get_proposals_missing_pdfs: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          title: string
-          status: string
-          created_at: string
-          pdf_generation_status: string
-        }[]
-      }
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
@@ -414,17 +350,6 @@ export type Database = {
       }
       set_request_invitation_token: {
         Args: { email_input: string; token_input: string } | { token: string }
-        Returns: boolean
-      }
-      update_batch_progress: {
-        Args: {
-          batch_id: string
-          new_processed: number
-          new_successful: number
-          new_failed: number
-          new_status?: string
-          error_msg?: string
-        }
         Returns: boolean
       }
       validate_invitation_token: {

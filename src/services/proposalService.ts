@@ -17,7 +17,7 @@ export const createProposal = async (
   selectedClientId?: string
 ): Promise<CreateProposalResult> => {
   try {
-    console.log("🚀 Creating proposal with auto PDF generation...");
+    console.log("🚀 Creating proposal...");
     
     // Calculate carbon credits and revenue
     const annualEnergy = parseFloat(projectInfo.size) * 1500; // kWh per year (simplified calculation)
@@ -40,8 +40,7 @@ export const createProposal = async (
       annual_energy: annualEnergy,
       carbon_credits: carbonCredits,
       client_share_percentage: 70,
-      agent_commission_percentage: 15,
-      pdf_generation_status: 'pending'
+      agent_commission_percentage: 15
     };
 
     console.log("📋 Proposal data prepared:", {
@@ -65,26 +64,6 @@ export const createProposal = async (
     }
 
     console.log("✅ Proposal created successfully:", proposal.id);
-
-    // Automatically trigger PDF generation
-    console.log("📄 Triggering automatic PDF generation...");
-    
-    try {
-      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-proposal-pdf', {
-        body: JSON.stringify({ proposalId: proposal.id })
-      });
-
-      if (pdfError) {
-        console.error("⚠️ PDF generation failed, but proposal was created:", pdfError);
-        // Don't fail the entire proposal creation if PDF generation fails
-        // The PDF can be regenerated later
-      } else {
-        console.log("✅ PDF generation triggered successfully");
-      }
-    } catch (pdfGenerationError) {
-      console.error("⚠️ PDF generation error (non-blocking):", pdfGenerationError);
-      // PDF generation failure is non-blocking
-    }
 
     return { 
       success: true, 

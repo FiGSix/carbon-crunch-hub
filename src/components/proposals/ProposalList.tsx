@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import { ProposalStatusBadge } from "./components/ProposalStatusBadge";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
-import { ProposalPDFStatus } from "./components/ProposalPDFStatus";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -42,12 +41,6 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
         <ProposalStatusBadge 
           status={proposal.status} 
           reviewLater={!!proposal.review_later_until}
-        />
-      </TableCell>
-      <TableCell>
-        <ProposalPDFStatus 
-          status={proposal.pdf_generation_status || 'pending'} 
-          pdfUrl={proposal.pdf_url || undefined} 
         />
       </TableCell>
       {userRole === "admin" && (
@@ -132,7 +125,6 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Date</TableHead>
             <TableHead>Size (MWp)</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>PDF</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
             <TableHead className="text-right">Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
