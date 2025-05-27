@@ -1,110 +1,100 @@
 
-import { 
-  createProposal as createProposalImpl, 
-  type ProposalCreationResult 
-} from "./proposals/proposalCreationService";
+import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
-import { logger } from "@/lib/logger";
-import { isValidUUID } from "@/utils/validationUtils";
 
-// Simplified wrapper that provides a more user-friendly interface to the component
-export async function createProposal(
+export interface CreateProposalResult {
+  success: boolean;
+  proposalId?: string;
+  error?: string;
+}
+
+export const createProposal = async (
   eligibility: EligibilityCriteria,
   clientInfo: ClientInformation,
   projectInfo: ProjectInformation,
   agentId: string,
   selectedClientId?: string
-): Promise<ProposalCreationResult> {
+): Promise<CreateProposalResult> => {
   try {
-    // Create a contextualized logger
-    const proposalLogger = logger.withContext({
-      component: 'ProposalService',
-      method: 'createProposal',
-      agentId
-    });
+    console.log("🚀 Creating proposal with auto PDF generation...");
     
-    // Validate agent ID is available
-    if (!agentId) {
-      proposalLogger.error("Missing agent ID when creating proposal");
-      return {
-        success: false,
-        error: "Authentication error: User ID is missing. Please sign out and back in."
-      };
-    }
+    // Calculate carbon credits and revenue
+    const annualEnergy = parseFloat(projectInfo.size) * 1500; // kWh per year (simplified calculation)
+    const carbonCredits = annualEnergy * 0.0007; // tCO2 per kWh (simplified factor)
+    
+    // Prepare proposal data
+    const proposalData = {
+      title: projectInfo.name,
+      status: 'pending',
+      content: {
+        eligibility,
+        clientInfo,
+        projectInfo
+      },
+      eligibility_criteria: eligibility,
+      project_info: projectInfo,
+      agent_id: agentId,
+      client_id: selectedClientId || null,
+      client_reference_id: selectedClientId || null,
+      annual_energy: annualEnergy,
+      carbon_credits: carbonCredits,
+      client_share_percentage: 70,
+      agent_commission_percentage: 15,
+      pdf_generation_status: 'pending'
+    };
 
-    // Validate client information is present
-    if (!clientInfo.email || !clientInfo.name) {
-      proposalLogger.error("Missing required client information", { clientInfo });
-      return {
-        success: false,
-        error: "Client information is incomplete. Email and name are required."
-      };
-    }
-
-    // Calculate derived values from project info
-    const annualEnergy = calculateAnnualEnergy(projectInfo.size);
-    const carbonCredits = calculateCarbonCredits(annualEnergy);
-    const clientSharePercentage = 80; // Default percentage
-    const agentCommissionPercentage = 5; // Default percentage
-    
-    // Generate proposal title
-    const proposalTitle = `${projectInfo.name} - ${clientInfo.name}`;
-    
-    // Add logging for selected client ID if available
-    if (selectedClientId) {
-      if (isValidUUID(selectedClientId)) {
-        proposalLogger.info("Creating proposal with explicit client ID", { 
-          clientId: selectedClientId,
-          existingClient: clientInfo.existingClient
-        });
-      } else {
-        proposalLogger.warn("Invalid client ID format provided", { selectedClientId });
-        return {
-          success: false,
-          error: "Invalid client ID format. Please try selecting the client again."
-        };
-      }
-    }
-    
-    proposalLogger.info("Creating proposal", {
-      title: proposalTitle,
-      clientEmail: clientInfo.email,
-      existingClient: clientInfo.existingClient,
-      projectName: projectInfo.name,
-      hasSelectedClientId: !!selectedClientId
-    });
-    
-    // Call the implementation with all required parameters
-    return await createProposalImpl(
-      proposalTitle,
+    console.log("📋 Proposal data prepared:", {
+      title: proposalData.title,
       agentId,
-      eligibility,
-      projectInfo,
-      clientInfo,
+      clientId: selectedClientId,
       annualEnergy,
-      carbonCredits,
-      clientSharePercentage,
-      agentCommissionPercentage,
-      selectedClientId
-    );
+      carbonCredits
+    });
+
+    // Insert the proposal
+    const { data: proposal, error: insertError } = await supabase
+      .from('proposals')
+      .insert([proposalData])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("❌ Error inserting proposal:", insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    console.log("✅ Proposal created successfully:", proposal.id);
+
+    // Automatically trigger PDF generation
+    console.log("📄 Triggering automatic PDF generation...");
+    
+    try {
+      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-proposal-pdf', {
+        body: JSON.stringify({ proposalId: proposal.id })
+      });
+
+      if (pdfError) {
+        console.error("⚠️ PDF generation failed, but proposal was created:", pdfError);
+        // Don't fail the entire proposal creation if PDF generation fails
+        // The PDF can be regenerated later
+      } else {
+        console.log("✅ PDF generation triggered successfully");
+      }
+    } catch (pdfGenerationError) {
+      console.error("⚠️ PDF generation error (non-blocking):", pdfGenerationError);
+      // PDF generation failure is non-blocking
+    }
+
+    return { 
+      success: true, 
+      proposalId: proposal.id 
+    };
+
   } catch (error) {
-    logger.error("Error in createProposal wrapper:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+    console.error("❌ Unexpected error in createProposal:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "An unexpected error occurred" 
     };
   }
-}
-
-// Helper function to calculate approximate annual energy from system size
-function calculateAnnualEnergy(systemSize: string): number {
-  const size = parseFloat(systemSize) || 0;
-  // Simple estimation: 1 kW system produces roughly 1600 kWh per year in good conditions
-  return size * 1600;
-}
-
-// Helper function to calculate approximate carbon credits
-function calculateCarbonCredits(annualEnergy: number): number {
-  // Simple estimation: 1 MWh of solar energy prevents roughly 0.7 tons of CO2
-  return (annualEnergy / 1000) * 0.7;
-}
+};

@@ -56,11 +56,11 @@ export function ProposalSubmitForm({
       if (result.success) {
         toast({
           title: "Proposal Created Successfully",
-          description: "Your proposal has been created and is ready for client review. A PDF is being generated automatically.",
+          description: "Your proposal has been created with automatic PDF generation. You can view the PDF from the proposals list once it's ready.",
         });
         
-        // Move to next step, which will navigate to the proposals list
-        nextStep();
+        // Navigate directly to proposals list
+        navigate('/proposals');
       } else {
         toast({
           title: "Error",

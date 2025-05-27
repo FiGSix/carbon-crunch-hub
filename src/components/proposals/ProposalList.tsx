@@ -113,10 +113,10 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
         <AlertTitle>No proposals found</AlertTitle>
         <AlertDescription>
           {userRole === "agent" 
-            ? "You don't have any proposals assigned to you. Only proposals explicitly assigned to you will appear here."
+            ? "You don't have any proposals assigned to you. Click 'Create New Proposal' to get started."
             : userRole === "client"
               ? "You don't have any proposals yet. An agent will create a proposal for you."
-              : "No proposals found matching your criteria. Try changing the filters."}
+              : "No proposals found matching your criteria. Try changing the filters or create a new proposal."}
         </AlertDescription>
       </Alert>
     );

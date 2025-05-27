@@ -10,8 +10,8 @@ export function ProposalActions() {
   
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
-      {/* Only agents can create new proposals */}
-      {userRole === "agent" && (
+      {/* Only agents and admins can create new proposals */}
+      {(userRole === "agent" || userRole === "admin") && (
         <Button 
           className="retro-button"
           onClick={() => navigate("/proposals/create")}
