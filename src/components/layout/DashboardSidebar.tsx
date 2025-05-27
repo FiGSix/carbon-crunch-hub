@@ -28,7 +28,15 @@ import {
 } from "@/components/ui/sidebar";
 import { useState } from 'react';
 
-const navigation = [
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  roles?: string[];
+  isSignOut?: boolean;
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Proposals', href: '/proposals', icon: FileText },
   { name: 'My Clients', href: '/clients', icon: Users, roles: ['agent', 'admin'] },
@@ -45,7 +53,7 @@ export function DashboardSidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Add admin navigation for admin users
-  const adminNavigation = userRole === 'admin' ? [
+  const adminNavigation: NavigationItem[] = userRole === 'admin' ? [
     { 
       name: 'Admin', 
       href: '/admin', 
