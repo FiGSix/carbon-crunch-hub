@@ -1,6 +1,5 @@
 
 import React, { useEffect, useMemo } from 'react';
-import { useFormContext } from 'react-hook-form';
 import { useAddressConflictCheck } from '@/hooks/useAddressConflictCheck';
 import { AddressConflictWarning } from './AddressConflictWarning';
 import { ProjectInfoForm } from './ProjectInfoForm';
@@ -20,7 +19,6 @@ export function ProjectInfoFormWithConflictCheck({
   updateProjectInfo,
   handleAddressChange
 }: ProjectInfoFormWithConflictCheckProps) {
-  const { watch } = useFormContext();
   const {
     isChecking,
     conflictResult,
@@ -32,7 +30,7 @@ export function ProjectInfoFormWithConflictCheck({
     clearConflict
   } = useAddressConflictCheck();
 
-  // Watch address field - using the address from projectInfo since that's what the form uses
+  // Use the address from projectInfo directly instead of watching form context
   const address = projectInfo.address;
 
   // Debounced conflict check
