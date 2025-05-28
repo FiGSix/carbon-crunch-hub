@@ -50,6 +50,9 @@ export function ProposalDetails({
   // Extract project info from the proposal content and properly type it
   const projectInfo = (proposal.content?.projectInfo || {}) as ProjectInformation;
   
+  // Get the client ID for portfolio-based pricing
+  const clientId = proposal.client_reference_id || proposal.client_id;
+  
   return (
     <Card className="retro-card">
       <CardHeader>
@@ -83,8 +86,15 @@ export function ProposalDetails({
           
           {projectInfo.size && (
             <>
-              <CarbonCreditSection systemSize={projectInfo.size} />
-              <RevenueDistributionSection systemSize={projectInfo.size} />
+              <CarbonCreditSection 
+                systemSize={projectInfo.size} 
+                commissionDate={projectInfo.commissionDate}
+                selectedClientId={clientId}
+              />
+              <RevenueDistributionSection 
+                systemSize={projectInfo.size} 
+                selectedClientId={clientId}
+              />
             </>
           )}
         </div>

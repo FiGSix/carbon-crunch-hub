@@ -19,6 +19,12 @@ export {
 } from './utils';
 
 export {
+  getClientSpecificCarbonPrice,
+  getFormattedClientSpecificCarbonPrice,
+  calculateClientSpecificRevenue
+} from './clientPricing';
+
+export {
   EMISSION_FACTOR,
   COAL_FACTOR,
   AVERAGE_SUN_HOURS,

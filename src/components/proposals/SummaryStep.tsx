@@ -47,6 +47,7 @@ export function SummaryStep({
           <CarbonCreditSection 
             systemSize={projectInfo.size} 
             commissionDate={projectInfo.commissionDate}
+            selectedClientId={selectedClientId}
           />
           <RevenueDistributionSection 
             systemSize={projectInfo.size}
