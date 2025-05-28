@@ -9,5 +9,5 @@ export const COAL_FACTOR = 0.0011; // kg coal per kWh
 export const AVERAGE_SUN_HOURS = 4.5; // Average daily sun hours in South Africa
 export const DAYS_IN_YEAR = 365;
 
-// Note: Carbon prices are now exclusively loaded from the database
-// via the dynamicCarbonPricingService. No hardcoded fallback prices remain.
+// Note: Carbon prices are now dynamically loaded from the database
+// via the dynamicCarbonPricingService. No hardcoded prices remain.

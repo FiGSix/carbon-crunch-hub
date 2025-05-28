@@ -1,5 +1,6 @@
 
 import { systemSettingsService } from "@/services/systemSettingsService";
+import { CARBON_PRICES } from "./constants";
 import { logger } from "@/lib/logger";
 
 /**
@@ -29,18 +30,17 @@ function filterCurrentAndFuturePrices(prices: Record<string, number>): Record<st
 }
 
 /**
- * Dynamic carbon pricing service that loads prices exclusively from system settings
+ * Dynamic carbon pricing service that loads prices from system settings
  */
 class DynamicCarbonPricingService {
   private logger = logger.withContext({ service: 'DynamicCarbonPricingService' });
-  public cachedPrices: Record<string, number> | null = null; // Made public for synchronous access
+  private cachedPrices: Record<string, number> | null = null;
   private lastCacheTime = 0;
   private cacheValidityMs = 5 * 60 * 1000; // 5 minutes
 
   /**
-   * Get carbon prices exclusively from database
+   * Get carbon prices with fallback to constants
    * Only includes current and future years
-   * Returns empty object if database fails
    */
   async getCarbonPrices(): Promise<Record<string, number>> {
     try {
@@ -65,19 +65,18 @@ class DynamicCarbonPricingService {
         return filteredDynamicPrices;
       }
     } catch (error) {
-      this.logger.error("Failed to load dynamic carbon prices from database", { error });
+      this.logger.warn("Failed to load dynamic carbon prices, using constants", { error });
     }
 
-    // Return empty object if dynamic loading fails - no hardcoded fallbacks
-    this.cachedPrices = {};
-    this.lastCacheTime = Date.now();
-    this.logger.warn("No carbon prices available - database load failed and no fallback prices configured");
-    return {};
+    // Fallback to constants if dynamic loading fails (also filtered)
+    const filteredConstantPrices = filterCurrentAndFuturePrices(CARBON_PRICES);
+    this.logger.info("Using fallback carbon prices from constants (filtered for current/future years)");
+    return filteredConstantPrices;
   }
 
   /**
    * Get carbon price for a specific year
-   * Returns 0 for past years or when no price data is available
+   * Returns 0 for past years
    */
   async getCarbonPriceForYear(year: string | number): Promise<number> {
     const yearNum = typeof year === 'string' ? parseInt(year) : year;
