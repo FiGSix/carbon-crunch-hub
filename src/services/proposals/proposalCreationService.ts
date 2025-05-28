@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { findOrCreateClient } from "./clientProfileService";
@@ -5,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { isValidUUID } from "@/utils/validationUtils";
 import { buildProposalData } from "./utils/proposalBuilder";
 import { validateClientId } from "./utils/dataTransformers";
+import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 
 // Define the return type for consistent interface
 export interface ProposalCreationResult {
@@ -106,6 +108,11 @@ export async function createProposal(
     // Override status to pending to skip the draft phase
     proposalData.status = 'pending';
 
+    // Normalize and store the system size in kWp
+    const systemSizeKWp = normalizeToKWp(projectInfo.size);
+    proposalData.system_size_kwp = systemSizeKWp;
+    proposalData.unit_standard = 'kWp';
+
     // Client validation before insert
     const clientValidation = validateClientId(
       proposalData.client_id, 
@@ -121,11 +128,13 @@ export async function createProposal(
       };
     }
 
-    proposalLogger.info("Prepared proposal data with portfolio-based calculations", {
+    proposalLogger.info("Prepared proposal data with normalized system size", {
       title: proposalData.title,
       clientId: proposalData.client_id,
       clientReferenceId: proposalData.client_reference_id,
       status: proposalData.status,
+      systemSizeKWp: proposalData.system_size_kwp,
+      unitStandard: proposalData.unit_standard,
       clientSharePercentage: proposalData.client_share_percentage,
       agentCommissionPercentage: proposalData.agent_commission_percentage
     });
@@ -151,8 +160,9 @@ export async function createProposal(
       };
     }
 
-    proposalLogger.info("Proposal created successfully with portfolio-based calculations", { 
-      proposalId: proposal.id 
+    proposalLogger.info("Proposal created successfully with normalized system size", { 
+      proposalId: proposal.id,
+      systemSizeKWp
     });
     
     return { 

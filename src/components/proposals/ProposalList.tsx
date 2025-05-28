@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/core";
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
@@ -36,7 +37,7 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       <TableCell className="font-medium">{proposal.name}</TableCell>
       <TableCell>{proposal.client}</TableCell>
       <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
-      <TableCell>{proposal.size.toFixed(2)} MWp</TableCell>
+      <TableCell>{formatSystemSizeForDisplay(proposal.size)}</TableCell>
       <TableCell>
         <ProposalStatusDropdown
           proposalId={proposal.id}
@@ -124,7 +125,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Project Name</TableHead>
             <TableHead>Client</TableHead>
             <TableHead>Date</TableHead>
-            <TableHead>Size (MWp)</TableHead>
+            <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
             <TableHead className="text-right">Est. Revenue</TableHead>

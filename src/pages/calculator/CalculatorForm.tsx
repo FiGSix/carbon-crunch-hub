@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { Calculator as CalculatorIcon, ArrowRight, Loader2 } from "lucide-react"
 import { IconCard } from "./IconCard";
 import { BarChart3, TreePine, CircleDollarSign } from "lucide-react";
 import { CalculationResults, calculateResults } from "@/lib/calculations/carbon";
+import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 
 interface CalculatorFormProps {
   onResultsCalculated: (results: CalculationResults, systemSize: number, commissioningDate: Date) => void;
@@ -23,8 +25,9 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
     // Validate inputs
     if (!systemSize || !commissioningDate) return;
     
-    const size = parseFloat(systemSize);
-    if (isNaN(size) || size <= 0) return;
+    // Normalize the system size to kWp
+    const sizeInKWp = normalizeToKWp(systemSize);
+    if (isNaN(sizeInKWp) || sizeInKWp <= 0) return;
     
     const commDate = new Date(commissioningDate);
     const minDate = new Date("2025-01-01");
@@ -40,8 +43,8 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
     
     // Simulate calculation delay for better UX
     setTimeout(() => {
-      const calculationResults = calculateResults(size, commDate);
-      onResultsCalculated(calculationResults, size, commDate);
+      const calculationResults = calculateResults(sizeInKWp, commDate, 'kWp');
+      onResultsCalculated(calculationResults, sizeInKWp, commDate);
       setIsCalculating(false);
     }, 1500);
   };
@@ -69,18 +72,19 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
           <div className="space-y-6">
             <div>
               <label htmlFor="systemSize" className="block text-sm font-medium text-crunch-black/70 mb-1">
-                System Size (kWp)
+                System Size (kWp or MWp)
               </label>
               <Input
                 id="systemSize"
-                type="number"
-                min="1"
-                step="0.1"
-                placeholder="e.g. 100"
+                type="text"
+                placeholder="e.g. 100 kWp or 1.5 MWp"
                 value={systemSize}
                 onChange={(e) => setSystemSize(e.target.value)}
                 className="retro-input text-lg"
               />
+              <p className="text-xs text-crunch-black/60 mt-1">
+                Enter with unit (kWp/MWp) or value will default to kWp
+              </p>
             </div>
             
             <div>
@@ -99,7 +103,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
             
             <Button 
               onClick={handleCalculate}
-              disabled={isCalculating || !systemSize || parseFloat(systemSize) <= 0}
+              disabled={isCalculating || !systemSize || normalizeToKWp(systemSize) <= 0}
               className="w-full bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium text-lg py-6 rounded-xl group transition-all hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               {isCalculating ? (

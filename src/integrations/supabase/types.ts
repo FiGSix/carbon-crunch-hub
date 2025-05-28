@@ -157,7 +157,9 @@ export type Database = {
           review_later_until: string | null
           signed_at: string | null
           status: string
+          system_size_kwp: number | null
           title: string
+          unit_standard: string | null
         }
         Insert: {
           agent_commission_percentage?: number | null
@@ -183,7 +185,9 @@ export type Database = {
           review_later_until?: string | null
           signed_at?: string | null
           status?: string
+          system_size_kwp?: number | null
           title: string
+          unit_standard?: string | null
         }
         Update: {
           agent_commission_percentage?: number | null
@@ -209,7 +213,9 @@ export type Database = {
           review_later_until?: string | null
           signed_at?: string | null
           status?: string
+          system_size_kwp?: number | null
           title?: string
+          unit_standard?: string | null
         }
         Relationships: [
           {
@@ -258,6 +264,10 @@ export type Database = {
       fix_proposal_client_references: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      format_system_size_for_display: {
+        Args: { size_kwp: number; preferred_unit?: string }
+        Returns: string
       }
       generate_secure_token: {
         Args: Record<PropertyKey, never>
@@ -337,6 +347,10 @@ export type Database = {
       migrate_client_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      normalize_system_size_to_kwp: {
+        Args: { size_value: number; unit_type?: string }
+        Returns: number
       }
       search_clients: {
         Args: { search_term: string }

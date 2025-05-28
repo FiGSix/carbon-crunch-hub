@@ -1,12 +1,17 @@
 
 import React from "react";
 import { ProjectInformation } from "@/types/proposals";
+import { formatSystemSizeForDisplay, normalizeToKWp } from "@/lib/calculations/carbon/core";
 
 interface ProjectInformationSectionProps {
   projectInfo: ProjectInformation;
 }
 
 export function ProjectInformationSection({ projectInfo }: ProjectInformationSectionProps) {
+  // Normalize system size for consistent display
+  const systemSizeKWp = normalizeToKWp(projectInfo.size);
+  const formattedSize = formatSystemSizeForDisplay(systemSizeKWp);
+
   return (
     <div>
       <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Project Information</h3>
@@ -17,7 +22,7 @@ export function ProjectInformationSection({ projectInfo }: ProjectInformationSec
         </div>
         <div>
           <p className="text-sm text-carbon-gray-500">System Size</p>
-          <p className="font-medium">{projectInfo.size} kWp</p>
+          <p className="font-medium">{formattedSize}</p>
         </div>
         <div className="md:col-span-2">
           <p className="text-sm text-carbon-gray-500">Address</p>

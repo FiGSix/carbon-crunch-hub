@@ -12,13 +12,78 @@ import {
 import type { YearData, CalculationResults } from './types';
 
 /**
- * Calculate the annual energy production in kWh based on system size
+ * Normalize system size to kWp regardless of input unit
  * 
- * @param systemSize - Solar system size in kWp (as string)
+ * @param systemSize - Solar system size (string or number)
+ * @param unit - Unit type ('kWp', 'MWp', or auto-detect from string)
  */
-export function calculateAnnualEnergy(systemSize: string | number): number {
-  // Parse input
-  const sizeInKWp = typeof systemSize === 'string' ? parseFloat(systemSize) : systemSize;
+export function normalizeToKWp(systemSize: string | number, unit?: string): number {
+  if (typeof systemSize === 'string') {
+    // Try to extract unit from string if not provided
+    const sizeStr = systemSize.toLowerCase().trim();
+    const numericValue = parseFloat(sizeStr);
+    
+    if (isNaN(numericValue)) return 0;
+    
+    // Auto-detect unit from string
+    if (sizeStr.includes('mwp') || sizeStr.includes('mw')) {
+      return numericValue * 1000; // Convert MWp to kWp
+    } else {
+      return numericValue; // Assume kWp
+    }
+  }
+  
+  const sizeValue = typeof systemSize === 'number' ? systemSize : parseFloat(systemSize);
+  if (isNaN(sizeValue)) return 0;
+  
+  // Apply unit conversion if specified
+  if (unit) {
+    switch (unit.toLowerCase()) {
+      case 'mwp':
+      case 'mw':
+        return sizeValue * 1000;
+      default:
+        return sizeValue;
+    }
+  }
+  
+  return sizeValue;
+}
+
+/**
+ * Format system size for display with appropriate unit
+ * 
+ * @param sizeInKWp - System size in kWp
+ * @param preferredUnit - Preferred display unit ('auto', 'kWp', 'MWp')
+ */
+export function formatSystemSizeForDisplay(sizeInKWp: number, preferredUnit: string = 'auto'): string {
+  if (isNaN(sizeInKWp) || sizeInKWp <= 0) return '0 kWp';
+  
+  switch (preferredUnit.toLowerCase()) {
+    case 'kwp':
+    case 'kw':
+      return `${sizeInKWp.toLocaleString()} kWp`;
+    case 'mwp':
+    case 'mw':
+      return `${(sizeInKWp / 1000).toFixed(3)} MWp`;
+    case 'auto':
+    default:
+      if (sizeInKWp >= 1000) {
+        return `${(sizeInKWp / 1000).toFixed(3)} MWp`;
+      } else {
+        return `${sizeInKWp.toLocaleString()} kWp`;
+      }
+  }
+}
+
+/**
+ * Calculate the annual energy production in kWh based on system size in kWp
+ * 
+ * @param systemSize - Solar system size (will be normalized to kWp)
+ * @param unit - Optional unit specification
+ */
+export function calculateAnnualEnergy(systemSize: string | number, unit?: string): number {
+  const sizeInKWp = normalizeToKWp(systemSize, unit);
   
   // Calculate daily and annual energy
   const dailyKWh = sizeInKWp * AVERAGE_SUN_HOURS;
@@ -28,10 +93,11 @@ export function calculateAnnualEnergy(systemSize: string | number): number {
 /**
  * Calculate the carbon credits based on annual energy production
  * 
- * @param systemSize - Solar system size in kWp (as string)
+ * @param systemSize - Solar system size (will be normalized to kWp)
+ * @param unit - Optional unit specification
  */
-export function calculateCarbonCredits(systemSize: string | number): number {
-  const annualEnergy = calculateAnnualEnergy(systemSize);
+export function calculateCarbonCredits(systemSize: string | number, unit?: string): number {
+  const annualEnergy = calculateAnnualEnergy(systemSize, unit);
   // Convert kWh to MWh and then to tCO2 using the emission factor
   return (annualEnergy / 1000) * EMISSION_FACTOR;
 }
@@ -48,16 +114,16 @@ export function calculateCoalAvoided(energyInKWh: number): number {
 /**
  * Calculate projected revenue based on carbon credit prices by year with pro-rata logic
  * 
- * @param systemSize - Solar system size in kWp
+ * @param systemSize - Solar system size (will be normalized to kWp)
  * @param commissionDate - Date when system is commissioned (optional)
+ * @param unit - Optional unit specification
  */
-export function calculateRevenue(systemSize: string | number, commissionDate?: string | Date): Record<string, number> {
-  const carbonCredits = calculateCarbonCredits(systemSize);
+export function calculateRevenue(systemSize: string | number, commissionDate?: string | Date, unit?: string): Record<string, number> {
+  const carbonCredits = calculateCarbonCredits(systemSize, unit);
   const revenue: Record<string, number> = {};
   
   // Parse commission date if provided
   const commissionDateTime = commissionDate ? new Date(commissionDate) : null;
-  const currentYear = new Date().getFullYear();
   
   // Calculate revenue for each year based on carbon prices
   Object.entries(CARBON_PRICES).forEach(([year, price]) => {
@@ -84,36 +150,40 @@ export function calculateRevenue(systemSize: string | number, commissionDate?: s
 /**
  * Calculate client share percentage based on portfolio size with correct tiers
  * 
- * @param portfolioSize - Total portfolio size in kWp across all client projects
+ * @param portfolioSize - Total portfolio size (will be normalized to kWp)
+ * @param unit - Optional unit specification
  */
-export function getClientSharePercentage(portfolioSize: string | number): number {
-  const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
+export function getClientSharePercentage(portfolioSize: string | number, unit?: string): number {
+  const sizeInKWp = normalizeToKWp(portfolioSize, unit);
   
-  if (size < 5000) return 63;        // Less than 5,000 kWp
-  if (size < 10000) return 66.5;     // 5,000–9,999 kWp
-  if (size < 20000) return 67.9;     // 10,000-19,999 kWp
-  if (size < 30000) return 70;       // 20,000–29,999 kWp
-  return 73.5;                       // 30,000+ kWp
+  if (sizeInKWp < 5000) return 63;        // Less than 5,000 kWp
+  if (sizeInKWp < 10000) return 66.5;     // 5,000–9,999 kWp
+  if (sizeInKWp < 20000) return 67.9;     // 10,000-19,999 kWp
+  if (sizeInKWp < 30000) return 70;       // 20,000–29,999 kWp
+  return 73.5;                            // 30,000+ kWp
 }
 
 /**
  * Calculate agent commission percentage based on portfolio size
  * 
- * @param portfolioSize - Total portfolio size in kWp across all client projects
+ * @param portfolioSize - Total portfolio size (will be normalized to kWp)
+ * @param unit - Optional unit specification
  */
-export function getAgentCommissionPercentage(portfolioSize: string | number): number {
-  const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
-  return size < 15000 ? 4 : 7;       // Less than 15,000 kWp
+export function getAgentCommissionPercentage(portfolioSize: string | number, unit?: string): number {
+  const sizeInKWp = normalizeToKWp(portfolioSize, unit);
+  return sizeInKWp < 15000 ? 4 : 7;       // Less than 15,000 kWp
 }
 
 /**
  * Calculate results for a solar system based on size and commissioning date
  * 
- * @param systemSize - System size in kWp
+ * @param systemSize - System size (will be normalized to kWp)
  * @param commissioningDate - Date when system is commissioned
+ * @param unit - Optional unit specification
  */
-export function calculateResults(systemSize: number, commissioningDate: Date): CalculationResults {
-  const dailyGeneration = systemSize * AVERAGE_SUN_HOURS; // kWh per day
+export function calculateResults(systemSize: number, commissioningDate: Date, unit?: string): CalculationResults {
+  const sizeInKWp = normalizeToKWp(systemSize, unit);
+  const dailyGeneration = sizeInKWp * AVERAGE_SUN_HOURS; // kWh per day
   const yearStart = new Date(commissioningDate.getFullYear(), 0, 1);
   const yearEnd = new Date(commissioningDate.getFullYear(), 11, 31);
   
