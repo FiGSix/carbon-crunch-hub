@@ -4,10 +4,10 @@
  */
 
 /**
- * Carbon emission factor: 1.033 kg CO₂ per kWh
- * This is the amount of CO₂ emissions avoided per kWh of renewable energy
+ * Carbon emission factor: 0.928 tCO₂ per MWh (standardized)
+ * This is the amount of CO₂ emissions avoided per MWh of renewable energy
  */
-export const EMISSION_FACTOR = 1.033;
+export const EMISSION_FACTOR = 0.928;
 
 /**
  * Coal factor: 0.33 kg of coal per kWh
@@ -26,7 +26,7 @@ export const AVERAGE_SUN_HOURS = 4.5;
 export const DAYS_IN_YEAR = 365;
 
 /**
- * Carbon prices by year (in Rand per tCO₂)
+ * Carbon prices by year (in Rand per tCO₂) - Updated with correct market prices
  */
 export const CARBON_PRICES: Record<string, number> = {
   "2024": 78.36,

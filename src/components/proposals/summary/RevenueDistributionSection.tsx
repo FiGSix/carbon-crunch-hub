@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   getClientSharePercentage,
   getAgentCommissionPercentage
@@ -21,10 +21,13 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
   
-  const revenueLogger = logger.withContext({
-    component: 'RevenueDistributionSection',
-    feature: 'portfolio-calculation'
-  });
+  // Create logger with useMemo to prevent infinite loops
+  const revenueLogger = useMemo(() => 
+    logger.withContext({
+      component: 'RevenueDistributionSection',
+      feature: 'portfolio-calculation'
+    }), []
+  );
 
   // Calculate portfolio when we have a client ID
   useEffect(() => {
@@ -77,7 +80,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
     };
 
     loadPortfolioData();
-  }, [selectedClientId, systemSize, revenueLogger]);
+  }, [selectedClientId, systemSize]); // Removed revenueLogger from dependencies to prevent infinite loop
 
   if (loading) {
     return (

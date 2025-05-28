@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
@@ -7,7 +7,8 @@ import {
   getFormattedCarbonPriceForYear,
   getFormattedClientSpecificCarbonPrice,
   calculateClientSpecificRevenue,
-  normalizeToKWp
+  normalizeToKWp,
+  EMISSION_FACTOR
 } from "@/lib/calculations/carbon";
 import { 
   Table,
@@ -55,12 +56,12 @@ function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDa
 }
 
 /**
- * Helper function to calculate pro-rated carbon credits for a specific year
+ * Helper function to calculate pro-rated carbon credits for a specific year using standardized emission factor
  */
 function calculateYearlyCarbonCredits(systemSizeKWp: number, year: number, commissionDate?: string): number {
   const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, year, commissionDate);
-  // Convert kWh to MWh and then to tCO₂ using the emission factor (0.928 tCO₂/MWh)
-  return (yearlyEnergy / 1000) * 0.928;
+  // Convert kWh to MWh and then to tCO₂ using the standardized emission factor (0.928 tCO₂/MWh)
+  return (yearlyEnergy / 1000) * EMISSION_FACTOR;
 }
 
 export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId }: CarbonCreditSectionProps) {
@@ -68,10 +69,13 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
   
-  const carbonLogger = logger.withContext({
-    component: 'CarbonCreditSection',
-    feature: 'client-specific-pricing'
-  });
+  // Create logger with useMemo to prevent infinite loops
+  const carbonLogger = useMemo(() => 
+    logger.withContext({
+      component: 'CarbonCreditSection',
+      feature: 'client-specific-pricing'
+    }), []
+  );
 
   // Load portfolio data for client-specific pricing
   useEffect(() => {
@@ -124,7 +128,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     };
 
     loadPortfolioData();
-  }, [selectedClientId, systemSize, carbonLogger]);
+  }, [selectedClientId, systemSize]); // Removed carbonLogger from dependencies to prevent infinite loop
 
   // Calculate revenue with commission date for pro-rata logic
   const revenue = calculateRevenue(systemSize, commissionDate);
