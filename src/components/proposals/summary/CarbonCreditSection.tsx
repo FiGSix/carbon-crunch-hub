@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  calculateRevenue,
-  calculateClientSpecificRevenue,
+  calculateRevenueSync,
   normalizeToKWp
 } from "@/lib/calculations/carbon";
+import { calculateClientSpecificRevenue } from "@/lib/calculations/carbon/clientPricing";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 import { Skeleton } from "@/components/ui/skeleton";
 import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
 import { logger } from "@/lib/logger";
@@ -26,13 +27,14 @@ interface CarbonCreditSectionProps {
 export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId }: CarbonCreditSectionProps) {
   const systemSizeKWp = normalizeToKWp(systemSize);
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
+  const [revenue, setRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   
   // Create logger with useMemo to prevent infinite loops
   const carbonLogger = useMemo(() => 
     logger.withContext({
       component: 'CarbonCreditSection',
-      feature: 'client-specific-pricing'
+      feature: 'dynamic-pricing'
     }), []
   );
 
@@ -89,8 +91,40 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     loadPortfolioData();
   }, [selectedClientId, systemSize]);
 
-  // Calculate revenue with commission date for pro-rata logic
-  const revenue = calculateRevenue(systemSize, commissionDate);
+  // Load dynamic revenue data
+  useEffect(() => {
+    const loadRevenue = async () => {
+      try {
+        setLoading(true);
+        carbonLogger.info("Loading dynamic carbon prices for revenue calculation");
+        
+        const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
+        
+        // Calculate revenue based on dynamic prices
+        const calculatedRevenue: Record<string, number> = {};
+        Object.entries(carbonPrices).forEach(([year, price]) => {
+          const yearNum = parseInt(year);
+          const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, yearNum, commissionDate);
+          calculatedRevenue[year] = Math.round(yearlyCarbonCredits * price);
+        });
+        
+        setRevenue(calculatedRevenue);
+        carbonLogger.info("Dynamic revenue calculation completed", { 
+          years: Object.keys(calculatedRevenue),
+          totalRevenue: Object.values(calculatedRevenue).reduce((sum, val) => sum + val, 0)
+        });
+        
+      } catch (error) {
+        carbonLogger.error("Error loading dynamic carbon prices", { error });
+        // Fallback to empty revenue object
+        setRevenue({});
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRevenue();
+  }, [systemSize, commissionDate, systemSizeKWp, carbonLogger]);
   
   // Use portfolio size for calculations, fallback to current project size
   const portfolioSize = portfolioData?.totalKWp || parseFloat(systemSize) || 0;

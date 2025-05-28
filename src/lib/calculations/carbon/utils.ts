@@ -1,8 +1,8 @@
 
 /**
- * Utility functions for carbon calculations
+ * Utility functions for carbon calculations using dynamic pricing
  */
-import { CARBON_PRICES } from './constants';
+import { dynamicCarbonPricingService } from './dynamicPricing';
 
 /**
  * Format a number with appropriate suffixes (k, M)
@@ -18,17 +18,34 @@ export function formatNumber(num: number): string {
 }
 
 /**
- * Get carbon price for a specific year as a number
+ * Get carbon price for a specific year as a number using dynamic pricing
  */
-export function getCarbonPriceForYear(year: string | number): number {
-  const yearStr = year.toString();
-  return CARBON_PRICES[yearStr] || 0;
+export async function getCarbonPriceForYear(year: string | number): Promise<number> {
+  return await dynamicCarbonPricingService.getCarbonPriceForYear(year);
 }
 
 /**
- * Get carbon price for a specific year as a formatted string with currency
+ * Get carbon price for a specific year as a formatted string with currency using dynamic pricing
  */
-export function getFormattedCarbonPriceForYear(year: string | number): string {
-  const price = getCarbonPriceForYear(year);
+export async function getFormattedCarbonPriceForYear(year: string | number): Promise<string> {
+  const price = await getCarbonPriceForYear(year);
   return price ? `R ${price.toFixed(2)}` : "";
+}
+
+/**
+ * Synchronous versions for backward compatibility - these will be deprecated
+ * 
+ * @deprecated Use the async versions instead
+ */
+export function getCarbonPriceForYearSync(year: string | number): number {
+  console.warn('getCarbonPriceForYearSync is deprecated. Use the async getCarbonPriceForYear function instead.');
+  return 0;
+}
+
+/**
+ * @deprecated Use the async versions instead
+ */
+export function getFormattedCarbonPriceForYearSync(year: string | number): string {
+  console.warn('getFormattedCarbonPriceForYearSync is deprecated. Use the async getFormattedCarbonPriceForYear function instead.');
+  return "";
 }

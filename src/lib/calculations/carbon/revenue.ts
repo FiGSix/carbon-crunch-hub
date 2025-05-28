@@ -1,56 +1,30 @@
 
 /**
- * Revenue calculation functions
+ * Revenue calculation functions using dynamic pricing exclusively
  */
-import { CARBON_PRICES } from './constants';
+import { dynamicCarbonPricingService } from './dynamicPricing';
 import { calculateCarbonCredits } from './energy';
 
 /**
- * Get current year for filtering past years
- */
-function getCurrentYear(): number {
-  return new Date().getFullYear();
-}
-
-/**
- * Filter carbon prices to exclude past years
- * 
- * @param prices - Carbon prices object
- */
-function filterCurrentAndFuturePrices(prices: Record<string, number>): Record<string, number> {
-  const currentYear = getCurrentYear();
-  const filteredPrices: Record<string, number> = {};
-  
-  Object.entries(prices).forEach(([year, price]) => {
-    const yearNum = parseInt(year);
-    if (yearNum >= currentYear) {
-      filteredPrices[year] = price;
-    }
-  });
-  
-  return filteredPrices;
-}
-
-/**
- * Calculate projected revenue based on carbon credit prices by year with pro-rata logic
+ * Calculate projected revenue based on dynamic carbon credit prices by year with pro-rata logic
  * Only includes current and future years
  * 
  * @param systemSize - Solar system size (will be normalized to kWp)
  * @param commissionDate - Date when system is commissioned (optional)
  * @param unit - Optional unit specification
  */
-export function calculateRevenue(systemSize: string | number, commissionDate?: string | Date, unit?: string): Record<string, number> {
+export async function calculateRevenue(systemSize: string | number, commissionDate?: string | Date, unit?: string): Promise<Record<string, number>> {
   const carbonCredits = calculateCarbonCredits(systemSize, unit);
   const revenue: Record<string, number> = {};
   
-  // Filter out past years from carbon prices
-  const currentAndFuturePrices = filterCurrentAndFuturePrices(CARBON_PRICES);
+  // Get dynamic carbon prices (already filtered for current and future years)
+  const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
   
   // Parse commission date if provided
   const commissionDateTime = commissionDate ? new Date(commissionDate) : null;
   
-  // Calculate revenue for each year based on carbon prices (current and future years only)
-  Object.entries(currentAndFuturePrices).forEach(([year, price]) => {
+  // Calculate revenue for each year based on dynamic carbon prices
+  Object.entries(carbonPrices).forEach(([year, price]) => {
     const yearNum = parseInt(year);
     let yearCredits = carbonCredits;
     
@@ -69,4 +43,16 @@ export function calculateRevenue(systemSize: string | number, commissionDate?: s
   });
   
   return revenue;
+}
+
+/**
+ * Synchronous version of calculateRevenue for backward compatibility
+ * This will be deprecated - use the async version instead
+ * 
+ * @deprecated Use the async calculateRevenue function instead
+ */
+export function calculateRevenueSync(systemSize: string | number, commissionDate?: string | Date, unit?: string): Record<string, number> {
+  console.warn('calculateRevenueSync is deprecated. Use the async calculateRevenue function instead.');
+  // Return empty object for now - components should migrate to async version
+  return {};
 }

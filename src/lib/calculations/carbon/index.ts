@@ -3,19 +3,35 @@
 export {
   calculateAnnualEnergy,
   calculateCarbonCredits,
-  calculateCoalAvoided,
+  calculateCoalAvoided
+} from './energy';
+
+// Revenue calculation (now async)
+export {
   calculateRevenue,
+  calculateRevenueSync // deprecated
+} from './revenue';
+
+export {
   getClientSharePercentage,
-  getAgentCommissionPercentage,
-  calculateResults,
+  getAgentCommissionPercentage
+} from './pricing';
+
+export {
+  calculateResults
+} from './results';
+
+export {
   normalizeToKWp,
   formatSystemSizeForDisplay
-} from './core';
+} from './normalization';
 
 export {
   formatNumber,
   getCarbonPriceForYear,
-  getFormattedCarbonPriceForYear
+  getFormattedCarbonPriceForYear,
+  getCarbonPriceForYearSync, // deprecated
+  getFormattedCarbonPriceForYearSync // deprecated
 } from './utils';
 
 export {
@@ -25,11 +41,15 @@ export {
 } from './clientPricing';
 
 export {
+  dynamicCarbonPricingService
+} from './dynamicPricing';
+
+// System constants (no longer includes CARBON_PRICES)
+export {
   EMISSION_FACTOR,
   COAL_FACTOR,
   AVERAGE_SUN_HOURS,
-  DAYS_IN_YEAR,
-  CARBON_PRICES
+  DAYS_IN_YEAR
 } from './constants';
 
 export type {

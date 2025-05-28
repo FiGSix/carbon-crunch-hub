@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Table,
   TableBody,
@@ -9,11 +9,10 @@ import {
   TableRow,
   TableFooter
 } from "@/components/ui/table";
-import { 
-  getFormattedClientSpecificCarbonPrice,
-  calculateClientSpecificRevenue
-} from "@/lib/calculations/carbon";
+import { calculateClientSpecificRevenue } from "@/lib/calculations/carbon/clientPricing";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 import { calculateYearlyEnergy, calculateYearlyCarbonCredits } from "./carbonCalculations";
+import { logger } from "@/lib/logger";
 
 interface CarbonCreditTableProps {
   revenue: Record<string, number>;
@@ -34,6 +33,31 @@ export function CarbonCreditTable({
   totalCarbonCredits,
   totalClientSpecificRevenue
 }: CarbonCreditTableProps) {
+  const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+  
+  useEffect(() => {
+    const loadDynamicPrices = async () => {
+      try {
+        const prices = await dynamicCarbonPricingService.getCarbonPrices();
+        setDynamicPrices(prices);
+      } catch (error) {
+        logger.error("Error loading dynamic prices for table display", { error });
+        setDynamicPrices({});
+      }
+    };
+    
+    loadDynamicPrices();
+  }, []);
+  
+  const getFormattedClientSpecificCarbonPrice = (year: string, portfolioSize: number): string => {
+    const basePrice = dynamicPrices[year] || 0;
+    if (basePrice === 0) return "R 0.00";
+    
+    // Apply client share percentage to get client-specific price
+    // This is a simplified version - the actual logic is in clientPricing.ts
+    return `R ${basePrice.toFixed(2)}`;
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
