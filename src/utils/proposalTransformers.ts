@@ -1,4 +1,3 @@
-
 import { ProposalData, ProposalListItem } from '@/types/proposals';
 
 /**
@@ -63,10 +62,21 @@ export async function transformToProposalListItems(
       ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() || 'Unknown Agent'
       : 'Unknown Agent';
 
+    // Calculate revenue from carbon credits and client share
+    const revenue = proposal.carbon_credits && proposal.client_share_percentage 
+      ? (proposal.carbon_credits * (proposal.client_share_percentage / 100))
+      : 0;
+
     return {
       id: proposal.id,
-      title: proposal.title,
+      name: proposal.title, // Map title to name for display
+      client: clientName, // Map client_name to client for display
+      date: proposal.created_at, // Map created_at to date for display
+      size: proposal.system_size_kwp || 0, // Map system_size_kwp to size for display
       status: proposal.status,
+      revenue: revenue,
+      // Keep all original fields for compatibility
+      title: proposal.title,
       created_at: proposal.created_at,
       signed_at: proposal.signed_at,
       archived_at: proposal.archived_at,
@@ -77,13 +87,16 @@ export async function transformToProposalListItems(
       client_name: clientName,
       client_email: clientEmail,
       agent_name: agentName,
+      agent: agentName, // Also map to agent for backward compatibility
       annual_energy: proposal.annual_energy,
       carbon_credits: proposal.carbon_credits,
       client_share_percentage: proposal.client_share_percentage,
       invitation_sent_at: proposal.invitation_sent_at,
       invitation_viewed_at: proposal.invitation_viewed_at,
       invitation_expires_at: proposal.invitation_expires_at,
-      system_size_kwp: proposal.system_size_kwp
+      system_size_kwp: proposal.system_size_kwp,
+      is_preview: proposal.is_preview,
+      preview_of_id: proposal.preview_of_id
     };
   });
 }
@@ -96,13 +109,13 @@ export function applyClientSideSorting(proposals: ProposalListItem[], sortBy: st
   
   switch (sortBy) {
     case 'oldest':
-      return sortedProposals.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      return sortedProposals.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     case 'title':
-      return sortedProposals.sort((a, b) => a.title.localeCompare(b.title));
+      return sortedProposals.sort((a, b) => a.name.localeCompare(b.name));
     case 'status':
       return sortedProposals.sort((a, b) => a.status.localeCompare(b.status));
     case 'newest':
     default:
-      return sortedProposals.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return sortedProposals.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 }

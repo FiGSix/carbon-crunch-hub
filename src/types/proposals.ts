@@ -1,3 +1,4 @@
+
 import { Json } from "@/types/supabase";
 
 /**
@@ -97,6 +98,7 @@ export interface ProposalData {
 
 /**
  * Simplified proposal representation for list views
+ * Updated to match what's actually used in ProposalList component
  */
 export interface ProposalListItem {
   id: string;
@@ -106,11 +108,24 @@ export interface ProposalListItem {
   size: number;
   status: string;
   revenue: number;
+  created_at: string;
+  title: string;
+  signed_at?: string | null;
+  archived_at?: string | null;
+  review_later_until?: string | null;
+  client_id?: string | null;
+  client_reference_id?: string | null;
+  agent_id?: string | null;
+  client_name?: string;
+  client_email?: string;
+  agent_name?: string;
+  annual_energy?: number | null;
+  carbon_credits?: number | null;
+  client_share_percentage?: number | null;
   invitation_sent_at?: string | null;
   invitation_viewed_at?: string | null;
   invitation_expires_at?: string | null;
-  review_later_until?: string | null;
-  agent_id?: string | null;
+  system_size_kwp?: number | null;
   agent?: string;
   is_preview?: boolean | null;
   preview_of_id?: string | null;

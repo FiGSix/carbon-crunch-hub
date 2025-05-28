@@ -30,7 +30,12 @@ export function buildBaseProposalsQuery(
       client_share_percentage,
       agent_commission_percentage,
       system_size_kwp,
-      unit_standard
+      unit_standard,
+      invitation_sent_at,
+      invitation_viewed_at,
+      invitation_expires_at,
+      is_preview,
+      preview_of_id
     `)
     .is('deleted_at', null); // Exclude soft-deleted proposals
 
