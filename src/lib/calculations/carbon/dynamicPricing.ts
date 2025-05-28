@@ -34,7 +34,7 @@ function filterCurrentAndFuturePrices(prices: Record<string, number>): Record<st
  */
 class DynamicCarbonPricingService {
   private logger = logger.withContext({ service: 'DynamicCarbonPricingService' });
-  private cachedPrices: Record<string, number> | null = null;
+  public cachedPrices: Record<string, number> | null = null; // Made public for synchronous access
   private lastCacheTime = 0;
   private cacheValidityMs = 5 * 60 * 1000; // 5 minutes
 
@@ -70,6 +70,8 @@ class DynamicCarbonPricingService {
 
     // Fallback to constants if dynamic loading fails (also filtered)
     const filteredConstantPrices = filterCurrentAndFuturePrices(CARBON_PRICES);
+    this.cachedPrices = filteredConstantPrices;
+    this.lastCacheTime = Date.now();
     this.logger.info("Using fallback carbon prices from constants (filtered for current/future years)");
     return filteredConstantPrices;
   }
