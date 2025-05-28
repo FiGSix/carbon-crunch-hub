@@ -95,11 +95,11 @@ export function CarbonCreditSection({ systemSize, commissionDate }: CarbonCredit
         <Table>
           <TableHeader>
             <TableRow className="bg-carbon-gray-50">
-              <TableHead className="text-left text-sm font-medium text-carbon-gray-700">Year</TableHead>
-              <TableHead className="text-right text-sm font-medium text-carbon-gray-700">MWh Generated per Year</TableHead>
-              <TableHead className="text-right text-sm font-medium text-carbon-gray-700">tCO₂e Offset per Year</TableHead>
-              <TableHead className="text-left text-sm font-medium text-carbon-gray-700">Carbon Price (R/tCO₂e)</TableHead>
-              <TableHead className="text-right text-sm font-medium text-carbon-gray-700">Estimated Revenue (R) per Year</TableHead>
+              <TableHead className="text-center text-sm font-medium text-carbon-gray-700">Year</TableHead>
+              <TableHead className="text-center text-sm font-medium text-carbon-gray-700">MWh Generated per Year</TableHead>
+              <TableHead className="text-center text-sm font-medium text-carbon-gray-700">tCO₂e Offset per Year</TableHead>
+              <TableHead className="text-center text-sm font-medium text-carbon-gray-700">Carbon Price (R/tCO₂e)</TableHead>
+              <TableHead className="text-center text-sm font-medium text-carbon-gray-700">Estimated Revenue (R) per Year</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -109,22 +109,22 @@ export function CarbonCreditSection({ systemSize, commissionDate }: CarbonCredit
               
               return (
                 <TableRow key={year}>
-                  <TableCell className="text-sm">{year}</TableCell>
-                  <TableCell className="text-sm text-right">{(yearlyEnergy / 1000).toFixed(2)}</TableCell>
-                  <TableCell className="text-sm text-right">{yearlyCarbonCredits.toFixed(2)}</TableCell>
-                  <TableCell className="text-sm">{getFormattedCarbonPriceForYear(year)}</TableCell>
-                  <TableCell className="text-sm text-right">R {amount.toLocaleString()}</TableCell>
+                  <TableCell className="text-sm text-center">{year}</TableCell>
+                  <TableCell className="text-sm text-center">{(yearlyEnergy / 1000).toFixed(2)}</TableCell>
+                  <TableCell className="text-sm text-center">{yearlyCarbonCredits.toFixed(2)}</TableCell>
+                  <TableCell className="text-sm text-center">{getFormattedCarbonPriceForYear(year)}</TableCell>
+                  <TableCell className="text-sm text-center">R {amount.toLocaleString()}</TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
           <TableFooter>
             <TableRow className="bg-carbon-gray-100 font-semibold">
-              <TableCell className="text-sm font-bold">Total</TableCell>
-              <TableCell className="text-sm text-right font-bold">{totalMWhGenerated.toFixed(2)}</TableCell>
-              <TableCell className="text-sm text-right font-bold">{totalCarbonCredits.toFixed(2)}</TableCell>
-              <TableCell className="text-sm font-bold">-</TableCell>
-              <TableCell className="text-sm text-right font-bold">R {totalRevenue.toLocaleString()}</TableCell>
+              <TableCell className="text-sm font-bold text-center">Total</TableCell>
+              <TableCell className="text-sm text-center font-bold">{totalMWhGenerated.toFixed(2)}</TableCell>
+              <TableCell className="text-sm text-center font-bold">{totalCarbonCredits.toFixed(2)}</TableCell>
+              <TableCell className="text-sm font-bold text-center">-</TableCell>
+              <TableCell className="text-sm text-center font-bold">R {totalRevenue.toLocaleString()}</TableCell>
             </TableRow>
           </TableFooter>
         </Table>
