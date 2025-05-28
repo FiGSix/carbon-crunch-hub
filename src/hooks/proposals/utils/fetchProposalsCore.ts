@@ -1,27 +1,13 @@
 
 import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
-import { ProposalFilters } from "@/types/proposals";
-import { buildProposalQuery } from "./queryBuilders";
-import { handleQueryError } from "./queryErrorHandler";
 import { fetchAndTransformProposalData } from "./dataTransformer";
-import { RawProposalData } from "../types";
-import { 
-  isCacheValid, 
-  getCachedProposals, 
-  updateProposalsCache 
-} from "./proposalCache";
+import { buildBaseProposalsQuery } from "./queryBuilders";
+import { ProposalFilters } from "../types";
 
-type FetchProposalsCoreProps = {
-  user: any;
-  userRole: string | null;
-  filters: ProposalFilters;
-  handleAuthError: () => Promise<boolean>;
-  setProposals: (proposals: any[]) => void;
-  setError: (error: string | null) => void;
-  setLoading: (loading: boolean) => void;
-};
-
+/**
+ * Core function to fetch proposals from Supabase
+ */
 export async function fetchProposalsCore({
   user,
   userRole,
@@ -30,133 +16,73 @@ export async function fetchProposalsCore({
   setProposals,
   setError,
   setLoading
-}: FetchProposalsCoreProps) {
+}: {
+  user: any;
+  userRole: string | null;
+  filters: ProposalFilters;
+  handleAuthError: (error: any) => Promise<boolean>;
+  setProposals: (proposals: any[]) => void;
+  setError: (error: string | null) => void;
+  setLoading: (loading: boolean) => void;
+}) {
   // Create a contextualized logger
-  const proposalLogger = logger.withContext({ 
+  const fetchLogger = logger.withContext({ 
     component: 'FetchProposalsCore', 
     feature: 'proposals' 
   });
-  
-  // Check if we have valid cached data
-  if (isCacheValid(filters)) {
-    proposalLogger.info("Using cached proposal data");
-    const cachedProposals = getCachedProposals();
-    if (cachedProposals) {
-      setProposals(cachedProposals);
-      return;
-    }
-  }
 
-  if (!user?.id) {
-    proposalLogger.info("No user ID found, attempting to refresh user session");
-    try {
-      const isAuthenticated = await handleAuthError();
-      if (!isAuthenticated) {
-        setError("Authentication issue detected. Please try logging in again.");
-        setLoading(false);
-        return;
-      }
-    } catch (refreshError) {
-      proposalLogger.error("Failed to refresh user", { error: refreshError });
-      setError("Authentication issue detected. Please try logging out and back in.");
-      setLoading(false);
-      return;
-    }
+  if (!user) {
+    fetchLogger.warn("No user found, cannot fetch proposals");
+    setError("Please log in to view proposals");
+    setLoading(false);
+    return;
   }
 
   try {
-    // Don't set loading to true if we already have data - prevents flashing
-    const shouldShowLoading = !getCachedProposals();
-    if (shouldShowLoading) {
-      setLoading(true);
-    }
-    
+    setLoading(true);
     setError(null);
     
-    proposalLogger.info("Fetching proposals", { 
-      filters,
-      userRole,
-      userId: user?.id 
+    fetchLogger.info("Starting proposal fetch", { 
+      userId: user.id, 
+      userRole, 
+      filters 
     });
-    
-    // Build the query using our utility function, now with user role and ID
-    const query = buildProposalQuery(supabase, filters, userRole, user?.id);
-    
-    // For admin users, limit the initial fetch to improve performance
-    const finalQuery = userRole === 'admin' 
-      ? query.order('created_at', { ascending: false }).limit(50)
-      : query;
-    
-    // Execute the query
-    const { data: proposalsData, error: queryError } = await finalQuery;
-    
-    if (queryError) {
-      proposalLogger.error("Error executing query", { error: queryError });
-      await handleQueryError(queryError, handleAuthError);
-      setError(`Failed to fetch proposals: ${queryError.message}`);
-      setLoading(false);
+
+    // Build and execute the query
+    const query = buildBaseProposalsQuery(supabase, userRole, user.id, filters);
+    const { data: proposalsData, error } = await query;
+
+    if (error) {
+      fetchLogger.error("Supabase query error", { error });
+      
+      // Check if it's an auth error and handle accordingly
+      const isAuthHandled = await handleAuthError(error);
+      if (!isAuthHandled) {
+        setError(`Failed to fetch proposals: ${error.message}`);
+      }
       return;
     }
-    
-    proposalLogger.info("Supabase returned proposals", { 
-      count: proposalsData?.length || 0,
-      userRole,
-      userId: user?.id 
-    });
-    
-    if (!proposalsData || proposalsData.length === 0) {
-      proposalLogger.info("No proposals found with the current filters");
+
+    if (!proposalsData) {
+      fetchLogger.warn("No proposals data returned");
       setProposals([]);
-      updateProposalsCache([], filters);
-      setLoading(false);
       return;
     }
+
+    fetchLogger.info("Raw proposals fetched", { count: proposalsData.length });
+
+    // Transform the data
+    const transformedProposals = await fetchAndTransformProposalData(proposalsData);
     
-    // Transform the raw data with proper typing - completely removed client_contact_id
-    const typedProposalsData = proposalsData.map(item => {
-      const transformedItem: RawProposalData = {
-        id: item.id,
-        title: item.title,
-        content: item.content,
-        status: item.status,
-        created_at: item.created_at,
-        client_id: item.client_id,
-        client_reference_id: item.client_reference_id,
-        agent_id: item.agent_id,
-        annual_energy: item.annual_energy,
-        carbon_credits: item.carbon_credits,
-        client_share_percentage: item.client_share_percentage,
-        invitation_sent_at: item.invitation_sent_at,
-        invitation_viewed_at: item.invitation_viewed_at,
-        invitation_expires_at: item.invitation_expires_at,
-        review_later_until: item.review_later_until,
-        is_preview: item.is_preview,
-        preview_of_id: item.preview_of_id
-      };
-      return transformedItem;
+    fetchLogger.info("Proposals transformation completed", { 
+      originalCount: proposalsData.length,
+      transformedCount: transformedProposals.length 
     });
-    
-    // Transform data using our utility function
-    const transformedProposals = await fetchAndTransformProposalData(typedProposalsData);
-    
-    proposalLogger.info("Setting proposals in state", { 
-      count: transformedProposals.length,
-      userRole
-    });
-    
-    // Update cache and state
-    updateProposalsCache(transformedProposals, filters);
+
     setProposals(transformedProposals);
-    
-    return transformedProposals;
   } catch (error) {
-    proposalLogger.error("Error fetching proposals", { 
-      error,
-      userRole,
-      userId: user?.id 
-    });
-    setError(error instanceof Error ? error.message : "Failed to load proposals");
-    return null;
+    fetchLogger.error("Unexpected error in fetchProposalsCore", { error });
+    setError(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   } finally {
     setLoading(false);
   }
