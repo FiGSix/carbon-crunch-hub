@@ -69,6 +69,13 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Sign Out",
+      href: "#",
+      icon: LogOut,
+      roles: ["admin", "agent", "client"],
+      isSignOut: true
+    },
+    {
       name: "System Settings",
       href: "/system-settings",
       icon: Settings,
@@ -86,6 +93,22 @@ export function DashboardSidebar() {
       <nav className="p-4 space-y-2 flex-1">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
+          
+          // Handle Sign Out item differently
+          if (item.isSignOut) {
+            return (
+              <button
+                key={item.name}
+                onClick={handleSignOut}
+                className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50"
+              >
+                <Icon className="mr-3 h-5 w-5" />
+                {item.name}
+              </button>
+            );
+          }
+          
+          // Handle regular navigation items
           return (
             <Link
               key={item.name}
@@ -102,16 +125,6 @@ export function DashboardSidebar() {
           );
         })}
       </nav>
-      
-      <div className="p-4 border-t border-carbon-gray-200">
-        <button
-          onClick={handleSignOut}
-          className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50"
-        >
-          <LogOut className="mr-3 h-5 w-5" />
-          Sign Out
-        </button>
-      </div>
     </aside>
   );
 }
