@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useProposals } from './useProposals';
+import { useAuth } from '@/contexts/auth';
 import { ProposalListItem } from '@/types/proposals';
 
 interface DashboardStats {
@@ -12,15 +13,35 @@ interface DashboardStats {
 }
 
 interface DashboardData {
+  // Auth data
+  userRole: string | null;
+  
+  // Proposal data
+  proposals: ProposalListItem[];
+  
+  // Loading states
+  loading: boolean;
+  error: string | null;
+  
+  // Computed stats
   stats: DashboardStats;
   recentProposals: ProposalListItem[];
   chartData: ProposalListItem[];
-  loading: boolean;
-  error: string | null;
+  portfolioSize: number;
+  totalProposals: number;
+  potentialRevenue: number;
+  co2Offset: number;
+  
+  // Helper functions
+  getWelcomeMessage: () => string;
+  getUserDisplayName: () => string;
+  formatUserRole: (role: string | null) => string;
+  handleRefreshProposals: () => Promise<void>;
 }
 
 export function useDashboardData(): DashboardData {
-  const { proposals, loading, error } = useProposals();
+  const { proposals, loading, error, fetchProposals } = useProposals();
+  const { userRole, user, profile } = useAuth();
   
   // Use ref to cache computed values and prevent unnecessary recalculations
   const computedDataRef = useRef<{
@@ -81,6 +102,43 @@ export function useDashboardData(): DashboardData {
     return filtered;
   }, [proposals]);
 
+  // Computed values from stats
+  const portfolioSize = useMemo(() => proposals.length, [proposals.length]);
+  const totalProposals = useMemo(() => stats.totalProposals, [stats.totalProposals]);
+  const potentialRevenue = useMemo(() => stats.totalRevenue, [stats.totalRevenue]);
+  const co2Offset = useMemo(() => stats.totalEnergyOffset, [stats.totalEnergyOffset]);
+
+  // Helper functions
+  const getWelcomeMessage = useCallback(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning!";
+    if (hour < 18) return "Good afternoon!";
+    return "Good evening!";
+  }, []);
+
+  const getUserDisplayName = useCallback(() => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    if (profile?.first_name) {
+      return profile.first_name;
+    }
+    if (user?.email) {
+      return user.email;
+    }
+    return "User";
+  }, [profile?.first_name, profile?.last_name, user?.email]);
+
+  const formatUserRole = useCallback((role: string | null) => {
+    if (!role) return "User";
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  }, []);
+
+  const handleRefreshProposals = useCallback(async () => {
+    console.log("Dashboard: Refreshing proposals data");
+    await fetchProposals();
+  }, [fetchProposals]);
+
   // Update cache when calculations are done
   useEffect(() => {
     if (proposals.length > 0) {
@@ -95,12 +153,47 @@ export function useDashboardData(): DashboardData {
 
   // Memoize the final result to prevent unnecessary re-renders
   const result = useMemo((): DashboardData => ({
+    // Auth data
+    userRole,
+    
+    // Proposal data
+    proposals,
+    
+    // Loading states
+    loading,
+    error,
+    
+    // Computed data
     stats,
     recentProposals,
     chartData,
+    portfolioSize,
+    totalProposals,
+    potentialRevenue,
+    co2Offset,
+    
+    // Helper functions
+    getWelcomeMessage,
+    getUserDisplayName,
+    formatUserRole,
+    handleRefreshProposals
+  }), [
+    userRole,
+    proposals,
     loading,
-    error
-  }), [stats, recentProposals, chartData, loading, error]);
+    error,
+    stats,
+    recentProposals,
+    chartData,
+    portfolioSize,
+    totalProposals,
+    potentialRevenue,
+    co2Offset,
+    getWelcomeMessage,
+    getUserDisplayName,
+    formatUserRole,
+    handleRefreshProposals
+  ]);
 
   return result;
 }
