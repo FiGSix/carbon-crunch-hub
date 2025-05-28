@@ -5,7 +5,6 @@ import { logger } from "@/lib/logger";
 import { isValidUUID } from "@/utils/validationUtils";
 import { buildProposalData } from "./utils/proposalBuilder";
 import { validateClientId } from "./utils/dataTransformers";
-import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 
 // Define the return type for consistent interface
 export interface ProposalCreationResult {
@@ -107,11 +106,6 @@ export async function createProposal(
     // Override status to pending to skip the draft phase
     proposalData.status = 'pending';
 
-    // Normalize and store the system size in kWp
-    const systemSizeKWp = normalizeToKWp(projectInfo.size);
-    proposalData.system_size_kwp = systemSizeKWp;
-    proposalData.unit_standard = 'kWp';
-
     // Client validation before insert
     const clientValidation = validateClientId(
       proposalData.client_id, 
@@ -161,7 +155,7 @@ export async function createProposal(
 
     proposalLogger.info("Proposal created successfully with normalized system size", { 
       proposalId: proposal.id,
-      systemSizeKWp
+      systemSizeKWp: proposalData.system_size_kwp
     });
     
     return { 

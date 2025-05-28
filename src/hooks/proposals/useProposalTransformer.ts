@@ -22,10 +22,14 @@ export function useProposalTransformer() {
       .filter((id): id is string => id !== null && id !== undefined);
     
     // Fetch profiles in parallel
-    const [clientProfiles, agentProfiles] = await Promise.all([
+    const [clientProfilesRecord, agentProfilesRecord] = await Promise.all([
       fetchProfilesByIds(clientIds),
       fetchProfilesByIds(agentIds)
     ]);
+    
+    // Convert Records to arrays for the transformer function
+    const clientProfiles = Object.values(clientProfilesRecord);
+    const agentProfiles = Object.values(agentProfilesRecord);
     
     // Transform the data using our utility function
     return transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles);

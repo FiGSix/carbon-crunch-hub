@@ -1,6 +1,12 @@
 
 import { EligibilityCriteria, ProjectInformation, ClientInformation } from "@/types/proposals";
-import { calculateResults } from "@/lib/calculations/carbon";
+import { 
+  calculateAnnualEnergy, 
+  calculateCarbonCredits, 
+  getClientSharePercentage,
+  getAgentCommissionPercentage,
+  calculateRevenue
+} from "@/lib/calculations/carbon";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 
@@ -27,14 +33,20 @@ export async function buildProposalData(
 
   // Calculate portfolio-based revenue distribution
   const systemSizeKWp = normalizeToKWp(projectInfo.size);
-  const results = calculateResults(systemSizeKWp, projectInfo.commissionDate);
+  
+  // Use individual calculation functions instead of calculateResults
+  const calculatedAnnualEnergy = calculateAnnualEnergy(systemSizeKWp);
+  const calculatedCarbonCredits = calculateCarbonCredits(systemSizeKWp);
+  const clientSharePercentage = getClientSharePercentage(systemSizeKWp);
+  const agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
+  const revenue = calculateRevenue(systemSizeKWp, projectInfo.commissionDate);
   
   proposalLogger.info("Calculated proposal results", {
     systemSizeKWp,
-    annualEnergy: results.annualEnergy,
-    carbonCredits: results.carbonCredits,
-    clientShare: results.clientSharePercentage,
-    agentCommission: results.agentCommissionPercentage
+    annualEnergy: calculatedAnnualEnergy,
+    carbonCredits: calculatedCarbonCredits,
+    clientShare: clientSharePercentage,
+    agentCommission: agentCommissionPercentage
   });
 
   // Determine client IDs based on registration status
@@ -56,15 +68,15 @@ export async function buildProposalData(
     agent_id: agentId,
     eligibility_criteria: eligibilityCriteria,
     project_info: projectInfo,
-    annual_energy: results.annualEnergy,
-    carbon_credits: results.carbonCredits,
-    client_share_percentage: results.clientSharePercentage,
-    agent_commission_percentage: results.agentCommissionPercentage,
+    annual_energy: calculatedAnnualEnergy,
+    carbon_credits: calculatedCarbonCredits,
+    client_share_percentage: clientSharePercentage,
+    agent_commission_percentage: agentCommissionPercentage,
     content: {
       clientInfo,
       projectInfo,
-      revenue: results.revenue
-    },
+      revenue
+    } as any, // Cast to any to satisfy Json type requirement
     status: 'draft',
     system_size_kwp: systemSizeKWp,
     unit_standard: 'kWp',
