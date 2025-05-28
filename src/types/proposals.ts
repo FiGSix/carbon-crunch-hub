@@ -1,4 +1,3 @@
-
 import { Json } from "@/types/supabase";
 
 /**
@@ -76,17 +75,24 @@ export interface ProposalData {
   title: string;
   status: string;
   content: ProposalContent;
-  client_id: string | null;
-  client_reference_id: string | null;
-  agent_id: string | null;
   created_at: string;
-  signed_at: string | null;
-  invitation_viewed_at: string | null;
-  archived_at: string | null;
-  archived_by: string | null;
-  review_later_until: string | null;
-  is_preview: boolean | null;
-  preview_of_id: string | null;
+  signed_at?: string | null;
+  archived_at?: string | null;
+  review_later_until?: string | null;
+  deleted_at?: string | null;  // New field for soft delete
+  client_id?: string | null;
+  client_reference_id?: string | null;
+  agent_id?: string | null;
+  annual_energy?: number | null;
+  carbon_credits?: number | null;
+  client_share_percentage?: number | null;
+  agent_commission_percentage?: number | null;
+  system_size_kwp?: number | null;
+  unit_standard?: string | null;
+  invitation_token?: string | null;
+  invitation_expires_at?: string | null;
+  invitation_sent_at?: string | null;
+  invitation_viewed_at?: string | null;
 }
 
 /**

@@ -2,7 +2,7 @@
 import React from 'react';
 import { ProposalHeader } from './ProposalHeader';
 import { ProposalDetails } from './ProposalDetails';
-import { ProposalArchiveDialog } from './ProposalArchiveDialog';
+import { ProposalDeleteDialog } from './ProposalDeleteDialog';
 import { SignInPrompt } from './SignInPrompt';
 import { ProjectInformation, ProposalData } from '@/types/proposals';
 
@@ -10,17 +10,17 @@ interface ProposalContentProps {
   proposal: ProposalData;
   token: string | null;
   clientEmail: string | null;
-  canArchive: boolean;
+  canDelete: boolean;
   isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
   handleApprove: () => Promise<void>;
   handleReject: () => Promise<void>;
-  handleArchive: () => Promise<void>;
+  handleDelete: () => Promise<void>;
   handleReviewLater: () => Promise<void>;
   handleSignInClick: () => void;
-  archiveDialogOpen: boolean;
-  setArchiveDialogOpen: (open: boolean) => void;
+  deleteDialogOpen: boolean;
+  setDeleteDialogOpen: (open: boolean) => void;
   showSignInPrompt: boolean;
 }
 
@@ -28,17 +28,17 @@ export function ProposalContent({
   proposal,
   token,
   clientEmail,
-  canArchive,
+  canDelete,
   isReviewLater,
   canTakeAction,
   isClient,
   handleApprove,
   handleReject,
-  handleArchive,
+  handleDelete,
   handleReviewLater,
   handleSignInClick,
-  archiveDialogOpen,
-  setArchiveDialogOpen,
+  deleteDialogOpen,
+  setDeleteDialogOpen,
   showSignInPrompt
 }: ProposalContentProps) {
   // Extract project info from the proposal content for the header
@@ -51,10 +51,10 @@ export function ProposalContent({
         showInvitationBadge={!!token}
         projectSize={projectInfo.size}
         projectName={projectInfo.name}
-        canArchive={canArchive}
-        isArchived={!!proposal.archived_at}
+        canDelete={canDelete}
+        isDeleted={!!proposal.deleted_at}
         isReviewLater={isReviewLater}
-        onArchiveClick={() => setArchiveDialogOpen(true)}
+        onDeleteClick={() => setDeleteDialogOpen(true)}
         onReviewLaterClick={handleReviewLater}
       />
       
@@ -74,11 +74,11 @@ export function ProposalContent({
         )}
       </div>
 
-      {/* Archive Dialog */}
-      <ProposalArchiveDialog
-        open={archiveDialogOpen}
-        onOpenChange={setArchiveDialogOpen}
-        onArchive={handleArchive}
+      {/* Delete Dialog */}
+      <ProposalDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleDelete}
         isClient={isClient}
       />
     </div>

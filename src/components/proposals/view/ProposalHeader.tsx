@@ -1,6 +1,6 @@
 
 import React from "react";
-import { CheckCircle2, Archive, ChevronLeft } from "lucide-react";
+import { CheckCircle2, Trash2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
@@ -12,10 +12,10 @@ interface ProposalHeaderProps {
   showInvitationBadge: boolean;
   projectSize?: string;
   projectName?: string;
-  canArchive?: boolean;
-  isArchived?: boolean;
+  canDelete?: boolean;
+  isDeleted?: boolean;
   isReviewLater?: boolean;
-  onArchiveClick?: () => void;
+  onDeleteClick?: () => void;
   onReviewLaterClick?: () => void;
   showBackButton?: boolean;
 }
@@ -25,10 +25,10 @@ export function ProposalHeader({
   showInvitationBadge, 
   projectSize, 
   projectName,
-  canArchive,
-  isArchived,
+  canDelete,
+  isDeleted,
   isReviewLater,
-  onArchiveClick,
+  onDeleteClick,
   onReviewLaterClick,
   showBackButton = true
 }: ProposalHeaderProps) {
@@ -89,28 +89,28 @@ export function ProposalHeader({
         )}
         
         {/* Only clients can use "Review Later" feature for pending proposals */}
-        {!isArchived && userRole === "client" && onReviewLaterClick && (
+        {!isDeleted && userRole === "client" && onReviewLaterClick && (
           <ProposalReviewLaterButton 
             onClick={onReviewLaterClick} 
             isReviewLater={isReviewLater}
           />
         )}
         
-        {canArchive && !isArchived && (
+        {canDelete && !isDeleted && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={onArchiveClick}
-                  className="flex items-center gap-1"
+                  onClick={onDeleteClick}
+                  className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
-                  <Archive className="h-4 w-4" /> Archive
+                  <Trash2 className="h-4 w-4" /> Delete
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Archive this proposal</p>
+                <p>Delete this proposal</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

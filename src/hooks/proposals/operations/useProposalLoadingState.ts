@@ -1,29 +1,36 @@
 
-import { useState } from "react";
+import { useState } from 'react';
 
-type OperationType = 'approve' | 'reject' | 'archive' | 'reviewLater';
+// Define the possible loading operations
+type LoadingOperation = 'approve' | 'reject' | 'delete' | 'reviewLater';
 
 interface LoadingState {
   approve: boolean;
   reject: boolean;
-  archive: boolean;
+  delete: boolean;
   reviewLater: boolean;
 }
 
 /**
- * Hook to manage loading states for proposal operations
+ * Hook for managing loading states for proposal operations
  */
 export function useProposalLoadingState() {
   const [loading, setLoading] = useState<LoadingState>({
     approve: false,
     reject: false,
-    archive: false,
-    reviewLater: false
+    delete: false,
+    reviewLater: false,
   });
 
-  const setLoadingState = (operation: OperationType, isLoading: boolean) => {
-    setLoading(prev => ({ ...prev, [operation]: isLoading }));
+  const setLoadingState = (operation: LoadingOperation, isLoading: boolean) => {
+    setLoading(prev => ({
+      ...prev,
+      [operation]: isLoading
+    }));
   };
 
-  return { loading, setLoadingState };
+  return {
+    loading,
+    setLoadingState
+  };
 }

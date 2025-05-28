@@ -10,11 +10,6 @@ import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
 import { useAuth } from "@/contexts/auth";
-import { logger } from "@/lib/logger";
-import { usePreviewProposal } from "@/hooks/proposal/usePreviewProposal";
-import { ProposalPreviewBanner } from "./ProposalPreviewBanner";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
 
 interface ProposalDetailsProps {
@@ -34,18 +29,7 @@ export function ProposalDetails({
   isReviewLater = false,
   showActions = false
 }: ProposalDetailsProps) {
-  const { userRole, user } = useAuth();
-  const navigate = useNavigate();
-  const { createPreview, loading: previewLoading } = usePreviewProposal();
-  
-  const handleCreatePreview = async () => {
-    try {
-      const preview = await createPreview(proposal.id);
-      navigate(`/proposals/${preview.id}`);
-    } catch (error) {
-      logger.error("Failed to create preview:", error);
-    }
-  };
+  const { userRole } = useAuth();
   
   // Extract project info from the proposal content and properly type it
   const projectInfo = (proposal.content?.projectInfo || {}) as ProjectInformation;
@@ -61,23 +45,11 @@ export function ProposalDetails({
             <FileText className="h-5 w-5 mr-2" />
             Proposal Details
           </div>
-          {!proposal.is_preview && userRole === 'agent' && user && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreatePreview}
-              disabled={previewLoading}
-            >
-              Create Preview
-            </Button>
-          )}
         </CardTitle>
         <CardDescription>
           Review the details of this carbon credit proposal
         </CardDescription>
       </CardHeader>
-      
-      <ProposalPreviewBanner />
       
       <CardContent>
         <div className="space-y-8">

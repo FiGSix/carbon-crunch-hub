@@ -26,11 +26,11 @@ export function useViewProposal(id?: string, token?: string | null) {
   const { 
     handleApprove, 
     handleReject,
-    handleArchive,
+    handleDelete,
     handleReviewLater,
-    archiveDialogOpen,
-    setArchiveDialogOpen,
-    archiveLoading
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    deleteLoading
   } = useProposalActions(fetchProposal);
   
   // Update local state when initial data loads
@@ -43,7 +43,7 @@ export function useViewProposal(id?: string, token?: string | null) {
   }, [initialProposal, initialLoading, initialError]);
   
   // Get proposal status data
-  const { canArchive, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
+  const { canDelete, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
 
   // Create wrapper functions that convert boolean returns to void
   const handleApproveWrapper = async (): Promise<void> => {
@@ -58,9 +58,9 @@ export function useViewProposal(id?: string, token?: string | null) {
     }
   };
 
-  const handleArchiveWrapper = async (): Promise<void> => {
+  const handleDeleteWrapper = async (): Promise<void> => {
     if (proposal?.id && user?.id) {
-      await handleArchive(proposal.id, user.id);
+      await handleDelete(proposal.id, user.id);
     }
   };
 
@@ -77,12 +77,12 @@ export function useViewProposal(id?: string, token?: string | null) {
     clientEmail,
     handleApprove: handleApproveWrapper,
     handleReject: handleRejectWrapper,
-    handleArchive: handleArchiveWrapper,
+    handleDelete: handleDeleteWrapper,
     handleReviewLater: handleReviewLaterWrapper,
-    archiveDialogOpen,
-    setArchiveDialogOpen,
-    archiveLoading,
-    canArchive,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    deleteLoading,
+    canDelete,
     isReviewLater,
     canTakeAction,
     isClient,

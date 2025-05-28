@@ -2,7 +2,7 @@
 import { useProposalLoadingState } from "./operations/useProposalLoadingState";
 import { useApproveProposal } from "./operations/useApproveProposal";
 import { useRejectProposal } from "./operations/useRejectProposal";
-import { useArchiveProposal } from "./operations/useArchiveProposal";
+import { useDeleteProposal } from "./operations/useDeleteProposal";
 import { useReviewLaterProposal } from "./operations/useReviewLaterProposal";
 
 /**
@@ -13,14 +13,14 @@ export function useProposalOperations() {
   const { loading, setLoadingState } = useProposalLoadingState();
   const { approveProposal } = useApproveProposal(setLoadingState);
   const { rejectProposal } = useRejectProposal(setLoadingState);
-  const { archiveProposal } = useArchiveProposal(setLoadingState);
+  const { deleteProposal } = useDeleteProposal(setLoadingState);
   const { toggleReviewLater } = useReviewLaterProposal(setLoadingState);
 
   return {
     loading,
     approveProposal,
     rejectProposal,
-    archiveProposal,
+    deleteProposal,
     toggleReviewLater,
   };
 }

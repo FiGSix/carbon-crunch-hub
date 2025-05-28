@@ -37,11 +37,11 @@ const ViewProposal = () => {
     clientEmail,
     handleApprove,
     handleReject,
-    handleArchive,
+    handleDelete,
     handleReviewLater,
-    archiveDialogOpen,
-    setArchiveDialogOpen,
-    canArchive,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    canDelete,
     isReviewLater,
     canTakeAction,
     isClient,
@@ -89,12 +89,12 @@ const ViewProposal = () => {
     await handleReject();
   };
   
-  const handleArchiveWrapper = async () => {
+  const handleDeleteWrapper = async () => {
     if (!user) {
       handleSignInClick();
       return;
     }
-    await handleArchive();
+    await handleDelete();
   };
   
   // Debug logging
@@ -182,17 +182,17 @@ const ViewProposal = () => {
       proposal={proposal}
       token={token}
       clientEmail={clientEmail}
-      canArchive={canArchive && !!user}
+      canDelete={canDelete && !!user}
       isReviewLater={isReviewLater}
       canTakeAction={canTakeAction && !!user}
       isClient={isClient}
       handleApprove={handleApproveWrapper}
       handleReject={handleRejectWrapper}
-      handleArchive={handleArchiveWrapper}
+      handleDelete={handleDeleteWrapper}
       handleReviewLater={handleReviewLater}
       handleSignInClick={handleSignInClick}
-      archiveDialogOpen={archiveDialogOpen}
-      setArchiveDialogOpen={setArchiveDialogOpen}
+      deleteDialogOpen={deleteDialogOpen}
+      setDeleteDialogOpen={setDeleteDialogOpen}
       showSignInPrompt={showSignInPrompt}
     />
   );

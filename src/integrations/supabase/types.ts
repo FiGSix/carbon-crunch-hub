@@ -145,14 +145,14 @@ export type Database = {
           client_share_percentage: number | null
           content: Json
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           eligibility_criteria: Json
           id: string
           invitation_expires_at: string | null
           invitation_sent_at: string | null
           invitation_token: string | null
           invitation_viewed_at: string | null
-          is_preview: boolean | null
-          preview_of_id: string | null
           project_info: Json
           review_later_until: string | null
           signed_at: string | null
@@ -173,14 +173,14 @@ export type Database = {
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           eligibility_criteria?: Json
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
-          is_preview?: boolean | null
-          preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -201,14 +201,14 @@ export type Database = {
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           eligibility_criteria?: Json
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
-          is_preview?: boolean | null
-          preview_of_id?: string | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -237,13 +237,6 @@ export type Database = {
             columns: ["client_reference_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_preview_of_id_fkey"
-            columns: ["preview_of_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -292,6 +285,10 @@ export type Database = {
       }
       can_create_preview_proposal: {
         Args: { proposal_row: Database["public"]["Tables"]["proposals"]["Row"] }
+        Returns: boolean
+      }
+      delete_proposal: {
+        Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
       fix_proposal_client_references: {

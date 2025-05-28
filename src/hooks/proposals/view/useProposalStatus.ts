@@ -1,70 +1,52 @@
 
 import { useMemo } from "react";
-import { ProposalData } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
-import { logger } from "@/lib/logger";
+import { ProposalData } from "@/types/proposals";
 
 /**
- * Hook to determine various proposal statuses and permissions
+ * Hook to determine proposal status and user permissions
  */
 export function useProposalStatus(proposal: ProposalData | null) {
-  const { user } = useAuth();
-  
-  // Create a contextualized logger
-  const statusLogger = logger.withContext({
-    component: 'useProposalStatus',
-    feature: 'proposals'
-  });
+  const { user, userRole } = useAuth();
 
   return useMemo(() => {
-    if (!proposal) {
+    if (!proposal || !user) {
       return {
-        canArchive: false,
+        canDelete: false,
         isReviewLater: false,
         isClient: false,
         canTakeAction: false,
-        isAuthenticated: !!user
+        isAuthenticated: false
       };
     }
 
-    const userId = user?.id;
-    
-    // Check if current user is the client for this proposal
-    // Using the unified client reference system - check both client_id and client_reference_id
-    const isClient = !!userId && (
-      userId === proposal.client_id || 
-      userId === proposal.client_reference_id
+    const isClient = userRole === 'client' && (
+      proposal.client_id === user.id || 
+      proposal.client_reference_id === user.id
     );
     
-    // For debugging permission issues
-    if (userId) {
-      statusLogger.debug("Checking client status", { 
-        userId,
-        proposalClientId: proposal.client_id,
-        proposalClientReferenceId: proposal.client_reference_id,
-        isClient
-      });
-    }
+    const isAgent = userRole === 'agent' && proposal.agent_id === user.id;
+    const isAdmin = userRole === 'admin';
     
-    // Check if user can archive the proposal - requires authentication
-    const canArchive = !!userId && !proposal.archived_at && 
-      (isClient || userId === proposal.agent_id);
-      
-    const isReviewLater = !!proposal.review_later_until;
+    // Users can delete if they are the client, agent, or admin
+    const canDelete = isClient || isAgent || isAdmin;
     
-    // Check if client can take action on the proposal
-    // Requires user to be logged in AND be the client
+    // Check if proposal is marked for review later
+    const isReviewLater = !!proposal.review_later_until && 
+      new Date(proposal.review_later_until) > new Date();
+    
+    // Can take action (approve/reject) if client and proposal is pending
     const canTakeAction = isClient && 
       proposal.status === 'pending' && 
       !proposal.archived_at && 
       !isReviewLater;
 
     return {
-      canArchive,
+      canDelete,
       isReviewLater,
       isClient,
       canTakeAction,
       isAuthenticated: !!user
     };
-  }, [user, proposal, statusLogger]);
+  }, [proposal, user, userRole]);
 }

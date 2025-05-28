@@ -4,11 +4,11 @@ import { useProposalOperations } from "../useProposalOperations";
 import { logger } from "@/lib/logger";
 
 /**
- * Hook for handling proposal action operations (approve, reject, archive)
+ * Hook for handling proposal action operations (approve, reject, delete)
  */
 export function useProposalActions(refreshData: () => Promise<void>) {
-  const { loading: operationLoading, approveProposal, rejectProposal, archiveProposal, toggleReviewLater } = useProposalOperations();
-  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const { loading: operationLoading, approveProposal, rejectProposal, deleteProposal, toggleReviewLater } = useProposalOperations();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Create a contextualized logger
   const actionsLogger = logger.withContext({ 
@@ -78,29 +78,29 @@ export function useProposalActions(refreshData: () => Promise<void>) {
     }
   };
 
-  const handleArchive = async (proposalId: string, userId: string) => {
+  const handleDelete = async (proposalId: string, userId: string) => {
     if (!proposalId || !userId) {
-      actionsLogger.error({ message: "Cannot archive proposal", action: 'archive', reason: 'missing proposal ID or user ID' });
+      actionsLogger.error({ message: "Cannot delete proposal", action: 'delete', reason: 'missing proposal ID or user ID' });
       return false;
     }
     
-    actionsLogger.info({ message: "Archiving proposal", proposalId, userId });
+    actionsLogger.info({ message: "Deleting proposal", proposalId, userId });
     
     try {
-      const result = await archiveProposal(proposalId, userId);
+      const result = await deleteProposal(proposalId, userId);
       if (result.success) {
-        actionsLogger.info({ message: "Proposal archived successfully, refreshing data", proposalId });
+        actionsLogger.info({ message: "Proposal deleted successfully, refreshing data", proposalId });
         // Refresh data from the server
         await refreshData();
         
-        setArchiveDialogOpen(false);
+        setDeleteDialogOpen(false);
         return true;
       } else {
-        actionsLogger.error({ message: "Archiving failed", error: result.error });
+        actionsLogger.error({ message: "Deletion failed", error: result.error });
         throw new Error(result.error);
       }
     } catch (error) {
-      actionsLogger.error({ message: "Error in handleArchive", error });
+      actionsLogger.error({ message: "Error in handleDelete", error });
       throw error;
     }
   };
@@ -139,10 +139,10 @@ export function useProposalActions(refreshData: () => Promise<void>) {
   return {
     handleApprove,
     handleReject,
-    handleArchive,
+    handleDelete,
     handleReviewLater,
-    archiveDialogOpen,
-    setArchiveDialogOpen,
-    archiveLoading: operationLoading.archive
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    deleteLoading: operationLoading.delete
   };
 }
