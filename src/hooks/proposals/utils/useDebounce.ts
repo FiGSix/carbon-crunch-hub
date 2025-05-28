@@ -12,7 +12,7 @@ export function useDebounce(delay: number = 300) {
   
   const debounce = useCallback((callback: () => Promise<void>, forceImmediate: boolean = false) => {
     // Check if a fetch operation is already in progress
-    if (isFetchingRef.current) {
+    if (isFetchingRef.current && !forceImmediate) {
       debounceLogger.info("Operation already in progress, skipping duplicate request");
       return;
     }
@@ -25,28 +25,22 @@ export function useDebounce(delay: number = 300) {
     
     // If forced, execute immediately
     if (forceImmediate) {
-      try {
+      if (!isFetchingRef.current) {
         isFetchingRef.current = true;
         callback().finally(() => {
           isFetchingRef.current = false;
         });
-      } catch (error) {
-        isFetchingRef.current = false;
-        debounceLogger.error("Error executing immediate callback", { error });
       }
       return;
     }
     
     // Otherwise debounce
     debounceTimerRef.current = window.setTimeout(() => {
-      try {
+      if (!isFetchingRef.current) {
         isFetchingRef.current = true;
         callback().finally(() => {
           isFetchingRef.current = false;
         });
-      } catch (error) {
-        isFetchingRef.current = false;
-        debounceLogger.error("Error executing debounced callback", { error });
       }
     }, delay);
   }, [delay, debounceLogger]);

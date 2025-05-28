@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import { useAuthInitialization } from '../hooks/useAuthInitialization';
 import { useAuthRefresh } from '../hooks/useAuthRefresh';
 import { useAuthDebug } from '../hooks/useAuthDebug';
@@ -11,7 +11,7 @@ interface AuthStateProps {
 }
 
 export function AuthState({ children }: AuthStateProps) {
-  // Use our custom hooks for different aspects of auth functionality
+  // Use our optimized auth initialization hook
   const {
     session,
     user,
@@ -40,14 +40,11 @@ export function AuthState({ children }: AuthStateProps) {
     profile
   });
 
-  // Determine if user is admin
-  const isAdmin = userRole === 'admin';
+  // Memoize derived state to prevent unnecessary re-renders
+  const isAdmin = useMemo(() => userRole === 'admin', [userRole]);
   
-  // Implement a proper sign out function that follows this sequence:
-  // 1. First clear the local state to prevent UI flashes
-  // 2. Then call supabase signOut API
-  // This avoids race conditions where the page might redirect before state is cleared
-  const handleSignOut = async (): Promise<boolean> => {
+  // Memoized sign out function to prevent recreation on every render
+  const handleSignOut = useMemo(() => async (): Promise<boolean> => {
     console.log("Auth context: Starting sign out process");
     
     try {
@@ -74,10 +71,17 @@ export function AuthState({ children }: AuthStateProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setIsLoading, setUser, setUserRole, setProfile, setSession]);
 
-  // Compile the auth state to be provided by the context
-  const authState = {
+  // Memoized refresh user function to match expected interface
+  const memoizedRefreshUser = useMemo(() => async () => {
+    await refreshUser();
+    // Convert boolean return to void to satisfy the interface
+    return;
+  }, [refreshUser]);
+
+  // Memoize the auth state to prevent unnecessary re-renders in child components
+  const authState = useMemo(() => ({
     session, 
     user, 
     userRole, 
@@ -86,16 +90,24 @@ export function AuthState({ children }: AuthStateProps) {
     isRefreshing,
     refreshAttemptCount,
     authInitialized,
-    refreshUser: async () => {
-      const result = await refreshUser();
-      // Convert boolean return to void to satisfy the interface
-      return;
-    },
+    refreshUser: memoizedRefreshUser,
     debugAuthState,
     isAdmin,
-    // Add the centralized sign out function
     signOut: handleSignOut
-  };
+  }), [
+    session,
+    user,
+    userRole,
+    profile,
+    isLoading,
+    isRefreshing,
+    refreshAttemptCount,
+    authInitialized,
+    memoizedRefreshUser,
+    debugAuthState,
+    isAdmin,
+    handleSignOut
+  ]);
 
   return (
     <AuthContextProvider value={authState}>

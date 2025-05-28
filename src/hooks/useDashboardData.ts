@@ -1,85 +1,106 @@
 
-import { useState, useCallback, useMemo } from "react";
-import { useAuth } from "@/contexts/auth";
-import { useProposals } from "@/hooks/useProposals";
-import { clearProposalsCache } from "./proposals/utils/proposalCache";
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useProposals } from './useProposals';
+import { ProposalListItem } from '@/types/proposals';
 
-export function useDashboardData() {
-  const { profile, userRole } = useAuth();
-  const { proposals, fetchProposals, loading } = useProposals();
+interface DashboardStats {
+  totalProposals: number;
+  pendingProposals: number;
+  approvedProposals: number;
+  totalRevenue: number;
+  totalEnergyOffset: number;
+}
+
+interface DashboardData {
+  stats: DashboardStats;
+  recentProposals: ProposalListItem[];
+  chartData: ProposalListItem[];
+  loading: boolean;
+  error: string | null;
+}
+
+export function useDashboardData(): DashboardData {
+  const { proposals, loading, error } = useProposals();
   
-  // Calculate dashboard metrics - memoized to prevent unnecessary recalculations
-  const metrics = useMemo(() => {
-    // For demo/initial values if no data is available yet
-    const defaultValues = {
-      portfolioSize: 12.5, // MWp
-      totalProposals: proposals.length || 8,
-      potentialRevenue: 284350, // in Rands
-      co2Offset: 1245 // in tCO2
-    };
+  // Use ref to cache computed values and prevent unnecessary recalculations
+  const computedDataRef = useRef<{
+    proposals: ProposalListItem[];
+    stats: DashboardStats;
+    recentProposals: ProposalListItem[];
+    chartData: ProposalListItem[];
+  } | null>(null);
+
+  // Memoized stats calculation with proper dependency tracking
+  const stats = useMemo(() => {
+    // Check if we can use cached data
+    if (computedDataRef.current && 
+        computedDataRef.current.proposals === proposals && 
+        proposals.length > 0) {
+      return computedDataRef.current.stats;
+    }
+
+    console.log("Recalculating dashboard stats for", proposals.length, "proposals");
     
-    // If we have real data, calculate actual values
+    const newStats: DashboardStats = {
+      totalProposals: proposals.length,
+      pendingProposals: proposals.filter(p => p.status === 'pending' || p.status === 'draft').length,
+      approvedProposals: proposals.filter(p => p.status === 'approved' || p.status === 'signed').length,
+      totalRevenue: proposals.reduce((sum, p) => sum + (p.revenue || 0), 0),
+      totalEnergyOffset: proposals.reduce((sum, p) => sum + (p.annual_energy || 0), 0)
+    };
+
+    return newStats;
+  }, [proposals]);
+
+  // Memoized recent proposals (last 5, sorted by date)
+  const recentProposals = useMemo(() => {
+    // Check if we can use cached data
+    if (computedDataRef.current && 
+        computedDataRef.current.proposals === proposals && 
+        proposals.length > 0) {
+      return computedDataRef.current.recentProposals;
+    }
+
+    const sorted = [...proposals]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
+    
+    return sorted;
+  }, [proposals]);
+
+  // Memoized chart data (proposals with revenue > 0)
+  const chartData = useMemo(() => {
+    // Check if we can use cached data
+    if (computedDataRef.current && 
+        computedDataRef.current.proposals === proposals && 
+        proposals.length > 0) {
+      return computedDataRef.current.chartData;
+    }
+
+    const filtered = proposals.filter(p => (p.revenue || 0) > 0);
+    return filtered;
+  }, [proposals]);
+
+  // Update cache when calculations are done
+  useEffect(() => {
     if (proposals.length > 0) {
-      // Sum up the size of all proposals
-      const calculatedSize = proposals.reduce((total, p) => total + p.size, 0);
-      
-      // Sum up the revenue of all proposals
-      const calculatedRevenue = proposals.reduce((total, p) => total + p.revenue, 0);
-      
-      // Calculate CO2 offset based on portfolio size (simple formula for example)
-      const calculatedCO2 = calculatedSize * 100; // 100 tCO2 per MWp is a placeholder
-      
-      return {
-        portfolioSize: calculatedSize,
-        totalProposals: proposals.length,
-        potentialRevenue: calculatedRevenue,
-        co2Offset: calculatedCO2
+      computedDataRef.current = {
+        proposals,
+        stats,
+        recentProposals,
+        chartData
       };
     }
-    
-    return defaultValues;
-  }, [proposals]);
-  
-  // User display functions - memoized to prevent unnecessary recalculations
-  const userDisplayFunctions = useMemo(() => {
-    const getWelcomeMessage = () => {
-      if (profile?.first_name) {
-        return `Welcome back, ${profile.first_name}!`;
-      }
-      return 'Welcome back!';
-    };
-    
-    const getUserDisplayName = () => {
-      if (profile?.first_name && profile?.last_name) {
-        return `${profile.first_name} ${profile.last_name}`;
-      } else if (profile?.first_name) {
-        return profile.first_name;
-      } else if (profile?.company_name) {
-        return profile.company_name;
-      }
-      return 'User';
-    };
-    
-    const formatUserRole = (role: string | null): string => {
-      if (!role) return '';
-      return role.charAt(0).toUpperCase() + role.slice(1);
-    };
-    
-    return { getWelcomeMessage, getUserDisplayName, formatUserRole };
-  }, [profile]);
-  
-  const handleRefreshProposals = useCallback(() => {
-    console.log(`Manually refreshing proposals from dashboard`);
-    clearProposalsCache(); // Clear cache to force refresh
-    fetchProposals();
-  }, [fetchProposals]);
+  }, [proposals, stats, recentProposals, chartData]);
 
-  return {
-    userRole,
-    proposals,
+  // Memoize the final result to prevent unnecessary re-renders
+  const result = useMemo((): DashboardData => ({
+    stats,
+    recentProposals,
+    chartData,
     loading,
-    ...metrics,
-    ...userDisplayFunctions,
-    handleRefreshProposals
-  };
+    error
+  }), [stats, recentProposals, chartData, loading, error]);
+
+  return result;
 }

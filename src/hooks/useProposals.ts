@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ProposalListItem, ProposalFilters } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth"; 
 import { useToast } from "@/hooks/use-toast";
@@ -18,20 +18,28 @@ export const useProposals = (): UseProposalsResult => {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]); 
   const location = useLocation();
   
+  // Use refs to track state and prevent unnecessary effects
+  const isInitializedRef = useRef(false);
+  const lastLocationRef = useRef('');
+  const lastFiltersRef = useRef<string>('');
+  
   // Create a contextualized logger
   const proposalsLogger = logger.withContext({ 
     component: 'ProposalsHook', 
     feature: 'proposals' 
   });
   
-  // Use the extracted filter hook
+  // Use the extracted filter hook with memoization
   const { filters, handleFilterChange } = useProposalFilters();
+
+  // Memoize filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [filters.search, filters.status, filters.sort]);
 
   // Use the extracted fetch proposals hook
   const { fetchProposals: fetchProposalsService } = useFetchProposals({
     user,
     userRole,
-    filters,
+    filters: memoizedFilters,
     toast,
     refreshUser,
     setProposals,
@@ -39,37 +47,43 @@ export const useProposals = (): UseProposalsResult => {
     setError
   });
 
-  // Track initial load
-  const isInitialLoadRef = useMemo(() => ({ current: true }), []);
-
-  // Wrap the fetchProposals function to maintain the same API
+  // Wrap the fetchProposals function to maintain the same API with better performance
   const fetchProposals = useCallback(async () => {
-    proposalsLogger.info("Fetching proposals manually triggered");
-    // Force refresh when manually triggered
+    proposalsLogger.info("Manual fetch triggered");
     await fetchProposalsService(true);
   }, [fetchProposalsService, proposalsLogger]);
 
-  // Handle filter changes - debounced in useFetchProposals
+  // Handle filter changes with debouncing and deduplication
   useEffect(() => {
-    if (isInitialLoadRef.current) {
-      // Skip on first render - we'll handle it in the next useEffect
-      isInitialLoadRef.current = false;
+    const filtersKey = JSON.stringify(memoizedFilters);
+    
+    // Skip if filters haven't actually changed
+    if (lastFiltersRef.current === filtersKey) {
       return;
     }
     
-    proposalsLogger.info("Filters changed, fetching proposals");
+    lastFiltersRef.current = filtersKey;
+    
+    // Skip initial render to avoid double fetch
+    if (!isInitializedRef.current) {
+      return;
+    }
+    
+    proposalsLogger.info("Filters changed, fetching proposals", { filters: memoizedFilters });
     fetchProposalsService(false);
-  }, [filters, fetchProposalsService, proposalsLogger]);
+  }, [memoizedFilters, fetchProposalsService, proposalsLogger]);
 
-  // Initial fetch when component mounts or dependencies change
+  // Initial fetch when component mounts or critical dependencies change
   useEffect(() => {
-    if (isInitialLoadRef.current) {
-      proposalsLogger.info("Initial fetch triggered");
+    // Only run if we have required auth data and haven't initialized yet
+    if (!isInitializedRef.current && user && userRole) {
+      proposalsLogger.info("Initial fetch triggered", { userId: user.id, userRole });
+      isInitializedRef.current = true;
       fetchProposalsService(false);
     }
-  }, [fetchProposalsService, proposalsLogger]);
+  }, [user, userRole, fetchProposalsService, proposalsLogger]);
   
-  // Clear cache and refresh proposals when a proposal status changes
+  // Handle proposal status changes with event listener
   useEffect(() => {
     const handleProposalStatusChange = () => {
       proposalsLogger.info("Proposal status change detected, clearing cache");
@@ -84,27 +98,32 @@ export const useProposals = (): UseProposalsResult => {
     };
   }, [fetchProposalsService, proposalsLogger]);
   
-  // Refresh proposals when returning to the proposals page or dashboard
+  // Handle navigation-based refreshes with better deduplication
   useEffect(() => {
-    const lastPathRef = { current: "" };
+    const currentPath = location.pathname;
     
-    // Only refresh if we're navigating TO the dashboard/proposals page
-    // from a different page - prevents double fetches
-    if ((location.pathname === '/proposals' || location.pathname === '/dashboard') && 
-        lastPathRef.current !== location.pathname) {
-      proposalsLogger.info(`Detected navigation to ${location.pathname}, refreshing proposal data`);
+    // Only refresh if we're navigating TO a relevant page and it's different from last path
+    if ((currentPath === '/proposals' || currentPath === '/dashboard') && 
+        lastLocationRef.current !== currentPath && 
+        isInitializedRef.current) {
+      
+      proposalsLogger.info(`Navigation to ${currentPath} detected, refreshing proposals`);
+      lastLocationRef.current = currentPath;
       fetchProposalsService(false);
+    } else {
+      lastLocationRef.current = currentPath;
     }
-    
-    lastPathRef.current = location.pathname;
   }, [location.pathname, fetchProposalsService, proposalsLogger]);
 
-  return {
+  // Memoize the return value to prevent unnecessary re-renders in consuming components
+  const result = useMemo((): UseProposalsResult => ({
     proposals,
     loading,
     error,
-    filters,
+    filters: memoizedFilters,
     handleFilterChange,
     fetchProposals
-  };
+  }), [proposals, loading, error, memoizedFilters, handleFilterChange, fetchProposals]);
+
+  return result;
 };

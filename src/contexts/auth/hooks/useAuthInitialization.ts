@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserRole, getCurrentUser } from '@/lib/supabase/auth';
@@ -15,31 +16,50 @@ export function useAuthInitialization() {
   const [authInitialized, setAuthInitialized] = useState(false);
   const { toast } = useToast();
 
-  // Function to fetch user profile data with debouncing
-  const fetchUserData = async (currentUser: User, skipLoading = false) => {
+  // Debounced state update to prevent rapid re-renders
+  const [stateUpdateTimeout, setStateUpdateTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Memoized state to prevent unnecessary re-renders
+  const authState = useMemo(() => ({
+    session,
+    user,
+    userRole,
+    profile,
+    isLoading,
+    authInitialized
+  }), [session, user, userRole, profile, isLoading, authInitialized]);
+
+  // Function to fetch user profile data with better error handling and caching
+  const fetchUserData = useCallback(async (currentUser: User, skipLoading = false) => {
     if (!skipLoading) {
       setIsLoading(true);
     }
     
     try {
-      // Run both requests in parallel with Promise.all for better performance
-      const [roleResult, profileResult] = await Promise.all([
+      // Use Promise.allSettled to handle partial failures gracefully
+      const [roleResult, profileResult] = await Promise.allSettled([
         getUserRole(),
         getProfile()
       ]);
       
-      if (roleResult.role) {
-        setUserRole(roleResult.role);
-        console.log("Role from API:", roleResult.role);
+      // Handle role result
+      if (roleResult.status === 'fulfilled' && roleResult.value.role) {
+        setUserRole(roleResult.value.role);
+        console.log("Role from API:", roleResult.value.role);
       } else {
-        console.log("No role found from API");
+        console.log("No role found from API or role fetch failed");
         setUserRole(null);
       }
       
-      if (!profileResult.error && profileResult.profile) {
-        setProfile(profileResult.profile);
-      } else if (profileResult.error) {
-        console.error("Error fetching user profile:", profileResult.error);
+      // Handle profile result
+      if (profileResult.status === 'fulfilled' && !profileResult.value.error && profileResult.value.profile) {
+        setProfile(profileResult.value.profile);
+      } else {
+        if (profileResult.status === 'rejected') {
+          console.error("Error fetching user profile:", profileResult.reason);
+        } else if (profileResult.status === 'fulfilled') {
+          console.error("Error fetching user profile:", profileResult.value.error);
+        }
         setProfile(null);
       }
     } catch (error) {
@@ -51,16 +71,40 @@ export function useAuthInitialization() {
         setIsLoading(false);
       }
     }
-  };
+  }, []);
 
   // Helper function to clear auth state
-  const clearAuthState = () => {
+  const clearAuthState = useCallback(() => {
     console.log("Clearing auth state");
     setUser(null);
     setUserRole(null);
     setProfile(null);
     setSession(null);
-  };
+  }, []);
+
+  // Debounced state update function to prevent rapid re-renders
+  const debouncedStateUpdate = useCallback((newSession: Session | null, event: string) => {
+    if (stateUpdateTimeout) {
+      clearTimeout(stateUpdateTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      setSession(newSession);
+      setUser(newSession?.user || null);
+      
+      if (newSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        // Defer user data fetching to prevent blocking auth state updates
+        setTimeout(() => {
+          fetchUserData(newSession.user, true)
+            .finally(() => setIsLoading(false));
+        }, 100);
+      } else {
+        setIsLoading(false);
+      }
+    }, 50); // Small debounce to batch rapid auth state changes
+
+    setStateUpdateTimeout(timeout);
+  }, [stateUpdateTimeout, fetchUserData]);
 
   useEffect(() => {
     console.log("Initializing auth context");
@@ -81,24 +125,8 @@ export function useAuthInitialization() {
               clearAuthState();
               setIsLoading(false);
             } else {
-              // Update basic session and user data for other events
-              setSession(newSession);
-              setUser(newSession?.user || null);
-              
-              if (newSession?.user) {
-                // For SIGNED_IN events, fetch role and profile
-                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                  // Use setTimeout to avoid recursive auth state changes
-                  setTimeout(() => {
-                    fetchUserData(newSession.user, true)
-                      .finally(() => setIsLoading(false));
-                  }, 0);
-                } else {
-                  setIsLoading(false);
-                }
-              } else {
-                setIsLoading(false);
-              }
+              // Use debounced update for other events
+              debouncedStateUpdate(newSession, event);
             }
           }
         ).data.subscription;
@@ -137,20 +165,18 @@ export function useAuthInitialization() {
       if (subscription) {
         subscription.unsubscribe();
       }
+      if (stateUpdateTimeout) {
+        clearTimeout(stateUpdateTimeout);
+      }
     };
-  }, [toast, authInitialized]);
+  }, [toast, authInitialized, debouncedStateUpdate, fetchUserData, clearAuthState, stateUpdateTimeout]);
 
   return {
-    session,
-    user,
-    userRole,
-    profile,
-    isLoading,
+    ...authState,
     setUser,
     setSession,
     setUserRole,
     setProfile,
-    setIsLoading,
-    authInitialized
+    setIsLoading
   };
 }
