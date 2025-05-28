@@ -82,17 +82,17 @@ export function calculateRevenue(systemSize: string | number, commissionDate?: s
 }
 
 /**
- * Calculate client share percentage based on portfolio size with all tiers
+ * Calculate client share percentage based on portfolio size with correct tiers
  * 
  * @param portfolioSize - Total portfolio size in kWp across all client projects
  */
 export function getClientSharePercentage(portfolioSize: string | number): number {
   const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
   
-  if (size < 1000) return 60;        // Less than 1,000 kWp - NEW TIER
   if (size < 5000) return 63;        // Less than 5,000 kWp
-  if (size < 10000) return 66.5;     // Less than 10,000 kWp 
-  if (size < 30000) return 70;       // Less than 30,000 kWp
+  if (size < 10000) return 66.5;     // 5,000–9,999 kWp
+  if (size < 20000) return 67.9;     // 10,000-19,999 kWp
+  if (size < 30000) return 70;       // 20,000–29,999 kWp
   return 73.5;                       // 30,000+ kWp
 }
 
