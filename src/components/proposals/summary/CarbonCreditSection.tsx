@@ -4,17 +4,77 @@ import {
   calculateAnnualEnergy, 
   calculateCarbonCredits, 
   calculateRevenue,
-  getFormattedCarbonPriceForYear
+  getFormattedCarbonPriceForYear,
+  normalizeToKWp
 } from "@/lib/calculations/carbon";
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter
+} from "@/components/ui/table";
 
 interface CarbonCreditSectionProps {
   systemSize: string;
   commissionDate?: string;
 }
 
+/**
+ * Helper function to calculate pro-rated energy generation for a specific year
+ */
+function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string): number {
+  const fullYearEnergy = calculateAnnualEnergy(systemSizeKWp);
+  
+  if (!commissionDate) {
+    return fullYearEnergy;
+  }
+  
+  const commissionDateTime = new Date(commissionDate);
+  const commissionYear = commissionDateTime.getFullYear();
+  
+  // Apply pro-rata logic for commission year
+  if (year === commissionYear) {
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31);
+    const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDateTime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const totalDaysInYear = Math.floor((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    return fullYearEnergy * (remainingDays / totalDaysInYear);
+  }
+  
+  return fullYearEnergy;
+}
+
+/**
+ * Helper function to calculate pro-rated carbon credits for a specific year
+ */
+function calculateYearlyCarbonCredits(systemSizeKWp: number, year: number, commissionDate?: string): number {
+  const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, year, commissionDate);
+  // Convert kWh to MWh and then to tCO₂ using the emission factor (0.928 tCO₂/MWh)
+  return (yearlyEnergy / 1000) * 0.928;
+}
+
 export function CarbonCreditSection({ systemSize, commissionDate }: CarbonCreditSectionProps) {
+  const systemSizeKWp = normalizeToKWp(systemSize);
+  
   // Calculate revenue with commission date for pro-rata logic
   const revenue = calculateRevenue(systemSize, commissionDate);
+
+  // Calculate totals
+  const totalMWhGenerated = Object.keys(revenue).reduce((total, year) => {
+    const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, parseInt(year), commissionDate);
+    return total + (yearlyEnergy / 1000); // Convert kWh to MWh
+  }, 0);
+
+  const totalCarbonCredits = Object.keys(revenue).reduce((total, year) => {
+    const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
+    return total + yearlyCarbonCredits;
+  }, 0);
+
+  const totalRevenue = Object.values(revenue).reduce((sum, amount) => sum + amount, 0);
 
   return (
     <div>
@@ -32,30 +92,46 @@ export function CarbonCreditSection({ systemSize, commissionDate }: CarbonCredit
       
       <h4 className="font-medium text-carbon-gray-700 mb-2">Projected Revenue by Year</h4>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-carbon-gray-50">
-              <th className="px-4 py-2 text-left text-sm font-medium text-carbon-gray-700 border border-carbon-gray-200">Year</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-carbon-gray-700 border border-carbon-gray-200">Carbon Price (R/tCO₂)</th>
-              <th className="px-4 py-2 text-right text-sm font-medium text-carbon-gray-700 border border-carbon-gray-200">Estimated Revenue (R)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(revenue).map(([year, amount]) => (
-              <tr key={year}>
-                <td className="px-4 py-2 text-sm border border-carbon-gray-200">{year}</td>
-                <td className="px-4 py-2 text-sm border border-carbon-gray-200">
-                  {getFormattedCarbonPriceForYear(year)}
-                </td>
-                <td className="px-4 py-2 text-sm text-right border border-carbon-gray-200">R {amount.toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-carbon-gray-50">
+              <TableHead className="text-left text-sm font-medium text-carbon-gray-700">Year</TableHead>
+              <TableHead className="text-right text-sm font-medium text-carbon-gray-700">MWh Generated per Year</TableHead>
+              <TableHead className="text-right text-sm font-medium text-carbon-gray-700">tCO₂e Offset per Year</TableHead>
+              <TableHead className="text-left text-sm font-medium text-carbon-gray-700">Carbon Price (R/tCO₂e)</TableHead>
+              <TableHead className="text-right text-sm font-medium text-carbon-gray-700">Estimated Revenue (R) per Year</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Object.entries(revenue).map(([year, amount]) => {
+              const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, parseInt(year), commissionDate);
+              const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
+              
+              return (
+                <TableRow key={year}>
+                  <TableCell className="text-sm">{year}</TableCell>
+                  <TableCell className="text-sm text-right">{(yearlyEnergy / 1000).toFixed(2)}</TableCell>
+                  <TableCell className="text-sm text-right">{yearlyCarbonCredits.toFixed(2)}</TableCell>
+                  <TableCell className="text-sm">{getFormattedCarbonPriceForYear(year)}</TableCell>
+                  <TableCell className="text-sm text-right">R {amount.toLocaleString()}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+          <TableFooter>
+            <TableRow className="bg-carbon-gray-100 font-semibold">
+              <TableCell className="text-sm font-bold">Total</TableCell>
+              <TableCell className="text-sm text-right font-bold">{totalMWhGenerated.toFixed(2)}</TableCell>
+              <TableCell className="text-sm text-right font-bold">{totalCarbonCredits.toFixed(2)}</TableCell>
+              <TableCell className="text-sm font-bold">-</TableCell>
+              <TableCell className="text-sm text-right font-bold">R {totalRevenue.toLocaleString()}</TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
       </div>
       {commissionDate && (
         <p className="text-xs text-carbon-gray-500 mt-2">
-          * Revenue for commissioning year is pro-rated based on the commission date
+          * Values for commissioning year are pro-rated based on the commission date
         </p>
       )}
     </div>
