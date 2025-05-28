@@ -36,6 +36,9 @@ export function ClientSearchAutocomplete({
     setSelectedClient 
   } = useClientSearch();
   
+  // Ensure results is always an array to prevent iteration errors
+  const safeResults = results || [];
+  
   // Sync internal search term with external value
   React.useEffect(() => {
     setSearchTerm(value);
@@ -50,7 +53,7 @@ export function ClientSearchAutocomplete({
     }
   };
   
-  const handleSelect = (client: typeof results[0]) => {
+  const handleSelect = (client: typeof safeResults[0]) => {
     setSelectedClient(client);
     
     // Convert to ClientInformation format and pass to parent
@@ -102,9 +105,9 @@ export function ClientSearchAutocomplete({
               )}
             </CommandEmpty>
             
-            {results.length > 0 && (
+            {safeResults.length > 0 && (
               <CommandGroup heading="Existing Clients">
-                {results.map((client) => (
+                {safeResults.map((client) => (
                   <CommandItem
                     key={`${client.id}-${client.isRegistered}`}
                     value={`${client.name} ${client.email}`}

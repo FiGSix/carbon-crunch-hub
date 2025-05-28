@@ -31,7 +31,8 @@ export function useClientSearch() {
       
       try {
         const clientResults = await searchClients(searchTerm);
-        setResults(clientResults);
+        // Ensure we always set an array, never undefined
+        setResults(Array.isArray(clientResults) ? clientResults : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to search clients");
         setResults([]);
