@@ -9,7 +9,8 @@ import {
   Calculator,
   Bell,
   Settings,
-  LogOut
+  LogOut,
+  User
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 
@@ -30,6 +31,12 @@ export function DashboardSidebar() {
       name: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
+      roles: ["admin", "agent", "client"]
+    },
+    {
+      name: "Profile",
+      href: "/profile",
+      icon: User,
       roles: ["admin", "agent", "client"]
     },
     {
