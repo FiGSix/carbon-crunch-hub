@@ -90,8 +90,8 @@ export async function createProposal(
       });
     }
 
-    // Step 2: Build the proposal data with status set to 'pending' instead of 'draft'
-    const proposalData = buildProposalData(
+    // Step 2: Build the proposal data with portfolio-based calculations
+    const proposalData = await buildProposalData(
       title,
       agentId,
       eligibilityCriteria,
@@ -99,8 +99,6 @@ export async function createProposal(
       clientInfo,
       annualEnergy,
       carbonCredits,
-      clientShare,
-      agentCommission,
       selectedClientId,
       clientResult
     );
@@ -123,11 +121,13 @@ export async function createProposal(
       };
     }
 
-    proposalLogger.info("Prepared proposal data", {
+    proposalLogger.info("Prepared proposal data with portfolio-based calculations", {
       title: proposalData.title,
       clientId: proposalData.client_id,
       clientReferenceId: proposalData.client_reference_id,
-      status: proposalData.status
+      status: proposalData.status,
+      clientSharePercentage: proposalData.client_share_percentage,
+      agentCommissionPercentage: proposalData.agent_commission_percentage
     });
 
     // Step 3: Insert proposal into database
@@ -151,7 +151,9 @@ export async function createProposal(
       };
     }
 
-    proposalLogger.info("Proposal created successfully", { proposalId: proposal.id });
+    proposalLogger.info("Proposal created successfully with portfolio-based calculations", { 
+      proposalId: proposal.id 
+    });
     
     return { 
       success: true,

@@ -21,7 +21,7 @@ interface SummaryStepProps {
   projectInfo: ProjectInformation;
   nextStep: () => void;
   prevStep: () => void;
-  selectedClientId?: string | null; // Added selectedClientId prop
+  selectedClientId?: string | null;
 }
 
 export function SummaryStep({ 
@@ -44,8 +44,14 @@ export function SummaryStep({
         <div className="space-y-8">
           <ClientInformationSection clientInfo={clientInfo} />
           <ProjectInformationSection projectInfo={projectInfo} />
-          <CarbonCreditSection systemSize={projectInfo.size} />
-          <RevenueDistributionSection systemSize={projectInfo.size} />
+          <CarbonCreditSection 
+            systemSize={projectInfo.size} 
+            commissionDate={projectInfo.commissionDate}
+          />
+          <RevenueDistributionSection 
+            systemSize={projectInfo.size}
+            selectedClientId={selectedClientId}
+          />
         </div>
       </CardContent>
       <CardFooter>

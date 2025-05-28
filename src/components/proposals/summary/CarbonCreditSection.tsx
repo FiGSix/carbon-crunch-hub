@@ -9,10 +9,12 @@ import {
 
 interface CarbonCreditSectionProps {
   systemSize: string;
+  commissionDate?: string;
 }
 
-export function CarbonCreditSection({ systemSize }: CarbonCreditSectionProps) {
-  const revenue = calculateRevenue(systemSize);
+export function CarbonCreditSection({ systemSize, commissionDate }: CarbonCreditSectionProps) {
+  // Calculate revenue with commission date for pro-rata logic
+  const revenue = calculateRevenue(systemSize, commissionDate);
 
   return (
     <div>
@@ -51,6 +53,11 @@ export function CarbonCreditSection({ systemSize }: CarbonCreditSectionProps) {
           </tbody>
         </table>
       </div>
+      {commissionDate && (
+        <p className="text-xs text-carbon-gray-500 mt-2">
+          * Revenue for commissioning year is pro-rated based on the commission date
+        </p>
+      )}
     </div>
   );
 }

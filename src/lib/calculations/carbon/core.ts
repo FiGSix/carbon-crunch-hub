@@ -46,44 +46,64 @@ export function calculateCoalAvoided(energyInKWh: number): number {
 }
 
 /**
- * Calculate projected revenue based on carbon credit prices by year
+ * Calculate projected revenue based on carbon credit prices by year with pro-rata logic
  * 
  * @param systemSize - Solar system size in kWp
+ * @param commissionDate - Date when system is commissioned (optional)
  */
-export function calculateRevenue(systemSize: string | number): Record<string, number> {
+export function calculateRevenue(systemSize: string | number, commissionDate?: string | Date): Record<string, number> {
   const carbonCredits = calculateCarbonCredits(systemSize);
   const revenue: Record<string, number> = {};
   
+  // Parse commission date if provided
+  const commissionDateTime = commissionDate ? new Date(commissionDate) : null;
+  const currentYear = new Date().getFullYear();
+  
   // Calculate revenue for each year based on carbon prices
   Object.entries(CARBON_PRICES).forEach(([year, price]) => {
-    revenue[year] = Math.round(carbonCredits * price);
+    const yearNum = parseInt(year);
+    let yearCredits = carbonCredits;
+    
+    // Apply pro-rata logic for commission year if date is provided
+    if (commissionDateTime && yearNum === commissionDateTime.getFullYear()) {
+      const yearStart = new Date(yearNum, 0, 1);
+      const yearEnd = new Date(yearNum, 11, 31);
+      const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDateTime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const totalDaysInYear = Math.floor((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      // Pro-rate the credits for the partial year
+      yearCredits = carbonCredits * (remainingDays / totalDaysInYear);
+    }
+    
+    revenue[year] = Math.round(yearCredits * price);
   });
   
   return revenue;
 }
 
 /**
- * Calculate client share percentage based on portfolio size
+ * Calculate client share percentage based on portfolio size with all tiers
  * 
- * @param portfolioSize - Portfolio size in kWp
+ * @param portfolioSize - Total portfolio size in kWp across all client projects
  */
 export function getClientSharePercentage(portfolioSize: string | number): number {
   const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
   
-  if (size < 5000) return 63;       // Less than 5,000 kWp
-  if (size < 10000) return 66.5;    // Less than 10,000 kWp 
-  if (size < 30000) return 70;      // Less than 30,000 kWp
-  return 73.5;                      // 30,000+ kWp
+  if (size < 1000) return 60;        // Less than 1,000 kWp - NEW TIER
+  if (size < 5000) return 63;        // Less than 5,000 kWp
+  if (size < 10000) return 66.5;     // Less than 10,000 kWp 
+  if (size < 30000) return 70;       // Less than 30,000 kWp
+  return 73.5;                       // 30,000+ kWp
 }
 
 /**
- * Calculate agent commission percentage
+ * Calculate agent commission percentage based on portfolio size
  * 
- * @param portfolioSize - Portfolio size in kWp
+ * @param portfolioSize - Total portfolio size in kWp across all client projects
  */
 export function getAgentCommissionPercentage(portfolioSize: string | number): number {
   const size = typeof portfolioSize === 'string' ? parseFloat(portfolioSize) : portfolioSize;
-  return size < 15000 ? 4 : 7;      // Less than 15,000 kWp
+  return size < 15000 ? 4 : 7;       // Less than 15,000 kWp
 }
 
 /**
