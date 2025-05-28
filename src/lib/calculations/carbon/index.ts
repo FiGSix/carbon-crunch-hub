@@ -44,7 +44,7 @@ export {
   dynamicCarbonPricingService
 } from './dynamicPricing';
 
-// System constants (no longer includes CARBON_PRICES)
+// System constants (no longer includes any carbon price constants)
 export {
   EMISSION_FACTOR,
   COAL_FACTOR,
