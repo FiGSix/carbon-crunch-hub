@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
 
 interface RecentProjectsNewProps {
   proposals?: Proposal[];
@@ -126,7 +127,7 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
                 >
                   <div className="grid grid-cols-12 gap-4 items-center">
                     <div className="col-span-5 sm:col-span-4 font-medium truncate">{project.name}</div>
-                    <div className="col-span-3 sm:col-span-2 text-right sm:text-left text-crunch-black/70">{project.size.toFixed(1)} MWp</div>
+                    <div className="col-span-3 sm:col-span-2 text-right sm:text-left text-crunch-black/70">{formatSystemSizeForDisplay(project.size)}</div>
                     <div className="hidden sm:block sm:col-span-3 text-crunch-black/70 truncate">{project.client}</div>
                     <div className="col-span-3 sm:col-span-2 text-center">
                       <Badge 
