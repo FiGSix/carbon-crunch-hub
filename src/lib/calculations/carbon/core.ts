@@ -112,7 +112,34 @@ export function calculateCoalAvoided(energyInKWh: number): number {
 }
 
 /**
+ * Get current year for filtering past years
+ */
+function getCurrentYear(): number {
+  return new Date().getFullYear();
+}
+
+/**
+ * Filter carbon prices to exclude past years
+ * 
+ * @param prices - Carbon prices object
+ */
+function filterCurrentAndFuturePrices(prices: Record<string, number>): Record<string, number> {
+  const currentYear = getCurrentYear();
+  const filteredPrices: Record<string, number> = {};
+  
+  Object.entries(prices).forEach(([year, price]) => {
+    const yearNum = parseInt(year);
+    if (yearNum >= currentYear) {
+      filteredPrices[year] = price;
+    }
+  });
+  
+  return filteredPrices;
+}
+
+/**
  * Calculate projected revenue based on carbon credit prices by year with pro-rata logic
+ * Only includes current and future years
  * 
  * @param systemSize - Solar system size (will be normalized to kWp)
  * @param commissionDate - Date when system is commissioned (optional)
@@ -122,11 +149,14 @@ export function calculateRevenue(systemSize: string | number, commissionDate?: s
   const carbonCredits = calculateCarbonCredits(systemSize, unit);
   const revenue: Record<string, number> = {};
   
+  // Filter out past years from carbon prices
+  const currentAndFuturePrices = filterCurrentAndFuturePrices(CARBON_PRICES);
+  
   // Parse commission date if provided
   const commissionDateTime = commissionDate ? new Date(commissionDate) : null;
   
-  // Calculate revenue for each year based on carbon prices
-  Object.entries(CARBON_PRICES).forEach(([year, price]) => {
+  // Calculate revenue for each year based on carbon prices (current and future years only)
+  Object.entries(currentAndFuturePrices).forEach(([year, price]) => {
     const yearNum = parseInt(year);
     let yearCredits = carbonCredits;
     
@@ -196,13 +226,13 @@ export function calculateResults(systemSize: number, commissioningDate: Date, un
   // Calculate full year generation
   const fullYearGeneration = dailyGeneration * DAYS_IN_YEAR;
   
-  // Calculate yearly data from commissioning to 2030
+  // Calculate yearly data from commissioning to 2030 (but only for current and future years)
   const yearsData: YearData[] = [];
-  const startYear = commissioningDate.getFullYear();
+  const startYear = Math.max(commissioningDate.getFullYear(), getCurrentYear());
   const endYear = 2030;
   
   for (let year = startYear; year <= endYear; year++) {
-    const isFirstYear = year === startYear;
+    const isFirstYear = year === commissioningDate.getFullYear();
     const yearGeneration = isFirstYear ? firstYearGeneration : fullYearGeneration;
     const yearCarbonOffset = (yearGeneration * EMISSION_FACTOR) / 1000; // Convert kg to tonnes
     const yearCarbonCredits = Math.floor(yearCarbonOffset); // 1 credit = 1 tonne
