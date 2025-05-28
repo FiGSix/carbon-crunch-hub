@@ -28,6 +28,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   const systemSizeKWp = normalizeToKWp(systemSize);
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [revenue, setRevenue] = useState<Record<string, number>>({});
+  const [totalClientSpecificRevenue, setTotalClientSpecificRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
   
   // Create logger with useMemo to prevent infinite loops
@@ -91,7 +92,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     loadPortfolioData();
   }, [selectedClientId, systemSize]);
 
-  // Load dynamic revenue data
+  // Load dynamic revenue data and calculate client-specific revenue
   useEffect(() => {
     const loadRevenue = async () => {
       try {
@@ -102,29 +103,43 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
         
         // Calculate revenue based on dynamic prices
         const calculatedRevenue: Record<string, number> = {};
-        Object.entries(carbonPrices).forEach(([year, price]) => {
+        let clientSpecificTotal = 0;
+        
+        for (const [year, price] of Object.entries(carbonPrices)) {
           const yearNum = parseInt(year);
           const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, yearNum, commissionDate);
           calculatedRevenue[year] = Math.round(yearlyCarbonCredits * price);
-        });
+          
+          // Calculate client-specific revenue for this year
+          if (portfolioData) {
+            const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioData.totalKWp);
+            clientSpecificTotal += clientRevenue;
+          }
+        }
         
         setRevenue(calculatedRevenue);
+        setTotalClientSpecificRevenue(clientSpecificTotal);
+        
         carbonLogger.info("Dynamic revenue calculation completed", { 
           years: Object.keys(calculatedRevenue),
-          totalRevenue: Object.values(calculatedRevenue).reduce((sum, val) => sum + val, 0)
+          totalRevenue: Object.values(calculatedRevenue).reduce((sum, val) => sum + val, 0),
+          totalClientSpecificRevenue: clientSpecificTotal
         });
         
       } catch (error) {
         carbonLogger.error("Error loading dynamic carbon prices", { error });
         // Fallback to empty revenue object
         setRevenue({});
+        setTotalClientSpecificRevenue(0);
       } finally {
         setLoading(false);
       }
     };
 
-    loadRevenue();
-  }, [systemSize, commissionDate, systemSizeKWp, carbonLogger]);
+    if (portfolioData) {
+      loadRevenue();
+    }
+  }, [systemSize, commissionDate, systemSizeKWp, portfolioData, carbonLogger]);
   
   // Use portfolio size for calculations, fallback to current project size
   const portfolioSize = portfolioData?.totalKWp || parseFloat(systemSize) || 0;
@@ -132,13 +147,6 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   // Calculate totals using helper functions
   const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, revenue, commissionDate);
   const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, revenue, commissionDate);
-
-  // Calculate client-specific total revenue
-  const totalClientSpecificRevenue = Object.keys(revenue).reduce((total, year) => {
-    const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
-    const clientRevenue = calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize);
-    return total + clientRevenue;
-  }, 0);
 
   if (loading) {
     return (
