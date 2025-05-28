@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
+import { CalculatorRedirect } from "@/components/auth/CalculatorRedirect";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -38,7 +39,14 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/calculator" element={<Calculator />} />
+              <Route 
+                path="/calculator" 
+                element={
+                  <CalculatorRedirect>
+                    <Calculator />
+                  </CalculatorRedirect>
+                } 
+              />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/force-logout" element={<ForceLogout />} />

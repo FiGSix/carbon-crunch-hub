@@ -6,7 +6,6 @@ import {
   FileText, 
   Users, 
   UserPlus, 
-  Calculator,
   Bell,
   Settings,
   LogOut,
@@ -62,12 +61,6 @@ export function DashboardSidebar() {
       href: "/agents",
       icon: UserPlus,
       roles: ["admin"]
-    },
-    {
-      name: "Calculator",
-      href: "/calculator",
-      icon: Calculator,
-      roles: ["admin", "agent", "client"]
     },
     {
       name: "Notifications",
