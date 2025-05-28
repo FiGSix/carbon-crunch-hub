@@ -2,7 +2,8 @@
 /**
  * Client-specific carbon pricing calculations
  */
-import { getCarbonPriceForYear, getClientSharePercentage } from './core';
+import { getClientSharePercentage } from './core';
+import { getCarbonPriceForYear } from './utils';
 
 /**
  * Calculate client-specific carbon price for a given year based on portfolio size
