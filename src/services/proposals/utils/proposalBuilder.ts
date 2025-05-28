@@ -1,4 +1,5 @@
 
+
 import { EligibilityCriteria, ProjectInformation, ClientInformation } from "@/types/proposals";
 import { 
   calculateAnnualEnergy, 
@@ -62,12 +63,12 @@ export async function buildProposalData(
     }
   }
 
-  // Build proposal data with normalized system size
+  // Build proposal data with normalized system size and proper type casting
   const proposalData = {
     title,
     agent_id: agentId,
-    eligibility_criteria: eligibilityCriteria,
-    project_info: projectInfo,
+    eligibility_criteria: eligibilityCriteria as any, // Cast to Json type
+    project_info: projectInfo as any, // Cast to Json type
     annual_energy: calculatedAnnualEnergy,
     carbon_credits: calculatedCarbonCredits,
     client_share_percentage: clientSharePercentage,
@@ -94,3 +95,4 @@ export async function buildProposalData(
 
   return proposalData;
 }
+
