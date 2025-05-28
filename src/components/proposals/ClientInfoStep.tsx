@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { ClientInformation } from "./types";
 import { ClientFormFields } from "./client-info/ClientFormFields";
-import { ClientNotification } from "./client-info/ClientNotification";
 import { ClientStepFooter } from "./client-info/ClientStepFooter";
 
 interface ClientInfoStepProps {
@@ -34,23 +33,12 @@ export function ClientInfoStep({
 }: ClientInfoStepProps) {
   const isFormValid = Boolean(clientInfo.name && clientInfo.email);
 
-  // Handle client selection from the autocomplete
-  const handleClientSelect = (updatedClientInfo: ClientInformation, clientId: string) => {
-    if (setClientInfo) {
-      setClientInfo(updatedClientInfo);
-    }
-    
-    if (setSelectedClientId) {
-      setSelectedClientId(clientId);
-    }
-  };
-
   return (
     <Card className="retro-card">
       <CardHeader>
         <CardTitle>Client Information</CardTitle>
         <CardDescription>
-          Provide details about the client who will receive this proposal.
+          Search for an existing client or enter new client details. Start typing in the name field to see matching clients.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -60,8 +48,6 @@ export function ClientInfoStep({
             updateClientInfo={updateClientInfo}
             setClientInfo={setClientInfo}
           />
-          
-          <ClientNotification isExistingClient={clientInfo.existingClient} />
         </div>
       </CardContent>
       <CardFooter>

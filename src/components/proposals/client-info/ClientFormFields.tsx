@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Edit2 } from "lucide-react";
 import { ClientSearchAutocomplete } from "./ClientSearchAutocomplete";
 import { ClientInformation } from "@/types/proposals";
 
@@ -17,9 +18,19 @@ export function ClientFormFields({
   setClientInfo
 }: ClientFormFieldsProps) {
   const [clientId, setClientId] = useState<string | null>(null);
+  const [isExistingClient, setIsExistingClient] = useState(false);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [nameValue, setNameValue] = useState(clientInfo.name);
+  
+  // Update name value when clientInfo changes
+  useEffect(() => {
+    setNameValue(clientInfo.name);
+  }, [clientInfo.name]);
   
   const handleClientSelect = (selectedClientInfo: ClientInformation, selectedClientId: string) => {
     setClientId(selectedClientId);
+    setIsExistingClient(true);
+    setIsEditingDetails(false);
     
     // If we have a direct setter, use it
     if (setClientInfo) {
@@ -43,84 +54,108 @@ export function ClientFormFields({
         updateClientInfo(event);
       });
       
-      // Set the existingClient checkbox if not already set
-      if (!clientInfo.existingClient) {
-        const checkboxEvent = {
-          target: {
-            name: "existingClient",
-            type: "checkbox",
-            checked: true
-          }
+      // Set the existingClient flag
+      const checkboxEvent = {
+        target: {
+          name: "existingClient",
+          type: "checkbox",
+          checked: true
+        }
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      updateClientInfo(checkboxEvent);
+    }
+  };
+
+  const handleNameChange = (value: string) => {
+    setNameValue(value);
+    
+    // If user starts typing in name field and we had an existing client, clear the selection
+    if (isExistingClient && value !== clientInfo.name) {
+      setIsExistingClient(false);
+      setClientId(null);
+      
+      // Clear the existing client flag
+      if (setClientInfo) {
+        setClientInfo({
+          ...clientInfo,
+          name: value,
+          existingClient: false
+        });
+      } else {
+        const nameEvent = {
+          target: { name: "name", value, type: "text" }
         } as React.ChangeEvent<HTMLInputElement>;
+        updateClientInfo(nameEvent);
         
+        const checkboxEvent = {
+          target: { name: "existingClient", type: "checkbox", checked: false }
+        } as React.ChangeEvent<HTMLInputElement>;
         updateClientInfo(checkboxEvent);
+      }
+    } else if (!isExistingClient) {
+      // For new clients, just update the name
+      if (setClientInfo) {
+        setClientInfo({
+          ...clientInfo,
+          name: value
+        });
+      } else {
+        const event = {
+          target: { name: "name", value, type: "text" }
+        } as React.ChangeEvent<HTMLInputElement>;
+        updateClientInfo(event);
       }
     }
   };
 
+  const handleEditDetails = () => {
+    setIsEditingDetails(true);
+  };
+
+  const handleRegularInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateClientInfo(e);
+  };
+
+  const isFieldReadOnly = isExistingClient && !isEditingDetails;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-start space-x-3 mb-6">
-        <Checkbox 
-          id="existingClient" 
-          name="existingClient"
-          checked={clientInfo.existingClient}
-          onCheckedChange={(checked) => {
-            const e = {
-              target: {
-                name: "existingClient",
-                type: "checkbox",
-                checked: !!checked
-              }
-            } as React.ChangeEvent<HTMLInputElement>;
-            updateClientInfo(e);
-          }}
-        />
-        <div className="space-y-1">
-          <Label 
-            htmlFor="existingClient" 
-            className="font-medium text-carbon-gray-900"
-          >
-            This is an existing client
-          </Label>
-          <p className="text-sm text-carbon-gray-500">
-            Check this box if the client already has an account with CrunchCarbon.
-          </p>
-        </div>
-      </div>
-      
-      {clientInfo.existingClient && (
-        <div className="mb-4 border rounded-md p-4 bg-slate-50">
-          <Label className="mb-2 block">Search for existing client</Label>
-          <ClientSearchAutocomplete onClientSelect={handleClientSelect} />
-          <p className="text-xs text-muted-foreground mt-2">
-            Select a client from the dropdown or modify the fields below manually.
-          </p>
-        </div>
-      )}
-      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            value={clientInfo.name}
-            onChange={updateClientInfo}
-            className="retro-input"
-            required
+          <Label htmlFor="name">Client Name</Label>
+          <ClientSearchAutocomplete
+            onClientSelect={handleClientSelect}
+            value={nameValue}
+            onChange={handleNameChange}
+            placeholder="Enter client name or search existing..."
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="email">Email Address</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="email">Email Address</Label>
+            {isExistingClient && !isEditingDetails && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleEditDetails}
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Edit2 className="h-3 w-3 mr-1" />
+                Edit details
+              </Button>
+            )}
+          </div>
           <Input 
             id="email" 
             name="email" 
             type="email"
             value={clientInfo.email}
-            onChange={updateClientInfo}
-            className="retro-input"
+            onChange={handleRegularInputChange}
+            className={`retro-input ${isFieldReadOnly ? 'bg-muted text-muted-foreground' : ''}`}
+            readOnly={isFieldReadOnly}
             required
           />
         </div>
@@ -131,8 +166,9 @@ export function ClientFormFields({
             id="phone" 
             name="phone" 
             value={clientInfo.phone}
-            onChange={updateClientInfo}
-            className="retro-input"
+            onChange={handleRegularInputChange}
+            className={`retro-input ${isFieldReadOnly ? 'bg-muted text-muted-foreground' : ''}`}
+            readOnly={isFieldReadOnly}
           />
         </div>
         
@@ -142,8 +178,9 @@ export function ClientFormFields({
             id="companyName" 
             name="companyName" 
             value={clientInfo.companyName}
-            onChange={updateClientInfo}
-            className="retro-input"
+            onChange={handleRegularInputChange}
+            className={`retro-input ${isFieldReadOnly ? 'bg-muted text-muted-foreground' : ''}`}
+            readOnly={isFieldReadOnly}
           />
         </div>
       </div>
