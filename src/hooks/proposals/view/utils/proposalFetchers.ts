@@ -104,6 +104,7 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
       .from('proposals')
       .select('*')
       .eq('id', proposalId)
+      .is('deleted_at', null) // Exclude soft-deleted proposals
       .single();
     
     if (fetchError) {

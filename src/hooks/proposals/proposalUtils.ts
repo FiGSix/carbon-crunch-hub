@@ -74,9 +74,7 @@ export function transformProposalData(
       invitation_sent_at: item.invitation_sent_at,
       invitation_viewed_at: item.invitation_viewed_at,
       invitation_expires_at: item.invitation_expires_at,
-      system_size_kwp: null, // Not available in RawProposalData
-      is_preview: item.is_preview,
-      preview_of_id: item.preview_of_id
+      system_size_kwp: null // Not available in RawProposalData
     };
   });
 }

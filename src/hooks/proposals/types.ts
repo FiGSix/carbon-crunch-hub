@@ -20,8 +20,6 @@ export interface RawProposalData {
   invitation_viewed_at: string | null;
   invitation_expires_at: string | null;
   review_later_until: string | null;
-  is_preview: boolean | null;
-  preview_of_id: string | null;
 }
 
 /**

@@ -20,6 +20,7 @@ export function buildBaseProposalsQuery(
       created_at,
       signed_at,
       archived_at,
+      deleted_at,
       review_later_until,
       client_id,
       client_reference_id,
@@ -33,9 +34,7 @@ export function buildBaseProposalsQuery(
       unit_standard,
       invitation_sent_at,
       invitation_viewed_at,
-      invitation_expires_at,
-      is_preview,
-      preview_of_id
+      invitation_expires_at
     `)
     .is('deleted_at', null); // Exclude soft-deleted proposals
 

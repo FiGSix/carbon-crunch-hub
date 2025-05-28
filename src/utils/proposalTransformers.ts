@@ -12,8 +12,8 @@ export function transformToProposalData(rawProposal: any): ProposalData {
     created_at: rawProposal.created_at,
     signed_at: rawProposal.signed_at,
     archived_at: rawProposal.archived_at,
-    review_later_until: rawProposal.review_later_until,
     deleted_at: rawProposal.deleted_at,
+    review_later_until: rawProposal.review_later_until,
     client_id: rawProposal.client_id,
     client_reference_id: rawProposal.client_reference_id,
     agent_id: rawProposal.agent_id,
@@ -94,9 +94,7 @@ export async function transformToProposalListItems(
       invitation_sent_at: proposal.invitation_sent_at,
       invitation_viewed_at: proposal.invitation_viewed_at,
       invitation_expires_at: proposal.invitation_expires_at,
-      system_size_kwp: proposal.system_size_kwp,
-      is_preview: proposal.is_preview,
-      preview_of_id: proposal.preview_of_id
+      system_size_kwp: proposal.system_size_kwp
     };
   });
 }

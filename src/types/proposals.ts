@@ -17,13 +17,13 @@ export interface ProposalDbRecord {
   signed_at: string | null;
   archived_at: string | null;
   archived_by: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
   review_later_until: string | null;
   invitation_sent_at: string | null;
   invitation_viewed_at: string | null;
   invitation_expires_at: string | null;
   invitation_token: string | null;
-  is_preview: boolean | null;
-  preview_of_id: string | null;
   annual_energy: number | null;
   carbon_credits: number | null;
   client_share_percentage: number | null;
@@ -79,8 +79,8 @@ export interface ProposalData {
   created_at: string;
   signed_at?: string | null;
   archived_at?: string | null;
+  deleted_at?: string | null;
   review_later_until?: string | null;
-  deleted_at?: string | null;  // New field for soft delete
   client_id?: string | null;
   client_reference_id?: string | null;
   agent_id?: string | null;
@@ -127,8 +127,6 @@ export interface ProposalListItem {
   invitation_expires_at?: string | null;
   system_size_kwp?: number | null;
   agent?: string;
-  is_preview?: boolean | null;
-  preview_of_id?: string | null;
 }
 
 /**
@@ -141,8 +139,6 @@ export interface ProposalDetailsProps {
   onReject: () => Promise<void>;
   isReviewLater?: boolean;
   showActions?: boolean;
-  is_preview?: boolean;
-  preview_of_id?: string;
 }
 
 /**
