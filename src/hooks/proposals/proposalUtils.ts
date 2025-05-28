@@ -41,21 +41,42 @@ export function transformProposalData(
         }
       }
     }
+
+    // Calculate revenue from carbon credits and client share
+    const revenue = item.carbon_credits && item.client_share_percentage 
+      ? (item.carbon_credits * (item.client_share_percentage / 100))
+      : item.carbon_credits ? item.carbon_credits * 100 : 0; // Simplified revenue calculation fallback
       
     return {
       id: item.id,
-      name: item.title,
-      client: clientName,
+      name: item.title, // Map title to name for display
+      client: clientName, // Map client_name to client for display
       date: item.created_at.substring(0, 10), // Format date as YYYY-MM-DD
       size: size,
       status: item.status,
-      revenue: item.carbon_credits ? item.carbon_credits * 100 : 0, // Simplified revenue calculation
+      revenue: revenue,
+      // Include all required fields from ProposalListItem interface
+      created_at: item.created_at,
+      title: item.title,
+      signed_at: null, // Not available in RawProposalData
+      archived_at: null, // Not available in RawProposalData
+      review_later_until: item.review_later_until,
+      client_id: item.client_id,
+      client_reference_id: item.client_reference_id,
+      agent_id: item.agent_id,
+      client_name: clientName,
+      client_email: clientProfile?.email || 'No email',
+      agent_name: agentName,
+      agent: agentName, // Also map to agent for backward compatibility
+      annual_energy: item.annual_energy,
+      carbon_credits: item.carbon_credits,
+      client_share_percentage: item.client_share_percentage,
       invitation_sent_at: item.invitation_sent_at,
       invitation_viewed_at: item.invitation_viewed_at,
       invitation_expires_at: item.invitation_expires_at,
-      review_later_until: item.review_later_until,
-      agent_id: item.agent_id,
-      agent: agentName
+      system_size_kwp: null, // Not available in RawProposalData
+      is_preview: item.is_preview,
+      preview_of_id: item.preview_of_id
     };
   });
 }
