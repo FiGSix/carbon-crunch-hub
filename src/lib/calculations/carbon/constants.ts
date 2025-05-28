@@ -9,5 +9,14 @@ export const COAL_FACTOR = 0.0011; // kg coal per kWh
 export const AVERAGE_SUN_HOURS = 4.5; // Average daily sun hours in South Africa
 export const DAYS_IN_YEAR = 365;
 
-// Note: Carbon prices are now dynamically loaded from the database
-// via the dynamicCarbonPricingService. No hardcoded prices remain.
+// Fallback carbon prices (in Rand per tCO₂e) - used when dynamic pricing fails
+// These should match the current database values
+export const CARBON_PRICES: Record<string, number> = {
+  "2024": 78.36,
+  "2025": 97.34,
+  "2026": 127.03,
+  "2027": 143.12,
+  "2028": 158.79,
+  "2029": 174.88,
+  "2030": 190.55
+};

@@ -70,7 +70,11 @@ class DynamicCarbonPricingService {
 
     // Fallback to constants if dynamic loading fails (also filtered)
     const filteredConstantPrices = filterCurrentAndFuturePrices(CARBON_PRICES);
-    this.logger.info("Using fallback carbon prices from constants (filtered for current/future years)");
+    this.cachedPrices = filteredConstantPrices;
+    this.lastCacheTime = Date.now();
+    this.logger.info("Using fallback carbon prices from constants (filtered for current/future years)", {
+      fallbackPrices: filteredConstantPrices
+    });
     return filteredConstantPrices;
   }
 

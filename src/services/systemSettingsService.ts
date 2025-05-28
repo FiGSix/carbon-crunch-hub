@@ -52,9 +52,17 @@ class SystemSettingsService {
         .from('system_settings')
         .select('setting_value')
         .eq('setting_key', 'carbon_prices')
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        this.logger.error("Database error retrieving carbon prices", { error });
+        throw error;
+      }
+      
+      if (!data) {
+        this.logger.warn("No carbon prices found in system settings");
+        throw new Error("Carbon prices not found in database");
+      }
       
       this.logger.info("Retrieved carbon prices from system settings");
       return data.setting_value as CarbonPrices;
@@ -71,17 +79,52 @@ class SystemSettingsService {
     try {
       const { error } = await supabase
         .from('system_settings')
-        .update({
+        .upsert({
+          setting_key: 'carbon_prices',
           setting_value: prices,
           updated_at: new Date().toISOString()
-        })
-        .eq('setting_key', 'carbon_prices');
+        });
 
       if (error) throw error;
       
       this.logger.info("Updated carbon prices", { prices });
     } catch (error) {
       this.logger.error("Error updating carbon prices", { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Initialize carbon prices in database if they don't exist
+   */
+  async initializeCarbonPrices(): Promise<void> {
+    try {
+      // Default carbon prices that match the constants
+      const defaultPrices: CarbonPrices = {
+        "2024": 78.36,
+        "2025": 97.34,
+        "2026": 127.03,
+        "2027": 143.12,
+        "2028": 158.79,
+        "2029": 174.88,
+        "2030": 190.55
+      };
+
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'carbon_prices',
+          setting_value: defaultPrices,
+          description: 'Carbon credit prices by year (in Rand per tCO₂e)',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      
+      this.logger.info("Initialized carbon prices in database", { defaultPrices });
+    } catch (error) {
+      this.logger.error("Error initializing carbon prices", { error });
       throw error;
     }
   }

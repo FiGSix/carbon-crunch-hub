@@ -44,12 +44,13 @@ export {
   dynamicCarbonPricingService
 } from './dynamicPricing';
 
-// System constants (no longer includes CARBON_PRICES)
+// System constants (now includes CARBON_PRICES as fallback)
 export {
   EMISSION_FACTOR,
   COAL_FACTOR,
   AVERAGE_SUN_HOURS,
-  DAYS_IN_YEAR
+  DAYS_IN_YEAR,
+  CARBON_PRICES
 } from './constants';
 
 export type {
