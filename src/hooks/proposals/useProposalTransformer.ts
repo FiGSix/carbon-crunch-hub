@@ -10,7 +10,7 @@ import { fetchProfilesByIds } from "./api/fetchProfiles";
 export function useProposalTransformer() {
   const transformProposalDataWithProfiles = async (
     proposalsData: RawProposalData[]
-  ) => {
+  ): Promise<ProposalListItem[]> => {
     if (!proposalsData || proposalsData.length === 0) {
       return [] as ProposalListItem[];
     }
@@ -31,8 +31,8 @@ export function useProposalTransformer() {
     const clientProfiles = Object.values(clientProfilesRecord);
     const agentProfiles = Object.values(agentProfilesRecord);
     
-    // Transform the data using our utility function
-    return transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles);
+    // Transform the data using our utility function - NOW AWAITING THE ASYNC FUNCTION
+    return await transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles);
   };
 
   return {

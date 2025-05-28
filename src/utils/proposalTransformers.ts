@@ -33,13 +33,16 @@ interface ProfileData {
 
 /**
  * Transform raw proposal data with profile information into ProposalListItem format
+ * Now async to handle revenue calculation properly
  */
-export function transformToProposalListItems(
+export async function transformToProposalListItems(
   proposalsData: RawProposalData[],
   clientProfiles: ProfileData[],
   agentProfiles: ProfileData[]
-): ProposalListItem[] {
-  return proposalsData.map(proposal => {
+): Promise<ProposalListItem[]> {
+  const transformedProposals: ProposalListItem[] = [];
+
+  for (const proposal of proposalsData) {
     // Get client name
     const clientProfile = clientProfiles.find(p => 
       p.id === proposal.client_id || p.id === proposal.client_reference_id
@@ -68,12 +71,12 @@ export function transformToProposalListItems(
       systemSizeInKWp = 0;
     }
 
-    // Calculate revenue based on the normalized system size
+    // Calculate revenue based on the normalized system size - NOW ASYNC
     const projectCommissionDate = proposal.content?.projectInfo?.commissionDate;
-    const revenue = calculateRevenue(systemSizeInKWp, projectCommissionDate, 'kWp');
+    const revenue = await calculateRevenue(systemSizeInKWp, projectCommissionDate, 'kWp');
     const totalRevenue = Object.values(revenue).reduce((sum, amount) => sum + amount, 0);
 
-    return {
+    transformedProposals.push({
       id: proposal.id,
       name: proposal.title,
       client: clientName,
@@ -89,8 +92,10 @@ export function transformToProposalListItems(
       agent: agentName,
       is_preview: proposal.is_preview,
       preview_of_id: proposal.preview_of_id
-    };
-  });
+    });
+  }
+
+  return transformedProposals;
 }
 
 /**

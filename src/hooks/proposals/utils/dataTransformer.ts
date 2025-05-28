@@ -70,8 +70,8 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
     }
   }
 
-  // Transform proposals using the utility function
-  const transformedProposals = transformToProposalListItems(
+  // Transform proposals using the utility function - NOW AWAITING THE ASYNC FUNCTION
+  const transformedProposals = await transformToProposalListItems(
     proposalsData,
     clientProfilesArray,
     agentProfilesArray
