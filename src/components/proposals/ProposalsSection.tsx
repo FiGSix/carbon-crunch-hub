@@ -37,7 +37,7 @@ export function ProposalsSection() {
   
   // Memoize title based on user role to prevent re-renders
   const sectionTitle = useMemo(() => {
-    if (userRole === 'agent') return 'My Assigned Proposals';
+    if (userRole === 'agent') return 'My Proposals';
     if (userRole === 'client') return 'My Proposals';
     return 'Proposal Management';
   }, [userRole]);

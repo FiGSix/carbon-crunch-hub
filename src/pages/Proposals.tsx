@@ -12,7 +12,7 @@ const Proposals = () => {
   const pageTitle = userRole === 'client' 
     ? 'My Proposals' 
     : userRole === 'agent' 
-      ? 'My Assigned Proposals' 
+      ? 'My Proposals' 
       : 'Proposals';
       
   const pageDescription = userRole === 'client'
