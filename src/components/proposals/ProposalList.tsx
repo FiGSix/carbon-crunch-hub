@@ -8,7 +8,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { ProposalStatusBadge } from "./components/ProposalStatusBadge";
+import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
@@ -38,9 +38,10 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
       <TableCell>{proposal.size.toFixed(2)} MWp</TableCell>
       <TableCell>
-        <ProposalStatusBadge 
-          status={proposal.status} 
-          reviewLater={!!proposal.review_later_until}
+        <ProposalStatusDropdown
+          proposalId={proposal.id}
+          currentStatus={proposal.status}
+          onStatusUpdate={onProposalUpdate}
         />
       </TableCell>
       {userRole === "admin" && (
