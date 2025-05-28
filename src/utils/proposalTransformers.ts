@@ -92,3 +92,57 @@ export function transformToProposalListItems(
     };
   });
 }
+
+/**
+ * Transform raw proposal database record to ProposalData format
+ */
+export function transformToProposalData(rawProposal: any) {
+  return {
+    id: rawProposal.id,
+    title: rawProposal.title,
+    status: rawProposal.status,
+    content: rawProposal.content || {},
+    client_id: rawProposal.client_id,
+    client_reference_id: rawProposal.client_reference_id,
+    agent_id: rawProposal.agent_id,
+    created_at: rawProposal.created_at,
+    signed_at: rawProposal.signed_at,
+    invitation_viewed_at: rawProposal.invitation_viewed_at,
+    archived_at: rawProposal.archived_at,
+    archived_by: rawProposal.archived_by,
+    review_later_until: rawProposal.review_later_until,
+    is_preview: rawProposal.is_preview,
+    preview_of_id: rawProposal.preview_of_id
+  };
+}
+
+/**
+ * Apply client-side sorting to proposal list items
+ */
+export function applyClientSideSorting(
+  proposals: ProposalListItem[],
+  sortBy: string
+): ProposalListItem[] {
+  const sorted = [...proposals];
+  
+  switch (sortBy) {
+    case 'date-desc':
+      return sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    case 'date-asc':
+      return sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    case 'name-asc':
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    case 'name-desc':
+      return sorted.sort((a, b) => b.name.localeCompare(a.name));
+    case 'size-desc':
+      return sorted.sort((a, b) => b.size - a.size);
+    case 'size-asc':
+      return sorted.sort((a, b) => a.size - b.size);
+    case 'revenue-desc':
+      return sorted.sort((a, b) => b.revenue - a.revenue);
+    case 'revenue-asc':
+      return sorted.sort((a, b) => a.revenue - b.revenue);
+    default:
+      return sorted;
+  }
+}

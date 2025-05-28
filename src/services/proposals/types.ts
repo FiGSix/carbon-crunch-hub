@@ -24,6 +24,8 @@ export interface ProposalData {
   // Additional fields to match database schema
   client_contact_id?: string;
   status?: string;
+  system_size_kwp?: number;
+  unit_standard?: string;
 }
 
 // Export the ProposalCreationResult interface from the service

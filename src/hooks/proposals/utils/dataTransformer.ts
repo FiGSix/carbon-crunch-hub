@@ -39,7 +39,7 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
   });
 
   // Fetch client profiles
-  const clientProfiles: Record<string, ProfileRecord> = {};
+  let clientProfilesArray: ProfileRecord[] = [];
   if (clientIds.size > 0) {
     const { data: clientData, error: clientError } = await supabase
       .from('profiles')
@@ -49,15 +49,13 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
     if (clientError) {
       dataLogger.error("Error fetching client profiles", { error: clientError });
     } else if (clientData) {
-      clientData.forEach(profile => {
-        clientProfiles[profile.id] = profile;
-      });
+      clientProfilesArray = clientData;
       dataLogger.info("Fetched client profiles", { count: clientData.length });
     }
   }
 
   // Fetch agent profiles
-  const agentProfiles: Record<string, ProfileRecord> = {};
+  let agentProfilesArray: ProfileRecord[] = [];
   if (agentIds.size > 0) {
     const { data: agentData, error: agentError } = await supabase
       .from('profiles')
@@ -67,9 +65,7 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
     if (agentError) {
       dataLogger.error("Error fetching agent profiles", { error: agentError });
     } else if (agentData) {
-      agentData.forEach(profile => {
-        agentProfiles[profile.id] = profile;
-      });
+      agentProfilesArray = agentData;
       dataLogger.info("Fetched agent profiles", { count: agentData.length });
     }
   }
@@ -77,8 +73,8 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
   // Transform proposals using the utility function
   const transformedProposals = transformToProposalListItems(
     proposalsData,
-    clientProfiles,
-    agentProfiles
+    clientProfilesArray,
+    agentProfilesArray
   );
 
   dataLogger.info("Data transformation completed", { 
