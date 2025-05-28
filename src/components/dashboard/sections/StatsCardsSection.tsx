@@ -6,6 +6,7 @@ import { DealStatusCard } from "@/components/dashboard/preview/DealStatusCard";
 import { FileText, TrendingUp, Wind, Leaf } from "lucide-react";
 import { UserRole } from "@/lib/supabase/types";
 import { ProposalListItem } from "@/types/proposals";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
 
 interface StatsCardsSectionProps {
   userRole: string | null;
@@ -31,7 +32,7 @@ export function StatsCardsSection({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
         <StatsCard 
           title="Portfolio Size" 
-          value={`${portfolioSize} MWp`} 
+          value={formatSystemSizeForDisplay(portfolioSize)} 
           icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
           trend="+14%"
           trendDirection="up"
@@ -58,7 +59,7 @@ export function StatsCardsSection({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <StatsCard 
         title="Portfolio Size" 
-        value={`${portfolioSize} MWp`} 
+        value={formatSystemSizeForDisplay(portfolioSize)} 
         icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
         trend="+14%"
         trendDirection="up"
