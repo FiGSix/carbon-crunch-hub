@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { 
   calculateAnnualEnergy, 
@@ -31,6 +30,7 @@ interface CarbonCreditSectionProps {
 
 /**
  * Helper function to calculate pro-rated energy generation for a specific year
+ * Updated to handle January 1st commissioning as full years
  */
 function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string): number {
   const fullYearEnergy = calculateAnnualEnergy(systemSizeKWp);
@@ -44,6 +44,15 @@ function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDa
   
   // Apply pro-rata logic for commission year
   if (year === commissionYear) {
+    // Check if commissioning happens at the very beginning of the year (January 1st)
+    const isJanuary1st = commissionDateTime.getMonth() === 0 && commissionDateTime.getDate() === 1;
+    
+    if (isJanuary1st) {
+      // If commissioned on January 1st, treat as full year
+      return fullYearEnergy;
+    }
+    
+    // For other dates, apply pro-rata logic
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31);
     const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDateTime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
