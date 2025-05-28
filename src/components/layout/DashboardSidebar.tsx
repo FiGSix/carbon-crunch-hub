@@ -8,16 +8,21 @@ import {
   UserPlus, 
   Calculator,
   Bell,
-  Settings
+  Settings,
+  LogOut
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 
 export function DashboardSidebar() {
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   const navItems = [
@@ -77,8 +82,8 @@ export function DashboardSidebar() {
   );
 
   return (
-    <aside className="w-64 bg-white border-r border-carbon-gray-200 h-full">
-      <nav className="p-4 space-y-2">
+    <aside className="w-64 bg-white border-r border-carbon-gray-200 h-full flex flex-col">
+      <nav className="p-4 space-y-2 flex-1">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -97,6 +102,16 @@ export function DashboardSidebar() {
           );
         })}
       </nav>
+      
+      <div className="p-4 border-t border-carbon-gray-200">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50"
+        >
+          <LogOut className="mr-3 h-5 w-5" />
+          Sign Out
+        </button>
+      </div>
     </aside>
   );
 }
