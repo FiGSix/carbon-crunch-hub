@@ -1,203 +1,20 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+
+import { useMemo } from 'react';
 import { useProposals } from './useProposals';
 import { useAuth } from '@/contexts/auth';
-import { ProposalListItem } from '@/types/proposals';
-import { formatSystemSizeForDisplay } from '@/lib/calculations/carbon';
-
-interface DashboardStats {
-  totalProposals: number;
-  pendingProposals: number;
-  approvedProposals: number;
-  totalRevenue: number;
-  totalEnergyOffset: number;
-}
-
-interface DashboardData {
-  // Auth data
-  userRole: string | null;
-  
-  // Proposal data
-  proposals: ProposalListItem[];
-  
-  // Loading states
-  loading: boolean;
-  error: string | null;
-  
-  // Computed stats
-  stats: DashboardStats;
-  recentProposals: ProposalListItem[];
-  chartData: ProposalListItem[];
-  portfolioSize: number;
-  totalProposals: number;
-  potentialRevenue: number;
-  co2Offset: number;
-  
-  // Helper functions
-  getWelcomeMessage: () => string;
-  getUserDisplayName: () => string;
-  formatUserRole: (role: string | null) => string;
-  handleRefreshProposals: () => Promise<void>;
-}
+import { useDashboardComputedData } from './dashboard/useDashboardComputedData';
+import { useDashboardHelpers } from './dashboard/useDashboardHelpers';
+import { DashboardData } from './dashboard/types';
 
 export function useDashboardData(): DashboardData {
   const { proposals, loading, error, fetchProposals } = useProposals();
-  const { userRole, user, profile } = useAuth();
+  const { userRole } = useAuth();
   
-  // Use ref to cache computed values and prevent unnecessary recalculations
-  const computedDataRef = useRef<{
-    proposals: ProposalListItem[];
-    stats: DashboardStats;
-    recentProposals: ProposalListItem[];
-    chartData: ProposalListItem[];
-  } | null>(null);
-
-  // Memoized stats calculation with proper dependency tracking
-  const stats = useMemo(() => {
-    // Check if we can use cached data
-    if (computedDataRef.current && 
-        computedDataRef.current.proposals === proposals && 
-        proposals.length > 0) {
-      return computedDataRef.current.stats;
-    }
-
-    console.log("Recalculating dashboard stats for", proposals.length, "proposals");
-    
-    // Calculate revenue based on user role
-    let totalRevenue = 0;
-    if (userRole === 'agent') {
-      // For agents: calculate commission-based revenue
-      totalRevenue = proposals.reduce((sum, p) => {
-        const proposalRevenue = p.revenue || 0;
-        const commissionPercentage = p.agent_commission_percentage || 0;
-        const commissionRevenue = (proposalRevenue * commissionPercentage) / 100;
-        return sum + commissionRevenue;
-      }, 0);
-    } else {
-      // For other roles: use total revenue
-      totalRevenue = proposals.reduce((sum, p) => sum + (p.revenue || 0), 0);
-    }
-    
-    const newStats: DashboardStats = {
-      totalProposals: proposals.length,
-      pendingProposals: proposals.filter(p => p.status === 'pending' || p.status === 'draft').length,
-      approvedProposals: proposals.filter(p => p.status === 'approved' || p.status === 'signed').length,
-      totalRevenue: Math.round(totalRevenue), // Round to avoid decimal precision issues
-      totalEnergyOffset: proposals.reduce((sum, p) => sum + (p.annual_energy || 0), 0)
-    };
-
-    return newStats;
-  }, [proposals, userRole]);
-
-  // Memoized recent proposals (last 5, sorted by date)
-  const recentProposals = useMemo(() => {
-    // Check if we can use cached data
-    if (computedDataRef.current && 
-        computedDataRef.current.proposals === proposals && 
-        proposals.length > 0) {
-      return computedDataRef.current.recentProposals;
-    }
-
-    const sorted = [...proposals]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5);
-    
-    return sorted;
-  }, [proposals]);
-
-  // Memoized chart data (proposals with revenue > 0)
-  const chartData = useMemo(() => {
-    // Check if we can use cached data
-    if (computedDataRef.current && 
-        computedDataRef.current.proposals === proposals && 
-        proposals.length > 0) {
-      return computedDataRef.current.chartData;
-    }
-
-    const filtered = proposals.filter(p => (p.revenue || 0) > 0);
-    return filtered;
-  }, [proposals]);
-
-  // Portfolio size calculation - different logic for agents vs other roles
-  const portfolioSize = useMemo(() => {
-    if (userRole === 'agent') {
-      // For agents: sum system_size_kwp from approved proposals only
-      const approvedProposals = proposals.filter(p => 
-        p.status === 'approved' || p.status === 'signed'
-      );
-      
-      const totalKwp = approvedProposals.reduce((sum, p) => {
-        // Use the system_size_kwp which should now be properly populated by the transformer
-        const systemSize = p.system_size_kwp || 0;
-        return sum + systemSize;
-      }, 0);
-      
-      console.log("Agent portfolio calculation:", {
-        totalProposals: proposals.length,
-        approvedProposals: approvedProposals.length,
-        totalKwp,
-        proposals: approvedProposals.map(p => ({
-          id: p.id,
-          title: p.title,
-          status: p.status,
-          system_size_kwp: p.system_size_kwp,
-          size: p.size
-        }))
-      });
-      
-      return totalKwp;
-    } else {
-      // For other roles: use total number of proposals
-      return proposals.length;
-    }
-  }, [proposals, userRole]);
-
-  // Computed values from stats
-  const totalProposals = useMemo(() => stats.totalProposals, [stats.totalProposals]);
-  const potentialRevenue = useMemo(() => stats.totalRevenue, [stats.totalRevenue]);
-  const co2Offset = useMemo(() => stats.totalEnergyOffset, [stats.totalEnergyOffset]);
-
-  // Helper functions
-  const getWelcomeMessage = useCallback(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning!";
-    if (hour < 18) return "Good afternoon!";
-    return "Good evening!";
-  }, []);
-
-  const getUserDisplayName = useCallback(() => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
-    }
-    if (profile?.first_name) {
-      return profile.first_name;
-    }
-    if (user?.email) {
-      return user.email;
-    }
-    return "User";
-  }, [profile?.first_name, profile?.last_name, user?.email]);
-
-  const formatUserRole = useCallback((role: string | null) => {
-    if (!role) return "User";
-    return role.charAt(0).toUpperCase() + role.slice(1);
-  }, []);
-
-  const handleRefreshProposals = useCallback(async () => {
-    console.log("Dashboard: Refreshing proposals data");
-    await fetchProposals();
-  }, [fetchProposals]);
-
-  // Update cache when calculations are done
-  useEffect(() => {
-    if (proposals.length > 0) {
-      computedDataRef.current = {
-        proposals,
-        stats,
-        recentProposals,
-        chartData
-      };
-    }
-  }, [proposals, stats, recentProposals, chartData]);
+  // Get computed data using the new hook
+  const computedData = useDashboardComputedData(proposals, userRole);
+  
+  // Get helper functions using the new hook
+  const helpers = useDashboardHelpers(fetchProposals);
 
   // Memoize the final result to prevent unnecessary re-renders
   const result = useMemo((): DashboardData => ({
@@ -212,35 +29,17 @@ export function useDashboardData(): DashboardData {
     error,
     
     // Computed data
-    stats,
-    recentProposals,
-    chartData,
-    portfolioSize,
-    totalProposals,
-    potentialRevenue,
-    co2Offset,
+    ...computedData,
     
     // Helper functions
-    getWelcomeMessage,
-    getUserDisplayName,
-    formatUserRole,
-    handleRefreshProposals
+    ...helpers
   }), [
     userRole,
     proposals,
     loading,
     error,
-    stats,
-    recentProposals,
-    chartData,
-    portfolioSize,
-    totalProposals,
-    potentialRevenue,
-    co2Offset,
-    getWelcomeMessage,
-    getUserDisplayName,
-    formatUserRole,
-    handleRefreshProposals
+    computedData,
+    helpers
   ]);
 
   return result;
