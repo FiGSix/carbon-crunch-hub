@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 /**
  * Hook for handling proposal action operations (approve, reject, delete)
  */
-export function useProposalActions(refreshData: () => Promise<void>) {
+export function useProposalActions(refreshData: () => Promise<void>, onDeleteSuccess?: () => void) {
   const { loading: operationLoading, approveProposal, rejectProposal, deleteProposal, toggleReviewLater } = useProposalOperations();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -89,11 +89,19 @@ export function useProposalActions(refreshData: () => Promise<void>) {
     try {
       const result = await deleteProposal(proposalId, userId);
       if (result.success) {
-        actionsLogger.info({ message: "Proposal deleted successfully, refreshing data", proposalId });
-        // Refresh data from the server
-        await refreshData();
+        actionsLogger.info({ message: "Proposal deleted successfully", proposalId });
         
         setDeleteDialogOpen(false);
+        
+        // Call the success callback if provided (for navigation)
+        if (onDeleteSuccess) {
+          actionsLogger.info({ message: "Executing delete success callback", proposalId });
+          onDeleteSuccess();
+        } else {
+          // If no callback provided, refresh data as fallback
+          await refreshData();
+        }
+        
         return true;
       } else {
         actionsLogger.error({ message: "Deletion failed", error: result.error });

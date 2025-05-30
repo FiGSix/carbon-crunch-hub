@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { useViewProposal } from "@/hooks/proposals/view/useViewProposal";
@@ -12,6 +12,7 @@ import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper
 const ViewProposal = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const token = searchParams.get('token');
   const { user } = useAuth();
   
@@ -30,6 +31,12 @@ const ViewProposal = () => {
     console.log("URL:", window.location.href);
   }, [id, token, user]);
   
+  // Handle successful deletion with navigation
+  const handleDeleteSuccess = useCallback(() => {
+    viewLogger.info("Proposal deleted successfully, navigating to proposals page");
+    navigate('/proposals');
+  }, [navigate, viewLogger]);
+  
   const {
     proposal,
     loading,
@@ -47,7 +54,7 @@ const ViewProposal = () => {
     isClient,
     isAuthenticated,
     fetchProposal
-  } = useViewProposal(id, token);
+  } = useViewProposal(id, token, handleDeleteSuccess);
   
   // Only show authentication when an action is attempted
   const [showAuthForm, setShowAuthForm] = useState(false);

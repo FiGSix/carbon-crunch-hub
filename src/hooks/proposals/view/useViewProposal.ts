@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger";
 /**
  * Hook for viewing and interacting with a proposal
  */
-export function useViewProposal(id?: string, token?: string | null) {
+export function useViewProposal(id?: string, token?: string | null, onDeleteSuccess?: () => void) {
   const { user } = useAuth();
   const { proposal: initialProposal, loading: initialLoading, error: initialError, clientEmail, fetchProposal } = useProposalData(id, token);
   const [proposal, setProposal] = useState<ProposalData | null>(null);
@@ -31,7 +31,7 @@ export function useViewProposal(id?: string, token?: string | null) {
     deleteDialogOpen,
     setDeleteDialogOpen,
     deleteLoading
-  } = useProposalActions(fetchProposal);
+  } = useProposalActions(fetchProposal, onDeleteSuccess);
   
   // Update local state when initial data loads
   useEffect(() => {
