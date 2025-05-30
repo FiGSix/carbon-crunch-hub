@@ -1,4 +1,3 @@
-
 import { ProposalData, ProposalListItem } from '@/types/proposals';
 
 /**
@@ -80,6 +79,32 @@ function extractSystemSize(proposal: any): number {
 }
 
 /**
+ * Extract client name from multiple sources with proper fallback hierarchy
+ */
+function extractClientName(proposal: any, clientProfile: any): string {
+  // First try: client profile from client_id/client_reference_id
+  if (clientProfile) {
+    const profileName = `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim();
+    if (profileName) {
+      return profileName;
+    }
+  }
+  
+  // Second try: company name from proposal content
+  if (proposal.content?.clientInfo?.companyName) {
+    return proposal.content.clientInfo.companyName;
+  }
+  
+  // Third try: client name from proposal content
+  if (proposal.content?.clientInfo?.name) {
+    return proposal.content.clientInfo.name;
+  }
+  
+  // Final fallback
+  return 'Unknown Client';
+}
+
+/**
  * Transform raw proposal data to ProposalListItem format with client and agent profiles
  */
 export async function transformToProposalListItems(
@@ -99,10 +124,8 @@ export async function transformToProposalListItems(
     // Get agent profile
     const agentProfile = agentProfileMap.get(proposal.agent_id);
 
-    // Format client name and email
-    const clientName = clientProfile 
-      ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || 'Unknown Client'
-      : 'Unknown Client';
+    // Use the new client name extraction function
+    const clientName = extractClientName(proposal, clientProfile);
     
     const clientEmail = clientProfile?.email || proposal.content?.clientInfo?.email || 'No email';
 
@@ -122,7 +145,7 @@ export async function transformToProposalListItems(
     return {
       id: proposal.id,
       name: proposal.title, // Map title to name for display
-      client: clientName, // Map client_name to client for display
+      client: clientName, // Use the extracted client name
       date: proposal.created_at, // Map created_at to date for display
       size: systemSizeKwp, // Map extracted system size to size for display
       status: proposal.status,
