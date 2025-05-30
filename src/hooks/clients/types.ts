@@ -14,8 +14,4 @@ export interface UseMyClientsResult {
   isRefreshing: boolean;
   error: string | null;
   refreshClients: () => void;
-  autoRefreshEnabled: boolean;
-  setAutoRefreshEnabled: (enabled: boolean) => void;
-  refreshInterval: number;
-  setRefreshInterval: (interval: number) => void;
 }

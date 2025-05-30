@@ -13,7 +13,6 @@ interface ClientsTableProps {
   error: string | null;
   isAdmin: boolean;
   onRefresh?: () => void;
-  autoRefreshEnabled?: boolean;
 }
 
 export function ClientsTable({ 
@@ -22,13 +21,12 @@ export function ClientsTable({
   isRefreshing = false,
   error, 
   isAdmin,
-  onRefresh,
-  autoRefreshEnabled = false
+  onRefresh
 }: ClientsTableProps) {
   console.log('=== ClientsTable Render ===');
   console.log('State - Loading:', isLoading, 'Refreshing:', isRefreshing);
   console.log('Data - Error:', error, 'Clients:', clients.length);
-  console.log('Config - Auto-refresh:', autoRefreshEnabled, 'Is Admin:', isAdmin);
+  console.log('Config - Is Admin:', isAdmin);
 
   // Show loading skeleton only on initial load
   if (isLoading && clients.length === 0) {
@@ -55,7 +53,6 @@ export function ClientsTable({
       <ClientsTableEmpty 
         isAdmin={isAdmin}
         isRefreshing={isRefreshing}
-        autoRefreshEnabled={autoRefreshEnabled}
         onRefresh={onRefresh}
       />
     );
@@ -68,7 +65,6 @@ export function ClientsTable({
       clients={clients}
       isAdmin={isAdmin}
       isRefreshing={isRefreshing}
-      autoRefreshEnabled={autoRefreshEnabled}
       onRefresh={onRefresh}
       error={error} // Pass error for inline display
     />

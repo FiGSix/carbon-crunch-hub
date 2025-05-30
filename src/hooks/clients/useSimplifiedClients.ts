@@ -5,38 +5,22 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchClientsData } from './clientDataProcessor';
 import { ClientData } from './types';
 
-interface UseSimplifiedClientsOptions {
-  autoRefreshEnabled?: boolean;
-  refreshInterval?: number;
-}
-
 interface UseSimplifiedClientsResult {
   clients: ClientData[];
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
   refreshClients: () => void;
-  autoRefreshEnabled: boolean;
-  setAutoRefreshEnabled: (enabled: boolean) => void;
-  refreshInterval: number;
-  setRefreshInterval: (interval: number) => void;
 }
 
-export function useSimplifiedClients(
-  options: UseSimplifiedClientsOptions = {}
-): UseSimplifiedClientsResult {
-  const { autoRefreshEnabled: initialAutoRefresh = false, refreshInterval: initialInterval = 30000 } = options;
-  
-  // Simplified state management
+export function useSimplifiedClients(): UseSimplifiedClientsResult {
+  // Simplified state management - no auto-refresh features
   const [clients, setClients] = useState<ClientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(initialAutoRefresh);
-  const [refreshInterval, setRefreshInterval] = useState(initialInterval);
   
-  // Refs for cleanup and avoiding stale closures
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref for cleanup
   const mountedRef = useRef(true);
   
   const { user, userRole } = useAuth();
@@ -115,32 +99,6 @@ export function useSimplifiedClients(
     fetchClients(true);
   }, [fetchClients]);
 
-  // Auto-refresh setup
-  useEffect(() => {
-    // Clear existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Setup new interval if auto-refresh is enabled
-    if (autoRefreshEnabled && refreshInterval > 0 && user) {
-      console.log('Setting up auto-refresh with interval:', refreshInterval);
-      intervalRef.current = setInterval(() => {
-        console.log('Auto-refresh triggered');
-        fetchClients(false);
-      }, refreshInterval);
-    }
-
-    // Cleanup function
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [autoRefreshEnabled, refreshInterval, fetchClients, user]);
-
   // Initial fetch - simplified
   useEffect(() => {
     console.log('Initial fetch effect triggered');
@@ -156,9 +114,6 @@ export function useSimplifiedClients(
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
     };
   }, []);
 
@@ -170,10 +125,6 @@ export function useSimplifiedClients(
     isLoading,
     isRefreshing,
     error,
-    refreshClients,
-    autoRefreshEnabled,
-    setAutoRefreshEnabled,
-    refreshInterval,
-    setRefreshInterval
+    refreshClients
   };
 }

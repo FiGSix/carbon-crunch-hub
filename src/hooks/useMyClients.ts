@@ -5,11 +5,8 @@ import { ClientData, UseMyClientsResult } from './clients/types';
 export function useMyClients(): UseMyClientsResult {
   console.log('=== useMyClients: Using simplified client hook ===');
   
-  // Use the simplified hook with more conservative defaults
-  const result = useSimplifiedClients({
-    autoRefreshEnabled: false, // Default to off for better UX
-    refreshInterval: 60000 // 1 minute default
-  });
+  // Use the simplified hook without auto-refresh features
+  const result = useSimplifiedClients();
 
   console.log('=== useMyClients: Returning result ===');
   console.log('Loading:', result.isLoading, 'Refreshing:', result.isRefreshing);

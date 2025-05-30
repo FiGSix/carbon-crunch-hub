@@ -3,7 +3,6 @@ import React from 'react';
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
-import { ClientsSettings } from '@/components/clients/ClientsSettings';
 import { useMyClients } from '@/hooks/useMyClients';
 
 const MyClients = () => {
@@ -13,11 +12,7 @@ const MyClients = () => {
     isLoading, 
     isRefreshing, 
     error, 
-    refreshClients,
-    autoRefreshEnabled,
-    setAutoRefreshEnabled,
-    refreshInterval,
-    setRefreshInterval
+    refreshClients
   } = useMyClients();
   
   const isAdmin = userRole === 'admin';
@@ -26,7 +21,6 @@ const MyClients = () => {
   console.log('User Role:', userRole, 'Is Admin:', isAdmin);
   console.log('Loading:', isLoading, 'Refreshing:', isRefreshing);
   console.log('Error:', error, 'Clients:', clients.length);
-  console.log('Auto-refresh enabled:', autoRefreshEnabled, 'Interval:', refreshInterval);
 
   return (
     <DashboardLayout>
@@ -52,17 +46,8 @@ const MyClients = () => {
                 <span>Refreshing: {isRefreshing ? 'Yes' : 'No'}</span>
                 <span>•</span>
                 <span>Clients: {clients.length}</span>
-                <span>•</span>
-                <span>Auto-refresh: {autoRefreshEnabled ? 'On' : 'Off'}</span>
               </div>
             </div>
-            
-            <ClientsSettings
-              autoRefreshEnabled={autoRefreshEnabled}
-              onAutoRefreshChange={setAutoRefreshEnabled}
-              refreshInterval={refreshInterval}
-              onRefreshIntervalChange={setRefreshInterval}
-            />
           </div>
 
           <ClientsTable 
@@ -72,7 +57,6 @@ const MyClients = () => {
             error={error}
             isAdmin={isAdmin}
             onRefresh={refreshClients}
-            autoRefreshEnabled={autoRefreshEnabled}
           />
         </div>
       </div>
