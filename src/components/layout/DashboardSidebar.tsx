@@ -54,7 +54,7 @@ export function DashboardSidebar() {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,
-      roles: ["admin", "agent"]
+      roles: ["admin"]
     },
     {
       name: "Agents",

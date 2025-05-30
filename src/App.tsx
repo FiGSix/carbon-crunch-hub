@@ -87,7 +87,7 @@ function App() {
               <Route
                 path="/my-clients"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute allowedRoles={['admin']}>
                     <MyClients />
                   </PrivateRoute>
                 }
