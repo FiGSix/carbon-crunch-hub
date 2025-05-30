@@ -47,6 +47,7 @@ function App() {
                   </CalculatorRedirect>
                 } 
               />
+              <Route path="/agents" element={<Agents />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/force-logout" element={<ForceLogout />} />
@@ -88,14 +89,6 @@ function App() {
                 element={
                   <PrivateRoute>
                     <MyClients />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/agents"
-                element={
-                  <PrivateRoute>
-                    <Agents />
                   </PrivateRoute>
                 }
               />
