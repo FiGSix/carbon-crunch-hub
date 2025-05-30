@@ -1,4 +1,5 @@
 import { ProposalData, ProposalListItem } from '@/types/proposals';
+import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
 
 /**
  * Transform raw proposal data from database to typed ProposalData
@@ -105,6 +106,38 @@ function extractClientName(proposal: any, clientProfile: any): string {
 }
 
 /**
+ * Calculate revenue using dynamic carbon pricing
+ */
+async function calculateProposalRevenue(
+  carbonCredits: number, 
+  clientSharePercentage: number, 
+  commissionDate?: string
+): Promise<number> {
+  if (!carbonCredits || !clientSharePercentage) {
+    return 0;
+  }
+
+  try {
+    // Get current year carbon price as the baseline
+    const currentYear = new Date().getFullYear();
+    const carbonPrice = await dynamicCarbonPricingService.getCarbonPriceForYear(currentYear);
+    
+    if (!carbonPrice) {
+      console.warn('No carbon price found for current year, using fallback calculation');
+      return 0;
+    }
+
+    // Calculate total revenue: carbon credits * price per credit * client share
+    const totalRevenue = carbonCredits * carbonPrice * (clientSharePercentage / 100);
+    
+    return Math.round(totalRevenue);
+  } catch (error) {
+    console.error('Error calculating proposal revenue:', error);
+    return 0;
+  }
+}
+
+/**
  * Transform raw proposal data to ProposalListItem format with client and agent profiles
  */
 export async function transformToProposalListItems(
@@ -116,63 +149,70 @@ export async function transformToProposalListItems(
   const clientProfileMap = new Map(clientProfiles.map(profile => [profile.id, profile]));
   const agentProfileMap = new Map(agentProfiles.map(profile => [profile.id, profile]));
 
-  return proposalsData.map(proposal => {
-    // Get client profile (check both client_id and client_reference_id)
-    const clientProfile = clientProfileMap.get(proposal.client_id) || 
-                         clientProfileMap.get(proposal.client_reference_id);
-    
-    // Get agent profile
-    const agentProfile = agentProfileMap.get(proposal.agent_id);
+  // Process all proposals in parallel to get their revenues
+  const transformedProposals = await Promise.all(
+    proposalsData.map(async (proposal) => {
+      // Get client profile (check both client_id and client_reference_id)
+      const clientProfile = clientProfileMap.get(proposal.client_id) || 
+                           clientProfileMap.get(proposal.client_reference_id);
+      
+      // Get agent profile
+      const agentProfile = agentProfileMap.get(proposal.agent_id);
 
-    // Use the new client name extraction function
-    const clientName = extractClientName(proposal, clientProfile);
-    
-    const clientEmail = clientProfile?.email || proposal.content?.clientInfo?.email || 'No email';
+      // Use the new client name extraction function
+      const clientName = extractClientName(proposal, clientProfile);
+      
+      const clientEmail = clientProfile?.email || proposal.content?.clientInfo?.email || 'No email';
 
-    // Format agent name
-    const agentName = agentProfile 
-      ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() || 'Unknown Agent'
-      : 'Unknown Agent';
+      // Format agent name
+      const agentName = agentProfile 
+        ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() || 'Unknown Agent'
+        : 'Unknown Agent';
 
-    // Extract system size from multiple sources
-    const systemSizeKwp = extractSystemSize(proposal);
+      // Extract system size from multiple sources
+      const systemSizeKwp = extractSystemSize(proposal);
 
-    // Calculate revenue from carbon credits and client share
-    const revenue = proposal.carbon_credits && proposal.client_share_percentage 
-      ? (proposal.carbon_credits * (proposal.client_share_percentage / 100))
-      : 0;
+      // Calculate revenue using dynamic carbon pricing
+      const revenue = await calculateProposalRevenue(
+        proposal.carbon_credits || 0,
+        proposal.client_share_percentage || 0,
+        proposal.content?.projectInfo?.commissionDate
+      );
 
-    return {
-      id: proposal.id,
-      name: proposal.title, // Map title to name for display
-      client: clientName, // Use the extracted client name
-      date: proposal.created_at, // Map created_at to date for display
-      size: systemSizeKwp, // Map extracted system size to size for display
-      status: proposal.status,
-      revenue: revenue,
-      // Keep all original fields for compatibility
-      title: proposal.title,
-      created_at: proposal.created_at,
-      signed_at: proposal.signed_at,
-      archived_at: proposal.archived_at,
-      review_later_until: proposal.review_later_until,
-      client_id: proposal.client_id,
-      client_reference_id: proposal.client_reference_id,
-      agent_id: proposal.agent_id,
-      client_name: clientName,
-      client_email: clientEmail,
-      agent_name: agentName,
-      agent: agentName, // Also map to agent for backward compatibility
-      annual_energy: proposal.annual_energy,
-      carbon_credits: proposal.carbon_credits,
-      client_share_percentage: proposal.client_share_percentage,
-      agent_commission_percentage: proposal.agent_commission_percentage, // Add this field
-      invitation_sent_at: proposal.invitation_sent_at,
-      invitation_viewed_at: proposal.invitation_viewed_at,
-      invitation_expires_at: proposal.invitation_expires_at,
-      system_size_kwp: systemSizeKwp // Use the extracted system size
-    };
-  });
+      return {
+        id: proposal.id,
+        name: proposal.title, // Map title to name for display
+        client: clientName, // Use the extracted client name
+        date: proposal.created_at, // Map created_at to date for display
+        size: systemSizeKwp, // Map extracted system size to size for display
+        status: proposal.status,
+        revenue: revenue,
+        // Keep all original fields for compatibility
+        title: proposal.title,
+        created_at: proposal.created_at,
+        signed_at: proposal.signed_at,
+        archived_at: proposal.archived_at,
+        review_later_until: proposal.review_later_until,
+        client_id: proposal.client_id,
+        client_reference_id: proposal.client_reference_id,
+        agent_id: proposal.agent_id,
+        client_name: clientName,
+        client_email: clientEmail,
+        agent_name: agentName,
+        agent: agentName, // Also map to agent for backward compatibility
+        annual_energy: proposal.annual_energy,
+        carbon_credits: proposal.carbon_credits,
+        client_share_percentage: proposal.client_share_percentage,
+        agent_commission_percentage: proposal.agent_commission_percentage, // Add this field
+        invitation_sent_at: proposal.invitation_sent_at,
+        invitation_viewed_at: proposal.invitation_viewed_at,
+        invitation_expires_at: proposal.invitation_expires_at,
+        system_size_kwp: systemSizeKwp // Use the extracted system size
+      };
+    })
+  );
+
+  return transformedProposals;
 }
 
 /**

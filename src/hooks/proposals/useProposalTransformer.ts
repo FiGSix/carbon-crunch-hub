@@ -31,7 +31,7 @@ export function useProposalTransformer() {
     const clientProfiles = Object.values(clientProfilesRecord);
     const agentProfiles = Object.values(agentProfilesRecord);
     
-    // Transform the data using our utility function - NOW AWAITING THE ASYNC FUNCTION
+    // Transform the data using our utility function - now properly awaiting the async function
     return await transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles);
   };
 
