@@ -27,7 +27,7 @@ export function useSimplifiedClients(
 ): UseSimplifiedClientsResult {
   const { autoRefreshEnabled: initialAutoRefresh = false, refreshInterval: initialInterval = 30000 } = options;
   
-  // State management
+  // Simplified state management
   const [clients, setClients] = useState<ClientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -38,36 +38,29 @@ export function useSimplifiedClients(
   // Refs for cleanup and avoiding stale closures
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
-  const fetchInProgressRef = useRef(false);
   
   const { user, userRole } = useAuth();
   const { toast } = useToast();
 
-  // Main fetch function with proper error handling and state management
+  // Simplified fetch function with clear state transitions
   const fetchClients = useCallback(async (isManualRefresh = false) => {
-    // Prevent concurrent fetches
-    if (fetchInProgressRef.current) {
-      console.log('Fetch already in progress, skipping...');
-      return;
-    }
-
-    console.log('=== useSimplifiedClients: Starting fetch ===');
+    console.log('=== fetchClients: Starting ===');
     console.log('User:', user?.id, 'Role:', userRole, 'Manual:', isManualRefresh);
 
     if (!user) {
-      console.log('No user - clearing loading states');
+      console.log('No user - setting loading to false');
       setIsLoading(false);
       setError('User not authenticated');
       return;
     }
 
     try {
-      fetchInProgressRef.current = true;
-      
-      // Set appropriate loading state
+      // Set loading state based on type of fetch
       if (isManualRefresh) {
+        console.log('Setting isRefreshing to true');
         setIsRefreshing(true);
       } else {
+        console.log('Setting isLoading to true');
         setIsLoading(true);
       }
       
@@ -75,12 +68,14 @@ export function useSimplifiedClients(
       setError(null);
 
       // Fetch the data
+      console.log('Calling fetchClientsData...');
       const clientsData = await fetchClientsData(userRole || '', user.id);
+      console.log('fetchClientsData completed with', clientsData.length, 'clients');
       
       // Only update state if component is still mounted
       if (mountedRef.current) {
         setClients(clientsData);
-        console.log('Successfully fetched', clientsData.length, 'clients');
+        console.log('State updated with clients data');
         
         if (isManualRefresh) {
           toast({
@@ -105,9 +100,9 @@ export function useSimplifiedClients(
         }
       }
     } finally {
-      fetchInProgressRef.current = false;
-      
+      // Always clear loading states
       if (mountedRef.current) {
+        console.log('Clearing loading states');
         setIsLoading(false);
         setIsRefreshing(false);
       }
@@ -132,10 +127,8 @@ export function useSimplifiedClients(
     if (autoRefreshEnabled && refreshInterval > 0 && user) {
       console.log('Setting up auto-refresh with interval:', refreshInterval);
       intervalRef.current = setInterval(() => {
-        if (!fetchInProgressRef.current) {
-          console.log('Auto-refresh triggered');
-          fetchClients(false);
-        }
+        console.log('Auto-refresh triggered');
+        fetchClients(false);
       }, refreshInterval);
     }
 
@@ -148,10 +141,16 @@ export function useSimplifiedClients(
     };
   }, [autoRefreshEnabled, refreshInterval, fetchClients, user]);
 
-  // Initial fetch
+  // Initial fetch - simplified
   useEffect(() => {
-    fetchClients(false);
-  }, [fetchClients]);
+    console.log('Initial fetch effect triggered');
+    if (user) {
+      fetchClients(false);
+    } else {
+      console.log('No user - setting loading to false immediately');
+      setIsLoading(false);
+    }
+  }, [user, userRole]); // Only depend on user and userRole
 
   // Cleanup on unmount
   useEffect(() => {

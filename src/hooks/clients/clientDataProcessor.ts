@@ -53,11 +53,13 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
     return [];
   }
 
-  return processProposalsIntoClients(proposalsData);
+  const result = processProposalsIntoClients(proposalsData);
+  console.log('=== fetchClientsData: Returning', result.length, 'clients ===');
+  return result;
 }
 
 function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
-  console.log('Processing client data...');
+  console.log('Processing', proposalsData.length, 'proposals into client data...');
   const clientMap = new Map<string, ClientData>();
 
   proposalsData.forEach((proposal, index) => {
@@ -124,6 +126,7 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
 
   console.log('=== Final client data ===');
   console.log('Unique clients found:', clientsArray.length);
+  console.log('Client names:', clientsArray.map(c => c.client_name));
 
   return clientsArray;
 }
