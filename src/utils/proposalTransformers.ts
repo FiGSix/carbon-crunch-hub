@@ -1,3 +1,4 @@
+
 import { ProposalData, ProposalListItem } from '@/types/proposals';
 
 /**
@@ -28,6 +29,54 @@ export function transformToProposalData(rawProposal: any): ProposalData {
     invitation_sent_at: rawProposal.invitation_sent_at,
     invitation_viewed_at: rawProposal.invitation_viewed_at
   };
+}
+
+/**
+ * Extract and convert system size from various sources
+ */
+function extractSystemSize(proposal: any): number {
+  // First check if system_size_kwp column has a value
+  if (proposal.system_size_kwp && proposal.system_size_kwp > 0) {
+    return Number(proposal.system_size_kwp);
+  }
+  
+  // Fall back to project_info.size if available
+  if (proposal.project_info?.size) {
+    const sizeString = proposal.project_info.size.toString().trim();
+    
+    // Extract numeric value from string (handle cases like "350 kWp", "14.8 MWp", etc.)
+    const numericMatch = sizeString.match(/^(\d+(?:\.\d+)?)/);
+    if (numericMatch) {
+      const numericValue = parseFloat(numericMatch[1]);
+      
+      // Check if it's in MWp and convert to kWp
+      if (sizeString.toLowerCase().includes('mwp') || sizeString.toLowerCase().includes('mw')) {
+        return numericValue * 1000;
+      }
+      
+      // Default to kWp
+      return numericValue;
+    }
+  }
+  
+  // Also check content.projectInfo.size as a fallback
+  if (proposal.content?.projectInfo?.size) {
+    const sizeString = proposal.content.projectInfo.size.toString().trim();
+    
+    const numericMatch = sizeString.match(/^(\d+(?:\.\d+)?)/);
+    if (numericMatch) {
+      const numericValue = parseFloat(numericMatch[1]);
+      
+      if (sizeString.toLowerCase().includes('mwp') || sizeString.toLowerCase().includes('mw')) {
+        return numericValue * 1000;
+      }
+      
+      return numericValue;
+    }
+  }
+  
+  // Return 0 if no valid size found
+  return 0;
 }
 
 /**
@@ -62,6 +111,9 @@ export async function transformToProposalListItems(
       ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() || 'Unknown Agent'
       : 'Unknown Agent';
 
+    // Extract system size from multiple sources
+    const systemSizeKwp = extractSystemSize(proposal);
+
     // Calculate revenue from carbon credits and client share
     const revenue = proposal.carbon_credits && proposal.client_share_percentage 
       ? (proposal.carbon_credits * (proposal.client_share_percentage / 100))
@@ -72,7 +124,7 @@ export async function transformToProposalListItems(
       name: proposal.title, // Map title to name for display
       client: clientName, // Map client_name to client for display
       date: proposal.created_at, // Map created_at to date for display
-      size: proposal.system_size_kwp || 0, // Map system_size_kwp to size for display
+      size: systemSizeKwp, // Map extracted system size to size for display
       status: proposal.status,
       revenue: revenue,
       // Keep all original fields for compatibility
@@ -94,7 +146,7 @@ export async function transformToProposalListItems(
       invitation_sent_at: proposal.invitation_sent_at,
       invitation_viewed_at: proposal.invitation_viewed_at,
       invitation_expires_at: proposal.invitation_expires_at,
-      system_size_kwp: proposal.system_size_kwp
+      system_size_kwp: systemSizeKwp // Use the extracted system size
     };
   });
 }

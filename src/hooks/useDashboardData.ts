@@ -112,7 +112,9 @@ export function useDashboardData(): DashboardData {
       );
       
       const totalKwp = approvedProposals.reduce((sum, p) => {
-        return sum + (p.system_size_kwp || 0);
+        // Use the system_size_kwp which should now be properly populated by the transformer
+        const systemSize = p.system_size_kwp || 0;
+        return sum + systemSize;
       }, 0);
       
       console.log("Agent portfolio calculation:", {
@@ -121,8 +123,10 @@ export function useDashboardData(): DashboardData {
         totalKwp,
         proposals: approvedProposals.map(p => ({
           id: p.id,
+          title: p.title,
           status: p.status,
-          system_size_kwp: p.system_size_kwp
+          system_size_kwp: p.system_size_kwp,
+          size: p.size
         }))
       });
       
