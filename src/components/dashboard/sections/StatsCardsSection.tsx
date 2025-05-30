@@ -27,12 +27,24 @@ export function StatsCardsSection({
   proposals = [],
   loading = false,
 }: StatsCardsSectionProps) {
+  
+  // Format portfolio size based on user role
+  const getPortfolioDisplayValue = () => {
+    if (userRole === 'agent') {
+      // For agents, portfolioSize is kWp value, so format it properly
+      return formatSystemSizeForDisplay(portfolioSize);
+    } else {
+      // For other roles, portfolioSize is proposal count
+      return portfolioSize;
+    }
+  };
+
   if (userRole === 'agent') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
         <StatsCard 
           title="Portfolio Size" 
-          value={formatSystemSizeForDisplay(portfolioSize)} 
+          value={getPortfolioDisplayValue()} 
           icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
           trend="+14%"
           trendDirection="up"
@@ -59,7 +71,7 @@ export function StatsCardsSection({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <StatsCard 
         title="Portfolio Size" 
-        value={formatSystemSizeForDisplay(portfolioSize)} 
+        value={getPortfolioDisplayValue()} 
         icon={<Wind className="h-5 w-5 text-crunch-yellow" />}
         trend="+14%"
         trendDirection="up"

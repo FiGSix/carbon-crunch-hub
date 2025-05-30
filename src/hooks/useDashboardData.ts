@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useProposals } from './useProposals';
 import { useAuth } from '@/contexts/auth';
 import { ProposalListItem } from '@/types/proposals';
+import { formatSystemSizeForDisplay } from '@/lib/calculations/carbon';
 
 interface DashboardStats {
   totalProposals: number;
@@ -102,8 +103,37 @@ export function useDashboardData(): DashboardData {
     return filtered;
   }, [proposals]);
 
+  // Portfolio size calculation - different logic for agents vs other roles
+  const portfolioSize = useMemo(() => {
+    if (userRole === 'agent') {
+      // For agents: sum system_size_kwp from approved proposals only
+      const approvedProposals = proposals.filter(p => 
+        p.status === 'approved' || p.status === 'signed'
+      );
+      
+      const totalKwp = approvedProposals.reduce((sum, p) => {
+        return sum + (p.system_size_kwp || 0);
+      }, 0);
+      
+      console.log("Agent portfolio calculation:", {
+        totalProposals: proposals.length,
+        approvedProposals: approvedProposals.length,
+        totalKwp,
+        proposals: approvedProposals.map(p => ({
+          id: p.id,
+          status: p.status,
+          system_size_kwp: p.system_size_kwp
+        }))
+      });
+      
+      return totalKwp;
+    } else {
+      // For other roles: use total number of proposals
+      return proposals.length;
+    }
+  }, [proposals, userRole]);
+
   // Computed values from stats
-  const portfolioSize = useMemo(() => proposals.length, [proposals.length]);
   const totalProposals = useMemo(() => stats.totalProposals, [stats.totalProposals]);
   const potentialRevenue = useMemo(() => stats.totalRevenue, [stats.totalRevenue]);
   const co2Offset = useMemo(() => stats.totalEnergyOffset, [stats.totalEnergyOffset]);
