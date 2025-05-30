@@ -1,4 +1,3 @@
-
 import { Json } from "@/types/supabase";
 
 /**
@@ -122,6 +121,7 @@ export interface ProposalListItem {
   annual_energy?: number | null;
   carbon_credits?: number | null;
   client_share_percentage?: number | null;
+  agent_commission_percentage?: number | null; // Add this field
   invitation_sent_at?: string | null;
   invitation_viewed_at?: string | null;
   invitation_expires_at?: string | null;

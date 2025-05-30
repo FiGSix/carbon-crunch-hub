@@ -166,6 +166,7 @@ export async function transformToProposalListItems(
       annual_energy: proposal.annual_energy,
       carbon_credits: proposal.carbon_credits,
       client_share_percentage: proposal.client_share_percentage,
+      agent_commission_percentage: proposal.agent_commission_percentage, // Add this field
       invitation_sent_at: proposal.invitation_sent_at,
       invitation_viewed_at: proposal.invitation_viewed_at,
       invitation_expires_at: proposal.invitation_expires_at,
