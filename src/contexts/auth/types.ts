@@ -17,6 +17,8 @@ export interface UserProfile {
   role?: UserRole;
   terms_accepted_at?: string;
   created_at?: string;
+  intro_video_viewed?: boolean;
+  intro_video_viewed_at?: string;
 }
 
 // Auth context type definition

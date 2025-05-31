@@ -96,6 +96,8 @@ export type Database = {
           email: string
           first_name: string | null
           id: string
+          intro_video_viewed: boolean | null
+          intro_video_viewed_at: string | null
           last_name: string | null
           phone: string | null
           role: string
@@ -110,6 +112,8 @@ export type Database = {
           email: string
           first_name?: string | null
           id: string
+          intro_video_viewed?: boolean | null
+          intro_video_viewed_at?: string | null
           last_name?: string | null
           phone?: string | null
           role: string
@@ -124,6 +128,8 @@ export type Database = {
           email?: string
           first_name?: string | null
           id?: string
+          intro_video_viewed?: boolean | null
+          intro_video_viewed_at?: string | null
           last_name?: string | null
           phone?: string | null
           role?: string
