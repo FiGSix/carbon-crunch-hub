@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signUp } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth";
 
 interface RegisterFormData {
   firstName: string;
@@ -19,7 +18,6 @@ interface RegisterFormData {
 export function useRegisterForm(initialRole: "client" | "agent") {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
   
   const [formData, setFormData] = useState<RegisterFormData>({
     firstName: "",
@@ -94,14 +92,13 @@ export function useRegisterForm(initialRole: "client" | "agent") {
         throw error;
       }
       
-      await refreshUser();
-      
       toast({
         title: "Registration successful!",
-        description: "Welcome to CrunchCarbon!",
+        description: "Please check your email to verify your account.",
       });
       
-      navigate("/dashboard");
+      // Redirect to verification page with email parameter
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       
     } catch (error: any) {
       toast({

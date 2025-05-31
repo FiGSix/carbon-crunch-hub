@@ -13,6 +13,7 @@ import Contact from "./pages/Contact";
 import Calculator from "./pages/Calculator";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import CreateProposal from "./pages/CreateProposal";
@@ -50,6 +51,7 @@ function App() {
               <Route path="/agents" element={<Agents />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/force-logout" element={<ForceLogout />} />
               <Route
                 path="/dashboard"

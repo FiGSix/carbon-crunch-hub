@@ -21,6 +21,7 @@ export async function signUp(email: string, password: string, role: UserRole, me
           role,
           ...metadata,
         },
+        emailRedirectTo: `${window.location.origin}/login`
       },
     });
     
