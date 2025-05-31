@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2 } from "lucide-react";
 import { ClientSearchAutocomplete } from "./ClientSearchAutocomplete";
+import { ClientSelectionFeedback } from "./ClientSelectionFeedback";
 import { ClientInformation } from "@/types/proposals";
 
 interface ClientFormFieldsProps {
@@ -18,30 +20,58 @@ export function ClientFormFields({
   setClientInfo
 }: ClientFormFieldsProps) {
   const [clientId, setClientId] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isExistingClient, setIsExistingClient] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [nameValue, setNameValue] = useState(clientInfo.name);
+  
+  console.log('=== ClientFormFields Debug ===');
+  console.log('clientInfo:', clientInfo);
+  console.log('selectedClient:', selectedClient);
+  console.log('isExistingClient:', isExistingClient);
+  console.log('clientId:', clientId);
+  console.log('nameValue:', nameValue);
   
   // Update name value when clientInfo changes
   useEffect(() => {
     setNameValue(clientInfo.name);
   }, [clientInfo.name]);
+
+  // Sync existing client state with clientInfo
+  useEffect(() => {
+    setIsExistingClient(clientInfo.existingClient || false);
+  }, [clientInfo.existingClient]);
   
   const handleClientSelect = (selectedClientInfo: ClientInformation, selectedClientId: string) => {
+    console.log('=== Client Selected ===');
+    console.log('selectedClientInfo:', selectedClientInfo);
+    console.log('selectedClientId:', selectedClientId);
+    
+    // Store the full client data for display
+    setSelectedClient({
+      id: selectedClientId,
+      name: selectedClientInfo.name,
+      email: selectedClientInfo.email,
+      company: selectedClientInfo.companyName,
+      isRegistered: true // Assume registered if coming from search
+    });
+    
     setClientId(selectedClientId);
     setIsExistingClient(true);
     setIsEditingDetails(false);
     
-    // If we have a direct setter, use it
+    // Update form state immediately
     if (setClientInfo) {
-      setClientInfo({
+      const updatedClientInfo = {
         ...selectedClientInfo,
         existingClient: true
-      });
+      };
+      console.log('Updating clientInfo with:', updatedClientInfo);
+      setClientInfo(updatedClientInfo);
     } else {
-      // Otherwise simulate form field changes (legacy support)
+      // Legacy form update approach
       Object.entries(selectedClientInfo).forEach(([key, value]) => {
-        if (key === 'existingClient') return; // Skip the checkbox
+        if (key === 'existingClient') return;
 
         const event = {
           target: {
@@ -65,17 +95,25 @@ export function ClientFormFields({
       
       updateClientInfo(checkboxEvent);
     }
+
+    console.log('=== Client selection completed ===');
   };
 
   const handleNameChange = (value: string) => {
+    console.log('=== Name Change ===');
+    console.log('Previous nameValue:', nameValue);
+    console.log('New value:', value);
+    console.log('Current isExistingClient:', isExistingClient);
+    
     setNameValue(value);
     
-    // If user starts typing in name field and we had an existing client, clear the selection
+    // If user starts typing and we had an existing client, clear the selection
     if (isExistingClient && value !== clientInfo.name) {
+      console.log('Clearing existing client selection due to manual typing');
       setIsExistingClient(false);
+      setSelectedClient(null);
       setClientId(null);
       
-      // Clear the existing client flag
       if (setClientInfo) {
         setClientInfo({
           ...clientInfo,
@@ -110,26 +148,44 @@ export function ClientFormFields({
   };
 
   const handleEditDetails = () => {
+    console.log('Edit details clicked');
     setIsEditingDetails(true);
   };
 
   const handleRegularInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Regular input change:', e.target.name, e.target.value);
     updateClientInfo(e);
   };
 
   const isFieldReadOnly = isExistingClient && !isEditingDetails;
+  const showAutocomplete = !isExistingClient || isEditingDetails;
+
+  console.log('=== Render State ===');
+  console.log('isFieldReadOnly:', isFieldReadOnly);
+  console.log('showAutocomplete:', showAutocomplete);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">Client Name</Label>
-          <ClientSearchAutocomplete
-            onClientSelect={handleClientSelect}
-            value={nameValue}
-            onChange={handleNameChange}
-            placeholder="Enter client name or search existing..."
-          />
+          {showAutocomplete ? (
+            <ClientSearchAutocomplete
+              onClientSelect={handleClientSelect}
+              value={nameValue}
+              onChange={handleNameChange}
+              placeholder="Enter client name or search existing..."
+            />
+          ) : (
+            <Input 
+              id="name" 
+              name="name" 
+              value={clientInfo.name}
+              onChange={handleRegularInputChange}
+              className="retro-input bg-muted text-muted-foreground"
+              readOnly={true}
+            />
+          )}
         </div>
         
         <div className="space-y-2">
@@ -185,7 +241,13 @@ export function ClientFormFields({
         </div>
       </div>
       
-      {/* Hidden field for client ID, this will be sent to the backend */}
+      {/* Enhanced client selection feedback */}
+      <ClientSelectionFeedback
+        selectedClient={selectedClient}
+        isVisible={isExistingClient && !isEditingDetails}
+      />
+      
+      {/* Hidden field for client ID */}
       {clientId && (
         <input 
           type="hidden" 

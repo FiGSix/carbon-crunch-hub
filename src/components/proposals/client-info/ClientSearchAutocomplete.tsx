@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Loader2, User, Building2, Mail, CheckCircle2 } from "lucide-react";
+import { Loader2, User, Building2, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ClientSearchAutocompleteProps {
@@ -36,37 +36,62 @@ export function ClientSearchAutocomplete({
     setSelectedClient 
   } = useClientSearch();
   
+  console.log('=== ClientSearchAutocomplete Debug ===');
+  console.log('value:', value);
+  console.log('searchTerm:', searchTerm);
+  console.log('results:', results);
+  console.log('selectedClient:', selectedClient);
+  console.log('isLoading:', isLoading);
+  
   // Ensure results is always an array to prevent iteration errors
   const safeResults = Array.isArray(results) ? results : [];
   
   // Sync internal search term with external value
   React.useEffect(() => {
-    setSearchTerm(value);
-  }, [value, setSearchTerm]);
+    if (searchTerm !== value) {
+      console.log('Syncing searchTerm with value:', value);
+      setSearchTerm(value);
+    }
+  }, [value, setSearchTerm, searchTerm]);
   
   const handleInputChange = (newValue: string) => {
+    console.log('Input change:', newValue);
     onChange(newValue);
     setSearchTerm(newValue);
+    
     // Clear selection when user types
     if (selectedClient) {
+      console.log('Clearing selectedClient due to input change');
       setSelectedClient(null);
     }
   };
   
   const handleSelect = (client: typeof safeResults[0]) => {
+    console.log('=== Client Selected in Autocomplete ===');
+    console.log('Selected client:', client);
+    
     setSelectedClient(client);
     
     // Convert to ClientInformation format and pass to parent
-    onClientSelect({
+    const clientInfo: ClientInformation = {
       name: client.name,
       email: client.email,
       companyName: client.company || "",
       phone: "", // We don't have phone in search results
       existingClient: true,
-    }, client.id);
+    };
+    
+    console.log('Calling onClientSelect with:', clientInfo, client.id);
+    onClientSelect(clientInfo, client.id);
   };
 
+  // Only show results if we're actively searching and haven't selected a client
   const showResults = searchTerm.length > 1 && !selectedClient;
+
+  console.log('=== Render Decision ===');
+  console.log('showResults:', showResults);
+  console.log('Conditions - searchTerm.length > 1:', searchTerm.length > 1);
+  console.log('Conditions - !selectedClient:', !selectedClient);
 
   return (
     <div className="relative">
@@ -93,17 +118,11 @@ export function ClientSearchAutocomplete({
           {showResults && !isLoading && !error && (
             <>
               <CommandEmpty>
-                {searchTerm.length > 1 ? (
-                  <div className="py-6 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      No existing clients found - entering new client details
-                    </p>
-                  </div>
-                ) : (
-                  <div className="py-6 text-center">
-                    <p className="text-sm text-muted-foreground">Type at least 2 characters to search</p>
-                  </div>
-                )}
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No existing clients found - entering new client details
+                  </p>
+                </div>
               </CommandEmpty>
               
               {safeResults.length > 0 && (
@@ -141,13 +160,6 @@ export function ClientSearchAutocomplete({
           )}
         </CommandList>
       </Command>
-      
-      {selectedClient && (
-        <div className="mt-2 text-sm text-green-600 flex items-center">
-          <CheckCircle2 className="h-4 w-4 mr-1" />
-          <span>Existing client selected: {selectedClient.name}</span>
-        </div>
-      )}
     </div>
   );
 }
