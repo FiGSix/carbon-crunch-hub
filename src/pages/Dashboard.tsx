@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
 import { StatsCardsSection } from "@/components/dashboard/sections/StatsCardsSection";
 import { ChartsSection } from "@/components/dashboard/sections/ChartsSection";
+import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 
 const Dashboard = () => {
   const {
@@ -23,6 +25,13 @@ const Dashboard = () => {
     formatUserRole,
     handleRefreshProposals
   } = useDashboardData();
+
+  const {
+    isModalOpen,
+    isUpdating,
+    markVideoAsViewed,
+    skipVideo
+  } = useAgentIntroVideo();
   
   return (
     <DashboardLayout>
@@ -65,6 +74,14 @@ const Dashboard = () => {
           onRefresh={handleRefreshProposals}
         />
       </div>
+
+      {/* Agent Introduction Video Modal */}
+      <AgentIntroVideoModal
+        isOpen={isModalOpen}
+        onVideoComplete={markVideoAsViewed}
+        onSkip={skipVideo}
+        isUpdating={isUpdating}
+      />
     </DashboardLayout>
   );
 };
