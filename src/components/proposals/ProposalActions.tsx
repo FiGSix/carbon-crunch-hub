@@ -14,7 +14,7 @@ export function ProposalActions() {
       {(userRole === "agent" || userRole === "admin") && (
         <Button 
           className="retro-button"
-          onClick={() => navigate("/proposals/create")}
+          onClick={() => navigate("/create-proposal")}
         >
           <Plus className="h-5 w-5 mr-2" />
           Create New Proposal
