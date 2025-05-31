@@ -6,6 +6,7 @@ import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
 import { GoogleMapsStatusIndicator } from "./GoogleMapsStatusIndicator";
 import { GoogleMapsMessages } from "./GoogleMapsMessages";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Properly define Google Maps types
 declare global {
@@ -41,6 +42,8 @@ export function GoogleAddressAutocomplete({
   required = false,
   onError,
 }: GoogleAddressAutocompleteProps) {
+  const isMobile = useIsMobile();
+  
   // Add debouncing for input changes
   const { debounce } = useDebounce(300);
   
@@ -51,7 +54,8 @@ export function GoogleAddressAutocomplete({
     hasApiKey: !!apiKey,
     apiKeyLength: apiKey ? apiKey.length : 0,
     value,
-    placeholder
+    placeholder,
+    isMobile
   });
 
   // Load Google Maps script
@@ -88,7 +92,8 @@ export function GoogleAddressAutocomplete({
     isLoading,
     isScriptLoaded,
     error: !!error,
-    isInputDisabled
+    isInputDisabled,
+    isMobile
   });
 
   return (
@@ -102,6 +107,12 @@ export function GoogleAddressAutocomplete({
         className={className}
         required={required}
         disabled={isInputDisabled}
+        // Mobile-specific optimizations
+        autoComplete="address-line1"
+        autoCapitalize="words"
+        autoCorrect="off"
+        spellCheck="false"
+        inputMode="text"
       />
       
       <GoogleMapsStatusIndicator 
