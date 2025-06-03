@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 interface Testimonial {
   name: string;
@@ -77,7 +78,7 @@ const TestimonialCard = ({
 
 // Testimonial data
 const testimonials: Testimonial[] = [{
-  name: "Michael R.",
+  name: "JH Kruger",
   location: "California",
   quote: "With Crunch Carbon's support, our clients have been able to leverage their renewable energy systems to not only reduce emissions but also earn from their commitment to sustainability."
 }, {
