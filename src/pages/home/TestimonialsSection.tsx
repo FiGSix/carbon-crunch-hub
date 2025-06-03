@@ -32,6 +32,7 @@ export const TestimonialsSection = () => {
       </div>
     </section>;
 };
+
 interface TestimonialCardProps {
   testimonial: Testimonial;
   index: number;
@@ -78,7 +79,7 @@ const TestimonialCard = ({
 const testimonials: Testimonial[] = [{
   name: "Michael R.",
   location: "California",
-  quote: "I've been earning an extra $840 annually from my 10kW solar system. The setup took less than 10 minutes and CrunchCarbon handled everything else."
+  quote: "With Crunch Carbon's support, our clients have been able to leverage their renewable energy systems to not only reduce emissions but also earn from their commitment to sustainability."
 }, {
   name: "Sarah T.",
   location: "Colorado",
