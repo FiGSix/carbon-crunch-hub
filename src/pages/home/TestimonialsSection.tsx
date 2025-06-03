@@ -79,7 +79,7 @@ const TestimonialCard = ({
 // Testimonial data
 const testimonials: Testimonial[] = [{
   name: "JH Kruger",
-  location: "California",
+  location: "Nuvo Energy",
   quote: "With Crunch Carbon's support, our clients have been able to leverage their renewable energy systems to not only reduce emissions but also earn from their commitment to sustainability."
 }, {
   name: "Sarah T.",
