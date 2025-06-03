@@ -86,7 +86,7 @@ const testimonials: Testimonial[] = [{
   location: "Grid Volt",
   quote: "After years of installing solar panels, we finally found a way to make them even more valuable to our clients. The annual payouts makes returns jump making for happy customers!"
 }, {
-  name: "David K.",
-  location: "Texas",
-  quote: "My first thought was 'this sounds too good to be true.' Six months and two payments later, I'm glad I took the leap. Incredibly simple process."
+  name: "Sydney P.",
+  location: "i-G3N",
+  quote: "My first thought was 'this sounds too good to be true.' But with Crunch Carbon's team, what a pleasure helping my clients. I'm glad I took the leap. Incredibly simple process."
 }];
