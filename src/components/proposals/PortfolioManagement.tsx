@@ -13,8 +13,8 @@ export function PortfolioManagement() {
   const { updateClientPortfolio, validatePortfolios, loading } = usePortfolioUpdates();
   const [clientId, setClientId] = useState('');
 
-  // Only show to agents and admins
-  if (userRole !== 'agent' && userRole !== 'admin') {
+  // Only show to admins
+  if (userRole !== 'admin') {
     return null;
   }
 
