@@ -7,6 +7,9 @@ import {
 import { useAuth } from "@/contexts/auth";
 import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { usePortfolioUpdates } from "@/hooks/proposals/usePortfolioUpdates";
 import { logger } from "@/lib/logger";
 
 interface RevenueDistributionSectionProps {
@@ -20,6 +23,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
   
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
+  const { updateClientPortfolio, loading: updateLoading } = usePortfolioUpdates();
   
   // Create logger with useMemo to prevent infinite loops
   const revenueLogger = useMemo(() => 
@@ -80,7 +84,21 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
     };
 
     loadPortfolioData();
-  }, [selectedClientId, systemSize]); // Removed revenueLogger from dependencies to prevent infinite loop
+  }, [selectedClientId, systemSize, revenueLogger]);
+
+  const handleUpdatePortfolio = async () => {
+    if (selectedClientId) {
+      await updateClientPortfolio(selectedClientId);
+      // Reload portfolio data after update
+      const portfolio = await calculateClientPortfolio(selectedClientId);
+      const currentProjectSize = parseFloat(systemSize) || 0;
+      setPortfolioData({
+        ...portfolio,
+        totalKWp: portfolio.totalKWp + currentProjectSize,
+        projectCount: portfolio.projectCount + 1
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -103,7 +121,21 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Revenue Distribution</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold text-carbon-gray-900">Revenue Distribution</h3>
+        {selectedClientId && !isClient && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleUpdatePortfolio}
+            disabled={updateLoading}
+            className="ml-2"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${updateLoading ? 'animate-spin' : ''}`} />
+            Update Portfolio
+          </Button>
+        )}
+      </div>
       
       {portfolioData && portfolioData.projectCount > 1 && (
         <div className="mb-4 p-3 bg-carbon-blue-50 rounded-lg border border-carbon-blue-200">

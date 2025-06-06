@@ -16,6 +16,9 @@ export { useProposalData } from './view/useProposalData';
 // Operations
 export { useProposalOperations } from './useProposalOperations';
 
+// Portfolio management
+export { usePortfolioUpdates } from './usePortfolioUpdates';
+
 // Utilities
 export { useFetchProposals } from './useFetchProposals';
 export { useAuthRefresh } from './useAuthRefresh';

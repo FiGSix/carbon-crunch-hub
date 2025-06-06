@@ -13,6 +13,32 @@ export interface ProposalCreationResult {
   error?: string;
 }
 
+export interface ProposalOperationResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface ProposalData {
+  title: string;
+  agent_id: string;
+  eligibility_criteria: EligibilityCriteria;
+  project_info: ProjectInformation;
+  client_info: ClientInformation;
+  annual_energy: number;
+  carbon_credits: number;
+  client_share: number;
+  agent_commission: number;
+  selected_client_id?: string;
+  client_id?: string;
+  client_reference_id?: string;
+  status?: string;
+  system_size_kwp?: number;
+  unit_standard?: string;
+  client_share_percentage?: number;
+  agent_commission_percentage?: number;
+}
+
 export async function createProposal(
   title: string,
   agentId: string,
@@ -24,73 +50,30 @@ export async function createProposal(
   clientShare: number,
   agentCommission: number,
   selectedClientId?: string
-): Promise<ProposalCreationResult> {
-  // Create a contextualized logger
+): Promise<ProposalOperationResult<ProposalData>> {
   const proposalLogger = logger.withContext({
-    component: 'ProposalCreationService', 
-    method: 'createProposal',
-    agentId
+    component: 'ProposalCreationService',
+    method: 'createProposal'
   });
-  
+
   try {
-    // Validate agentId is a valid UUID
-    if (!isValidUUID(agentId)) {
-      proposalLogger.error("Invalid agent ID format", { agentId });
-      return { 
-        success: false, 
-        error: "Authentication error: Invalid agent ID format." 
-      };
-    }
-    
-    let clientResult;
-    
-    // If we have an explicit selected client ID, we can skip client creation
-    if (selectedClientId && isValidUUID(selectedClientId)) {
-      proposalLogger.info("Using selected client ID directly", { selectedClientId });
-      
-      // Check if this is a registered user or client contact
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', selectedClientId)
-        .eq('role', 'client')
-        .maybeSingle();
-        
-      const isRegisteredUser = !!existingProfile;
-      
-      clientResult = {
-        clientId: selectedClientId,
-        isRegisteredUser
-      };
-      
-      proposalLogger.info("Found client by ID", { 
-        clientId: selectedClientId, 
-        isRegisteredUser 
-      });
-    } else {
-      // Otherwise, find or create client profile
-      proposalLogger.info("Finding or creating client profile", { 
-        clientEmail: clientInfo.email,
-        existingClient: clientInfo.existingClient
-      });
-      
-      clientResult = await findOrCreateClient(clientInfo);
-      
-      if (!clientResult) {
-        proposalLogger.error("Failed to create or find client profile", { clientInfo });
-        return { 
-          success: false, 
-          error: "Failed to create or find client profile" 
-        };
-      }
-      
-      proposalLogger.info("Client profile found/created", { 
-        clientId: clientResult.clientId,
-        isRegisteredUser: clientResult.isRegisteredUser
-      });
+    proposalLogger.info("Creating proposal", { 
+      title, 
+      agentId, 
+      selectedClientId,
+      projectSize: projectInfo.size
+    });
+
+    // Handle client creation/lookup
+    const clientResult = selectedClientId 
+      ? await handleExistingClient(selectedClientId)
+      : await handleNewClient(clientInfo, agentId);
+
+    if (!clientResult.success) {
+      return clientResult;
     }
 
-    // Step 2: Build the proposal data with portfolio-based calculations
+    // Build proposal data with portfolio-aware calculations
     const proposalData = await buildProposalData(
       title,
       agentId,
@@ -100,75 +83,109 @@ export async function createProposal(
       annualEnergy,
       carbonCredits,
       selectedClientId,
-      clientResult
+      clientResult.data
     );
 
-    // Override status to pending to skip the draft phase
-    proposalData.status = 'pending';
-
-    // Client validation before insert
-    const clientValidation = validateClientId(
-      proposalData.client_id, 
-      proposalData.client_reference_id,
-      proposalLogger
-    );
-
-    if (!clientValidation.isValid) {
-      proposalLogger.error("Client validation failed", { error: clientValidation.error });
-      return {
-        success: false,
-        error: clientValidation.error
-      };
-    }
-
-    proposalLogger.info("Prepared proposal data with normalized system size", {
-      title: proposalData.title,
-      clientId: proposalData.client_id,
-      clientReferenceId: proposalData.client_reference_id,
-      status: proposalData.status,
-      systemSizeKWp: proposalData.system_size_kwp,
-      unitStandard: proposalData.unit_standard,
-      clientSharePercentage: proposalData.client_share_percentage,
-      agentCommissionPercentage: proposalData.agent_commission_percentage
-    });
-
-    // Step 3: Insert proposal into database
-    const { data: proposal, error } = await supabase
+    // Insert the proposal
+    const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert(proposalData)
-      .select('id')
+      .select()
       .single();
-    
-    if (error) {
-      proposalLogger.error("Failed to insert proposal", {
-        error: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
-      });
-      
-      return { 
-        success: false, 
-        error: error.message 
-      };
+
+    if (insertError) {
+      proposalLogger.error("Failed to insert proposal", { error: insertError });
+      throw insertError;
     }
 
-    proposalLogger.info("Proposal created successfully with normalized system size", { 
-      proposalId: proposal.id,
-      systemSizeKWp: proposalData.system_size_kwp
+    proposalLogger.info("Proposal created successfully", { 
+      proposalId: insertedProposal.id,
+      clientSharePercentage: insertedProposal.client_share_percentage
     });
-    
-    return { 
+
+    // If this is for an existing client, update their entire portfolio
+    if (selectedClientId) {
+      try {
+        const { updatePortfolioPercentages } = await import('./portfolioUpdateService');
+        await updatePortfolioPercentages(selectedClientId);
+        proposalLogger.info("Portfolio percentages updated after proposal creation");
+      } catch (portfolioError) {
+        proposalLogger.warn("Failed to update portfolio percentages", { 
+          error: portfolioError instanceof Error ? portfolioError.message : String(portfolioError)
+        });
+        // Don't fail the proposal creation for this
+      }
+    }
+
+    return {
       success: true,
-      proposalId: proposal.id
+      data: insertedProposal as ProposalData
     };
+
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    proposalLogger.error("Unexpected error creating proposal", { error: errorMessage });
-    
-    return { 
-      success: false, 
-      error: errorMessage 
+    proposalLogger.error("Proposal creation failed", { error });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create proposal"
     };
   }
+}
+
+async function handleExistingClient(selectedClientId: string): Promise<ProposalOperationResult<ClientInformation>> {
+  const proposalLogger = logger.withContext({
+    component: 'ProposalCreationService',
+    method: 'handleExistingClient'
+  });
+
+  proposalLogger.info("Using selected client ID directly", { selectedClientId });
+
+  // Check if this is a registered user or client contact
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', selectedClientId)
+    .eq('role', 'client')
+    .maybeSingle();
+  
+  const isRegisteredUser = !!existingProfile;
+
+  return {
+    success: true,
+    data: {
+      clientId: selectedClientId,
+      isRegisteredUser
+    }
+  };
+}
+
+async function handleNewClient(clientInfo: ClientInformation, agentId: string): Promise<ProposalOperationResult<ClientInformation>> {
+  const proposalLogger = logger.withContext({
+    component: 'ProposalCreationService',
+    method: 'handleNewClient'
+  });
+
+  proposalLogger.info("Finding or creating client profile", { 
+    clientEmail: clientInfo.email,
+    existingClient: clientInfo.existingClient
+  });
+
+  const clientResult = await findOrCreateClient(clientInfo);
+
+  if (!clientResult) {
+    proposalLogger.error("Failed to create or find client profile", { clientInfo });
+    return {
+      success: false,
+      error: "Failed to create or find client profile"
+    };
+  }
+
+  proposalLogger.info("Client profile found/created", { 
+    clientId: clientResult.clientId,
+    isRegisteredUser: clientResult.isRegisteredUser
+  });
+
+  return {
+    success: true,
+    data: clientResult
+  };
 }

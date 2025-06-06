@@ -1,5 +1,4 @@
 
-
 import { EligibilityCriteria, ProjectInformation, ClientInformation } from "@/types/proposals";
 import { 
   calculateAnnualEnergy, 
@@ -10,6 +9,7 @@ import {
 } from "@/lib/calculations/carbon";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/core";
+import { calculateClientPortfolio } from "../portfolioCalculationService";
 
 interface ClientResult {
   clientId: string;
@@ -32,17 +32,49 @@ export async function buildProposalData(
     method: 'buildProposalData'
   });
 
-  // Calculate portfolio-based revenue distribution
+  // Calculate individual project values
   const systemSizeKWp = normalizeToKWp(projectInfo.size);
-  
-  // Use individual calculation functions instead of calculateResults
   const calculatedAnnualEnergy = calculateAnnualEnergy(systemSizeKWp);
   const calculatedCarbonCredits = calculateCarbonCredits(systemSizeKWp);
-  const clientSharePercentage = getClientSharePercentage(systemSizeKWp);
-  const agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
   const revenue = calculateRevenue(systemSizeKWp, projectInfo.commissionDate);
   
-  proposalLogger.info("Calculated proposal results", {
+  // Calculate portfolio-based percentages
+  let clientSharePercentage: number;
+  let agentCommissionPercentage: number;
+
+  if (selectedClientId) {
+    try {
+      // Get existing portfolio for the client
+      const portfolioData = await calculateClientPortfolio(selectedClientId);
+      const totalPortfolioSize = portfolioData.totalKWp + systemSizeKWp; // Include this new project
+      
+      // Calculate percentages based on total portfolio
+      clientSharePercentage = getClientSharePercentage(totalPortfolioSize);
+      agentCommissionPercentage = getAgentCommissionPercentage(totalPortfolioSize);
+      
+      proposalLogger.info("Portfolio-based calculation", {
+        existingPortfolioKWp: portfolioData.totalKWp,
+        newProjectKWp: systemSizeKWp,
+        totalPortfolioKWp: totalPortfolioSize,
+        clientShare: clientSharePercentage,
+        agentCommission: agentCommissionPercentage
+      });
+    } catch (error) {
+      proposalLogger.warn("Failed to calculate portfolio-based percentages, using individual project", {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      // Fallback to individual project calculation
+      clientSharePercentage = getClientSharePercentage(systemSizeKWp);
+      agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
+    }
+  } else {
+    // No client selected, use individual project calculation
+    clientSharePercentage = getClientSharePercentage(systemSizeKWp);
+    agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
+  }
+
+  proposalLogger.info("Final calculated values", {
     systemSizeKWp,
     annualEnergy: calculatedAnnualEnergy,
     carbonCredits: calculatedCarbonCredits,
@@ -63,12 +95,12 @@ export async function buildProposalData(
     }
   }
 
-  // Build proposal data with normalized system size and proper type casting
+  // Build proposal data with portfolio-aware percentages
   const proposalData = {
     title,
     agent_id: agentId,
-    eligibility_criteria: eligibilityCriteria as any, // Cast to Json type
-    project_info: projectInfo as any, // Cast to Json type
+    eligibility_criteria: eligibilityCriteria as any,
+    project_info: projectInfo as any,
     annual_energy: calculatedAnnualEnergy,
     carbon_credits: calculatedCarbonCredits,
     client_share_percentage: clientSharePercentage,
@@ -77,7 +109,7 @@ export async function buildProposalData(
       clientInfo,
       projectInfo,
       revenue
-    } as any, // Cast to any to satisfy Json type requirement
+    } as any,
     status: 'draft',
     system_size_kwp: systemSizeKWp,
     unit_standard: 'kWp',
@@ -85,14 +117,12 @@ export async function buildProposalData(
     ...(finalClientReferenceId && { client_reference_id: finalClientReferenceId })
   };
 
-  proposalLogger.info("Built proposal data", {
+  proposalLogger.info("Built proposal data with portfolio awareness", {
     title: proposalData.title,
     systemSizeKWp: proposalData.system_size_kwp,
-    unitStandard: proposalData.unit_standard,
-    clientId: proposalData.client_id,
-    clientReferenceId: proposalData.client_reference_id
+    clientSharePercentage: proposalData.client_share_percentage,
+    agentCommissionPercentage: proposalData.agent_commission_percentage
   });
 
   return proposalData;
 }
-

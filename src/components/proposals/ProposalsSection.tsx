@@ -6,6 +6,7 @@ import { ProposalList } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/components/proposals/ProposalFilters";
 import { ProposalActions } from "@/components/proposals/ProposalActions";
 import { ProposalLoadingState } from "@/components/proposals/ProposalLoadingState";
+import { PortfolioManagement } from "@/components/proposals/PortfolioManagement";
 import { useProposals } from "@/hooks/useProposals";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -53,11 +54,21 @@ export function ProposalsSection() {
   useEffect(() => {
     const handleProposalStatusChange = (event: Event) => {
       // Cast event to CustomEvent to access detail property
-      const customEvent = event as CustomEvent<{id: string, status: string}>;
+      const customEvent = event as CustomEvent<{id?: string, status?: string, type?: string, clientId?: string}>;
       console.log("ProposalsSection detected status change event:", customEvent.detail);
       
-      // Show toast notification based on the new status
-      if (customEvent.detail.status === 'approved') {
+      // Show toast notification based on the event type
+      if (customEvent.detail.type === 'portfolio-update') {
+        toast({
+          title: "Portfolio Updated",
+          description: "Client portfolio percentages have been recalculated.",
+        });
+      } else if (customEvent.detail.type === 'portfolio-validation-complete') {
+        toast({
+          title: "Portfolio Validation Complete",
+          description: "All portfolio inconsistencies have been checked and fixed.",
+        });
+      } else if (customEvent.detail.status === 'approved') {
         toast({
           title: "Proposal Approved",
           description: "The proposal has been approved successfully.",
@@ -80,63 +91,67 @@ export function ProposalsSection() {
   }, [toast]);
   
   return (
-    <Card className="retro-card mb-8">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            {sectionTitle}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleProposalUpdate}
-            disabled={loading}
-            className="ml-auto"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ProposalActions />
-        <ProposalFilters 
-          onSearchChange={(value) => handleFilterChange('search', value)}
-          onStatusChange={(value) => handleFilterChange('status', value)}
-          onSortChange={(value) => handleFilterChange('sort', value)}
-        />
-        
-        {error && (
-          <Alert variant="destructive" className="my-4">
-            <AlertTitle>Error Loading Proposals</AlertTitle>
-            <AlertDescription className="flex flex-col gap-2">
-              <p>{error}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="self-start"
-                onClick={() => fetchProposals()}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        <ProposalLoadingState 
-          loading={loading} 
-          hasProposals={proposals.length > 0} 
-        />
-        
-        {!loading && proposals.length > 0 && (
-          <ProposalList 
-            proposals={proposals} 
-            onProposalUpdate={handleProposalUpdate}
+    <>
+      <PortfolioManagement />
+      
+      <Card className="retro-card mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              {sectionTitle}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleProposalUpdate}
+              disabled={loading}
+              className="ml-auto"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProposalActions />
+          <ProposalFilters 
+            onSearchChange={(value) => handleFilterChange('search', value)}
+            onStatusChange={(value) => handleFilterChange('status', value)}
+            onSortChange={(value) => handleFilterChange('sort', value)}
           />
-        )}
-      </CardContent>
-    </Card>
+          
+          {error && (
+            <Alert variant="destructive" className="my-4">
+              <AlertTitle>Error Loading Proposals</AlertTitle>
+              <AlertDescription className="flex flex-col gap-2">
+                <p>{error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="self-start"
+                  onClick={() => fetchProposals()}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <ProposalLoadingState 
+            loading={loading} 
+            hasProposals={proposals.length > 0} 
+          />
+          
+          {!loading && proposals.length > 0 && (
+            <ProposalList 
+              proposals={proposals} 
+              onProposalUpdate={handleProposalUpdate}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }
