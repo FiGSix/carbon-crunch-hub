@@ -74,15 +74,12 @@ export async function createProposal(
     }
 
     // Build proposal data with portfolio-aware calculations
-    // Pass placeholder values - buildProposalData will calculate everything
     const proposalData = await buildProposalData(
       title,
       agentId,
       eligibilityCriteria,
       projectInfo,
       clientInfo,
-      0, // placeholder - will be calculated
-      0, // placeholder - will be calculated
       selectedClientId,
       clientResult.data
     );
