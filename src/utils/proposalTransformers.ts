@@ -1,5 +1,6 @@
 import { ProposalData, ProposalListItem } from '@/types/proposals';
 import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
+import { UserRole } from '@/contexts/auth/types';
 
 /**
  * Transform raw proposal data from database to typed ProposalData
@@ -138,12 +139,45 @@ async function calculateProposalRevenue(
 }
 
 /**
+ * Calculate agent commission revenue using dynamic carbon pricing
+ */
+async function calculateAgentCommissionRevenue(
+  carbonCredits: number, 
+  agentCommissionPercentage: number, 
+  commissionDate?: string
+): Promise<number> {
+  if (!carbonCredits || !agentCommissionPercentage) {
+    return 0;
+  }
+
+  try {
+    // Get current year carbon price as the baseline
+    const currentYear = new Date().getFullYear();
+    const carbonPrice = await dynamicCarbonPricingService.getCarbonPriceForYear(currentYear);
+    
+    if (!carbonPrice) {
+      console.warn('No carbon price found for current year, using fallback calculation');
+      return 0;
+    }
+
+    // Calculate agent commission revenue: carbon credits * price per credit * agent commission
+    const commissionRevenue = carbonCredits * carbonPrice * (agentCommissionPercentage / 100);
+    
+    return Math.round(commissionRevenue);
+  } catch (error) {
+    console.error('Error calculating agent commission revenue:', error);
+    return 0;
+  }
+}
+
+/**
  * Transform raw proposal data to ProposalListItem format with client and agent profiles
  */
 export async function transformToProposalListItems(
   proposalsData: any[],
   clientProfiles: any[],
-  agentProfiles: any[]
+  agentProfiles: any[],
+  userRole?: UserRole | null
 ): Promise<ProposalListItem[]> {
   // Create lookup maps for profiles
   const clientProfileMap = new Map(clientProfiles.map(profile => [profile.id, profile]));
@@ -172,12 +206,23 @@ export async function transformToProposalListItems(
       // Extract system size from multiple sources
       const systemSizeKwp = extractSystemSize(proposal);
 
-      // Calculate revenue using dynamic carbon pricing
-      const revenue = await calculateProposalRevenue(
-        proposal.carbon_credits || 0,
-        proposal.client_share_percentage || 0,
-        proposal.content?.projectInfo?.commissionDate
-      );
+      // Calculate revenue based on user role
+      let revenue = 0;
+      if (userRole === 'agent') {
+        // For agents, show their commission revenue
+        revenue = await calculateAgentCommissionRevenue(
+          proposal.carbon_credits || 0,
+          proposal.agent_commission_percentage || 0,
+          proposal.content?.projectInfo?.commissionDate
+        );
+      } else {
+        // For clients and admins, show client revenue
+        revenue = await calculateProposalRevenue(
+          proposal.carbon_credits || 0,
+          proposal.client_share_percentage || 0,
+          proposal.content?.projectInfo?.commissionDate
+        );
+      }
 
       return {
         id: proposal.id,

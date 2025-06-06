@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase/client";
 import { transformToProposalListItems, applyClientSideSorting } from "@/utils/proposalTransformers";
 import { logger } from "@/lib/logger";
 import { RawProposalData } from "../types";
+import { UserRole } from "@/contexts/auth/types";
 
 type ProfileRecord = {
   id: string;
@@ -14,7 +15,7 @@ type ProfileRecord = {
 /**
  * Fetches and transforms raw proposal data into ProposalListItem format
  */
-export async function fetchAndTransformProposalData(proposalsData: RawProposalData[]) {
+export async function fetchAndTransformProposalData(proposalsData: RawProposalData[], userRole?: UserRole | null) {
   // Create a contextualized logger
   const dataLogger = logger.withContext({ 
     component: 'DataTransformer', 
@@ -70,11 +71,12 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
     }
   }
 
-  // Transform proposals using the utility function - awaiting the async function
+  // Transform proposals using the utility function - awaiting the async function and passing userRole
   const transformedProposals = await transformToProposalListItems(
     proposalsData,
     clientProfilesArray,
-    agentProfilesArray
+    agentProfilesArray,
+    userRole
   );
 
   dataLogger.info("Data transformation completed", { 

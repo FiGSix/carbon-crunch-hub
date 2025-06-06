@@ -3,13 +3,15 @@ import { RawProposalData } from "./types";
 import { ProposalListItem } from "@/types/proposals";
 import { transformToProposalListItems } from "@/utils/proposalTransformers";
 import { fetchProfilesByIds } from "./api/fetchProfiles";
+import { UserRole } from "@/contexts/auth/types";
 
 /**
  * Hook for transforming raw proposal data into the ProposalListItem interface
  */
 export function useProposalTransformer() {
   const transformProposalDataWithProfiles = async (
-    proposalsData: RawProposalData[]
+    proposalsData: RawProposalData[],
+    userRole?: UserRole | null
   ): Promise<ProposalListItem[]> => {
     if (!proposalsData || proposalsData.length === 0) {
       return [] as ProposalListItem[];
@@ -32,7 +34,7 @@ export function useProposalTransformer() {
     const agentProfiles = Object.values(agentProfilesRecord);
     
     // Transform the data using our utility function - now properly awaiting the async function
-    return await transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles);
+    return await transformToProposalListItems(proposalsData as any, clientProfiles, agentProfiles, userRole);
   };
 
   return {
