@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 
-type CorrectionFunction = 'update_system_size_kwp' | 'recalculate_carbon_values' | 'recalculate_proposal_percentages';
+type CorrectionFunction = 'update_system_size_kwp' | 'recalculate_carbon_values' | 'recalculate_proposal_percentages' | 'populate_missing_client_references';
 
 interface IndividualCorrectionsProps {
   onRunCorrection: (functionName: CorrectionFunction, description: string) => void;
@@ -14,7 +14,23 @@ export function IndividualCorrections({ onRunCorrection, loading }: IndividualCo
     <div className="space-y-4">
       <h4 className="font-medium text-carbon-gray-900">Individual Corrections</h4>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <h5 className="text-sm font-medium">Client References</h5>
+          <p className="text-xs text-carbon-gray-600">
+            Populate missing client_reference_id values by extracting emails from proposal content.
+          </p>
+          <Button
+            onClick={() => onRunCorrection('populate_missing_client_references', 'Client Reference Population')}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+            className="w-full"
+          >
+            Fix Client References
+          </Button>
+        </div>
+
         <div className="space-y-2">
           <h5 className="text-sm font-medium">System Sizes</h5>
           <p className="text-xs text-carbon-gray-600">

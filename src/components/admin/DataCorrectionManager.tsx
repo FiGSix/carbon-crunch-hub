@@ -41,6 +41,7 @@ export function DataCorrectionManager() {
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         // More careful type conversion
         const result: CorrectionResult = {
+          client_reference_fixes: Number(data.client_reference_fixes) || 0,
           system_size_corrections: Number(data.system_size_corrections) || 0,
           carbon_value_corrections: Number(data.carbon_value_corrections) || 0,
           percentage_corrections: Number(data.percentage_corrections) || 0,
@@ -51,7 +52,7 @@ export function DataCorrectionManager() {
         
         toast({
           title: "Data Correction Complete",
-          description: `Successfully corrected ${result.system_size_corrections} system sizes, ${result.carbon_value_corrections} carbon calculations, and ${result.percentage_corrections} fee percentages.`,
+          description: `Successfully fixed ${result.client_reference_fixes} client references, corrected ${result.system_size_corrections} system sizes, ${result.carbon_value_corrections} carbon calculations, and ${result.percentage_corrections} fee percentages.`,
         });
       } else {
         throw new Error("Unexpected response format from database function");

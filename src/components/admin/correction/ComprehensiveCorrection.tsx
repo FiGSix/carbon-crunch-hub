@@ -16,7 +16,7 @@ export function ComprehensiveCorrection({ onRunCorrection, loading }: Comprehens
         Comprehensive Data Correction
       </h4>
       <p className="text-sm text-carbon-gray-600">
-        Runs all correction functions in sequence: system sizes → carbon calculations → fee percentages.
+        Runs all correction functions in sequence: client references → system sizes → carbon calculations → fee percentages.
       </p>
       <Button
         onClick={onRunCorrection}

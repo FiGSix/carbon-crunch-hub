@@ -2,6 +2,7 @@
 import React from 'react';
 
 interface CorrectionResult {
+  client_reference_fixes: number;
   system_size_corrections: number;
   carbon_value_corrections: number;
   percentage_corrections: number;
@@ -16,7 +17,10 @@ export function CorrectionResults({ result }: CorrectionResultsProps) {
   return (
     <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
       <h5 className="font-medium text-green-800 mb-2">Last Correction Results</h5>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <div>
+          <span className="font-medium">Client References:</span> {result.client_reference_fixes} fixed
+        </div>
         <div>
           <span className="font-medium">System Sizes:</span> {result.system_size_corrections} corrected
         </div>

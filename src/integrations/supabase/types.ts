@@ -388,6 +388,15 @@ export type Database = {
         Args: { size_value: number; unit_type?: string }
         Returns: number
       }
+      populate_missing_client_references: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          proposal_id: string
+          client_email: string
+          found_client_id: string
+          action_taken: string
+        }[]
+      }
       recalculate_carbon_values: {
         Args: Record<PropertyKey, never>
         Returns: {
