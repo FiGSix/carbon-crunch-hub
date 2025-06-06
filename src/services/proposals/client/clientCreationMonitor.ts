@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { ProposalContent } from "@/types/proposals";
 
 export interface ClientCreationStats {
   totalProposals: number;
@@ -63,7 +64,10 @@ export async function getClientCreationStats(): Promise<ClientCreationStats> {
     
     if (proposalEmails) {
       for (const proposal of proposalEmails) {
-        const proposalEmail = proposal.content?.clientInfo?.email;
+        // Safely cast and access the content
+        const proposalContent = proposal.content as ProposalContent;
+        const proposalEmail = proposalContent?.clientInfo?.email;
+        
         if (proposalEmail && proposal.client_reference_id) {
           const { data: client } = await supabase
             .from('clients')

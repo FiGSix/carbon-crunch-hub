@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { ProposalContent } from "@/types/proposals";
 
 export interface ClientCreationValidationResult {
   isValid: boolean;
@@ -84,7 +85,9 @@ export async function validateClientCreation(
     }
 
     // 3. Check for email consistency in proposal content
-    const contentEmail = proposal.content?.clientInfo?.email;
+    const proposalContent = proposal.content as ProposalContent;
+    const contentEmail = proposalContent?.clientInfo?.email;
+    
     if (contentEmail && contentEmail.toLowerCase() !== validation.expectedClientEmail.toLowerCase()) {
       warnings.push(`Proposal content email (${contentEmail}) doesn't match expected email (${validation.expectedClientEmail})`);
     }
@@ -165,30 +168,34 @@ export async function fixClientCreationIssues(
         if (!updateError) {
           actions.push(`Linked proposal to existing client ${existingClient.id}`);
         }
-      } else if (proposal?.content?.clientInfo && proposal.agent_id) {
+      } else if (proposal?.content && proposal.agent_id) {
         // Create a new client from proposal content
-        const clientInfo = proposal.content.clientInfo;
-        const { data: newClient, error: createError } = await supabase
-          .from('clients')
-          .insert({
-            email: validation.expectedClientEmail.toLowerCase(),
-            first_name: clientInfo.name || 'Unknown',
-            company_name: clientInfo.companyName || null,
-            phone: clientInfo.phone || null,
-            created_by: proposal.agent_id
-          })
-          .select('id')
-          .single();
+        const proposalContent = proposal.content as ProposalContent;
+        const clientInfo = proposalContent?.clientInfo;
+        
+        if (clientInfo) {
+          const { data: newClient, error: createError } = await supabase
+            .from('clients')
+            .insert({
+              email: validation.expectedClientEmail.toLowerCase(),
+              first_name: clientInfo.name || 'Unknown',
+              company_name: clientInfo.companyName || null,
+              phone: clientInfo.phone || null,
+              created_by: proposal.agent_id
+            })
+            .select('id')
+            .single();
 
-        if (!createError && newClient) {
-          // Update proposal with new client reference
-          const { error: updateError } = await supabase
-            .from('proposals')
-            .update({ client_reference_id: newClient.id })
-            .eq('id', validation.proposalId);
+          if (!createError && newClient) {
+            // Update proposal with new client reference
+            const { error: updateError } = await supabase
+              .from('proposals')
+              .update({ client_reference_id: newClient.id })
+              .eq('id', validation.proposalId);
 
-          if (!updateError) {
-            actions.push(`Created new client ${newClient.id} and linked to proposal`);
+            if (!updateError) {
+              actions.push(`Created new client ${newClient.id} and linked to proposal`);
+            }
           }
         }
       }
