@@ -3,8 +3,7 @@ import { useCallback } from "react";
 import { ProposalListItem } from "@/types/proposals";
 import { fetchAndTransformProposalData } from "./utils/dataTransformer";
 import { fetchProposalsCore } from "./utils/fetchProposalsCore";
-import { handleQueryError } from "./utils/queryErrorHandler";
-import { showToastError } from "./utils/toastErrors";
+import { handleFetchError } from "./utils/toastErrors";
 import { getCachedProposals, setCachedProposals, isCacheValid } from "./utils/proposalCache";
 import { UseFetchProposalsParams } from "./types";
 import { logger } from "@/lib/logger";
@@ -42,9 +41,9 @@ export function useFetchProposals({
     }
 
     // Check cache first (unless force refresh)
-    if (!forceRefresh && isCacheValid()) {
+    if (!forceRefresh && isCacheValid(filters)) {
       const cachedProposals = getCachedProposals();
-      if (cachedProposals.length > 0) {
+      if (cachedProposals && cachedProposals.length > 0) {
         fetchLogger.info("Using cached proposals", { count: cachedProposals.length });
         setProposals(cachedProposals);
         setLoading(false);
@@ -86,11 +85,12 @@ export function useFetchProposals({
     } catch (error) {
       fetchLogger.error("Error fetching proposals", { error });
       
-      const handledError = handleQueryError(error);
-      setError(handledError.message);
+      // Handle the error using the toast error handler
+      handleFetchError(error, toast);
       
-      // Show toast notification for the error
-      showToastError(handledError, toast, refreshUser);
+      // Set error message for component state
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch proposals";
+      setError(errorMessage);
       
       // Set empty proposals on error
       setProposals([]);
