@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CarbonPriceManager } from "@/components/admin/CarbonPriceManager";
 import { DataCorrectionManager } from "@/components/admin/DataCorrectionManager";
+import { ClientPopulationManager } from "@/components/admin/ClientPopulationManager";
 import { useAuth } from "@/contexts/auth";
 
 const SystemSettings = () => {
@@ -25,9 +26,10 @@ const SystemSettings = () => {
     <DashboardLayout>
       <DashboardHeader 
         title="System Settings" 
-        description="Manage carbon pricing and system-wide configurations." 
+        description="Manage carbon pricing, client data, and system-wide configurations." 
       />
       <div className="space-y-6">
+        <ClientPopulationManager />
         <DataCorrectionManager />
         <CarbonPriceManager />
       </div>
