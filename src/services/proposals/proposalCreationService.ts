@@ -1,10 +1,9 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { findOrCreateClient } from "./clientProfileService";
 import { logger } from "@/lib/logger";
-import { isValidUUID } from "@/utils/validationUtils";
 import { buildProposalData } from "./utils/proposalBuilder";
-import { validateClientId } from "./utils/dataTransformers";
 
 // Define the return type for consistent interface
 export interface ProposalCreationResult {
@@ -39,16 +38,17 @@ export interface ProposalData {
   agent_commission_percentage?: number;
 }
 
+interface ClientResult {
+  clientId: string;
+  isRegisteredUser: boolean;
+}
+
 export async function createProposal(
   title: string,
   agentId: string,
   eligibilityCriteria: EligibilityCriteria,
   projectInfo: ProjectInformation,
   clientInfo: ClientInformation,
-  annualEnergy: number,
-  carbonCredits: number,
-  clientShare: number,
-  agentCommission: number,
   selectedClientId?: string
 ): Promise<ProposalOperationResult<ProposalData>> {
   const proposalLogger = logger.withContext({
@@ -74,14 +74,15 @@ export async function createProposal(
     }
 
     // Build proposal data with portfolio-aware calculations
+    // Pass placeholder values - buildProposalData will calculate everything
     const proposalData = await buildProposalData(
       title,
       agentId,
       eligibilityCriteria,
       projectInfo,
       clientInfo,
-      annualEnergy,
-      carbonCredits,
+      0, // placeholder - will be calculated
+      0, // placeholder - will be calculated
       selectedClientId,
       clientResult.data
     );
@@ -131,7 +132,7 @@ export async function createProposal(
   }
 }
 
-async function handleExistingClient(selectedClientId: string): Promise<ProposalOperationResult<ClientInformation>> {
+async function handleExistingClient(selectedClientId: string): Promise<ProposalOperationResult<ClientResult>> {
   const proposalLogger = logger.withContext({
     component: 'ProposalCreationService',
     method: 'handleExistingClient'
@@ -158,7 +159,7 @@ async function handleExistingClient(selectedClientId: string): Promise<ProposalO
   };
 }
 
-async function handleNewClient(clientInfo: ClientInformation, agentId: string): Promise<ProposalOperationResult<ClientInformation>> {
+async function handleNewClient(clientInfo: ClientInformation, agentId: string): Promise<ProposalOperationResult<ClientResult>> {
   const proposalLogger = logger.withContext({
     component: 'ProposalCreationService',
     method: 'handleNewClient'
@@ -186,6 +187,9 @@ async function handleNewClient(clientInfo: ClientInformation, agentId: string): 
 
   return {
     success: true,
-    data: clientResult
+    data: {
+      clientId: clientResult.clientId,
+      isRegisteredUser: clientResult.isRegisteredUser
+    }
   };
 }

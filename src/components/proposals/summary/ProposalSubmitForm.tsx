@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Loader2 } from "lucide-react";
-import { calculateAnnualEnergy, calculateCarbonCredits, getClientSharePercentage, getAgentCommissionPercentage } from "@/lib/calculations/carbon";
 
 interface ProposalSubmitFormProps {
   eligibility: EligibilityCriteria;
@@ -46,22 +45,13 @@ export function ProposalSubmitForm({
     setIsSubmitting(true);
     
     try {
-      // Calculate values using the carbon calculation functions
-      const annualEnergy = calculateAnnualEnergy(projectInfo.size);
-      const carbonCredits = calculateCarbonCredits(annualEnergy);
-      const clientShare = getClientSharePercentage(projectInfo.size);
-      const agentCommission = getAgentCommissionPercentage(projectInfo.size);
-      
+      // No calculations here - let the service handle everything
       const result = await createProposal(
         projectInfo.name,
         user.id,
         eligibility,
         projectInfo,
         clientInfo,
-        annualEnergy,
-        carbonCredits,
-        clientShare,
-        agentCommission,
         selectedClientId || undefined
       );
       

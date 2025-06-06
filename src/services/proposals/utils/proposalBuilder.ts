@@ -22,8 +22,8 @@ export async function buildProposalData(
   eligibilityCriteria: EligibilityCriteria,
   projectInfo: ProjectInformation,
   clientInfo: ClientInformation,
-  annualEnergy: number,
-  carbonCredits: number,
+  annualEnergyPlaceholder: number, // These are now placeholders
+  carbonCreditsPlaceholder: number, // These are now placeholders
   selectedClientId?: string,
   clientResult?: ClientResult
 ) {
@@ -32,7 +32,7 @@ export async function buildProposalData(
     method: 'buildProposalData'
   });
 
-  // Calculate individual project values
+  // Calculate all values here - ignore placeholders
   const systemSizeKWp = normalizeToKWp(projectInfo.size);
   const calculatedAnnualEnergy = calculateAnnualEnergy(systemSizeKWp);
   const calculatedCarbonCredits = calculateCarbonCredits(systemSizeKWp);
