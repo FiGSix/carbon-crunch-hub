@@ -70,7 +70,10 @@ export async function createProposal(
       : await handleNewClient(clientInfo, agentId);
 
     if (!clientResult.success) {
-      return clientResult;
+      return {
+        success: false,
+        error: clientResult.error
+      };
     }
 
     // Build proposal data with portfolio-aware calculations

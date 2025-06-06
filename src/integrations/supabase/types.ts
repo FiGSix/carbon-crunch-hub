@@ -388,6 +388,32 @@ export type Database = {
         Args: { size_value: number; unit_type?: string }
         Returns: number
       }
+      recalculate_carbon_values: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          proposal_id: string
+          old_annual_energy: number
+          new_annual_energy: number
+          old_carbon_credits: number
+          new_carbon_credits: number
+          system_size_kwp: number
+        }[]
+      }
+      recalculate_proposal_percentages: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          proposal_id: string
+          old_client_share: number
+          new_client_share: number
+          old_agent_commission: number
+          new_agent_commission: number
+          portfolio_kwp: number
+        }[]
+      }
+      run_comprehensive_data_correction: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       search_clients: {
         Args: { search_term: string }
         Returns: {
@@ -401,6 +427,15 @@ export type Database = {
       set_request_invitation_token: {
         Args: { email_input: string; token_input: string } | { token: string }
         Returns: boolean
+      }
+      update_system_size_kwp: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          proposal_id: string
+          old_system_size_kwp: number
+          new_system_size_kwp: number
+          project_size_from_info: string
+        }[]
       }
       validate_invitation_token: {
         Args: { token: string }

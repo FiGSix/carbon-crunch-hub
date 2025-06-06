@@ -1,61 +1,38 @@
 
 import React from "react";
-import { useAuth } from "@/contexts/auth";
-import { Navigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CarbonPriceManager } from "@/components/admin/CarbonPriceManager";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataCorrectionManager } from "@/components/admin/DataCorrectionManager";
+import { useAuth } from "@/contexts/auth";
 
-export default function SystemSettings() {
-  const { profile, isLoading } = useAuth();
+const SystemSettings = () => {
+  const { userRole } = useAuth();
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Only admins should access this page
+  if (userRole !== 'admin') {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-64" />
-        </div>
-      </div>
+      <DashboardLayout>
+        <DashboardHeader 
+          title="Access Denied" 
+          description="You don't have permission to access this page." 
+        />
+      </DashboardLayout>
     );
   }
 
-  // Redirect non-admin users
-  if (!profile || profile.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
+    <DashboardLayout>
+      <DashboardHeader 
+        title="System Settings" 
+        description="Manage carbon pricing and system-wide configurations." 
+      />
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-carbon-gray-900">System Settings</h1>
-          <p className="text-carbon-gray-600 mt-2">
-            Manage system-wide configuration and pricing
-          </p>
-        </div>
-
-        <div className="grid gap-6">
-          <CarbonPriceManager />
-          
-          {/* Placeholder for future settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Settings</CardTitle>
-              <CardDescription>
-                More system settings will be available here in the future
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-carbon-gray-500">
-                Additional configuration options coming soon...
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <DataCorrectionManager />
+        <CarbonPriceManager />
       </div>
-    </div>
+    </DashboardLayout>
   );
-}
+};
+
+export default SystemSettings;
