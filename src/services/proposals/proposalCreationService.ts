@@ -107,13 +107,13 @@ export async function createProposal(
       clientSharePercentage: insertedProposal.client_share_percentage
     });
 
-    // Transform database response to match our ProposalData interface
+    // Transform database response to match our ProposalData interface with safe type conversions
     const transformedProposal: ProposalData = {
       id: insertedProposal.id,
       title: insertedProposal.title,
       agent_id: insertedProposal.agent_id,
-      eligibility_criteria: insertedProposal.eligibility_criteria as EligibilityCriteria,
-      project_info: insertedProposal.project_info as ProjectInformation,
+      eligibility_criteria: insertedProposal.eligibility_criteria as unknown as EligibilityCriteria,
+      project_info: insertedProposal.project_info as unknown as ProjectInformation,
       client_info: clientInfo,
       annual_energy: insertedProposal.annual_energy || 0,
       carbon_credits: insertedProposal.carbon_credits || 0,
