@@ -85,7 +85,7 @@ export async function validateClientCreation(
     }
 
     // 3. Check for email consistency in proposal content
-    const proposalContent = proposal.content as ProposalContent;
+    const proposalContent = proposal.content as unknown as ProposalContent;
     const contentEmail = proposalContent?.clientInfo?.email;
     
     if (contentEmail && contentEmail.toLowerCase() !== validation.expectedClientEmail.toLowerCase()) {
@@ -170,7 +170,7 @@ export async function fixClientCreationIssues(
         }
       } else if (proposal?.content && proposal.agent_id) {
         // Create a new client from proposal content
-        const proposalContent = proposal.content as ProposalContent;
+        const proposalContent = proposal.content as unknown as ProposalContent;
         const clientInfo = proposalContent?.clientInfo;
         
         if (clientInfo) {

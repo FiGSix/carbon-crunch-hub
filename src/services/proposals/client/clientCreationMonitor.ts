@@ -65,7 +65,7 @@ export async function getClientCreationStats(): Promise<ClientCreationStats> {
     if (proposalEmails) {
       for (const proposal of proposalEmails) {
         // Safely cast and access the content
-        const proposalContent = proposal.content as ProposalContent;
+        const proposalContent = proposal.content as unknown as ProposalContent;
         const proposalEmail = proposalContent?.clientInfo?.email;
         
         if (proposalEmail && proposal.client_reference_id) {
