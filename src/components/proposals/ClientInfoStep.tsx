@@ -11,6 +11,7 @@ import {
 import { ClientInformation } from "./types";
 import { ClientFormFields } from "./client-info/ClientFormFields";
 import { ClientStepFooter } from "./client-info/ClientStepFooter";
+import { ClientCreationFeedback } from "./client-info/ClientCreationFeedback";
 
 interface ClientInfoStepProps {
   clientInfo: ClientInformation;
@@ -32,6 +33,7 @@ export function ClientInfoStep({
   setSelectedClientId
 }: ClientInfoStepProps) {
   const isFormValid = Boolean(clientInfo.name && clientInfo.email);
+  const isNewClient = !selectedClientId && clientInfo.name && clientInfo.email && !clientInfo.existingClient;
 
   return (
     <Card className="retro-card">
@@ -47,6 +49,12 @@ export function ClientInfoStep({
             clientInfo={clientInfo}
             updateClientInfo={updateClientInfo}
             setClientInfo={setClientInfo}
+          />
+          
+          <ClientCreationFeedback
+            isCreating={false}
+            isNewClient={isNewClient}
+            clientName={clientInfo.name}
           />
         </div>
       </CardContent>

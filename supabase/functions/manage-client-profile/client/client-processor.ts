@@ -11,7 +11,25 @@ export async function processClientRequest(
   try {
     const { email, existingClient } = clientData;
     
-    console.log(`Processing client request for email: ${email}`);
+    // Validate input data
+    if (!email || !email.trim()) {
+      console.error("Email is required for client processing");
+      return {
+        error: "Email is required",
+        status: 400
+      };
+    }
+
+    if (!createdBy) {
+      console.error("Created by user ID is required");
+      return {
+        error: "Invalid user context",
+        status: 400
+      };
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log(`Processing client request for email: ${normalizedEmail}`);
     
     // If this is marked as an existing client, try to find them in registered users first
     if (existingClient) {
@@ -21,7 +39,7 @@ export async function processClientRequest(
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, role')
-        .eq('email', email.toLowerCase().trim())
+        .eq('email', normalizedEmail)
         .eq('role', 'client')
         .maybeSingle();
       
@@ -35,18 +53,28 @@ export async function processClientRequest(
       
       if (profile) {
         console.log(`Found existing registered client: ${profile.id}`);
-        return {
-          clientId: profile.id,
-          isNewProfile: false,
-          isRegisteredUser: true
-        };
+        
+        // Validate the profile exists and is accessible
+        const { data: validationProfile, error: validationError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', profile.id)
+          .single();
+
+        if (!validationError && validationProfile) {
+          return {
+            clientId: profile.id,
+            isNewProfile: false,
+            isRegisteredUser: true
+          };
+        }
       }
       
       // Check if this email exists in the unified clients table
       const { data: existingClient, error: clientError } = await supabase
         .from('clients')
         .select('id, user_id')
-        .eq('email', email.toLowerCase().trim())
+        .eq('email', normalizedEmail)
         .maybeSingle();
       
       if (clientError && !clientError.message.includes('No rows found')) {
@@ -59,17 +87,48 @@ export async function processClientRequest(
       
       if (existingClient) {
         console.log(`Found existing client: ${existingClient.id}`);
-        return {
-          clientId: existingClient.id,
-          isNewProfile: false,
-          isRegisteredUser: existingClient.user_id !== null
-        };
+        
+        // Validate the client exists and is accessible
+        const { data: validationClient, error: validationError } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('id', existingClient.id)
+          .single();
+
+        if (!validationError && validationClient) {
+          return {
+            clientId: existingClient.id,
+            isNewProfile: false,
+            isRegisteredUser: existingClient.user_id !== null
+          };
+        }
       }
     }
     
     // No existing client found, create a new one
     console.log("No existing client found, creating new client");
-    return await createClientContact(clientData, createdBy, supabase);
+    const createResult = await createClientContact(clientData, createdBy, supabase);
+    
+    // Additional validation after creation
+    if ('clientId' in createResult && createResult.clientId) {
+      const { data: finalValidation, error: finalValidationError } = await supabase
+        .from('clients')
+        .select('id, email')
+        .eq('id', createResult.clientId)
+        .single();
+
+      if (finalValidationError || !finalValidation) {
+        console.error("Final validation failed for created client:", finalValidationError);
+        return {
+          error: "Client creation succeeded but final validation failed",
+          status: 500
+        };
+      }
+
+      console.log(`Client creation and validation completed successfully: ${createResult.clientId}`);
+    }
+    
+    return createResult;
     
   } catch (error) {
     console.error("Error in processClientRequest:", error);

@@ -1,6 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
-import { findOrCreateClient } from "./clientProfileService";
+import { findOrCreateClient } from "./client/clientProfileService";
+import { validateClientCreation, fixClientCreationIssues } from "./client/clientCreationValidator";
 import { logger } from "@/lib/logger";
 import { buildProposalData } from "./utils/proposalBuilder";
 
@@ -9,6 +11,10 @@ export interface ProposalCreationResult {
   success: boolean;
   proposalId?: string;
   error?: string;
+  clientValidation?: {
+    isValid: boolean;
+    warnings: string[];
+  };
 }
 
 export interface ProposalOperationResult<T> {
@@ -64,7 +70,8 @@ export async function createProposal(
       title, 
       agentId, 
       selectedClientId,
-      projectSize: projectInfo.size
+      projectSize: projectInfo.size,
+      clientEmail: clientInfo.email
     });
 
     // Handle client creation/lookup
@@ -106,6 +113,44 @@ export async function createProposal(
       proposalId: insertedProposal.id,
       clientSharePercentage: insertedProposal.client_share_percentage
     });
+
+    // Validate client creation and linkage
+    const validationResult = await validateClientCreation({
+      proposalId: insertedProposal.id,
+      expectedClientEmail: clientInfo.email,
+      clientId: clientResult.data?.clientId
+    });
+
+    if (!validationResult.isValid) {
+      proposalLogger.warn("Client validation failed, attempting to fix", {
+        errors: validationResult.errors,
+        warnings: validationResult.warnings
+      });
+
+      // Attempt to fix the issues
+      const fixResult = await fixClientCreationIssues({
+        proposalId: insertedProposal.id,
+        expectedClientEmail: clientInfo.email,
+        clientId: clientResult.data?.clientId
+      });
+
+      if (fixResult.fixed) {
+        proposalLogger.info("Client issues fixed", { actions: fixResult.actions });
+        
+        // Re-validate after fixes
+        const reValidationResult = await validateClientCreation({
+          proposalId: insertedProposal.id,
+          expectedClientEmail: clientInfo.email,
+          clientId: clientResult.data?.clientId
+        });
+
+        if (!reValidationResult.isValid) {
+          proposalLogger.error("Client validation still failing after fixes", {
+            errors: reValidationResult.errors
+          });
+        }
+      }
+    }
 
     // Transform database response to match our ProposalData interface with safe type conversions
     const transformedProposal: ProposalData = {
@@ -166,15 +211,44 @@ async function handleExistingClient(selectedClientId: string): Promise<ProposalO
 
   proposalLogger.info("Using selected client ID directly", { selectedClientId });
 
-  // Check if this is a registered user or client contact
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id')
+  // Validate that the client exists
+  const { data: existingClient, error: clientError } = await supabase
+    .from('clients')
+    .select('id, user_id')
     .eq('id', selectedClientId)
-    .eq('role', 'client')
-    .maybeSingle();
+    .single();
+
+  if (clientError) {
+    proposalLogger.error("Selected client not found in clients table", { 
+      clientId: selectedClientId, 
+      error: clientError 
+    });
+    
+    // Check if this is a registered user
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', selectedClientId)
+      .eq('role', 'client')
+      .single();
+    
+    if (profileError) {
+      return {
+        success: false,
+        error: `Selected client ${selectedClientId} not found in database`
+      };
+    }
+    
+    return {
+      success: true,
+      data: {
+        clientId: selectedClientId,
+        isRegisteredUser: true
+      }
+    };
+  }
   
-  const isRegisteredUser = !!existingProfile;
+  const isRegisteredUser = !!existingClient.user_id;
 
   return {
     success: true,
@@ -198,7 +272,7 @@ async function handleNewClient(clientInfo: ClientInformation, agentId: string): 
 
   const clientResult = await findOrCreateClient(clientInfo);
 
-  if (!clientResult) {
+  if (!clientResult || !clientResult.clientId) {
     proposalLogger.error("Failed to create or find client profile", { clientInfo });
     return {
       success: false,
@@ -206,9 +280,29 @@ async function handleNewClient(clientInfo: ClientInformation, agentId: string): 
     };
   }
 
-  proposalLogger.info("Client profile found/created", { 
+  // Additional validation - verify the client was actually created/found
+  const { data: verificationClient, error: verificationError } = await supabase
+    .from('clients')
+    .select('id, email')
+    .eq('id', clientResult.clientId)
+    .single();
+
+  if (verificationError || !verificationClient) {
+    proposalLogger.error("Client verification failed after creation", { 
+      clientId: clientResult.clientId,
+      error: verificationError
+    });
+    
+    return {
+      success: false,
+      error: "Client was created but verification failed"
+    };
+  }
+
+  proposalLogger.info("Client profile found/created and verified", { 
     clientId: clientResult.clientId,
-    isRegisteredUser: clientResult.isRegisteredUser
+    isRegisteredUser: clientResult.isRegisteredUser,
+    verifiedEmail: verificationClient.email
   });
 
   return {
