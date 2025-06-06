@@ -40,12 +40,19 @@ export function DataCorrectionManager() {
       }
       
       console.log("Data correction completed:", data);
-      setLastResult(data);
       
-      toast({
-        title: "Data Correction Complete",
-        description: `Successfully corrected ${data.system_size_corrections} system sizes, ${data.carbon_value_corrections} carbon calculations, and ${data.percentage_corrections} fee percentages.`,
-      });
+      // Type guard to ensure data matches our expected structure
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const result = data as CorrectionResult;
+        setLastResult(result);
+        
+        toast({
+          title: "Data Correction Complete",
+          description: `Successfully corrected ${result.system_size_corrections} system sizes, ${result.carbon_value_corrections} carbon calculations, and ${result.percentage_corrections} fee percentages.`,
+        });
+      } else {
+        throw new Error("Unexpected response format from database function");
+      }
       
       // Trigger a global refresh of proposal data
       window.dispatchEvent(new CustomEvent('proposal-status-changed', {
@@ -64,7 +71,7 @@ export function DataCorrectionManager() {
     }
   };
 
-  const runIndividualCorrection = async (functionName: string, description: string) => {
+  const runIndividualCorrection = async (functionName: 'update_system_size_kwp' | 'recalculate_carbon_values' | 'recalculate_proposal_percentages', description: string) => {
     setLoading(true);
     
     try {

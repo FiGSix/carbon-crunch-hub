@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { findOrCreateClient } from "./clientProfileService";
@@ -18,7 +17,9 @@ export interface ProposalOperationResult<T> {
   error?: string;
 }
 
+// Updated ProposalData interface to match database schema
 export interface ProposalData {
+  id?: string;
   title: string;
   agent_id: string;
   eligibility_criteria: EligibilityCriteria;
@@ -36,6 +37,8 @@ export interface ProposalData {
   unit_standard?: string;
   client_share_percentage?: number;
   agent_commission_percentage?: number;
+  content?: any;
+  created_at?: string;
 }
 
 interface ClientResult {
@@ -104,6 +107,29 @@ export async function createProposal(
       clientSharePercentage: insertedProposal.client_share_percentage
     });
 
+    // Transform database response to match our ProposalData interface
+    const transformedProposal: ProposalData = {
+      id: insertedProposal.id,
+      title: insertedProposal.title,
+      agent_id: insertedProposal.agent_id,
+      eligibility_criteria: insertedProposal.eligibility_criteria as EligibilityCriteria,
+      project_info: insertedProposal.project_info as ProjectInformation,
+      client_info: clientInfo,
+      annual_energy: insertedProposal.annual_energy || 0,
+      carbon_credits: insertedProposal.carbon_credits || 0,
+      client_share: insertedProposal.client_share_percentage || 0,
+      agent_commission: insertedProposal.agent_commission_percentage || 0,
+      client_id: insertedProposal.client_id,
+      client_reference_id: insertedProposal.client_reference_id,
+      status: insertedProposal.status,
+      system_size_kwp: insertedProposal.system_size_kwp,
+      unit_standard: insertedProposal.unit_standard,
+      client_share_percentage: insertedProposal.client_share_percentage,
+      agent_commission_percentage: insertedProposal.agent_commission_percentage,
+      content: insertedProposal.content,
+      created_at: insertedProposal.created_at
+    };
+
     // If this is for an existing client, update their entire portfolio
     if (selectedClientId) {
       try {
@@ -120,7 +146,7 @@ export async function createProposal(
 
     return {
       success: true,
-      data: insertedProposal as ProposalData
+      data: transformedProposal
     };
 
   } catch (error) {
