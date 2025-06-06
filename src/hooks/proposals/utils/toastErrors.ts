@@ -1,4 +1,3 @@
-
 import { logger } from "@/lib/logger";
 
 export function handleFetchError(error: unknown, toast: any) {
@@ -26,5 +25,17 @@ export function handleFetchError(error: unknown, toast: any) {
       description: "Failed to load proposals. Please try again.",
       variant: "destructive",
     });
+  }
+}
+
+export function showToastError(error: any, toast: any, refreshUser: () => void) {
+  toast({
+    title: "Error",
+    description: error.message || "An unexpected error occurred",
+    variant: "destructive",
+  });
+  
+  if (error.isAuthError) {
+    refreshUser();
   }
 }

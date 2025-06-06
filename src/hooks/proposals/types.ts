@@ -1,4 +1,3 @@
-
 import { ProposalListItem, ProposalData, ProposalOperationResult } from "@/types/proposals";
 
 /**
@@ -89,3 +88,14 @@ export interface ProposalFilters {
 export type {
   ProposalOperationResult
 };
+
+export interface UseFetchProposalsParams {
+  user: any;
+  userRole: any;
+  filters: ProposalFilters;
+  toast: any;
+  refreshUser: () => void;
+  setProposals: (proposals: any[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+}

@@ -1,4 +1,3 @@
-
 import { ProposalCache, ProposalFilters } from "../types";
 import { ProposalListItem } from "@/types/proposals";
 
@@ -54,4 +53,13 @@ export function updateProposalsCache(
  */
 export function clearProposalsCache(): void {
   proposalsCache = null;
+}
+
+export function setCachedProposals(proposals: any[]) {
+  const cacheKey = 'proposals_cache';
+  const cacheData = {
+    data: proposals,
+    timestamp: Date.now()
+  };
+  localStorage.setItem(cacheKey, JSON.stringify(cacheData));
 }
