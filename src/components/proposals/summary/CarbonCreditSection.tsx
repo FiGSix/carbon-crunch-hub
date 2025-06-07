@@ -1,20 +1,14 @@
 
-import React, { useState, useEffect, useMemo } from "react";
-import { 
-  normalizeToKWp
-} from "@/lib/calculations/carbon";
-import { calculateClientSpecificRevenue } from "@/lib/calculations/carbon/clientPricing";
-import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
+import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
-import { logger } from "@/lib/logger";
 import { CarbonCreditSummary } from "./carbon/CarbonCreditSummary";
 import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
 import { 
   calculateTotalMWhGenerated, 
-  calculateTotalCarbonCredits,
-  calculateYearlyCarbonCredits
+  calculateTotalCarbonCredits
 } from "./carbon/carbonCalculations";
+import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
+import { useRevenueCalculations } from "./carbon/hooks/useRevenueCalculations";
 
 interface CarbonCreditSectionProps {
   systemSize: string;
@@ -23,128 +17,23 @@ interface CarbonCreditSectionProps {
 }
 
 export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId }: CarbonCreditSectionProps) {
-  const systemSizeKWp = normalizeToKWp(systemSize);
-  const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
-  const [marketRevenue, setMarketRevenue] = useState<Record<string, number>>({});
-  const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(false);
-  
-  // Create logger with useMemo to prevent infinite loops
-  const carbonLogger = useMemo(() => 
-    logger.withContext({
-      component: 'CarbonCreditSection',
-      feature: 'client-specific-pricing'
-    }), []
-  );
+  const { portfolioData, loading: portfolioLoading } = usePortfolioData({
+    selectedClientId,
+    systemSize
+  });
 
-  // Load portfolio data for client-specific pricing
-  useEffect(() => {
-    const loadPortfolioData = async () => {
-      if (!selectedClientId) {
-        // If no client selected, use current project size only
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        setPortfolioData({
-          totalKWp: currentProjectSize,
-          projectCount: 1,
-          clientId: 'current'
-        });
-        return;
-      }
+  const { 
+    clientSpecificRevenue, 
+    loading: revenueLoading, 
+    systemSizeKWp 
+  } = useRevenueCalculations({
+    systemSize,
+    commissionDate,
+    portfolioData
+  });
 
-      setLoading(true);
-      try {
-        carbonLogger.info("Loading portfolio data for client-specific pricing", { selectedClientId });
-        
-        const portfolio = await calculateClientPortfolio(selectedClientId);
-        
-        // Add current project size to the total
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        const totalPortfolioSize = portfolio.totalKWp + currentProjectSize;
-        
-        setPortfolioData({
-          ...portfolio,
-          totalKWp: totalPortfolioSize,
-          projectCount: portfolio.projectCount + 1
-        });
-        
-        carbonLogger.info("Portfolio data loaded for client-specific pricing", { 
-          existingKWp: portfolio.totalKWp,
-          currentProjectKWp: currentProjectSize,
-          totalKWp: totalPortfolioSize
-        });
-        
-      } catch (error) {
-        carbonLogger.error("Error loading portfolio data for client-specific pricing", { error });
-        // Fallback to current project only
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        setPortfolioData({
-          totalKWp: currentProjectSize,
-          projectCount: 1,
-          clientId: selectedClientId
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loading = portfolioLoading || revenueLoading;
 
-    loadPortfolioData();
-  }, [selectedClientId, systemSize, carbonLogger]);
-
-  // Load both market and client-specific revenue data
-  useEffect(() => {
-    const loadRevenue = async () => {
-      if (!portfolioData) return;
-
-      try {
-        setLoading(true);
-        carbonLogger.info("Loading carbon prices for revenue calculation");
-        
-        const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
-        
-        // Calculate both market and client-specific revenue
-        const calculatedMarketRevenue: Record<string, number> = {};
-        const calculatedClientSpecificRevenue: Record<string, number> = {};
-        
-        for (const [year, price] of Object.entries(carbonPrices)) {
-          const yearNum = parseInt(year);
-          const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, yearNum, commissionDate);
-          
-          // Market revenue (standard pricing)
-          calculatedMarketRevenue[year] = Math.round(yearlyCarbonCredits * price);
-          
-          // Client-specific revenue (portfolio-based pricing)
-          calculatedClientSpecificRevenue[year] = await calculateClientSpecificRevenue(
-            year, 
-            yearlyCarbonCredits, 
-            portfolioData.totalKWp
-          );
-        }
-        
-        setMarketRevenue(calculatedMarketRevenue);
-        setClientSpecificRevenue(calculatedClientSpecificRevenue);
-        
-        carbonLogger.info("Revenue calculation completed with client-specific pricing", { 
-          years: Object.keys(calculatedMarketRevenue),
-          totalMarketRevenue: Object.values(calculatedMarketRevenue).reduce((sum, val) => sum + val, 0),
-          totalClientSpecificRevenue: Object.values(calculatedClientSpecificRevenue).reduce((sum, val) => sum + val, 0),
-          portfolioSize: portfolioData.totalKWp
-        });
-        
-      } catch (error) {
-        carbonLogger.error("Error loading carbon prices for client-specific revenue", { error });
-        // Fallback to empty revenue objects
-        setMarketRevenue({});
-        setClientSpecificRevenue({});
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (portfolioData) {
-      loadRevenue();
-    }
-  }, [systemSize, commissionDate, systemSizeKWp, portfolioData, carbonLogger]);
-  
   // Use client-specific revenue for display (this is what the client actually gets)
   const displayRevenue = clientSpecificRevenue;
 
