@@ -15,3 +15,9 @@ verify_jwt = true
 
 [functions.health-check]
 verify_jwt = false
+
+[functions.google-places-autocomplete]
+verify_jwt = false
+
+[functions.google-place-details]
+verify_jwt = false

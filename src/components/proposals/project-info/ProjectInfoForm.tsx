@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "lucide-react";
-import { GoogleAddressAutocomplete } from "@/components/common/GoogleAddressAutocomplete";
+import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
 import { ProjectInformation } from "@/types/proposals";
 
 interface ProjectInfoFormProps {
@@ -26,8 +26,6 @@ export function ProjectInfoForm({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Removed mapsError Alert */}
-      
       <div className="space-y-2">
         <Label htmlFor="name">Project Name</Label>
         <Input 
@@ -59,7 +57,7 @@ export function ProjectInfoForm({
       
       <div className="space-y-2 md:col-span-2">
         <Label htmlFor="address">Project Address</Label>
-        <GoogleAddressAutocomplete
+        <SecureGoogleAddressAutocomplete
           value={projectInfo.address}
           onChange={handleAddressChange}
           className="retro-input"
@@ -67,7 +65,6 @@ export function ProjectInfoForm({
           placeholder="Enter the project's physical address"
           onError={handleMapsError}
         />
-        {/* Removed mapsError warning message */}
         <p className="text-xs text-carbon-gray-500">Enter the complete physical address of the project</p>
       </div>
       
