@@ -18,14 +18,14 @@ export function usePortfolioUpdates() {
     setLoading(true);
     
     try {
-      portfolioLogger.info("Updating client portfolio", { clientId });
+      portfolioLogger.info("Updating client portfolio - CLIENT SHARE ONLY", { clientId });
       
       const result = await updatePortfolioPercentages(clientId);
       
       if (result.success) {
         toast({
-          title: "Portfolio Updated",
-          description: `Updated ${result.updatedProposals} proposals for portfolio size of ${formatSystemSizeForDisplay(result.portfolioData.totalKWp)}`,
+          title: "Client Portfolio Updated",
+          description: `Updated client share percentages for ${result.updatedProposals} proposals (portfolio size: ${formatSystemSizeForDisplay(result.portfolioData.totalKWp)}). Agent commission rates remain unchanged.`,
         });
         
         // Dispatch event to trigger proposal list refresh
@@ -35,7 +35,7 @@ export function usePortfolioUpdates() {
       } else {
         toast({
           title: "Portfolio Update Failed",
-          description: result.error || "Failed to update portfolio percentages",
+          description: result.error || "Failed to update client share percentages",
           variant: "destructive",
         });
       }
@@ -45,7 +45,7 @@ export function usePortfolioUpdates() {
       portfolioLogger.error("Portfolio update error", { error });
       toast({
         title: "Update Error",
-        description: "An unexpected error occurred while updating the portfolio",
+        description: "An unexpected error occurred while updating the client portfolio",
         variant: "destructive",
       });
       return null;
@@ -58,19 +58,19 @@ export function usePortfolioUpdates() {
     setLoading(true);
     
     try {
-      portfolioLogger.info("Starting portfolio validation");
+      portfolioLogger.info("Starting portfolio validation - CLIENT SHARE ONLY");
       
       const result = await validateAndFixPortfolioInconsistencies();
       
       if (result.errors.length === 0) {
         toast({
           title: "Portfolio Validation Complete",
-          description: `Checked ${result.checked} portfolios, fixed ${result.fixed} inconsistencies`,
+          description: `Checked ${result.checked} portfolios, fixed ${result.fixed} client share inconsistencies. Agent commission rates remain unchanged.`,
         });
       } else {
         toast({
           title: "Portfolio Validation Issues",
-          description: `Found ${result.errors.length} errors while validating portfolios`,
+          description: `Found ${result.errors.length} errors while validating client portfolios`,
           variant: "destructive",
         });
       }

@@ -2,7 +2,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import { calculateClientPortfolio, PortfolioData } from "./portfolioCalculationService";
-import { getClientSharePercentage, getAgentCommissionPercentage } from "@/lib/calculations/carbon";
+import { getClientSharePercentage } from "@/lib/calculations/carbon";
 
 export interface PortfolioUpdateResult {
   success: boolean;
@@ -12,7 +12,8 @@ export interface PortfolioUpdateResult {
 }
 
 /**
- * Update client share percentages for all proposals in a client's portfolio
+ * Update ONLY client share percentages for all proposals in a client's portfolio
+ * Agent commission percentages are NOT updated as they are locked at creation time
  */
 export async function updatePortfolioPercentages(clientId: string): Promise<PortfolioUpdateResult> {
   const portfolioLogger = logger.withContext({
@@ -22,7 +23,7 @@ export async function updatePortfolioPercentages(clientId: string): Promise<Port
   });
 
   try {
-    portfolioLogger.info("Starting portfolio percentage update");
+    portfolioLogger.info("Starting portfolio percentage update - CLIENT SHARE ONLY");
 
     // Calculate the client's total portfolio
     const portfolioData = await calculateClientPortfolio(clientId);
@@ -36,22 +37,21 @@ export async function updatePortfolioPercentages(clientId: string): Promise<Port
       };
     }
 
-    // Calculate new percentages based on total portfolio
+    // Calculate new CLIENT share percentage only - agent commission stays locked
     const newClientSharePercentage = getClientSharePercentage(portfolioData.totalKWp);
-    const newAgentCommissionPercentage = getAgentCommissionPercentage(portfolioData.totalKWp);
 
-    portfolioLogger.info("Calculated new percentages", {
+    portfolioLogger.info("Calculated new CLIENT share percentage", {
       totalKWp: portfolioData.totalKWp,
       clientShare: newClientSharePercentage,
-      agentCommission: newAgentCommissionPercentage
+      note: "Agent commission percentages are NOT updated - locked at creation time"
     });
 
-    // Update all proposals for this client
+    // Update ONLY client share percentage - NOT agent commission
     const { data: updatedProposals, error } = await supabase
       .from('proposals')
       .update({
-        client_share_percentage: newClientSharePercentage,
-        agent_commission_percentage: newAgentCommissionPercentage
+        client_share_percentage: newClientSharePercentage
+        // agent_commission_percentage is intentionally NOT updated
       })
       .or(`client_id.eq.${clientId},client_reference_id.eq.${clientId}`)
       .is('archived_at', null)
@@ -64,7 +64,7 @@ export async function updatePortfolioPercentages(clientId: string): Promise<Port
     }
 
     const updatedCount = updatedProposals?.length || 0;
-    portfolioLogger.info("Portfolio update completed", {
+    portfolioLogger.info("Portfolio update completed - CLIENT SHARE ONLY", {
       updatedProposals: updatedCount,
       proposalIds: updatedProposals?.map(p => p.id)
     });
@@ -93,7 +93,7 @@ export async function updatePortfolioPercentages(clientId: string): Promise<Port
 }
 
 /**
- * Update portfolio percentages for multiple clients
+ * Update portfolio percentages for multiple clients - CLIENT SHARE ONLY
  */
 export async function updateMultiplePortfoliosPercentages(clientIds: string[]): Promise<Record<string, PortfolioUpdateResult>> {
   const portfolioLogger = logger.withContext({
@@ -111,7 +111,7 @@ export async function updateMultiplePortfoliosPercentages(clientIds: string[]): 
 
   await Promise.all(updatePromises);
 
-  portfolioLogger.info("Multiple portfolio updates completed", {
+  portfolioLogger.info("Multiple portfolio updates completed - CLIENT SHARE ONLY", {
     clientCount: clientIds.length,
     successfulUpdates: Object.values(results).filter(r => r.success).length
   });
@@ -120,7 +120,7 @@ export async function updateMultiplePortfoliosPercentages(clientIds: string[]): 
 }
 
 /**
- * Validate and fix portfolio inconsistencies
+ * Validate and fix portfolio inconsistencies - CLIENT SHARE ONLY
  */
 export async function validateAndFixPortfolioInconsistencies(): Promise<{
   checked: number;
@@ -133,7 +133,7 @@ export async function validateAndFixPortfolioInconsistencies(): Promise<{
   });
 
   try {
-    portfolioLogger.info("Starting portfolio consistency validation");
+    portfolioLogger.info("Starting portfolio consistency validation - CLIENT SHARE ONLY");
 
     // Get all unique client IDs from proposals
     const { data: clientIds, error: clientError } = await supabase
@@ -178,7 +178,7 @@ export async function validateAndFixPortfolioInconsistencies(): Promise<{
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    portfolioLogger.info("Portfolio validation completed", {
+    portfolioLogger.info("Portfolio validation completed - CLIENT SHARE ONLY", {
       checked: clientIdArray.length,
       fixed: fixedCount,
       errors: errors.length

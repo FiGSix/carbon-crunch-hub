@@ -1,22 +1,29 @@
 
 import React from "react";
 import { 
-  getClientSharePercentage,
-  getAgentCommissionPercentage
+  getClientSharePercentage
 } from "@/lib/calculations/carbon";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
 import { useAuth } from "@/contexts/auth";
 import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
-import { useAgentPortfolioData } from "./carbon/hooks/useAgentPortfolioData";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface RevenueDistributionSectionProps {
   systemSize: string;
   selectedClientId?: string | null;
   proposalId?: string | null;
+  proposalData?: {
+    agent_commission_percentage?: number;
+    agent_portfolio_kwp?: number;
+  } | null;
 }
 
-export function RevenueDistributionSection({ systemSize, selectedClientId, proposalId }: RevenueDistributionSectionProps) {
+export function RevenueDistributionSection({ 
+  systemSize, 
+  selectedClientId, 
+  proposalId,
+  proposalData 
+}: RevenueDistributionSectionProps) {
   const { profile } = useAuth();
   const isClient = profile?.role === 'client';
   
@@ -26,14 +33,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
     proposalId
   });
 
-  const { agentPortfolioData, loading: agentLoading } = useAgentPortfolioData({
-    systemSize,
-    proposalId
-  });
-
-  const loading = clientLoading || agentLoading;
-
-  if (loading) {
+  if (clientLoading) {
     return (
       <div>
         <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Revenue Distribution</h3>
@@ -50,9 +50,10 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
   const clientPortfolioSize = clientPortfolioData?.totalKWp || parseFloat(systemSize) || 0;
   const clientSharePercentage = getClientSharePercentage(clientPortfolioSize);
 
-  // Use agent portfolio size for agent commission calculations
-  const agentPortfolioSize = agentPortfolioData?.totalKWp || parseFloat(systemSize) || 0;
-  const agentCommissionPercentage = getAgentCommissionPercentage(agentPortfolioSize);
+  // Use stored agent commission percentage from proposal data if available
+  // This ensures we show the commission rate that was locked at creation time
+  const agentCommissionPercentage = proposalData?.agent_commission_percentage || 4; // fallback to default
+  const agentPortfolioSize = proposalData?.agent_portfolio_kwp || 0;
   
   const crunchCarbonSharePercentage = 100 - clientSharePercentage - agentCommissionPercentage;
 
@@ -75,7 +76,10 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
               <p className="text-sm text-carbon-gray-500">Agent Commission</p>
               <p className="text-xl font-bold text-carbon-blue-600">{agentCommissionPercentage}%</p>
               <p className="text-xs text-carbon-gray-500 mt-1">
-                Based on {formatSystemSizeForDisplay(agentPortfolioSize)} agent portfolio
+                {agentPortfolioSize > 0 
+                  ? `Locked at creation (agent portfolio: ${formatSystemSizeForDisplay(agentPortfolioSize)})`
+                  : "Rate locked at proposal creation"
+                }
               </p>
             </div>
             <div className="p-4 bg-carbon-gray-50 rounded-lg border border-carbon-gray-200">

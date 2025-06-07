@@ -48,6 +48,12 @@ export function ProposalDetails({
   const isPortfolioBased = proposal.content?.calculationMetadata?.portfolioBasedPricing;
   const portfolioSize = proposal.content?.portfolioSize;
   
+  // Extract agent commission data from proposal
+  const proposalData = {
+    agent_commission_percentage: proposal.agent_commission_percentage,
+    agent_portfolio_kwp: proposal.agent_portfolio_kwp
+  };
+  
   return (
     <Card className="retro-card">
       <CardHeader>
@@ -72,6 +78,9 @@ export function ProposalDetails({
                 <strong>Portfolio-based calculation:</strong> This proposal uses portfolio-based pricing with a total portfolio size of {formatSystemSizeForDisplay(portfolioSize)}, 
                 which provides enhanced client share percentages and accurate revenue projections.
                 {hasClientSpecificRevenue && " Revenue figures reflect the client's actual share based on their portfolio size."}
+                {proposalData.agent_commission_percentage && (
+                  <span> Agent commission rate ({proposalData.agent_commission_percentage}%) was locked at creation time.</span>
+                )}
               </AlertDescription>
             </Alert>
           )}
@@ -91,6 +100,7 @@ export function ProposalDetails({
                 systemSize={projectInfo.size} 
                 selectedClientId={clientId}
                 proposalId={proposal.id}
+                proposalData={proposalData}
               />
             </>
           )}
