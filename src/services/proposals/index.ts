@@ -1,7 +1,8 @@
+
 // Barrel file for proposalService to maintain backward compatibility
-export { createProposal, type ProposalCreationResult } from './proposalCreationService';
+export { createProposal } from './creation/proposalCreationService';
+export type { ProposalCreationResult, ProposalData } from './creation/types';
 export { findOrCreateClient } from './clientProfileService';
-export type { ProposalData } from './types';
 
 // Export the new status update service
 export { updateProposalStatus } from './statusUpdateService';

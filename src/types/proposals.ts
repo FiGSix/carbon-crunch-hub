@@ -130,6 +130,7 @@ export interface ProposalListItem {
   invitation_expires_at?: string | null;
   system_size_kwp?: number | null;
   agent?: string;
+  content?: ProposalContent; // Add content property to fix build errors
 }
 
 /**
