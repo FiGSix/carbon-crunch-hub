@@ -22,7 +22,7 @@ export function CommissionProjectionCard({
   const yearsRemaining = Math.max(0, 2030 - currentYear);
   
   const getProjectionDescription = () => {
-    return `Projected commission from ${filteredProposalsCount} active proposals over ${yearsRemaining} years until 2030`;
+    return "Total projected commission until 2030";
   };
 
   return (
