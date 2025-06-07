@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
 import { logger } from "@/lib/logger";
 import { CarbonCreditSummary } from "./carbon/CarbonCreditSummary";
-import { PortfolioInfo } from "./carbon/PortfolioInfo";
 import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
 import { 
   calculateTotalMWhGenerated, 
@@ -173,19 +172,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       
       <CarbonCreditSummary systemSize={systemSize} />
       
-      <PortfolioInfo portfolioData={portfolioData} />
-      
       <h4 className="font-medium text-carbon-gray-700 mb-2">Client Revenue by Year</h4>
-      
-      {/* Show transparency info about pricing */}
-      {portfolioData && portfolioData.projectCount > 1 && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-700">
-            <strong>Portfolio-based pricing:</strong> Revenue calculated using your client's portfolio size of {portfolioData.totalKWp.toLocaleString()} kWp. 
-            Client receives {((Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0) / Object.values(marketRevenue).reduce((sum, val) => sum + val, 0)) * 100).toFixed(1)}% of market value.
-          </p>
-        </div>
-      )}
       
       <CarbonCreditTable 
         revenue={displayRevenue}
@@ -200,11 +187,6 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       {commissionDate && (
         <p className="text-xs text-carbon-gray-500 mt-2">
           * Values for commissioning year are pro-rated based on the commission date
-        </p>
-      )}
-      {portfolioData && portfolioData.projectCount > 1 && (
-        <p className="text-xs text-carbon-gray-500 mt-1">
-          * Revenue reflects portfolio-based client share percentage ({((Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0) / Object.values(marketRevenue).reduce((sum, val) => sum + val, 0)) * 100).toFixed(1)}% of market rate)
         </p>
       )}
     </div>
