@@ -22,6 +22,7 @@ interface SummaryStepProps {
   nextStep: () => void;
   prevStep: () => void;
   selectedClientId?: string | null;
+  proposalId?: string | null; // Add proposal ID parameter (null for new proposals)
 }
 
 export function SummaryStep({ 
@@ -30,7 +31,8 @@ export function SummaryStep({
   projectInfo, 
   nextStep, 
   prevStep,
-  selectedClientId
+  selectedClientId,
+  proposalId
 }: SummaryStepProps) {
   return (
     <Card className="retro-card">
@@ -48,10 +50,12 @@ export function SummaryStep({
             systemSize={projectInfo.size} 
             commissionDate={projectInfo.commissionDate}
             selectedClientId={selectedClientId}
+            proposalId={proposalId}
           />
           <RevenueDistributionSection 
             systemSize={projectInfo.size}
             selectedClientId={selectedClientId}
+            proposalId={proposalId}
           />
         </div>
       </CardContent>

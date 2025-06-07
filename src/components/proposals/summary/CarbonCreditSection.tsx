@@ -14,12 +14,14 @@ interface CarbonCreditSectionProps {
   systemSize: string;
   commissionDate?: string;
   selectedClientId?: string | null;
+  proposalId?: string | null; // Add proposal ID parameter
 }
 
-export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId }: CarbonCreditSectionProps) {
+export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId }: CarbonCreditSectionProps) {
   const { portfolioData, loading: portfolioLoading } = usePortfolioData({
     selectedClientId,
-    systemSize
+    systemSize,
+    proposalId
   });
 
   const { 
@@ -29,7 +31,8 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   } = useRevenueCalculations({
     systemSize,
     commissionDate,
-    portfolioData
+    portfolioData,
+    proposalId
   });
 
   const loading = portfolioLoading || revenueLoading;

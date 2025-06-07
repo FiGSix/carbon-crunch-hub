@@ -6,9 +6,10 @@ import { logger } from "@/lib/logger";
 interface UsePortfolioDataProps {
   selectedClientId?: string | null;
   systemSize: string;
+  proposalId?: string | null; // Add proposal ID to detect view vs create mode
 }
 
-export function usePortfolioData({ selectedClientId, systemSize }: UsePortfolioDataProps) {
+export function usePortfolioData({ selectedClientId, systemSize, proposalId }: UsePortfolioDataProps) {
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
   
@@ -19,6 +20,9 @@ export function usePortfolioData({ selectedClientId, systemSize }: UsePortfolioD
       feature: 'client-specific-pricing'
     }), []
   );
+
+  // Determine if we're viewing an existing proposal or creating a new one
+  const isViewingExistingProposal = !!proposalId;
 
   // Load portfolio data for client-specific pricing
   useEffect(() => {
@@ -36,24 +40,41 @@ export function usePortfolioData({ selectedClientId, systemSize }: UsePortfolioD
 
       setLoading(true);
       try {
-        carbonLogger.info("Loading portfolio data for client-specific pricing", { selectedClientId });
+        carbonLogger.info("Loading portfolio data for client-specific pricing", { 
+          selectedClientId, 
+          isViewingExistingProposal 
+        });
         
         const portfolio = await calculateClientPortfolio(selectedClientId);
         
-        // Add current project size to the total
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        const totalPortfolioSize = portfolio.totalKWp + currentProjectSize;
+        // Only add current project size when creating a new proposal
+        // When viewing existing proposals, the portfolio already includes this project
+        let totalPortfolioSize: number;
+        let projectCount: number;
+        
+        if (isViewingExistingProposal) {
+          // Viewing existing proposal - portfolio already includes this project
+          totalPortfolioSize = portfolio.totalKWp;
+          projectCount = portfolio.projectCount;
+        } else {
+          // Creating new proposal - add current project to existing portfolio
+          const currentProjectSize = parseFloat(systemSize) || 0;
+          totalPortfolioSize = portfolio.totalKWp + currentProjectSize;
+          projectCount = portfolio.projectCount + 1;
+        }
         
         setPortfolioData({
           ...portfolio,
           totalKWp: totalPortfolioSize,
-          projectCount: portfolio.projectCount + 1
+          projectCount
         });
         
         carbonLogger.info("Portfolio data loaded for client-specific pricing", { 
           existingKWp: portfolio.totalKWp,
-          currentProjectKWp: currentProjectSize,
-          totalKWp: totalPortfolioSize
+          currentProjectKWp: parseFloat(systemSize) || 0,
+          totalKWp: totalPortfolioSize,
+          isViewingExistingProposal,
+          projectCount
         });
         
       } catch (error) {
@@ -71,7 +92,7 @@ export function usePortfolioData({ selectedClientId, systemSize }: UsePortfolioD
     };
 
     loadPortfolioData();
-  }, [selectedClientId, systemSize, carbonLogger]);
+  }, [selectedClientId, systemSize, proposalId, isViewingExistingProposal, carbonLogger]);
 
   return { portfolioData, loading };
 }

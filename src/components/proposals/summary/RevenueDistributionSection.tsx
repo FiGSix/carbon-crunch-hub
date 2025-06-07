@@ -1,86 +1,28 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React from "react";
 import { 
   getClientSharePercentage,
   getAgentCommissionPercentage
 } from "@/lib/calculations/carbon";
 import { useAuth } from "@/contexts/auth";
-import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
+import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
 import { Skeleton } from "@/components/ui/skeleton";
-import { logger } from "@/lib/logger";
 
 interface RevenueDistributionSectionProps {
   systemSize: string;
   selectedClientId?: string | null;
+  proposalId?: string | null; // Add proposal ID parameter
 }
 
-export function RevenueDistributionSection({ systemSize, selectedClientId }: RevenueDistributionSectionProps) {
+export function RevenueDistributionSection({ systemSize, selectedClientId, proposalId }: RevenueDistributionSectionProps) {
   const { profile } = useAuth();
   const isClient = profile?.role === 'client';
   
-  const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
-  const [loading, setLoading] = useState(false);
-  
-  // Create logger with useMemo to prevent infinite loops
-  const revenueLogger = useMemo(() => 
-    logger.withContext({
-      component: 'RevenueDistributionSection',
-      feature: 'portfolio-calculation'
-    }), []
-  );
-
-  // Calculate portfolio when we have a client ID
-  useEffect(() => {
-    const loadPortfolioData = async () => {
-      if (!selectedClientId) {
-        // If no client selected, use current project size only
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        setPortfolioData({
-          totalKWp: currentProjectSize,
-          projectCount: 1,
-          clientId: 'current'
-        });
-        return;
-      }
-
-      setLoading(true);
-      try {
-        revenueLogger.info("Loading portfolio data for revenue distribution", { selectedClientId });
-        
-        const portfolio = await calculateClientPortfolio(selectedClientId);
-        
-        // Add current project size to the total
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        const totalPortfolioSize = portfolio.totalKWp + currentProjectSize;
-        
-        setPortfolioData({
-          ...portfolio,
-          totalKWp: totalPortfolioSize,
-          projectCount: portfolio.projectCount + 1
-        });
-        
-        revenueLogger.info("Portfolio data loaded for revenue distribution", { 
-          existingKWp: portfolio.totalKWp,
-          currentProjectKWp: currentProjectSize,
-          totalKWp: totalPortfolioSize
-        });
-        
-      } catch (error) {
-        revenueLogger.error("Error loading portfolio data for revenue distribution", { error });
-        // Fallback to current project only
-        const currentProjectSize = parseFloat(systemSize) || 0;
-        setPortfolioData({
-          totalKWp: currentProjectSize,
-          projectCount: 1,
-          clientId: selectedClientId
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPortfolioData();
-  }, [selectedClientId, systemSize, revenueLogger]);
+  const { portfolioData, loading } = usePortfolioData({
+    selectedClientId,
+    systemSize,
+    proposalId
+  });
 
   if (loading) {
     return (

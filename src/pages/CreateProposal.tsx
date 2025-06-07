@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
@@ -174,6 +173,7 @@ const CreateProposal = () => {
           nextStep={nextStep}
           prevStep={prevStep}
           selectedClientId={selectedClientId}
+          proposalId={null}
         />
       )}
     </DashboardLayout>

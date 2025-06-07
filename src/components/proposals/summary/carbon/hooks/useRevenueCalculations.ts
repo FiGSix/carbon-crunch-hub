@@ -11,9 +11,10 @@ interface UseRevenueCalculationsProps {
   systemSize: string;
   commissionDate?: string;
   portfolioData: PortfolioData | null;
+  proposalId?: string | null; // Add proposal ID parameter
 }
 
-export function useRevenueCalculations({ systemSize, commissionDate, portfolioData }: UseRevenueCalculationsProps) {
+export function useRevenueCalculations({ systemSize, commissionDate, portfolioData, proposalId }: UseRevenueCalculationsProps) {
   const systemSizeKWp = normalizeToKWp(systemSize);
   const [marketRevenue, setMarketRevenue] = useState<Record<string, number>>({});
   const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
@@ -34,7 +35,9 @@ export function useRevenueCalculations({ systemSize, commissionDate, portfolioDa
 
       try {
         setLoading(true);
-        carbonLogger.info("Loading carbon prices for revenue calculation");
+        carbonLogger.info("Loading carbon prices for revenue calculation", { 
+          proposalId: proposalId || 'new-proposal' 
+        });
         
         const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
         
@@ -64,7 +67,8 @@ export function useRevenueCalculations({ systemSize, commissionDate, portfolioDa
           years: Object.keys(calculatedMarketRevenue),
           totalMarketRevenue: Object.values(calculatedMarketRevenue).reduce((sum, val) => sum + val, 0),
           totalClientSpecificRevenue: Object.values(calculatedClientSpecificRevenue).reduce((sum, val) => sum + val, 0),
-          portfolioSize: portfolioData.totalKWp
+          portfolioSize: portfolioData.totalKWp,
+          proposalId: proposalId || 'new-proposal'
         });
         
       } catch (error) {
@@ -80,7 +84,7 @@ export function useRevenueCalculations({ systemSize, commissionDate, portfolioDa
     if (portfolioData) {
       loadRevenue();
     }
-  }, [systemSize, commissionDate, systemSizeKWp, portfolioData, carbonLogger]);
+  }, [systemSize, commissionDate, systemSizeKWp, portfolioData, proposalId, carbonLogger]);
 
   return {
     marketRevenue,

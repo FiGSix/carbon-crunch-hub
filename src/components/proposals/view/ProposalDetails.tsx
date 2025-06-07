@@ -84,10 +84,12 @@ export function ProposalDetails({
                 systemSize={projectInfo.size} 
                 commissionDate={projectInfo.commissionDate}
                 selectedClientId={clientId}
+                proposalId={proposal.id}
               />
               <RevenueDistributionSection 
                 systemSize={projectInfo.size} 
                 selectedClientId={clientId}
+                proposalId={proposal.id}
               />
             </>
           )}
