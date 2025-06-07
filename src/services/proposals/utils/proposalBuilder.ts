@@ -112,8 +112,7 @@ export async function buildProposalData(
       agent_commission_percentage: agentCommissionPercentage,
       agent_portfolio_kwp: agentPortfolioWithNewProject, // Store agent portfolio size at creation
       status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     };
 
   } catch (error) {
