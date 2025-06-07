@@ -33,7 +33,7 @@ export function CommissionProjectionCard({
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
       className="h-full sm:col-span-2"
     >
-      <Card className="overflow-hidden border border-crunch-black/5 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+      <Card className="overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-crunch-black/70">Total Potential Revenue</CardTitle>
         </CardHeader>
@@ -51,7 +51,7 @@ export function CommissionProjectionCard({
           </div>
           
           {/* Description */}
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-crunch-black/50">
             {getProjectionDescription()}
           </p>
         </CardContent>
