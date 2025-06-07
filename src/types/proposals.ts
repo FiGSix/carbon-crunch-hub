@@ -28,6 +28,7 @@ export interface ProposalDbRecord {
   carbon_credits: number | null;
   client_share_percentage: number | null;
   agent_commission_percentage: number | null;
+  agent_portfolio_kwp: number | null;
   eligibility_criteria: Json;
   project_info: Json;
 }
@@ -104,6 +105,7 @@ export interface ProposalData {
   carbon_credits?: number | null;
   client_share_percentage?: number | null;
   agent_commission_percentage?: number | null;
+  agent_portfolio_kwp?: number | null;
   system_size_kwp?: number | null;
   unit_standard?: string | null;
   invitation_token?: string | null;
@@ -138,7 +140,8 @@ export interface ProposalListItem {
   annual_energy?: number | null;
   carbon_credits?: number | null;
   client_share_percentage?: number | null;
-  agent_commission_percentage?: number | null; // Add this field
+  agent_commission_percentage?: number | null;
+  agent_portfolio_kwp?: number | null;
   invitation_sent_at?: string | null;
   invitation_viewed_at?: string | null;
   invitation_expires_at?: string | null;
