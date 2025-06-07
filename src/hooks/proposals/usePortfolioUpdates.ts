@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updatePortfolioPercentages, validateAndFixPortfolioInconsistencies } from '@/services/proposals/portfolioUpdateService';
+import { formatSystemSizeForDisplay } from '@/lib/calculations/carbon/normalization';
 import { logger } from '@/lib/logger';
 
 export function usePortfolioUpdates() {
@@ -24,7 +25,7 @@ export function usePortfolioUpdates() {
       if (result.success) {
         toast({
           title: "Portfolio Updated",
-          description: `Updated ${result.updatedProposals} proposals for portfolio size of ${result.portfolioData.totalKWp.toLocaleString()} kWp`,
+          description: `Updated ${result.updatedProposals} proposals for portfolio size of ${formatSystemSizeForDisplay(result.portfolioData.totalKWp)}`,
         });
         
         // Dispatch event to trigger proposal list refresh

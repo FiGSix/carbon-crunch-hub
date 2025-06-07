@@ -57,11 +57,11 @@ export function formatSystemSizeForDisplay(sizeInKWp: number, preferredUnit: str
       return `${sizeInKWp.toLocaleString()} kWp`;
     case 'mwp':
     case 'mw':
-      return `${(sizeInKWp / 1000).toFixed(3)} MWp`;
+      return `${(sizeInKWp / 1000).toFixed(2)} MWp`;
     case 'auto':
     default:
       if (sizeInKWp >= 1000) {
-        return `${(sizeInKWp / 1000).toFixed(3)} MWp`;
+        return `${(sizeInKWp / 1000).toFixed(2)} MWp`;
       } else {
         return `${sizeInKWp.toLocaleString()} kWp`;
       }

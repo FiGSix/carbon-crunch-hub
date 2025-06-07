@@ -4,6 +4,7 @@ import {
   getClientSharePercentage,
   getAgentCommissionPercentage
 } from "@/lib/calculations/carbon";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
 import { useAuth } from "@/contexts/auth";
 import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
 import { useAgentPortfolioData } from "./carbon/hooks/useAgentPortfolioData";
@@ -64,7 +65,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
           <p className="text-sm text-carbon-gray-500">Client Share</p>
           <p className="text-xl font-bold text-carbon-green-600">{clientSharePercentage}%</p>
           <p className="text-xs text-carbon-gray-500 mt-1">
-            Based on {clientPortfolioSize.toLocaleString()} kWp client portfolio
+            Based on {formatSystemSizeForDisplay(clientPortfolioSize)} client portfolio
           </p>
         </div>
         
@@ -74,7 +75,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
               <p className="text-sm text-carbon-gray-500">Agent Commission</p>
               <p className="text-xl font-bold text-carbon-blue-600">{agentCommissionPercentage}%</p>
               <p className="text-xs text-carbon-gray-500 mt-1">
-                Based on {agentPortfolioSize.toLocaleString()} kWp agent portfolio
+                Based on {formatSystemSizeForDisplay(agentPortfolioSize)} agent portfolio
               </p>
             </div>
             <div className="p-4 bg-carbon-gray-50 rounded-lg border border-carbon-gray-200">

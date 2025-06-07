@@ -8,6 +8,7 @@ import {
 import { motion } from "framer-motion";
 import { Percent } from "lucide-react";
 import { getAgentCommissionPercentage } from "@/lib/calculations/carbon";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
 import { useAgentPortfolioData } from "@/components/proposals/summary/carbon/hooks/useAgentPortfolioData";
 
 interface CommissionCardProps {
@@ -30,6 +31,9 @@ export function CommissionCard({ portfolioSize }: CommissionCardProps) {
   // Calculate progress towards next tier (as percentage)
   // The threshold is 15,000 kWp (15 MWp) for 7% commission
   const progress = actualPortfolioSize >= 15000 ? 100 : (actualPortfolioSize / 15000) * 100;
+  
+  // Calculate remaining kWp needed to reach 7% commission
+  const remainingKWp = Math.max(0, 15000 - actualPortfolioSize);
   
   if (loading) {
     return (
@@ -71,7 +75,7 @@ export function CommissionCard({ portfolioSize }: CommissionCardProps) {
             <div className="space-y-1">
               <div className="text-2xl font-bold">{commissionRate}%</div>
               <div className="text-xs text-crunch-black/50">
-                {actualPortfolioSize < 15000 ? `${((15000 - actualPortfolioSize) / 1000).toFixed(1)} MWp to 7%` : "Maximum rate achieved"}
+                {actualPortfolioSize < 15000 ? `${formatSystemSizeForDisplay(remainingKWp)} to 7%` : "Maximum rate achieved"}
               </div>
             </div>
             <div className="rounded-full bg-crunch-yellow/10 p-3 shadow-sm">

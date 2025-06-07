@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/auth";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
 
 interface ProposalDetailsProps {
   proposal: ProposalData;
@@ -68,7 +69,7 @@ export function ProposalDetails({
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                <strong>Portfolio-based calculation:</strong> This proposal uses portfolio-based pricing with a total portfolio size of {portfolioSize.toLocaleString()} kWp, 
+                <strong>Portfolio-based calculation:</strong> This proposal uses portfolio-based pricing with a total portfolio size of {formatSystemSizeForDisplay(portfolioSize)}, 
                 which provides enhanced client share percentages and accurate revenue projections.
                 {hasClientSpecificRevenue && " Revenue figures reflect the client's actual share based on their portfolio size."}
               </AlertDescription>
