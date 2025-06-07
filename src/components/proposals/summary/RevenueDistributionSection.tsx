@@ -77,7 +77,7 @@ export function RevenueDistributionSection({
               <p className="text-xl font-bold text-carbon-blue-600">{agentCommissionPercentage}%</p>
               <p className="text-xs text-carbon-gray-500 mt-1">
                 {agentPortfolioSize > 0 
-                  ? `Locked at creation (agent portfolio: ${formatSystemSizeForDisplay(agentPortfolioSize)})`
+                  ? `Rate locked at creation (agent portfolio: ${formatSystemSizeForDisplay(agentPortfolioSize)})`
                   : "Rate locked at proposal creation"
                 }
               </p>
