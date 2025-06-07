@@ -13,6 +13,7 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
   const [isOpen, setIsOpen] = useState(false);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState(value);
+  const [pendingInput, setPendingInput] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { debounce } = useDebounce(500);
@@ -47,10 +48,14 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     setIsOpen(results.length > 0);
   }, [getPlacePredictions]);
 
-  // Debounced version of fetchPredictions
+  // Debounced function that uses the pending input
   const debouncedFetchPredictions = useCallback(
-    debounce(fetchPredictions),
-    [debounce, fetchPredictions]
+    debounce(async () => {
+      if (pendingInput) {
+        await fetchPredictions(pendingInput);
+      }
+    }),
+    [debounce, fetchPredictions, pendingInput]
   );
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,9 +65,10 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     setInputValue(newValue);
     onChange(newValue);
     
-    // Trigger debounced search for predictions
+    // Set pending input and trigger debounced search
+    setPendingInput(newValue);
     if (newValue.trim().length >= 3) {
-      debouncedFetchPredictions(newValue);
+      debouncedFetchPredictions();
     } else {
       setPredictions([]);
       setIsOpen(false);
