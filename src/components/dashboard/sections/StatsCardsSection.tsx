@@ -39,6 +39,20 @@ export function StatsCardsSection({
     }
   };
 
+  // Get agent-specific revenue description
+  const getAgentRevenueDescription = () => {
+    const filteredProposals = proposals.filter(p => 
+      p.status === 'pending' || 
+      p.status === 'draft' || 
+      p.status === 'approved' || 
+      p.status === 'signed'
+    );
+    const currentYear = new Date().getFullYear();
+    const yearsRemaining = Math.max(0, 2030 - currentYear);
+    
+    return `Projected commission from ${filteredProposals.length} active proposals over ${yearsRemaining} years until 2030`;
+  };
+
   if (userRole === 'agent') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
@@ -53,14 +67,20 @@ export function StatsCardsSection({
         
         <CommissionCard portfolioSize={portfolioSize} />
         
-        <StatsCard 
-          title="Potential Revenue" 
-          value={`R ${potentialRevenue.toLocaleString()}`} 
-          icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
-          trend="+12%"
-          trendDirection="up"
-          color="yellow"
-        />
+        <div className="sm:col-span-2">
+          <StatsCard 
+            title="Commission Projection" 
+            value={`R ${potentialRevenue.toLocaleString()}`} 
+            icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
+            trend="+12%"
+            trendDirection="up"
+            color="yellow"
+            className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200"
+          />
+          <p className="text-sm text-gray-600 mt-2 px-6 pb-4">
+            {getAgentRevenueDescription()}
+          </p>
+        </div>
         
         <DealStatusCard proposals={proposals} loading={loading} />
       </div>
