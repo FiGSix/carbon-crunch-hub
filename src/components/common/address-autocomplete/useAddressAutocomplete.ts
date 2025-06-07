@@ -55,12 +55,6 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     }
   }, [fetchPredictions, pendingInput]);
 
-  // Debounced function
-  const debouncedFetchPredictions = useCallback(
-    debounce(handleDebouncedSearch),
-    [debounce, handleDebouncedSearch]
-  );
-
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     console.log("📝 Input changed:", newValue);
@@ -71,12 +65,12 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     // Set pending input and trigger debounced search
     setPendingInput(newValue);
     if (newValue.trim().length >= 3) {
-      debouncedFetchPredictions();
+      debounce(handleDebouncedSearch);
     } else {
       setPredictions([]);
       setIsOpen(false);
     }
-  }, [onChange, debouncedFetchPredictions]);
+  }, [onChange, debounce, handleDebouncedSearch]);
 
   const handleSelectPrediction = useCallback(async (prediction: any) => {
     console.log("📍 Prediction selected:", prediction);
