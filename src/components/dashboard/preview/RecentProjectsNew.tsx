@@ -1,4 +1,3 @@
-
 import { 
   Card, 
   CardContent, 
@@ -99,7 +98,7 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
               variant="outline" 
               size="sm"
               className="bg-crunch-yellow/10 text-crunch-black hover:bg-crunch-yellow/20 border-crunch-yellow/20"
-              onClick={() => navigate('/proposals/create')}
+              onClick={() => navigate('/create-proposal')}
             >
               <Plus className="h-4 w-4 mr-1" /> New Project
             </Button>
