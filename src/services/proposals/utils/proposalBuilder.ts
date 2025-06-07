@@ -5,7 +5,10 @@ import {
   calculateCarbonCredits, 
   getClientSharePercentage,
   getAgentCommissionPercentage,
-  calculateRevenue
+  calculateRevenue,
+  calculateAgentCommissionRevenue,
+  calculateCrunchCommissionRevenue,
+  getCrunchCommissionPercentage
 } from "@/lib/calculations/carbon";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/core";
@@ -34,7 +37,6 @@ export async function buildProposalData(
   const systemSizeKWp = normalizeToKWp(projectInfo.size);
   const calculatedAnnualEnergy = calculateAnnualEnergy(systemSizeKWp);
   const calculatedCarbonCredits = calculateCarbonCredits(systemSizeKWp);
-  const revenue = calculateRevenue(systemSizeKWp, projectInfo.commissionDate);
   
   // Calculate portfolio-based percentages
   let clientSharePercentage: number;
@@ -72,12 +74,32 @@ export async function buildProposalData(
     agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
   }
 
+  // Calculate revenue breakdowns for all parties
+  const clientRevenue = await calculateRevenue(systemSizeKWp, projectInfo.commissionDate);
+  const agentCommissionRevenue = await calculateAgentCommissionRevenue(
+    systemSizeKWp, 
+    agentCommissionPercentage, 
+    projectInfo.commissionDate
+  );
+  
+  // Calculate Crunch Carbon commission
+  const crunchCommissionPercentage = getCrunchCommissionPercentage(
+    clientSharePercentage, 
+    agentCommissionPercentage
+  );
+  const crunchCommissionRevenue = await calculateCrunchCommissionRevenue(
+    systemSizeKWp, 
+    crunchCommissionPercentage, 
+    projectInfo.commissionDate
+  );
+
   proposalLogger.info("Final calculated values", {
     systemSizeKWp,
     annualEnergy: calculatedAnnualEnergy,
     carbonCredits: calculatedCarbonCredits,
     clientShare: clientSharePercentage,
-    agentCommission: agentCommissionPercentage
+    agentCommission: agentCommissionPercentage,
+    crunchCommission: crunchCommissionPercentage
   });
 
   // Determine client IDs based on registration status
@@ -93,7 +115,7 @@ export async function buildProposalData(
     }
   }
 
-  // Build proposal data with portfolio-aware percentages
+  // Build proposal data with all commission data stored
   const proposalData = {
     title,
     agent_id: agentId,
@@ -106,7 +128,9 @@ export async function buildProposalData(
     content: {
       clientInfo,
       projectInfo,
-      revenue
+      revenue: clientRevenue,
+      agentCommissionRevenue,
+      crunchCommissionRevenue
     } as any,
     status: 'draft',
     system_size_kwp: systemSizeKWp,
@@ -115,11 +139,14 @@ export async function buildProposalData(
     ...(finalClientReferenceId && { client_reference_id: finalClientReferenceId })
   };
 
-  proposalLogger.info("Built proposal data with portfolio awareness", {
+  proposalLogger.info("Built proposal data with comprehensive revenue breakdown", {
     title: proposalData.title,
     systemSizeKWp: proposalData.system_size_kwp,
     clientSharePercentage: proposalData.client_share_percentage,
-    agentCommissionPercentage: proposalData.agent_commission_percentage
+    agentCommissionPercentage: proposalData.agent_commission_percentage,
+    crunchCommissionPercentage,
+    hasAgentCommissionData: !!agentCommissionRevenue,
+    hasCrunchCommissionData: !!crunchCommissionRevenue
   });
 
   return proposalData;

@@ -1,3 +1,4 @@
+
 import { Json } from "@/types/supabase";
 
 /**
@@ -64,6 +65,8 @@ export interface ProposalContent {
   clientInfo: ClientInformation;
   projectInfo: ProjectInformation;
   revenue?: Record<string, number>;
+  agentCommissionRevenue?: Record<string, number>; // New field for agent commission by year
+  crunchCommissionRevenue?: Record<string, number>; // New field for Crunch Carbon commission by year
 }
 
 /**

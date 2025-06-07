@@ -22,7 +22,7 @@ export function CommissionProjectionCard({
   const yearsRemaining = Math.max(0, 2030 - currentYear);
   
   const getProjectionDescription = () => {
-    return "Total projected commission until 2030";
+    return `Total commission from ${filteredProposalsCount} active proposals through 2030`;
   };
 
   return (
@@ -42,7 +42,7 @@ export function CommissionProjectionCard({
             <div className="space-y-1">
               <div className="text-2xl font-bold">R {projectedCommission.toLocaleString()}</div>
               <div className="text-xs text-crunch-black/50">
-                +12% from last period
+                Projected commission earnings
               </div>
             </div>
             <div className="rounded-full bg-crunch-yellow/10 p-3 shadow-sm">

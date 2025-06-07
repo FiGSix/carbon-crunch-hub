@@ -12,6 +12,18 @@ export {
   calculateRevenueSync // deprecated
 } from './revenue';
 
+// Agent commission calculations
+export {
+  calculateAgentCommissionRevenue,
+  calculateTotalAgentCommission
+} from './agentCommission';
+
+// Crunch Carbon commission calculations
+export {
+  calculateCrunchCommissionRevenue,
+  getCrunchCommissionPercentage
+} from './crunchCommission';
+
 export {
   getClientSharePercentage,
   getAgentCommissionPercentage
