@@ -31,7 +31,7 @@ export async function createProposal(
       clientEmail: clientInfo.email
     });
 
-    // Handle client creation/lookup
+    // Handle client creation/lookup with enhanced data structure
     const clientResult = selectedClientId 
       ? await handleExistingClient(selectedClientId)
       : await handleNewClient(clientInfo, agentId);
@@ -43,7 +43,7 @@ export async function createProposal(
       };
     }
 
-    // Build proposal data with portfolio-aware calculations
+    // Build proposal data with proper client ID handling
     const proposalData = await buildProposalData(
       title,
       agentId,
@@ -54,6 +54,13 @@ export async function createProposal(
       clientResult.data
     );
 
+    proposalLogger.info("Attempting to insert proposal with data", {
+      clientId: proposalData.client_id,
+      clientReferenceId: proposalData.client_reference_id,
+      hasProfileId: !!clientResult.data?.profileId,
+      hasClientsTableId: !!clientResult.data?.clientsTableId
+    });
+
     // Insert the proposal
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
@@ -62,27 +69,36 @@ export async function createProposal(
       .single();
 
     if (insertError) {
-      proposalLogger.error("Failed to insert proposal", { error: insertError });
+      proposalLogger.error("Failed to insert proposal", { 
+        error: insertError,
+        proposalData: {
+          client_id: proposalData.client_id,
+          client_reference_id: proposalData.client_reference_id,
+          agent_id: proposalData.agent_id
+        }
+      });
       throw insertError;
     }
 
     proposalLogger.info("Proposal created successfully", { 
       proposalId: insertedProposal.id,
-      clientSharePercentage: insertedProposal.client_share_percentage
+      clientSharePercentage: insertedProposal.client_share_percentage,
+      finalClientId: insertedProposal.client_id,
+      finalClientReferenceId: insertedProposal.client_reference_id
     });
 
     // Validate and fix client issues
     await validateAndFixClient(
       insertedProposal.id,
       clientInfo.email,
-      clientResult.data?.clientId
+      clientResult.data?.clientsTableId
     );
 
     // Transform database response to match our ProposalData interface
     const transformedProposal = transformProposalData(insertedProposal, clientInfo);
 
     // Update portfolio if needed
-    await updateClientPortfolio(selectedClientId);
+    await updateClientPortfolio(clientResult.data?.clientsTableId);
 
     return {
       success: true,

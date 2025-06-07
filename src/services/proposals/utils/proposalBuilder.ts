@@ -24,6 +24,14 @@ interface ProposalContent {
   portfolioSize: number;
 }
 
+// Enhanced client data interface
+interface ClientData {
+  clientId: string;
+  profileId?: string; // ID from profiles table (for registered users)
+  clientsTableId: string; // ID from clients table
+  isRegisteredUser: boolean;
+}
+
 export async function buildProposalData(
   title: string,
   agentId: string,
@@ -31,7 +39,7 @@ export async function buildProposalData(
   projectInfo: ProjectInformation,
   clientInfo: ClientInformation,
   selectedClientId?: string,
-  clientData?: any
+  clientData?: ClientData
 ): Promise<any> {
   const proposalLogger = logger.withContext({
     component: 'ProposalBuilder',
@@ -42,7 +50,8 @@ export async function buildProposalData(
     proposalLogger.info("Building proposal data with portfolio-aware calculations", {
       agentId,
       selectedClientId,
-      projectSize: projectInfo.size
+      projectSize: projectInfo.size,
+      clientData
     });
 
     // Calculate current agent portfolio size (excluding this proposal)
@@ -66,14 +75,17 @@ export async function buildProposalData(
     let clientSharePercentage = 63; // Default for new clients
     let clientPortfolioKWp = projectSizeKWp;
     
-    if (selectedClientId) {
+    // Determine which client ID to use for portfolio calculations
+    const clientIdForPortfolio = clientData?.clientsTableId || selectedClientId;
+    
+    if (clientIdForPortfolio) {
       try {
-        const clientPortfolio = await calculateClientPortfolio(selectedClientId);
+        const clientPortfolio = await calculateClientPortfolio(clientIdForPortfolio);
         clientPortfolioKWp = clientPortfolio.totalKWp + projectSizeKWp;
         clientSharePercentage = getClientSharePercentage(clientPortfolioKWp);
         
         proposalLogger.info("Client portfolio calculation", {
-          clientId: selectedClientId,
+          clientId: clientIdForPortfolio,
           existingPortfolioKWp: clientPortfolio.totalKWp,
           newProjectKWp: projectSizeKWp,
           totalPortfolioKWp: clientPortfolioKWp,
@@ -98,22 +110,30 @@ export async function buildProposalData(
       portfolioSize: clientPortfolioKWp
     };
 
-    // Determine client reference
-    const clientReferenceId = selectedClientId || clientData?.clientId;
-
-    return {
+    // Properly handle client IDs to avoid foreign key constraint violations
+    const proposalData = {
       title,
       agent_id: agentId,
-      client_id: clientData?.clientId,
-      client_reference_id: clientReferenceId,
+      // client_id should ONLY reference profiles table (registered users)
+      client_id: clientData?.isRegisteredUser ? clientData.profileId : null,
+      // client_reference_id should ALWAYS point to clients table
+      client_reference_id: clientData?.clientsTableId || selectedClientId,
       content: proposalContent,
       system_size_kwp: projectSizeKWp,
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
-      agent_portfolio_kwp: agentPortfolioWithNewProject, // Store agent portfolio size at creation
+      agent_portfolio_kwp: agentPortfolioWithNewProject,
       status: 'pending',
       created_at: new Date().toISOString()
     };
+
+    proposalLogger.info("Proposal data built successfully", {
+      clientId: proposalData.client_id,
+      clientReferenceId: proposalData.client_reference_id,
+      isRegisteredUser: clientData?.isRegisteredUser
+    });
+
+    return proposalData;
 
   } catch (error) {
     proposalLogger.error("Error building proposal data", { error });

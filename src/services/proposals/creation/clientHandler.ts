@@ -3,7 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClientInformation } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { findOrCreateClient } from "../client/clientProfileService";
-import { ProposalOperationResult, ClientResult } from "./types";
+import { ProposalOperationResult } from "./types";
+
+// Enhanced client result interface
+interface ClientResult {
+  clientsTableId: string; // ID from clients table
+  profileId?: string; // ID from profiles table (for registered users)
+  isRegisteredUser: boolean;
+}
 
 export async function handleExistingClient(selectedClientId: string): Promise<ProposalOperationResult<ClientResult>> {
   const proposalLogger = logger.withContext({
@@ -11,9 +18,48 @@ export async function handleExistingClient(selectedClientId: string): Promise<Pr
     method: 'handleExistingClient'
   });
 
-  proposalLogger.info("Using selected client ID directly", { selectedClientId });
+  proposalLogger.info("Processing existing client", { selectedClientId });
 
-  // Validate that the client exists
+  // First check if this is a profile ID (registered user)
+  const { data: existingProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', selectedClientId)
+    .eq('role', 'client')
+    .single();
+
+  if (!profileError && existingProfile) {
+    proposalLogger.info("Found registered user profile", { profileId: existingProfile.id });
+    
+    // Find corresponding client record in clients table
+    const { data: clientRecord, error: clientError } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', selectedClientId)
+      .single();
+
+    if (!clientError && clientRecord) {
+      return {
+        success: true,
+        data: {
+          clientsTableId: clientRecord.id,
+          profileId: existingProfile.id,
+          isRegisteredUser: true
+        }
+      };
+    } else {
+      proposalLogger.warn("Profile found but no corresponding client record", { 
+        profileId: selectedClientId 
+      });
+      
+      return {
+        success: false,
+        error: "Registered user profile found but missing client record"
+      };
+    }
+  }
+
+  // If not a profile, check if it's a client record
   const { data: existingClient, error: clientError } = await supabase
     .from('clients')
     .select('id, user_id')
@@ -21,32 +67,14 @@ export async function handleExistingClient(selectedClientId: string): Promise<Pr
     .single();
 
   if (clientError) {
-    proposalLogger.error("Selected client not found in clients table", { 
+    proposalLogger.error("Selected client not found", { 
       clientId: selectedClientId, 
       error: clientError 
     });
     
-    // Check if this is a registered user
-    const { data: existingProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', selectedClientId)
-      .eq('role', 'client')
-      .single();
-    
-    if (profileError) {
-      return {
-        success: false,
-        error: `Selected client ${selectedClientId} not found in database`
-      };
-    }
-    
     return {
-      success: true,
-      data: {
-        clientId: selectedClientId,
-        isRegisteredUser: true
-      }
+      success: false,
+      error: `Selected client ${selectedClientId} not found in database`
     };
   }
   
@@ -55,7 +83,8 @@ export async function handleExistingClient(selectedClientId: string): Promise<Pr
   return {
     success: true,
     data: {
-      clientId: selectedClientId,
+      clientsTableId: selectedClientId,
+      profileId: isRegisteredUser ? existingClient.user_id : undefined,
       isRegisteredUser
     }
   };
@@ -67,7 +96,7 @@ export async function handleNewClient(clientInfo: ClientInformation, agentId: st
     method: 'handleNewClient'
   });
 
-  proposalLogger.info("Finding or creating client profile", { 
+  proposalLogger.info("Creating new client profile", { 
     clientEmail: clientInfo.email,
     existingClient: clientInfo.existingClient
   });
@@ -82,10 +111,10 @@ export async function handleNewClient(clientInfo: ClientInformation, agentId: st
     };
   }
 
-  // Additional validation - verify the client was actually created/found
+  // Verify the client was actually created/found
   const { data: verificationClient, error: verificationError } = await supabase
     .from('clients')
-    .select('id, email')
+    .select('id, email, user_id')
     .eq('id', clientResult.clientId)
     .single();
 
@@ -101,17 +130,21 @@ export async function handleNewClient(clientInfo: ClientInformation, agentId: st
     };
   }
 
-  proposalLogger.info("Client profile found/created and verified", { 
-    clientId: clientResult.clientId,
-    isRegisteredUser: clientResult.isRegisteredUser,
+  const isRegisteredUser = !!verificationClient.user_id;
+
+  proposalLogger.info("Client profile created/found and verified", { 
+    clientsTableId: clientResult.clientId,
+    profileId: verificationClient.user_id,
+    isRegisteredUser,
     verifiedEmail: verificationClient.email
   });
 
   return {
     success: true,
     data: {
-      clientId: clientResult.clientId,
-      isRegisteredUser: clientResult.isRegisteredUser
+      clientsTableId: clientResult.clientId,
+      profileId: isRegisteredUser ? verificationClient.user_id : undefined,
+      isRegisteredUser
     }
   };
 }

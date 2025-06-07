@@ -1,4 +1,3 @@
-
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 
 // Define the return type for consistent interface
@@ -42,7 +41,9 @@ export interface ProposalData {
   created_at?: string;
 }
 
+// Enhanced client result type
 export interface ClientResult {
-  clientId: string;
+  clientsTableId: string; // ID from clients table (always present)
+  profileId?: string; // ID from profiles table (only for registered users)
   isRegisteredUser: boolean;
 }
