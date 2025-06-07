@@ -32,6 +32,22 @@ export function StatsCardsSection({
   // Get agent commission stats for the new card
   const agentCommissionStats = useAgentCommissionStats(proposals);
   
+  // Add debugging for agent stats
+  if (userRole === 'agent') {
+    console.log("StatsCardsSection - Agent Debug:", {
+      proposalsCount: proposals.length,
+      agentCommissionStats,
+      sampleProposals: proposals.slice(0, 3).map(p => ({
+        id: p.id,
+        status: p.status,
+        archived_at: p.archived_at,
+        agent_commission_percentage: p.agent_commission_percentage,
+        carbon_credits: p.carbon_credits,
+        annual_energy: p.annual_energy
+      }))
+    });
+  }
+  
   // Format portfolio size based on user role
   const getPortfolioDisplayValue = () => {
     if (userRole === 'agent') {

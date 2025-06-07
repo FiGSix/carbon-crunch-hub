@@ -27,23 +27,27 @@ export function useAgentCommissionStats(proposals: ProposalListItem[]): AgentCom
         activeProposals: activeProposals.length
       });
 
-      // Calculate total projected commission using stored commission percentages
+      // Calculate total projected commission using carbon credits and proper pricing
       const totalProjectedCommission = activeProposals.reduce((total, proposal) => {
         // Use the stored agent commission percentage from the proposal
         const commissionRate = proposal.agent_commission_percentage || 4; // fallback to 4%
-        const annualEnergy = proposal.annual_energy || 0;
+        const carbonCredits = proposal.carbon_credits || 0;
         
-        // Estimate annual revenue based on energy production (using R0.95 per kWh as baseline)
-        const estimatedAnnualRevenue = annualEnergy * 0.95;
+        // Use a baseline carbon price of R95 per tCO₂ (this should match the pricing service)
+        const carbonPricePerCredit = 95;
         
-        // Calculate commission for this proposal (over 10 years)
-        const proposalCommission = estimatedAnnualRevenue * (commissionRate / 100) * 10;
+        // Calculate total revenue from carbon credits over the crediting period (typically 10 years)
+        const totalCarbonRevenue = carbonCredits * carbonPricePerCredit * 10;
+        
+        // Calculate agent commission for this proposal
+        const proposalCommission = totalCarbonRevenue * (commissionRate / 100);
         
         commissionLogger.debug("Proposal commission calculation", {
           proposalId: proposal.id,
           commissionRate,
-          annualEnergy,
-          estimatedAnnualRevenue,
+          carbonCredits,
+          carbonPricePerCredit,
+          totalCarbonRevenue,
           proposalCommission
         });
 

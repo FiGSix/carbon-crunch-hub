@@ -17,6 +17,12 @@ export function CommissionProjectionCard({
   projectedCommission, 
   filteredProposalsCount 
 }: CommissionProjectionCardProps) {
+  // Add debugging to see the actual values
+  console.log("CommissionProjectionCard - Debug values:", {
+    projectedCommission,
+    filteredProposalsCount
+  });
+
   // Calculate years remaining until 2030
   const currentYear = new Date().getFullYear();
   const yearsRemaining = Math.max(0, 2030 - currentYear);
