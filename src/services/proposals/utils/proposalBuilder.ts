@@ -15,6 +15,7 @@ import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPr
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 import { calculateClientPortfolio } from "../portfolioCalculationService";
+import { calculateAgentPortfolio } from "../agentPortfolioService";
 
 interface ClientResult {
   clientId: string;
@@ -40,40 +41,62 @@ export async function buildProposalData(
   const calculatedAnnualEnergy = calculateAnnualEnergy(systemSizeKWp);
   const calculatedCarbonCredits = calculateCarbonCredits(systemSizeKWp);
   
-  // Calculate portfolio-based percentages
+  // Calculate client portfolio-based percentages for client share
   let clientSharePercentage: number;
-  let agentCommissionPercentage: number;
-  let portfolioSize = systemSizeKWp;
+  let clientPortfolioSize = systemSizeKWp;
 
   if (selectedClientId) {
     try {
       // Get existing portfolio for the client
-      const portfolioData = await calculateClientPortfolio(selectedClientId);
-      portfolioSize = portfolioData.totalKWp + systemSizeKWp; // Include this new project
+      const clientPortfolioData = await calculateClientPortfolio(selectedClientId);
+      clientPortfolioSize = clientPortfolioData.totalKWp + systemSizeKWp; // Include this new project
       
-      // Calculate percentages based on total portfolio
-      clientSharePercentage = getClientSharePercentage(portfolioSize);
-      agentCommissionPercentage = getAgentCommissionPercentage(portfolioSize);
+      // Calculate client share percentage based on client portfolio
+      clientSharePercentage = getClientSharePercentage(clientPortfolioSize);
       
-      proposalLogger.info("Portfolio-based calculation", {
-        existingPortfolioKWp: portfolioData.totalKWp,
+      proposalLogger.info("Client portfolio-based calculation", {
+        existingClientPortfolioKWp: clientPortfolioData.totalKWp,
         newProjectKWp: systemSizeKWp,
-        totalPortfolioKWp: portfolioSize,
-        clientShare: clientSharePercentage,
-        agentCommission: agentCommissionPercentage
+        totalClientPortfolioKWp: clientPortfolioSize,
+        clientShare: clientSharePercentage
       });
     } catch (error) {
-      proposalLogger.warn("Failed to calculate portfolio-based percentages, using individual project", {
+      proposalLogger.warn("Failed to calculate client portfolio-based percentages, using individual project", {
         error: error instanceof Error ? error.message : String(error)
       });
       
       // Fallback to individual project calculation
       clientSharePercentage = getClientSharePercentage(systemSizeKWp);
-      agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
     }
   } else {
     // No client selected, use individual project calculation
     clientSharePercentage = getClientSharePercentage(systemSizeKWp);
+  }
+
+  // Calculate agent commission based on AGENT's total portfolio (NEW LOGIC)
+  let agentCommissionPercentage: number;
+  let agentPortfolioSize = systemSizeKWp;
+
+  try {
+    // Get agent's total portfolio across all clients
+    const agentPortfolioData = await calculateAgentPortfolio(agentId);
+    agentPortfolioSize = agentPortfolioData.totalKWp + systemSizeKWp; // Include this new project
+    
+    // Calculate agent commission percentage based on agent's total portfolio
+    agentCommissionPercentage = getAgentCommissionPercentage(agentPortfolioSize);
+    
+    proposalLogger.info("Agent portfolio-based commission calculation", {
+      existingAgentPortfolioKWp: agentPortfolioData.totalKWp,
+      newProjectKWp: systemSizeKWp,
+      totalAgentPortfolioKWp: agentPortfolioSize,
+      agentCommission: agentCommissionPercentage
+    });
+  } catch (error) {
+    proposalLogger.warn("Failed to calculate agent portfolio-based commission, using individual project", {
+      error: error instanceof Error ? error.message : String(error)
+    });
+    
+    // Fallback to individual project calculation
     agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
   }
 
@@ -96,7 +119,7 @@ export async function buildProposalData(
     projectInfo.commissionDate
   );
 
-  // Calculate client-specific revenue using portfolio-based pricing
+  // Calculate client-specific revenue using client portfolio-based pricing
   const clientSpecificRevenue: Record<string, number> = {};
   const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
   
@@ -116,13 +139,14 @@ export async function buildProposalData(
       yearCredits = calculatedCarbonCredits * (remainingDays / totalDaysInYear);
     }
     
-    // Calculate client-specific revenue for this year
-    clientSpecificRevenue[year] = await calculateClientSpecificRevenue(year, yearCredits, portfolioSize);
+    // Calculate client-specific revenue for this year using client portfolio size
+    clientSpecificRevenue[year] = await calculateClientSpecificRevenue(year, yearCredits, clientPortfolioSize);
   }
 
-  proposalLogger.info("Final calculated values with client-specific pricing", {
+  proposalLogger.info("Final calculated values with agent portfolio-based commission", {
     systemSizeKWp,
-    portfolioSize,
+    clientPortfolioSize,
+    agentPortfolioSize,
     annualEnergy: calculatedAnnualEnergy,
     carbonCredits: calculatedCarbonCredits,
     clientShare: clientSharePercentage,
@@ -158,14 +182,16 @@ export async function buildProposalData(
     content: {
       clientInfo,
       projectInfo,
-      portfolioSize, // Store portfolio size for transparency
+      clientPortfolioSize, // Store client portfolio size for transparency
+      agentPortfolioSize, // Store agent portfolio size for transparency
       marketRevenue, // Market-rate revenue breakdown
       clientSpecificRevenue, // Client-specific revenue breakdown 
       agentCommissionRevenue,
       crunchCommissionRevenue,
       calculationMetadata: {
         portfolioBasedPricing: !!selectedClientId,
-        portfolioSize,
+        clientPortfolioSize,
+        agentPortfolioSize,
         calculatedAt: new Date().toISOString(),
         carbonPricesUsed: carbonPrices
       }
@@ -177,10 +203,11 @@ export async function buildProposalData(
     ...(finalClientReferenceId && { client_reference_id: finalClientReferenceId })
   };
 
-  proposalLogger.info("Built proposal data with comprehensive revenue breakdown and client-specific pricing", {
+  proposalLogger.info("Built proposal data with agent portfolio-based commission calculation", {
     title: proposalData.title,
     systemSizeKWp: proposalData.system_size_kwp,
-    portfolioSize,
+    clientPortfolioSize,
+    agentPortfolioSize,
     clientSharePercentage: proposalData.client_share_percentage,
     agentCommissionPercentage: proposalData.agent_commission_percentage,
     crunchCommissionPercentage,

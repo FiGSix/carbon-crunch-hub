@@ -6,23 +6,31 @@ import {
 } from "@/lib/calculations/carbon";
 import { useAuth } from "@/contexts/auth";
 import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
+import { useAgentPortfolioData } from "./carbon/hooks/useAgentPortfolioData";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface RevenueDistributionSectionProps {
   systemSize: string;
   selectedClientId?: string | null;
-  proposalId?: string | null; // Add proposal ID parameter
+  proposalId?: string | null;
 }
 
 export function RevenueDistributionSection({ systemSize, selectedClientId, proposalId }: RevenueDistributionSectionProps) {
   const { profile } = useAuth();
   const isClient = profile?.role === 'client';
   
-  const { portfolioData, loading } = usePortfolioData({
+  const { portfolioData: clientPortfolioData, loading: clientLoading } = usePortfolioData({
     selectedClientId,
     systemSize,
     proposalId
   });
+
+  const { agentPortfolioData, loading: agentLoading } = useAgentPortfolioData({
+    systemSize,
+    proposalId
+  });
+
+  const loading = clientLoading || agentLoading;
 
   if (loading) {
     return (
@@ -37,10 +45,14 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
     );
   }
 
-  // Use portfolio size for calculations, fallback to current project size
-  const portfolioSize = portfolioData?.totalKWp || parseFloat(systemSize) || 0;
-  const clientSharePercentage = getClientSharePercentage(portfolioSize);
-  const agentCommissionPercentage = getAgentCommissionPercentage(portfolioSize);
+  // Use client portfolio size for client share calculations
+  const clientPortfolioSize = clientPortfolioData?.totalKWp || parseFloat(systemSize) || 0;
+  const clientSharePercentage = getClientSharePercentage(clientPortfolioSize);
+
+  // Use agent portfolio size for agent commission calculations
+  const agentPortfolioSize = agentPortfolioData?.totalKWp || parseFloat(systemSize) || 0;
+  const agentCommissionPercentage = getAgentCommissionPercentage(agentPortfolioSize);
+  
   const crunchCarbonSharePercentage = 100 - clientSharePercentage - agentCommissionPercentage;
 
   return (
@@ -52,7 +64,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
           <p className="text-sm text-carbon-gray-500">Client Share</p>
           <p className="text-xl font-bold text-carbon-green-600">{clientSharePercentage}%</p>
           <p className="text-xs text-carbon-gray-500 mt-1">
-            Based on {portfolioSize.toLocaleString()} kWp portfolio
+            Based on {clientPortfolioSize.toLocaleString()} kWp client portfolio
           </p>
         </div>
         
@@ -62,7 +74,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId, propo
               <p className="text-sm text-carbon-gray-500">Agent Commission</p>
               <p className="text-xl font-bold text-carbon-blue-600">{agentCommissionPercentage}%</p>
               <p className="text-xs text-carbon-gray-500 mt-1">
-                Based on {portfolioSize.toLocaleString()} kWp portfolio
+                Based on {agentPortfolioSize.toLocaleString()} kWp agent portfolio
               </p>
             </div>
             <div className="p-4 bg-carbon-gray-50 rounded-lg border border-carbon-gray-200">
