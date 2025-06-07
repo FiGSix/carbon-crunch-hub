@@ -105,7 +105,8 @@ export function ProposalList({
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
-            <TableHead className="text-centre">1st Yr Est. Revenue</TableHead>
+            <TableHead className="text-centre">First
+Yr Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
