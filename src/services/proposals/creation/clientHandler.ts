@@ -3,14 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClientInformation } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { findOrCreateClient } from "../client/clientProfileService";
-import { ProposalOperationResult } from "./types";
-
-// Enhanced client result interface
-interface ClientResult {
-  clientsTableId: string; // ID from clients table
-  profileId?: string; // ID from profiles table (for registered users)
-  isRegisteredUser: boolean;
-}
+import { ProposalOperationResult, ClientResult } from "./types";
 
 export async function handleExistingClient(selectedClientId: string): Promise<ProposalOperationResult<ClientResult>> {
   const proposalLogger = logger.withContext({
@@ -42,7 +35,7 @@ export async function handleExistingClient(selectedClientId: string): Promise<Pr
       return {
         success: true,
         data: {
-          clientsTableId: clientRecord.id,
+          clientId: clientRecord.id, // renamed from clientsTableId
           profileId: existingProfile.id,
           isRegisteredUser: true
         }
@@ -83,7 +76,7 @@ export async function handleExistingClient(selectedClientId: string): Promise<Pr
   return {
     success: true,
     data: {
-      clientsTableId: selectedClientId,
+      clientId: selectedClientId, // renamed from clientsTableId
       profileId: isRegisteredUser ? existingClient.user_id : undefined,
       isRegisteredUser
     }
@@ -133,7 +126,7 @@ export async function handleNewClient(clientInfo: ClientInformation, agentId: st
   const isRegisteredUser = !!verificationClient.user_id;
 
   proposalLogger.info("Client profile created/found and verified", { 
-    clientsTableId: clientResult.clientId,
+    clientId: clientResult.clientId, // renamed from clientsTableId
     profileId: verificationClient.user_id,
     isRegisteredUser,
     verifiedEmail: verificationClient.email
@@ -142,7 +135,7 @@ export async function handleNewClient(clientInfo: ClientInformation, agentId: st
   return {
     success: true,
     data: {
-      clientsTableId: clientResult.clientId,
+      clientId: clientResult.clientId, // renamed from clientsTableId
       profileId: isRegisteredUser ? verificationClient.user_id : undefined,
       isRegisteredUser
     }

@@ -24,11 +24,10 @@ interface ProposalContent {
   portfolioSize: number;
 }
 
-// Enhanced client data interface
+// Enhanced client data interface - now matches ClientResult
 interface ClientData {
-  clientId: string;
+  clientId: string; // ID from clients table
   profileId?: string; // ID from profiles table (for registered users)
-  clientsTableId: string; // ID from clients table
   isRegisteredUser: boolean;
 }
 
@@ -76,7 +75,7 @@ export async function buildProposalData(
     let clientPortfolioKWp = projectSizeKWp;
     
     // Determine which client ID to use for portfolio calculations
-    const clientIdForPortfolio = clientData?.clientsTableId || selectedClientId;
+    const clientIdForPortfolio = clientData?.clientId || selectedClientId;
     
     if (clientIdForPortfolio) {
       try {
@@ -117,7 +116,7 @@ export async function buildProposalData(
       // client_id should ONLY reference profiles table (registered users)
       client_id: clientData?.isRegisteredUser ? clientData.profileId : null,
       // client_reference_id should ALWAYS point to clients table
-      client_reference_id: clientData?.clientsTableId || selectedClientId,
+      client_reference_id: clientData?.clientId || selectedClientId,
       content: proposalContent,
       system_size_kwp: projectSizeKWp,
       client_share_percentage: clientSharePercentage,

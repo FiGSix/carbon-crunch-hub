@@ -58,7 +58,7 @@ export async function createProposal(
       clientId: proposalData.client_id,
       clientReferenceId: proposalData.client_reference_id,
       hasProfileId: !!clientResult.data?.profileId,
-      hasClientsTableId: !!clientResult.data?.clientsTableId
+      hasClientId: !!clientResult.data?.clientId
     });
 
     // Insert the proposal
@@ -91,14 +91,14 @@ export async function createProposal(
     await validateAndFixClient(
       insertedProposal.id,
       clientInfo.email,
-      clientResult.data?.clientsTableId
+      clientResult.data?.clientId
     );
 
     // Transform database response to match our ProposalData interface
     const transformedProposal = transformProposalData(insertedProposal, clientInfo);
 
     // Update portfolio if needed
-    await updateClientPortfolio(clientResult.data?.clientsTableId);
+    await updateClientPortfolio(clientResult.data?.clientId);
 
     return {
       success: true,
