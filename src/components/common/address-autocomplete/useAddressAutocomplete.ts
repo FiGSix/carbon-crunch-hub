@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDebounce } from "@/hooks/proposals/utils/useDebounce";
 import { useSecureGoogleMaps } from "@/hooks/useSecureGoogleMaps";
@@ -48,14 +47,17 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     setIsOpen(results.length > 0);
   }, [getPlacePredictions]);
 
-  // Debounced function that uses the pending input
+  // Create a function that can be properly debounced
+  const handleDebouncedSearch = useCallback(() => {
+    if (pendingInput && pendingInput.trim().length >= 3) {
+      fetchPredictions(pendingInput);
+    }
+  }, [fetchPredictions, pendingInput]);
+
+  // Debounced function
   const debouncedFetchPredictions = useCallback(
-    debounce(async () => {
-      if (pendingInput) {
-        await fetchPredictions(pendingInput);
-      }
-    }),
-    [debounce, fetchPredictions, pendingInput]
+    debounce(handleDebouncedSearch),
+    [debounce, handleDebouncedSearch]
   );
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
