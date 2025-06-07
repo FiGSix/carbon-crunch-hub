@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { ProposalListItem } from '@/types/proposals';
 import { logger } from '@/lib/logger';
 
-interface AgentCommissionStats {
+export interface AgentCommissionStats {
   projectedCommission: number;
   filteredProposalsCount: number;
 }
