@@ -75,10 +75,10 @@ export function SecureGoogleAddressAutocomplete({
 
   // Debounced version of fetchPredictions
   const debouncedFetchPredictions = useCallback(
-    debounce(() => {
+    debounce(async () => {
       const currentInput = inputRef.current?.value;
       if (currentInput) {
-        fetchPredictions(currentInput);
+        await fetchPredictions(currentInput);
       }
     }),
     [debounce, fetchPredictions]
