@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDebounce } from "@/hooks/proposals/utils/useDebounce";
 import { useSecureGoogleMaps } from "@/hooks/useSecureGoogleMaps";
@@ -47,10 +48,10 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     setIsOpen(results.length > 0);
   }, [getPlacePredictions]);
 
-  // Create a function that can be properly debounced
-  const handleDebouncedSearch = useCallback(() => {
+  // Create a function that returns a Promise for debouncing
+  const handleDebouncedSearch = useCallback(async (): Promise<void> => {
     if (pendingInput && pendingInput.trim().length >= 3) {
-      fetchPredictions(pendingInput);
+      await fetchPredictions(pendingInput);
     }
   }, [fetchPredictions, pendingInput]);
 
