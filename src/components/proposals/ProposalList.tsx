@@ -35,13 +35,14 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       {userRole === "admin" && <TableCell>
           {proposal.agent || "Unassigned"}
         </TableCell>}
-      <TableCell className="text-right">R {proposal.revenue.toLocaleString()}</TableCell>
+      <TableCell className="text-center">R {proposal.revenue.toLocaleString()}</TableCell>
       <TableCell className="text-right">
         <ProposalActionButtons proposal={proposal} onProposalUpdate={onProposalUpdate} />
       </TableCell>
     </TableRow>;
 });
 MemoizedProposalRow.displayName = "MemoizedProposalRow";
+
 export function ProposalList({
   proposals,
   onProposalUpdate
@@ -105,7 +106,7 @@ export function ProposalList({
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
-            <TableHead className="text-centre">First
+            <TableHead className="text-center">First
 Yr Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
