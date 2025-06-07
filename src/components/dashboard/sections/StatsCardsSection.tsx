@@ -1,12 +1,13 @@
-
 import React from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { CommissionCard } from "@/components/dashboard/preview/CommissionCard";
+import { CommissionProjectionCard } from "@/components/dashboard/preview/CommissionProjectionCard";
 import { DealStatusCard } from "@/components/dashboard/preview/DealStatusCard";
 import { FileText, TrendingUp, Wind, Leaf } from "lucide-react";
 import { UserRole } from "@/lib/supabase/types";
 import { ProposalListItem } from "@/types/proposals";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
+import { useAgentCommissionStats } from "@/hooks/dashboard/useAgentCommissionStats";
 
 interface StatsCardsSectionProps {
   userRole: string | null;
@@ -28,6 +29,9 @@ export function StatsCardsSection({
   loading = false,
 }: StatsCardsSectionProps) {
   
+  // Get agent commission stats for the new card
+  const agentCommissionStats = useAgentCommissionStats(proposals);
+  
   // Format portfolio size based on user role
   const getPortfolioDisplayValue = () => {
     if (userRole === 'agent') {
@@ -37,20 +41,6 @@ export function StatsCardsSection({
       // For other roles, portfolioSize is proposal count
       return portfolioSize;
     }
-  };
-
-  // Get agent-specific revenue description
-  const getAgentRevenueDescription = () => {
-    const filteredProposals = proposals.filter(p => 
-      p.status === 'pending' || 
-      p.status === 'draft' || 
-      p.status === 'approved' || 
-      p.status === 'signed'
-    );
-    const currentYear = new Date().getFullYear();
-    const yearsRemaining = Math.max(0, 2030 - currentYear);
-    
-    return `Projected commission from ${filteredProposals.length} active proposals over ${yearsRemaining} years until 2030`;
   };
 
   if (userRole === 'agent') {
@@ -67,20 +57,10 @@ export function StatsCardsSection({
         
         <CommissionCard portfolioSize={portfolioSize} />
         
-        <div className="sm:col-span-2">
-          <StatsCard 
-            title="Commission Projection" 
-            value={`R ${potentialRevenue.toLocaleString()}`} 
-            icon={<TrendingUp className="h-5 w-5 text-crunch-yellow" />}
-            trend="+12%"
-            trendDirection="up"
-            color="yellow"
-            className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200"
-          />
-          <p className="text-sm text-gray-600 mt-2 px-6 pb-4">
-            {getAgentRevenueDescription()}
-          </p>
-        </div>
+        <CommissionProjectionCard 
+          projectedCommission={agentCommissionStats.projectedCommission}
+          filteredProposalsCount={agentCommissionStats.filteredProposalsCount}
+        />
         
         <DealStatusCard proposals={proposals} loading={loading} />
       </div>
