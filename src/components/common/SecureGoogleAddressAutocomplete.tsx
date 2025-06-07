@@ -59,21 +59,29 @@ export function SecureGoogleAddressAutocomplete({
     }
   }, [value]);
 
-  // Debounced function to fetch predictions
-  const debouncedFetchPredictions = useCallback(
-    debounce(async (input: string) => {
-      if (input.trim().length < 3) {
-        setPredictions([]);
-        setIsOpen(false);
-        return;
-      }
+  // Function to fetch predictions
+  const fetchPredictions = useCallback(async (input: string) => {
+    if (input.trim().length < 3) {
+      setPredictions([]);
+      setIsOpen(false);
+      return;
+    }
 
-      console.log("🔍 Fetching predictions for:", input);
-      const results = await getPlacePredictions(input);
-      setPredictions(results);
-      setIsOpen(results.length > 0);
+    console.log("🔍 Fetching predictions for:", input);
+    const results = await getPlacePredictions(input);
+    setPredictions(results);
+    setIsOpen(results.length > 0);
+  }, [getPlacePredictions]);
+
+  // Debounced version of fetchPredictions
+  const debouncedFetchPredictions = useCallback(
+    debounce(() => {
+      const currentInput = inputRef.current?.value;
+      if (currentInput) {
+        fetchPredictions(currentInput);
+      }
     }),
-    [getPlacePredictions, debounce]
+    [debounce, fetchPredictions]
   );
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,8 +91,8 @@ export function SecureGoogleAddressAutocomplete({
     setInputValue(newValue);
     onChange(newValue);
     
-    // Trigger search for predictions
-    debouncedFetchPredictions(newValue);
+    // Trigger debounced search for predictions
+    debouncedFetchPredictions();
   }, [onChange, debouncedFetchPredictions]);
 
   const handleSelectPrediction = useCallback(async (prediction: any) => {
