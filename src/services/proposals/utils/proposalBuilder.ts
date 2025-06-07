@@ -10,6 +10,8 @@ import {
   calculateCrunchCommissionRevenue,
   getCrunchCommissionPercentage
 } from "@/lib/calculations/carbon";
+import { calculateClientSpecificRevenue } from "@/lib/calculations/carbon/clientPricing";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 import { calculateClientPortfolio } from "../portfolioCalculationService";
@@ -41,21 +43,22 @@ export async function buildProposalData(
   // Calculate portfolio-based percentages
   let clientSharePercentage: number;
   let agentCommissionPercentage: number;
+  let portfolioSize = systemSizeKWp;
 
   if (selectedClientId) {
     try {
       // Get existing portfolio for the client
       const portfolioData = await calculateClientPortfolio(selectedClientId);
-      const totalPortfolioSize = portfolioData.totalKWp + systemSizeKWp; // Include this new project
+      portfolioSize = portfolioData.totalKWp + systemSizeKWp; // Include this new project
       
       // Calculate percentages based on total portfolio
-      clientSharePercentage = getClientSharePercentage(totalPortfolioSize);
-      agentCommissionPercentage = getAgentCommissionPercentage(totalPortfolioSize);
+      clientSharePercentage = getClientSharePercentage(portfolioSize);
+      agentCommissionPercentage = getAgentCommissionPercentage(portfolioSize);
       
       proposalLogger.info("Portfolio-based calculation", {
         existingPortfolioKWp: portfolioData.totalKWp,
         newProjectKWp: systemSizeKWp,
-        totalPortfolioKWp: totalPortfolioSize,
+        totalPortfolioKWp: portfolioSize,
         clientShare: clientSharePercentage,
         agentCommission: agentCommissionPercentage
       });
@@ -74,8 +77,8 @@ export async function buildProposalData(
     agentCommissionPercentage = getAgentCommissionPercentage(systemSizeKWp);
   }
 
-  // Calculate revenue breakdowns for all parties
-  const clientRevenue = await calculateRevenue(systemSizeKWp, projectInfo.commissionDate);
+  // Calculate revenue breakdowns for all parties using dynamic pricing
+  const marketRevenue = await calculateRevenue(systemSizeKWp, projectInfo.commissionDate);
   const agentCommissionRevenue = await calculateAgentCommissionRevenue(
     systemSizeKWp, 
     agentCommissionPercentage, 
@@ -93,13 +96,40 @@ export async function buildProposalData(
     projectInfo.commissionDate
   );
 
-  proposalLogger.info("Final calculated values", {
+  // Calculate client-specific revenue using portfolio-based pricing
+  const clientSpecificRevenue: Record<string, number> = {};
+  const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
+  
+  for (const [year, price] of Object.entries(carbonPrices)) {
+    const yearNum = parseInt(year);
+    let yearCredits = calculatedCarbonCredits;
+    
+    // Apply pro-rata logic for commission year if date is provided
+    if (projectInfo.commissionDate && yearNum === new Date(projectInfo.commissionDate).getFullYear()) {
+      const commissionDateTime = new Date(projectInfo.commissionDate);
+      const yearStart = new Date(yearNum, 0, 1);
+      const yearEnd = new Date(yearNum, 11, 31);
+      const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDateTime.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const totalDaysInYear = Math.floor((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      // Pro-rate the credits for the partial year
+      yearCredits = calculatedCarbonCredits * (remainingDays / totalDaysInYear);
+    }
+    
+    // Calculate client-specific revenue for this year
+    clientSpecificRevenue[year] = await calculateClientSpecificRevenue(year, yearCredits, portfolioSize);
+  }
+
+  proposalLogger.info("Final calculated values with client-specific pricing", {
     systemSizeKWp,
+    portfolioSize,
     annualEnergy: calculatedAnnualEnergy,
     carbonCredits: calculatedCarbonCredits,
     clientShare: clientSharePercentage,
     agentCommission: agentCommissionPercentage,
-    crunchCommission: crunchCommissionPercentage
+    crunchCommission: crunchCommissionPercentage,
+    marketRevenueTotal: Object.values(marketRevenue).reduce((sum, val) => sum + val, 0),
+    clientSpecificRevenueTotal: Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0)
   });
 
   // Determine client IDs based on registration status
@@ -115,7 +145,7 @@ export async function buildProposalData(
     }
   }
 
-  // Build proposal data with all commission data stored
+  // Build proposal data with comprehensive revenue breakdown
   const proposalData = {
     title,
     agent_id: agentId,
@@ -128,9 +158,17 @@ export async function buildProposalData(
     content: {
       clientInfo,
       projectInfo,
-      revenue: clientRevenue,
+      portfolioSize, // Store portfolio size for transparency
+      marketRevenue, // Market-rate revenue breakdown
+      clientSpecificRevenue, // Client-specific revenue breakdown 
       agentCommissionRevenue,
-      crunchCommissionRevenue
+      crunchCommissionRevenue,
+      calculationMetadata: {
+        portfolioBasedPricing: !!selectedClientId,
+        portfolioSize,
+        calculatedAt: new Date().toISOString(),
+        carbonPricesUsed: carbonPrices
+      }
     } as any,
     status: 'draft',
     system_size_kwp: systemSizeKWp,
@@ -139,12 +177,15 @@ export async function buildProposalData(
     ...(finalClientReferenceId && { client_reference_id: finalClientReferenceId })
   };
 
-  proposalLogger.info("Built proposal data with comprehensive revenue breakdown", {
+  proposalLogger.info("Built proposal data with comprehensive revenue breakdown and client-specific pricing", {
     title: proposalData.title,
     systemSizeKWp: proposalData.system_size_kwp,
+    portfolioSize,
     clientSharePercentage: proposalData.client_share_percentage,
     agentCommissionPercentage: proposalData.agent_commission_percentage,
     crunchCommissionPercentage,
+    hasMarketRevenue: !!marketRevenue,
+    hasClientSpecificRevenue: !!clientSpecificRevenue,
     hasAgentCommissionData: !!agentCommissionRevenue,
     hasCrunchCommissionData: !!crunchCommissionRevenue
   });

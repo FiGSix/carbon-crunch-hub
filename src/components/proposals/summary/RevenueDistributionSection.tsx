@@ -8,9 +8,10 @@ import { useAuth } from "@/contexts/auth";
 import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Info } from "lucide-react";
 import { usePortfolioUpdates } from "@/hooks/proposals/usePortfolioUpdates";
 import { logger } from "@/lib/logger";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface RevenueDistributionSectionProps {
   systemSize: string;
@@ -49,7 +50,7 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
 
       setLoading(true);
       try {
-        revenueLogger.info("Loading portfolio data for client", { selectedClientId });
+        revenueLogger.info("Loading portfolio data for revenue distribution", { selectedClientId });
         
         const portfolio = await calculateClientPortfolio(selectedClientId);
         
@@ -63,14 +64,14 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
           projectCount: portfolio.projectCount + 1
         });
         
-        revenueLogger.info("Portfolio data loaded", { 
+        revenueLogger.info("Portfolio data loaded for revenue distribution", { 
           existingKWp: portfolio.totalKWp,
           currentProjectKWp: currentProjectSize,
           totalKWp: totalPortfolioSize
         });
         
       } catch (error) {
-        revenueLogger.error("Error loading portfolio data", { error });
+        revenueLogger.error("Error loading portfolio data for revenue distribution", { error });
         // Fallback to current project only
         const currentProjectSize = parseFloat(systemSize) || 0;
         setPortfolioData({
@@ -138,12 +139,13 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
       </div>
       
       {portfolioData && portfolioData.projectCount > 1 && (
-        <div className="mb-4 p-3 bg-carbon-blue-50 rounded-lg border border-carbon-blue-200">
-          <p className="text-sm text-carbon-blue-700">
-            <strong>Portfolio-based calculation:</strong> Total portfolio size of {portfolioData.totalKWp.toLocaleString()} kWp 
-            across {portfolioData.projectCount} projects (including this one)
-          </p>
-        </div>
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Portfolio-based calculation:</strong> Revenue distribution based on total portfolio size of {portfolioData.totalKWp.toLocaleString()} kWp 
+            across {portfolioData.projectCount} projects (including this one). Larger portfolios receive higher client share percentages.
+          </AlertDescription>
+        </Alert>
       )}
       
       <div className={`grid grid-cols-1 ${isClient ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
@@ -153,6 +155,11 @@ export function RevenueDistributionSection({ systemSize, selectedClientId }: Rev
           <p className="text-xs text-carbon-gray-500 mt-1">
             Based on {portfolioSize.toLocaleString()} kWp portfolio
           </p>
+          {portfolioData && portfolioData.projectCount > 1 && (
+            <p className="text-xs text-carbon-green-600 mt-1">
+              Portfolio bonus applied
+            </p>
+          )}
         </div>
         
         {!isClient && (

@@ -61,12 +61,26 @@ export interface EligibilityCriteria {
   legalOwnership: boolean;
 }
 
+/**
+ * Calculation metadata for transparency
+ */
+export interface CalculationMetadata {
+  portfolioBasedPricing: boolean;
+  portfolioSize: number;
+  calculatedAt: string;
+  carbonPricesUsed: Record<string, number>;
+}
+
 export interface ProposalContent {
   clientInfo: ClientInformation;
   projectInfo: ProjectInformation;
-  revenue?: Record<string, number>;
-  agentCommissionRevenue?: Record<string, number>; // New field for agent commission by year
-  crunchCommissionRevenue?: Record<string, number>; // New field for Crunch Carbon commission by year
+  portfolioSize?: number; // Store portfolio size for transparency
+  revenue?: Record<string, number>; // Legacy field - kept for backward compatibility
+  marketRevenue?: Record<string, number>; // Market-rate revenue breakdown
+  clientSpecificRevenue?: Record<string, number>; // Client-specific revenue breakdown (what client actually gets)
+  agentCommissionRevenue?: Record<string, number>; // Agent commission by year
+  crunchCommissionRevenue?: Record<string, number>; // Crunch Carbon commission by year
+  calculationMetadata?: CalculationMetadata; // Metadata about how calculations were performed
 }
 
 /**

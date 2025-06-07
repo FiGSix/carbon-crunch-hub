@@ -24,7 +24,17 @@ export function transformProposalData(
     unit_standard: insertedProposal.unit_standard,
     client_share_percentage: insertedProposal.client_share_percentage,
     agent_commission_percentage: insertedProposal.agent_commission_percentage,
-    content: insertedProposal.content,
+    content: {
+      ...insertedProposal.content,
+      // Ensure backward compatibility while supporting new structure
+      revenue: insertedProposal.content?.clientSpecificRevenue || insertedProposal.content?.revenue || {},
+      marketRevenue: insertedProposal.content?.marketRevenue || {},
+      clientSpecificRevenue: insertedProposal.content?.clientSpecificRevenue || {},
+      agentCommissionRevenue: insertedProposal.content?.agentCommissionRevenue || {},
+      crunchCommissionRevenue: insertedProposal.content?.crunchCommissionRevenue || {},
+      portfolioSize: insertedProposal.content?.portfolioSize || 0,
+      calculationMetadata: insertedProposal.content?.calculationMetadata || {}
+    },
     created_at: insertedProposal.created_at
   };
 }

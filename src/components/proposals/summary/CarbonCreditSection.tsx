@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  calculateRevenueSync,
   normalizeToKWp
 } from "@/lib/calculations/carbon";
 import { calculateClientSpecificRevenue } from "@/lib/calculations/carbon/clientPricing";
@@ -27,15 +26,15 @@ interface CarbonCreditSectionProps {
 export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId }: CarbonCreditSectionProps) {
   const systemSizeKWp = normalizeToKWp(systemSize);
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
-  const [revenue, setRevenue] = useState<Record<string, number>>({});
-  const [totalClientSpecificRevenue, setTotalClientSpecificRevenue] = useState(0);
+  const [marketRevenue, setMarketRevenue] = useState<Record<string, number>>({});
+  const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   
   // Create logger with useMemo to prevent infinite loops
   const carbonLogger = useMemo(() => 
     logger.withContext({
       component: 'CarbonCreditSection',
-      feature: 'dynamic-pricing'
+      feature: 'client-specific-pricing'
     }), []
   );
 
@@ -55,7 +54,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
 
       setLoading(true);
       try {
-        carbonLogger.info("Loading portfolio data for carbon pricing", { selectedClientId });
+        carbonLogger.info("Loading portfolio data for client-specific pricing", { selectedClientId });
         
         const portfolio = await calculateClientPortfolio(selectedClientId);
         
@@ -69,14 +68,14 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
           projectCount: portfolio.projectCount + 1
         });
         
-        carbonLogger.info("Portfolio data loaded for carbon pricing", { 
+        carbonLogger.info("Portfolio data loaded for client-specific pricing", { 
           existingKWp: portfolio.totalKWp,
           currentProjectKWp: currentProjectSize,
           totalKWp: totalPortfolioSize
         });
         
       } catch (error) {
-        carbonLogger.error("Error loading portfolio data for carbon pricing", { error });
+        carbonLogger.error("Error loading portfolio data for client-specific pricing", { error });
         // Fallback to current project only
         const currentProjectSize = parseFloat(systemSize) || 0;
         setPortfolioData({
@@ -90,47 +89,53 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     };
 
     loadPortfolioData();
-  }, [selectedClientId, systemSize]);
+  }, [selectedClientId, systemSize, carbonLogger]);
 
-  // Load dynamic revenue data and calculate client-specific revenue
+  // Load both market and client-specific revenue data
   useEffect(() => {
     const loadRevenue = async () => {
+      if (!portfolioData) return;
+
       try {
         setLoading(true);
-        carbonLogger.info("Loading dynamic carbon prices for revenue calculation");
+        carbonLogger.info("Loading carbon prices for revenue calculation");
         
         const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
         
-        // Calculate revenue based on dynamic prices
-        const calculatedRevenue: Record<string, number> = {};
-        let clientSpecificTotal = 0;
+        // Calculate both market and client-specific revenue
+        const calculatedMarketRevenue: Record<string, number> = {};
+        const calculatedClientSpecificRevenue: Record<string, number> = {};
         
         for (const [year, price] of Object.entries(carbonPrices)) {
           const yearNum = parseInt(year);
           const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, yearNum, commissionDate);
-          calculatedRevenue[year] = Math.round(yearlyCarbonCredits * price);
           
-          // Calculate client-specific revenue for this year
-          if (portfolioData) {
-            const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioData.totalKWp);
-            clientSpecificTotal += clientRevenue;
-          }
+          // Market revenue (standard pricing)
+          calculatedMarketRevenue[year] = Math.round(yearlyCarbonCredits * price);
+          
+          // Client-specific revenue (portfolio-based pricing)
+          calculatedClientSpecificRevenue[year] = await calculateClientSpecificRevenue(
+            year, 
+            yearlyCarbonCredits, 
+            portfolioData.totalKWp
+          );
         }
         
-        setRevenue(calculatedRevenue);
-        setTotalClientSpecificRevenue(clientSpecificTotal);
+        setMarketRevenue(calculatedMarketRevenue);
+        setClientSpecificRevenue(calculatedClientSpecificRevenue);
         
-        carbonLogger.info("Dynamic revenue calculation completed", { 
-          years: Object.keys(calculatedRevenue),
-          totalRevenue: Object.values(calculatedRevenue).reduce((sum, val) => sum + val, 0),
-          totalClientSpecificRevenue: clientSpecificTotal
+        carbonLogger.info("Revenue calculation completed with client-specific pricing", { 
+          years: Object.keys(calculatedMarketRevenue),
+          totalMarketRevenue: Object.values(calculatedMarketRevenue).reduce((sum, val) => sum + val, 0),
+          totalClientSpecificRevenue: Object.values(calculatedClientSpecificRevenue).reduce((sum, val) => sum + val, 0),
+          portfolioSize: portfolioData.totalKWp
         });
         
       } catch (error) {
-        carbonLogger.error("Error loading dynamic carbon prices", { error });
-        // Fallback to empty revenue object
-        setRevenue({});
-        setTotalClientSpecificRevenue(0);
+        carbonLogger.error("Error loading carbon prices for client-specific revenue", { error });
+        // Fallback to empty revenue objects
+        setMarketRevenue({});
+        setClientSpecificRevenue({});
       } finally {
         setLoading(false);
       }
@@ -141,12 +146,13 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     }
   }, [systemSize, commissionDate, systemSizeKWp, portfolioData, carbonLogger]);
   
-  // Use portfolio size for calculations, fallback to current project size
-  const portfolioSize = portfolioData?.totalKWp || parseFloat(systemSize) || 0;
+  // Use client-specific revenue for display (this is what the client actually gets)
+  const displayRevenue = clientSpecificRevenue;
 
   // Calculate totals using helper functions
-  const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, revenue, commissionDate);
-  const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, revenue, commissionDate);
+  const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
+  const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
+  const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0);
 
   if (loading) {
     return (
@@ -169,13 +175,23 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       
       <PortfolioInfo portfolioData={portfolioData} />
       
-      <h4 className="font-medium text-carbon-gray-700 mb-2">Projected Revenue by Year</h4>
+      <h4 className="font-medium text-carbon-gray-700 mb-2">Client Revenue by Year</h4>
+      
+      {/* Show transparency info about pricing */}
+      {portfolioData && portfolioData.projectCount > 1 && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">
+            <strong>Portfolio-based pricing:</strong> Revenue calculated using your client's portfolio size of {portfolioData.totalKWp.toLocaleString()} kWp. 
+            Client receives {((Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0) / Object.values(marketRevenue).reduce((sum, val) => sum + val, 0)) * 100).toFixed(1)}% of market value.
+          </p>
+        </div>
+      )}
       
       <CarbonCreditTable 
-        revenue={revenue}
+        revenue={displayRevenue}
         systemSizeKWp={systemSizeKWp}
         commissionDate={commissionDate}
-        portfolioSize={portfolioSize}
+        portfolioSize={portfolioData?.totalKWp || systemSizeKWp}
         totalMWhGenerated={totalMWhGenerated}
         totalCarbonCredits={totalCarbonCredits}
         totalClientSpecificRevenue={totalClientSpecificRevenue}
@@ -188,7 +204,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       )}
       {portfolioData && portfolioData.projectCount > 1 && (
         <p className="text-xs text-carbon-gray-500 mt-1">
-          * Client prices reflect your portfolio-based share percentage
+          * Revenue reflects portfolio-based client share percentage ({((Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0) / Object.values(marketRevenue).reduce((sum, val) => sum + val, 0)) * 100).toFixed(1)}% of market rate)
         </p>
       )}
     </div>

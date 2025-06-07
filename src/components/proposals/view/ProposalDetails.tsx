@@ -11,6 +11,8 @@ import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
 import { useAuth } from "@/contexts/auth";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 interface ProposalDetailsProps {
   proposal: ProposalData;
@@ -37,6 +39,14 @@ export function ProposalDetails({
   // Get the client ID for portfolio-based pricing
   const clientId = proposal.client_reference_id || proposal.client_id;
   
+  // Check if this proposal has client-specific revenue data
+  const hasClientSpecificRevenue = proposal.content?.clientSpecificRevenue && 
+    Object.keys(proposal.content.clientSpecificRevenue).length > 0;
+  
+  // Check if this is a portfolio-based calculation
+  const isPortfolioBased = proposal.content?.calculationMetadata?.portfolioBasedPricing;
+  const portfolioSize = proposal.content?.portfolioSize;
+  
   return (
     <Card className="retro-card">
       <CardHeader>
@@ -53,6 +63,18 @@ export function ProposalDetails({
       
       <CardContent>
         <div className="space-y-8">
+          {/* Show calculation transparency info */}
+          {isPortfolioBased && portfolioSize && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Portfolio-based calculation:</strong> This proposal uses portfolio-based pricing with a total portfolio size of {portfolioSize.toLocaleString()} kWp, 
+                which provides enhanced client share percentages and accurate revenue projections.
+                {hasClientSpecificRevenue && " Revenue figures reflect the client's actual share based on their portfolio size."}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
           <ProjectInfoSection projectInfo={projectInfo} />
           
