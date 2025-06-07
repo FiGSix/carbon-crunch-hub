@@ -128,7 +128,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
-            <TableHead className="text-right">Est. Revenue</TableHead>
+            <TableHead className="text-right">1st Yr Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
