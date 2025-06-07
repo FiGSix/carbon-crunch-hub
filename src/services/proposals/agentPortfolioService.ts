@@ -24,7 +24,7 @@ export async function calculateAgentPortfolio(agentId: string): Promise<AgentPor
     // Get all proposals for this agent that are not archived/deleted/rejected
     const { data: proposals, error } = await supabase
       .from('proposals')
-      .select('system_size_kwp, project_info')
+      .select('id, system_size_kwp, project_info')
       .eq('agent_id', agentId)
       .is('archived_at', null)
       .is('deleted_at', null)
@@ -42,13 +42,17 @@ export async function calculateAgentPortfolio(agentId: string): Promise<AgentPor
       // Use system_size_kwp if available, otherwise extract from project_info
       let projectSize = proposal.system_size_kwp;
       
-      if (!projectSize && proposal.project_info?.size) {
+      if (!projectSize && proposal.project_info) {
         try {
-          projectSize = parseFloat(proposal.project_info.size);
+          // Safely cast and access the project_info JSON
+          const projectInfo = proposal.project_info as { size?: string | number };
+          if (projectInfo && projectInfo.size) {
+            projectSize = parseFloat(String(projectInfo.size));
+          }
         } catch (e) {
           agentLogger.warn("Could not parse project size", { 
             proposalId: proposal.id,
-            projectInfoSize: proposal.project_info.size 
+            projectInfo: proposal.project_info 
           });
           continue;
         }
