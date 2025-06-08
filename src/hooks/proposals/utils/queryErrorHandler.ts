@@ -5,10 +5,11 @@ import { logger } from "@/lib/logger";
 /**
  * Handles query errors from Supabase, with special handling for permission errors
  */
-export async function handleQueryError(
+export function handleQueryError(
   error: PostgrestError,
-  handleAuthError: () => Promise<boolean>
-): Promise<never> {
+  toast: any,
+  refreshUser: () => void
+): string {
   const errorLogger = logger.withContext({
     component: 'QueryErrorHandler',
     feature: 'proposals'
@@ -19,13 +20,19 @@ export async function handleQueryError(
   // Handle permission errors by refreshing session
   if (error.code === 'PGRST116' || error.code === '42501') {
     errorLogger.info("Permission error detected, trying to refresh session");
-    const isAuthenticated = await handleAuthError();
-    if (!isAuthenticated) {
-      throw new Error("Permission error. Please try logging in again.");
-    } else {
-      throw new Error("Permission error. Please try again after refreshing.");
-    }
+    refreshUser();
+    toast({
+      title: "Session expired",
+      description: "Please try again after refreshing.",
+      variant: "destructive",
+    });
+    return "Permission error. Please try logging in again.";
   } else {
-    throw error;
+    toast({
+      title: "Error",
+      description: error.message || "An unexpected error occurred",
+      variant: "destructive",
+    });
+    return error.message || "An unexpected error occurred";
   }
 }

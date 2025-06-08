@@ -69,7 +69,7 @@ export const useFetchProposals = ({
       }
     } catch (error) {
       fetchLogger.error("Failed to fetch proposals", { error });
-      const errorMessage = handleQueryError(error, toast, refreshUser);
+      const errorMessage = handleQueryError(error as any, toast, refreshUser);
       setError(errorMessage);
     } finally {
       setLoading(false);

@@ -61,7 +61,6 @@ export async function createSimpleProposal(
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
-        title: proposalTitle,
         agent_id: agentId,
         content: {
           title: proposalTitle,

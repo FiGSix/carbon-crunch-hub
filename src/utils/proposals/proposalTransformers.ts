@@ -12,7 +12,7 @@ import { calculateProposalRevenue, calculateAgentCommissionRevenue } from './rev
 export function transformToProposalData(rawProposal: any): ProposalData {
   return {
     id: rawProposal.id,
-    title: rawProposal.title,
+    title: rawProposal.content?.title || rawProposal.content?.projectInfo?.name || `Project ${rawProposal.id}`,
     status: rawProposal.status,
     content: rawProposal.content || {},
     created_at: rawProposal.created_at,
@@ -72,34 +72,42 @@ export async function transformToProposalListItems(
       // Extract system size from multiple sources
       const systemSizeKwp = extractSystemSize(proposal);
 
+      // Extract proposal title/name
+      const proposalTitle = proposal.content?.title || proposal.content?.projectInfo?.name || `Project ${proposal.id}`;
+
       // Calculate revenue based on user role
       let revenue = 0;
-      if (userRole === 'agent') {
-        // For agents, show their commission revenue
-        revenue = await calculateAgentCommissionRevenue(
-          proposal.carbon_credits || 0,
-          proposal.agent_commission_percentage || 0,
-          proposal.content?.projectInfo?.commissionDate
-        );
-      } else {
-        // For clients and admins, show client revenue
-        revenue = await calculateProposalRevenue(
-          proposal.carbon_credits || 0,
-          proposal.client_share_percentage || 0,
-          proposal.content?.projectInfo?.commissionDate
-        );
+      try {
+        if (userRole === 'agent') {
+          // For agents, show their commission revenue
+          revenue = await calculateAgentCommissionRevenue(
+            proposal.carbon_credits || 0,
+            proposal.agent_commission_percentage || 0,
+            proposal.content?.projectInfo?.commissionDate
+          );
+        } else {
+          // For clients and admins, show client revenue
+          revenue = await calculateProposalRevenue(
+            proposal.carbon_credits || 0,
+            proposal.client_share_percentage || 0,
+            proposal.content?.projectInfo?.commissionDate
+          );
+        }
+      } catch (error) {
+        console.warn('Error calculating revenue for proposal', proposal.id, error);
+        revenue = 0;
       }
 
       return {
         id: proposal.id,
-        name: proposal.title, // Map title to name for display
+        name: proposalTitle, // Map title to name for display
         client: clientName, // Use the extracted client name
         date: proposal.created_at, // Map created_at to date for display
         size: systemSizeKwp, // Map extracted system size to size for display
         status: proposal.status,
         revenue: revenue,
         // Keep all original fields for compatibility
-        title: proposal.title,
+        title: proposalTitle,
         created_at: proposal.created_at,
         signed_at: proposal.signed_at,
         archived_at: proposal.archived_at,
@@ -114,11 +122,12 @@ export async function transformToProposalListItems(
         annual_energy: proposal.annual_energy,
         carbon_credits: proposal.carbon_credits,
         client_share_percentage: proposal.client_share_percentage,
-        agent_commission_percentage: proposal.agent_commission_percentage, // Add this field
+        agent_commission_percentage: proposal.agent_commission_percentage,
         invitation_sent_at: proposal.invitation_sent_at,
         invitation_viewed_at: proposal.invitation_viewed_at,
         invitation_expires_at: proposal.invitation_expires_at,
-        system_size_kwp: systemSizeKwp // Use the extracted system size
+        system_size_kwp: systemSizeKwp,
+        content: proposal.content // Add content property to fix build errors
       };
     })
   );
