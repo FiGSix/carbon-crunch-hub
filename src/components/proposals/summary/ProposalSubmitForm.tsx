@@ -64,8 +64,7 @@ export function ProposalSubmitForm({
       if (result.success) {
         setCreationStatus({ 
           stage: 'complete', 
-          message: 'Proposal created successfully',
-          warnings: result.data ? [] : undefined
+          message: 'Proposal created successfully'
         });
 
         toast({

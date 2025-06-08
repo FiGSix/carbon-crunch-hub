@@ -61,6 +61,7 @@ export async function createSimpleProposal(
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
+        title,
         agent_id: agentId,
         content: {
           eligibilityCriteria,
@@ -73,7 +74,7 @@ export async function createSimpleProposal(
         client_share_percentage: clientSharePercentage,
         agent_commission_percentage: agentCommissionPercentage,
         status: 'pending',
-        client_id: clientId,
+        client_reference_id: clientId,
         eligibility_criteria: eligibilityCriteria,
         project_info: projectInfo
       })
