@@ -1,16 +1,14 @@
 
 import { useSimplifiedClients } from './clients/useSimplifiedClients';
-import { ClientData, UseMyClientsResult } from './clients/types';
 
-export function useMyClients(): UseMyClientsResult {
-  console.log('=== useMyClients: Using simplified client hook ===');
+export function useMyClients() {
+  console.log('=== useMyClients: Using simplified client management ===');
   
-  // Use the simplified hook without auto-refresh features
+  // Use the simplified hook without complex features
   const result = useSimplifiedClients();
 
-  console.log('=== useMyClients: Returning result ===');
-  console.log('Loading:', result.isLoading, 'Refreshing:', result.isRefreshing);
-  console.log('Clients count:', result.clients.length, 'Error:', result.error);
+  console.log('=== useMyClients: Returning simplified result ===');
+  console.log('Loading:', result.isLoading, 'Clients count:', result.clients.length);
 
   return result;
 }

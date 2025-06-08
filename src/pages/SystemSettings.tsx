@@ -26,11 +26,11 @@ const SystemSettings = () => {
     <DashboardLayout>
       <DashboardHeader 
         title="System Settings" 
-        description="Manage carbon pricing and system-wide configurations." 
+        description="Manage carbon pricing and system configurations." 
       />
       <div className="space-y-6">
-        <ClientPopulationManager />
         <DataCorrectionManager />
+        <ClientPopulationManager />
         <CarbonPriceManager />
       </div>
     </DashboardLayout>

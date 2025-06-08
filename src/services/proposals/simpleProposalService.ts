@@ -149,37 +149,22 @@ export async function createSimpleProposal(
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio);
     
-    // Step 4: Build proposal data
-    const proposalData: SimpleProposalData = {
-      title,
-      agent_id: agentId,
-      content: {
-        eligibilityCriteria,
-        projectInfo,
-        clientInfo
-      },
-      system_size_kwp: systemSizeKWp,
-      annual_energy: annualEnergy,
-      carbon_credits: carbonCredits,
-      client_share_percentage: clientSharePercentage,
-      agent_commission_percentage: agentCommissionPercentage,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    };
-
-    // Step 5: Insert proposal with correct database fields
+    // Step 4: Insert proposal with correct database fields (no title field in database)
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
-        title: proposalData.title,
-        agent_id: proposalData.agent_id,
-        content: proposalData.content,
-        system_size_kwp: proposalData.system_size_kwp,
-        annual_energy: proposalData.annual_energy,
-        carbon_credits: proposalData.carbon_credits,
-        client_share_percentage: proposalData.client_share_percentage,
-        agent_commission_percentage: proposalData.agent_commission_percentage,
-        status: proposalData.status,
+        agent_id: agentId,
+        content: {
+          eligibilityCriteria,
+          projectInfo,
+          clientInfo
+        },
+        system_size_kwp: systemSizeKWp,
+        annual_energy: annualEnergy,
+        carbon_credits: carbonCredits,
+        client_share_percentage: clientSharePercentage,
+        agent_commission_percentage: agentCommissionPercentage,
+        status: 'pending',
         client_id: clientId,
         eligibility_criteria: eligibilityCriteria,
         project_info: projectInfo

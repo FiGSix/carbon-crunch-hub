@@ -42,3 +42,11 @@ export function calculateSimpleAgentRevenue(
 export function getCurrentCarbonPrice(): number {
   return CURRENT_CARBON_PRICE;
 }
+
+/**
+ * Calculate total potential revenue for display
+ */
+export function calculateTotalRevenue(carbonCredits: number): number {
+  if (!carbonCredits) return 0;
+  return Math.round(carbonCredits * CURRENT_CARBON_PRICE);
+}

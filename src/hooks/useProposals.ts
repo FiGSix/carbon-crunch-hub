@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ProposalListItem, ProposalFilters } from "@/types/proposals";
+import { ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth"; 
 import { useToast } from "@/hooks/use-toast";
 import { useFetchProposals } from "./proposals/useFetchProposals";
@@ -26,16 +26,16 @@ export const useProposals = (): UseProposalsResult => {
   // Create a contextualized logger
   const proposalsLogger = logger.withContext({ 
     component: 'ProposalsHook', 
-    feature: 'proposals' 
+    feature: 'simplified-proposals' 
   });
   
-  // Use the extracted filter hook with memoization
+  // Use the extracted filter hook
   const { filters, handleFilterChange } = useProposalFilters();
 
   // Memoize filters to prevent unnecessary re-renders
   const memoizedFilters = useMemo(() => filters, [filters.search, filters.status, filters.sort]);
 
-  // Use the extracted fetch proposals hook
+  // Use the simplified fetch proposals hook
   const { fetchProposals: fetchProposalsService } = useFetchProposals({
     user,
     userRole,
@@ -47,13 +47,13 @@ export const useProposals = (): UseProposalsResult => {
     setError
   });
 
-  // Wrap the fetchProposals function to maintain the same API with better performance
+  // Simplified fetch function
   const fetchProposals = useCallback(async () => {
     proposalsLogger.info("Manual fetch triggered");
     await fetchProposalsService(true);
   }, [fetchProposalsService, proposalsLogger]);
 
-  // Handle filter changes with debouncing and deduplication
+  // Handle filter changes with simplified logic
   useEffect(() => {
     const filtersKey = JSON.stringify(memoizedFilters);
     
@@ -73,9 +73,8 @@ export const useProposals = (): UseProposalsResult => {
     fetchProposalsService(false);
   }, [memoizedFilters, fetchProposalsService, proposalsLogger]);
 
-  // Initial fetch when component mounts or critical dependencies change
+  // Initial fetch when component mounts
   useEffect(() => {
-    // Only run if we have required auth data and haven't initialized yet
     if (!isInitializedRef.current && user && userRole) {
       proposalsLogger.info("Initial fetch triggered", { userId: user.id, userRole });
       isInitializedRef.current = true;
@@ -83,10 +82,10 @@ export const useProposals = (): UseProposalsResult => {
     }
   }, [user, userRole, fetchProposalsService, proposalsLogger]);
   
-  // Handle proposal status changes with event listener
+  // Handle proposal status changes
   useEffect(() => {
     const handleProposalStatusChange = () => {
-      proposalsLogger.info("Proposal status change detected, clearing cache");
+      proposalsLogger.info("Proposal status change detected, refreshing");
       clearProposalsCache();
       fetchProposalsService(true);
     };
@@ -98,11 +97,10 @@ export const useProposals = (): UseProposalsResult => {
     };
   }, [fetchProposalsService, proposalsLogger]);
   
-  // Handle navigation-based refreshes with better deduplication
+  // Handle navigation-based refreshes
   useEffect(() => {
     const currentPath = location.pathname;
     
-    // Only refresh if we're navigating TO a relevant page and it's different from last path
     if ((currentPath === '/proposals' || currentPath === '/dashboard') && 
         lastLocationRef.current !== currentPath && 
         isInitializedRef.current) {
@@ -115,7 +113,7 @@ export const useProposals = (): UseProposalsResult => {
     }
   }, [location.pathname, fetchProposalsService, proposalsLogger]);
 
-  // Memoize the return value to prevent unnecessary re-renders in consuming components
+  // Return simplified result
   const result = useMemo((): UseProposalsResult => ({
     proposals,
     loading,
