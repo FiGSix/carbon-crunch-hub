@@ -1,20 +1,20 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export interface AgentPortfolioData {
+export interface PortfolioData {
   totalKWp: number;
   projectCount: number;
-  agentId: string;
+  clientId: string;
 }
 
 /**
- * Calculate agent portfolio data
+ * Calculate client portfolio data
  */
-export async function calculateAgentPortfolio(agentId: string): Promise<AgentPortfolioData> {
+export async function calculateClientPortfolio(clientId: string): Promise<PortfolioData> {
   const { data } = await supabase
     .from('proposals')
     .select('system_size_kwp')
-    .eq('agent_id', agentId)
+    .eq('client_reference_id', clientId)
     .not('system_size_kwp', 'is', null);
   
   const totalKWp = data?.reduce((total, p) => total + (p.system_size_kwp || 0), 0) || 0;
@@ -23,6 +23,6 @@ export async function calculateAgentPortfolio(agentId: string): Promise<AgentPor
   return {
     totalKWp,
     projectCount,
-    agentId
+    clientId
   };
 }

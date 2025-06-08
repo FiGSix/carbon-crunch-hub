@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { createProposal } from "@/services/proposals/proposalCreationService";
+import { createSimpleProposal } from "@/services/proposals/simple/proposalCreation";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -52,7 +51,7 @@ export function ProposalSubmitForm({
     setCreationStatus({ stage: 'creating-client', message: 'Setting up client profile...' });
     
     try {
-      const result = await createProposal(
+      const result = await createSimpleProposal(
         projectInfo.name,
         user.id,
         eligibility,

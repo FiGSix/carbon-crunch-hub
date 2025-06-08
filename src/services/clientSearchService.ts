@@ -1,5 +1,5 @@
 
-import { searchSimpleClients } from "./proposals/simpleProposalService";
+import { searchSimpleClients } from "./proposals/simple/clientService";
 
 export interface ClientSearchResult {
   id: string;

@@ -16,7 +16,7 @@ import {
  * Simplified proposal creation - everything in one function
  */
 export async function createSimpleProposal(
-  title: string,
+  proposalTitle: string,
   agentId: string,
   eligibilityCriteria: EligibilityCriteria,
   projectInfo: ProjectInformation,
@@ -30,7 +30,7 @@ export async function createSimpleProposal(
 
   try {
     proposalLogger.info("Creating proposal with simplified service", { 
-      title, 
+      proposalTitle, 
       agentId, 
       selectedClientId,
       projectSize: projectInfo.size,
@@ -61,7 +61,7 @@ export async function createSimpleProposal(
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
-        title,
+        title: proposalTitle,
         agent_id: agentId,
         content: {
           eligibilityCriteria,
@@ -73,6 +73,7 @@ export async function createSimpleProposal(
         carbon_credits: carbonCredits,
         client_share_percentage: clientSharePercentage,
         agent_commission_percentage: agentCommissionPercentage,
+        agent_portfolio_kwp: totalAgentPortfolio,
         status: 'pending',
         client_reference_id: clientId,
         eligibility_criteria: eligibilityCriteria,
