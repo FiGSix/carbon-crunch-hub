@@ -1,3 +1,4 @@
+
 // Simplified carbon calculations entry point
 export {
   normalizeToKWp,
@@ -6,6 +7,7 @@ export {
   calculateRevenue,
   getClientSharePercentage,
   getAgentCommissionPercentage,
+  formatSystemSizeForDisplay,
   EMISSION_FACTOR,
   AVERAGE_SUN_HOURS,
   DAYS_IN_YEAR
@@ -16,12 +18,8 @@ export type { CalculationResults, YearData } from './types';
 
 // Export additional functions needed by other modules
 export { calculateResults } from './results';
-export { formatSystemSizeForDisplay } from './core';
 
 // Export utility function
 export function formatNumber(num: number): string {
   return num.toLocaleString();
 }
-
-// Keep legacy exports for backward compatibility
-export { normalizeToKWp as formatSystemSizeForDisplay } from './simplified';

@@ -14,7 +14,7 @@ import { calculateCarbonCredits } from './energy';
  * @param unit - Optional unit specification
  */
 export async function calculateRevenue(systemSize: string | number, commissionDate?: string | Date, unit?: string): Promise<Record<string, number>> {
-  const carbonCredits = calculateCarbonCredits(systemSize, unit);
+  const carbonCredits = calculateCarbonCredits(systemSize);
   const revenue: Record<string, number> = {};
   
   // Get dynamic carbon prices (already filtered for current and future years)

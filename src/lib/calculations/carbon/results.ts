@@ -21,7 +21,7 @@ function getCurrentYear(): number {
  * @param unit - Optional unit specification
  */
 export function calculateResults(systemSize: number, commissioningDate: Date, unit?: string): CalculationResults {
-  const sizeInKWp = normalizeToKWp(systemSize, unit);
+  const sizeInKWp = normalizeToKWp(systemSize);
   const dailyGeneration = sizeInKWp * AVERAGE_SUN_HOURS; // kWh per day
   const yearStart = new Date(commissioningDate.getFullYear(), 0, 1);
   const yearEnd = new Date(commissioningDate.getFullYear(), 11, 31);

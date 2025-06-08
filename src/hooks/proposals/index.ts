@@ -1,6 +1,6 @@
 
 // Proposal hooks exports
-export { useProposals } from './useFetchProposals';
+export { useFetchProposals } from './useFetchProposals';
 export { useProposalFilters } from './useProposalFilters';
 export { useProposalOperations } from './useProposalOperations';
 

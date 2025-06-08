@@ -19,7 +19,7 @@ export async function calculateAgentCommissionRevenue(
   commissionDate?: string | Date, 
   unit?: string
 ): Promise<Record<string, number>> {
-  const carbonCredits = calculateCarbonCredits(systemSize, unit);
+  const carbonCredits = calculateCarbonCredits(systemSize);
   const commissionRevenue: Record<string, number> = {};
   
   // Get dynamic carbon prices (already filtered for current and future years)

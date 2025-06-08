@@ -11,7 +11,7 @@ export const DAYS_IN_YEAR = 365;
 /**
  * Normalize system size to kWp
  */
-export function normalizeToKWp(systemSize: string | number): number {
+export function normalizeToKWp(systemSize: string | number, unit?: string): number {
   if (typeof systemSize === 'string') {
     const sizeStr = systemSize.toLowerCase().trim();
     const numericValue = parseFloat(sizeStr);
@@ -30,6 +30,16 @@ export function normalizeToKWp(systemSize: string | number): number {
 }
 
 /**
+ * Format system size for display
+ */
+export function formatSystemSizeForDisplay(systemSizeKWp: number): string {
+  if (systemSizeKWp >= 1000) {
+    return `${(systemSizeKWp / 1000).toFixed(2)} MWp`;
+  }
+  return `${systemSizeKWp.toFixed(1)} kWp`;
+}
+
+/**
  * Calculate annual energy production
  */
 export function calculateAnnualEnergy(systemSizeKWp: number): number {
@@ -40,8 +50,11 @@ export function calculateAnnualEnergy(systemSizeKWp: number): number {
 /**
  * Calculate carbon credits
  */
-export function calculateCarbonCredits(systemSizeKWp: number): number {
-  const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
+export function calculateCarbonCredits(systemSizeKWp: number, unit?: string): number {
+  const normalizedSize = typeof systemSizeKWp === 'string' 
+    ? normalizeToKWp(systemSizeKWp, unit) 
+    : systemSizeKWp;
+  const annualEnergy = calculateAnnualEnergy(normalizedSize);
   return (annualEnergy / 1000) * EMISSION_FACTOR;
 }
 
