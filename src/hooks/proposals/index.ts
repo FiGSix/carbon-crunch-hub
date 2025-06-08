@@ -1,24 +1,24 @@
 
-/**
- * Centralized import point for all proposal-related hooks - Simplified
- */
-
-// Main query hooks
-export { useProposals } from '../useProposals';
+// Proposal hooks exports
+export { useProposals } from './useFetchProposals';
 export { useProposalFilters } from './useProposalFilters';
-
-// View hooks  
-export { useViewProposal } from './view/useViewProposal';
-export { useProposalStatus } from './view/useProposalStatus';
-export { useProposalActions } from './view/useProposalActions';
-export { useProposalData } from './view/useProposalData';
-
-// Operations
 export { useProposalOperations } from './useProposalOperations';
 
-// Portfolio management - simplified
-export { usePortfolioUpdates } from './usePortfolioUpdates';
+// Proposal operations
+export { useApproveProposal } from './operations/useApproveProposal';
+export { useRejectProposal } from './operations/useRejectProposal';
+export { useDeleteProposal } from './operations/useDeleteProposal';
+export { useArchiveProposal } from './operations/useArchiveProposal';
+export { useReviewLaterProposal } from './operations/useReviewLaterProposal';
 
-// Utilities
-export { useFetchProposals } from './useFetchProposals';
-export { useAuthRefresh } from './useAuthRefresh';
+// View operations
+export { useViewProposal } from './view/useViewProposal';
+export { useProposalData } from './view/useProposalData';
+export { useProposalActions } from './view/useProposalActions';
+export { useProposalStatus } from './view/useProposalStatus';
+
+// Types
+export type { ProposalFilters } from './types';
+
+// Utils
+export { proposalUtils } from './proposalUtils';

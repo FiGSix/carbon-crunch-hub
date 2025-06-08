@@ -1,6 +1,8 @@
 
-export { useMyClients } from '../useMyClients';
+// Client hooks exports
 export { useSimplifiedClients } from './useSimplifiedClients';
-export type { ClientData, UseMyClientsResult } from './types';
-export { fetchClientsData } from './clientDataProcessor';
+export { useAutoRefresh } from './useAutoRefresh';
 export { useRealtimeSubscription } from './useRealtimeSubscription';
+
+// Types
+export type { ClientData } from './types';

@@ -14,7 +14,7 @@ interface CarbonCreditSectionProps {
   systemSize: string;
   commissionDate?: string;
   selectedClientId?: string | null;
-  proposalId?: string | null; // Add proposal ID parameter
+  proposalId?: string | null;
 }
 
 export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId }: CarbonCreditSectionProps) {
@@ -43,7 +43,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   // Calculate totals using helper functions
   const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
   const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
-  const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum, val) => sum + val, 0);
+  const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum: number, val: number) => sum + val, 0);
 
   if (loading) {
     return (
