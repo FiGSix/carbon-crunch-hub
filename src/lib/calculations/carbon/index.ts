@@ -1,71 +1,15 @@
-
-// Main entry point for carbon calculations
-export {
-  calculateAnnualEnergy,
-  calculateCarbonCredits,
-  calculateCoalAvoided
-} from './energy';
-
-// Revenue calculation (now async)
-export {
-  calculateRevenue,
-  calculateRevenueSync // deprecated
-} from './revenue';
-
-// Agent commission calculations
-export {
-  calculateAgentCommissionRevenue,
-  calculateTotalAgentCommission
-} from './agentCommission';
-
-// Crunch Carbon commission calculations
-export {
-  calculateCrunchCommissionRevenue,
-  getCrunchCommissionPercentage
-} from './crunchCommission';
-
-export {
-  getClientSharePercentage,
-  getAgentCommissionPercentage
-} from './pricing';
-
-export {
-  calculateResults
-} from './results';
-
+// Simplified carbon calculations entry point
 export {
   normalizeToKWp,
-  formatSystemSizeForDisplay
-} from './normalization';
-
-export {
-  formatNumber,
-  getCarbonPriceForYear,
-  getFormattedCarbonPriceForYear,
-  getCarbonPriceForYearSync, // deprecated
-  getFormattedCarbonPriceForYearSync // deprecated
-} from './utils';
-
-export {
-  getClientSpecificCarbonPrice,
-  getFormattedClientSpecificCarbonPrice,
-  calculateClientSpecificRevenue
-} from './clientPricing';
-
-export {
-  dynamicCarbonPricingService
-} from './dynamicPricing';
-
-// System constants (now includes CARBON_PRICES as fallback)
-export {
+  calculateAnnualEnergy,
+  calculateCarbonCredits,
+  calculateRevenue,
+  getClientSharePercentage,
+  getAgentCommissionPercentage,
   EMISSION_FACTOR,
-  COAL_FACTOR,
   AVERAGE_SUN_HOURS,
-  DAYS_IN_YEAR,
-  CARBON_PRICES
-} from './constants';
+  DAYS_IN_YEAR
+} from './simplified';
 
-export type {
-  YearData,
-  CalculationResults
-} from './types';
+// Keep legacy exports for backward compatibility
+export { normalizeToKWp as formatSystemSizeForDisplay } from './simplified';

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
@@ -31,7 +32,6 @@ const CreateProposal = () => {
     existingClient: false,
   });
   
-  // New state for selected client ID
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   
   const [projectInfo, setProjectInfo] = useState<ProjectInformation>({
@@ -42,10 +42,8 @@ const CreateProposal = () => {
     additionalNotes: "",
   });
   
-  // Calculate if all eligibility criteria are met
   const isEligible = Object.values(eligibility).every(value => value === true);
   
-  // Navigate to next step
   const nextStep = () => {
     switch (step) {
       case "eligibility":
@@ -58,18 +56,11 @@ const CreateProposal = () => {
         setStep("summary");
         break;
       case "summary":
-        // Submission is now handled in the SummaryStep component
-        // Navigate to proposals list after successful submission
         navigate("/proposals");
-        toast({
-          title: "Proposal Created Successfully",
-          description: "Your proposal has been created and is ready for client review. A PDF has been automatically generated and will be available shortly.",
-        });
         break;
     }
   };
   
-  // Navigate to previous step
   const prevStep = () => {
     switch (step) {
       case "client":
@@ -84,7 +75,6 @@ const CreateProposal = () => {
     }
   };
   
-  // Toggle eligibility checkbox - updated to handle both single and bulk updates
   const toggleEligibility = (field: keyof EligibilityCriteria) => {
     setEligibility(prev => ({
       ...prev,
@@ -92,7 +82,6 @@ const CreateProposal = () => {
     }));
   };
   
-  // Update client info
   const updateClientInfo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setClientInfo(prev => ({
@@ -100,18 +89,15 @@ const CreateProposal = () => {
       [name]: type === "checkbox" ? checked : value
     }));
     
-    // Reset selected client ID if the form is modified manually
     if (selectedClientId && name !== "existingClient") {
       setSelectedClientId(null);
     }
   };
   
-  // Direct setter for client info for use by the client search component
   const setClientInfoDirectly = (newClientInfo: ClientInformation) => {
     setClientInfo(newClientInfo);
   };
   
-  // Update project info - handles both regular inputs and our custom address input
   const updateProjectInfo = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -131,7 +117,6 @@ const CreateProposal = () => {
       
       <ProposalStepper currentStep={step} />
       
-      {/* Eligibility Step */}
       {step === "eligibility" && (
         <EligibilityStep 
           eligibility={eligibility} 
@@ -141,7 +126,6 @@ const CreateProposal = () => {
         />
       )}
       
-      {/* Client Information Step */}
       {step === "client" && (
         <ClientInfoStep 
           clientInfo={clientInfo}
@@ -154,7 +138,6 @@ const CreateProposal = () => {
         />
       )}
       
-      {/* Project Information Step */}
       {step === "project" && (
         <ProjectInfoStep
           projectInfo={projectInfo}
@@ -164,7 +147,6 @@ const CreateProposal = () => {
         />
       )}
       
-      {/* Summary Step */}
       {step === "summary" && (
         <SummaryStep
           eligibility={eligibility}
