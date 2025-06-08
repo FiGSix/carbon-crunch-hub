@@ -11,6 +11,9 @@ import {
   getClientPortfolioSize,
   getAgentPortfolioSize
 } from "./portfolioCalculations";
+import type { Database } from "@/integrations/supabase/types";
+
+type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
 /**
  * Simplified proposal creation - everything in one function
@@ -57,29 +60,31 @@ export async function createSimpleProposal(
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio);
     
-    // Step 4: Insert proposal with correct database fields using direct insert
+    // Step 4: Insert proposal with explicit typing
+    const proposalData: ProposalInsert = {
+      title: proposalTitle,
+      agent_id: agentId,
+      client_reference_id: clientId,
+      status: 'pending',
+      content: {
+        title: proposalTitle,
+        eligibilityCriteria,
+        projectInfo,
+        clientInfo
+      },
+      eligibility_criteria: eligibilityCriteria,
+      project_info: projectInfo,
+      system_size_kwp: systemSizeKWp,
+      annual_energy: annualEnergy,
+      carbon_credits: carbonCredits,
+      client_share_percentage: clientSharePercentage,
+      agent_commission_percentage: agentCommissionPercentage,
+      agent_portfolio_kwp: totalAgentPortfolio
+    };
+
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
-      .insert({
-        title: proposalTitle,
-        agent_id: agentId,
-        client_reference_id: clientId,
-        status: 'pending',
-        content: {
-          title: proposalTitle,
-          eligibilityCriteria,
-          projectInfo,
-          clientInfo
-        },
-        eligibility_criteria: eligibilityCriteria,
-        project_info: projectInfo,
-        system_size_kwp: systemSizeKWp,
-        annual_energy: annualEnergy,
-        carbon_credits: carbonCredits,
-        client_share_percentage: clientSharePercentage,
-        agent_commission_percentage: agentCommissionPercentage,
-        agent_portfolio_kwp: totalAgentPortfolio
-      })
+      .insert(proposalData)
       .select('id')
       .single();
 
