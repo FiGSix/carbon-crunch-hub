@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { 
   getClientSharePercentage,
-  getAgentCommissionPercentage
+  getAgentCommissionPercentage,
+  calculateAnnualEnergy,
+  calculateCarbonCredits
 } from "@/lib/calculations/carbon";
-import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
+import { formatSystemSizeForDisplay, normalizeToKWp } from "@/lib/calculations/carbon/normalization";
 import { logger } from "@/lib/logger";
 import { calculateClientPortfolio } from "../portfolioCalculationService";
 import { calculateAgentPortfolio } from "../agentPortfolioService";
@@ -58,7 +60,7 @@ export async function buildProposalData(
     const currentAgentPortfolioKWp = agentPortfolio.totalKWp;
     
     // Add current project to agent portfolio for commission calculation
-    const projectSizeKWp = parseFloat(projectInfo.size) || 0;
+    const projectSizeKWp = normalizeToKWp(projectInfo.size) || 0;
     const agentPortfolioWithNewProject = currentAgentPortfolioKWp + projectSizeKWp;
     
     proposalLogger.info("Agent portfolio calculation", {
@@ -95,6 +97,28 @@ export async function buildProposalData(
       }
     }
 
+    // Calculate carbon values using the new methods
+    let annualEnergy: number | null = null;
+    let carbonCredits: number | null = null;
+    
+    try {
+      if (projectSizeKWp > 0) {
+        annualEnergy = calculateAnnualEnergy(projectSizeKWp);
+        carbonCredits = calculateCarbonCredits(projectSizeKWp);
+        
+        proposalLogger.info("Carbon calculations completed", {
+          projectSizeKWp,
+          annualEnergy,
+          carbonCredits
+        });
+      }
+    } catch (carbonError) {
+      proposalLogger.error("Failed to calculate carbon values", { 
+        error: carbonError,
+        projectSizeKWp 
+      });
+    }
+
     // Build proposal content with portfolio metadata
     const proposalContent = {
       eligibilityCriteria,
@@ -119,6 +143,8 @@ export async function buildProposalData(
       client_reference_id: clientData?.clientId || selectedClientId,
       content: proposalContent,
       system_size_kwp: projectSizeKWp,
+      annual_energy: annualEnergy,
+      carbon_credits: carbonCredits,
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
       agent_portfolio_kwp: agentPortfolioWithNewProject,
@@ -129,7 +155,10 @@ export async function buildProposalData(
     proposalLogger.info("Proposal data built successfully", {
       clientId: proposalData.client_id,
       clientReferenceId: proposalData.client_reference_id,
-      isRegisteredUser: clientData?.isRegisteredUser
+      isRegisteredUser: clientData?.isRegisteredUser,
+      systemSizeKwp: proposalData.system_size_kwp,
+      annualEnergy: proposalData.annual_energy,
+      carbonCredits: proposalData.carbon_credits
     });
 
     return proposalData;

@@ -10,6 +10,8 @@ import { ComprehensiveCorrection } from './correction/ComprehensiveCorrection';
 import { IndividualCorrections } from './correction/IndividualCorrections';
 import { CorrectionResults } from './correction/CorrectionResults';
 import { CorrectionResult, CorrectionFunction } from './correction/types';
+import { systemSettingsService } from '@/services/systemSettingsService';
+import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
 
 export function DataCorrectionManager() {
   const { userRole } = useAuth();
@@ -22,11 +24,49 @@ export function DataCorrectionManager() {
     return null;
   }
 
+  const initializeCarbonPricing = async () => {
+    setLoading(true);
+    
+    try {
+      console.log("Initializing carbon pricing...");
+      
+      // Initialize carbon prices in the database
+      await systemSettingsService.initializeCarbonPrices();
+      
+      // Clear the dynamic pricing cache to force reload
+      dynamicCarbonPricingService.clearCache();
+      
+      toast({
+        title: "Carbon Pricing Initialized",
+        description: "Default carbon prices have been set up in the database.",
+      });
+      
+    } catch (error) {
+      console.error("Error initializing carbon pricing:", error);
+      toast({
+        title: "Carbon Pricing Initialization Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const runComprehensiveCorrection = async () => {
     setLoading(true);
     
     try {
       console.log("Starting comprehensive data correction...");
+      
+      // First ensure carbon pricing is initialized
+      try {
+        await systemSettingsService.getCarbonPrices();
+      } catch (error) {
+        console.log("Carbon prices not found, initializing...");
+        await systemSettingsService.initializeCarbonPrices();
+        dynamicCarbonPricingService.clearCache();
+      }
       
       const { data, error } = await supabase.rpc('run_comprehensive_data_correction');
       
@@ -117,6 +157,24 @@ export function DataCorrectionManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         <CorrectionAlert />
+        
+        {/* Carbon Pricing Initialization */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-carbon-gray-900 flex items-center">
+            <Database className="h-4 w-4 mr-2" />
+            Carbon Pricing Setup
+          </h4>
+          <p className="text-sm text-carbon-gray-600">
+            Initialize default carbon prices in the database. This fixes the "Carbon prices not found in database" error.
+          </p>
+          <button
+            onClick={initializeCarbonPricing}
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            {loading ? "Initializing..." : "Initialize Carbon Pricing"}
+          </button>
+        </div>
         
         <ComprehensiveCorrection 
           onRunCorrection={runComprehensiveCorrection}

@@ -8,6 +8,8 @@ import { validateAndFixClient } from "./validationService";
 import { transformProposalData } from "./dataTransformer";
 import { updateClientPortfolio } from "./portfolioService";
 import { ProposalOperationResult, ProposalData } from "./types";
+import { systemSettingsService } from "@/services/systemSettingsService";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 
 export async function createProposal(
   title: string,
@@ -30,6 +32,19 @@ export async function createProposal(
       projectSize: projectInfo.size,
       clientEmail: clientInfo.email
     });
+
+    // Ensure carbon pricing is available before creating proposals
+    try {
+      await dynamicCarbonPricingService.getCarbonPrices();
+    } catch (carbonPriceError) {
+      proposalLogger.warn("Carbon prices not available, initializing defaults", { error: carbonPriceError });
+      try {
+        await systemSettingsService.initializeCarbonPrices();
+        dynamicCarbonPricingService.clearCache();
+      } catch (initError) {
+        proposalLogger.error("Failed to initialize carbon prices", { error: initError });
+      }
+    }
 
     // Handle client creation/lookup with enhanced data structure
     const clientResult = selectedClientId 
@@ -58,7 +73,9 @@ export async function createProposal(
       clientId: proposalData.client_id,
       clientReferenceId: proposalData.client_reference_id,
       hasProfileId: !!clientResult.data?.profileId,
-      hasClientId: !!clientResult.data?.clientId
+      hasClientId: !!clientResult.data?.clientId,
+      systemSizeKwp: proposalData.system_size_kwp,
+      carbonCredits: proposalData.carbon_credits || 'not calculated'
     });
 
     // Insert the proposal
@@ -84,8 +101,34 @@ export async function createProposal(
       proposalId: insertedProposal.id,
       clientSharePercentage: insertedProposal.client_share_percentage,
       finalClientId: insertedProposal.client_id,
-      finalClientReferenceId: insertedProposal.client_reference_id
+      finalClientReferenceId: insertedProposal.client_reference_id,
+      systemSizeKwp: insertedProposal.system_size_kwp,
+      annualEnergy: insertedProposal.annual_energy,
+      carbonCredits: insertedProposal.carbon_credits
     });
+
+    // If carbon calculations are missing, try to recalculate them
+    if (!insertedProposal.annual_energy || !insertedProposal.carbon_credits) {
+      proposalLogger.warn("Carbon calculations missing, attempting recalculation", {
+        proposalId: insertedProposal.id,
+        systemSizeKwp: insertedProposal.system_size_kwp
+      });
+      
+      try {
+        const { data: recalcData, error: recalcError } = await supabase.rpc('recalculate_carbon_values');
+        if (!recalcError && recalcData) {
+          proposalLogger.info("Carbon values recalculated successfully", { 
+            proposalId: insertedProposal.id,
+            recalculationResults: recalcData
+          });
+        }
+      } catch (recalcError) {
+        proposalLogger.error("Failed to recalculate carbon values", { 
+          proposalId: insertedProposal.id,
+          error: recalcError 
+        });
+      }
+    }
 
     // Validate and fix client issues
     await validateAndFixClient(
