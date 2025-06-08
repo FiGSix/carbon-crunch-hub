@@ -16,7 +16,7 @@ export { useProposalData } from './view/useProposalData';
 // Operations
 export { useProposalOperations } from './useProposalOperations';
 
-// Portfolio management
+// Portfolio management - using simplified version
 export { usePortfolioUpdates } from './usePortfolioUpdates';
 
 // Utilities
