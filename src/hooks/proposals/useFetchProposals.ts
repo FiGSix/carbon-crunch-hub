@@ -4,13 +4,14 @@ import { ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { fetchProposalsCore } from "./utils/fetchProposalsCore";
-import { transformProposalData } from "./utils/dataTransformer";
+import { fetchAndTransformProposalData } from "./utils/dataTransformer";
 import { handleQueryError } from "./utils/queryErrorHandler";
 import { logger } from "@/lib/logger";
+import { UserRole } from "@/contexts/auth/types";
 
 interface UseFetchProposalsProps {
   user: any;
-  userRole: string | null;
+  userRole: UserRole | null;
   filters: any;
   toast: any;
   refreshUser: () => void;
@@ -56,7 +57,7 @@ export const useFetchProposals = ({
       const data = await fetchProposalsCore(user.id, userRole, filters);
       
       if (data) {
-        const transformedProposals = transformProposalData(data, userRole);
+        const transformedProposals = await fetchAndTransformProposalData(data, userRole);
         setProposals(transformedProposals);
         fetchLogger.info("Proposals fetched successfully", { 
           count: transformedProposals.length 

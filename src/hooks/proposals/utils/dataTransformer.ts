@@ -86,3 +86,10 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
 
   return transformedProposals;
 }
+
+/**
+ * Simple data transformation function for backwards compatibility
+ */
+export function transformProposalData(data: RawProposalData[], userRole?: UserRole | null) {
+  return fetchAndTransformProposalData(data, userRole);
+}

@@ -57,13 +57,14 @@ export async function createSimpleProposal(
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio);
     
-    // Step 4: Insert proposal with correct database fields (without title since it's not in the type)
+    // Step 4: Insert proposal with correct database fields
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
+        title: proposalTitle,
         agent_id: agentId,
         content: {
-          title: proposalTitle, // Store title in content for now
+          title: proposalTitle,
           eligibilityCriteria,
           projectInfo,
           clientInfo
