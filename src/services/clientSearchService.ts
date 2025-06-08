@@ -6,6 +6,7 @@ export interface ClientSearchResult {
   name: string;
   email: string;
   company?: string;
+  isRegistered: boolean;
 }
 
 export async function searchClients(searchTerm: string): Promise<ClientSearchResult[]> {

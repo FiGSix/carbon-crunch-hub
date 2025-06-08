@@ -85,7 +85,7 @@ async function getClientPortfolioSize(clientId: string): Promise<number> {
   const { data } = await supabase
     .from('proposals')
     .select('system_size_kwp')
-    .eq('client_reference_id', clientId)
+    .eq('client_id', clientId)
     .not('system_size_kwp', 'is', null);
   
   return data?.reduce((total, p) => total + (p.system_size_kwp || 0), 0) || 0;
@@ -167,12 +167,20 @@ export async function createSimpleProposal(
       created_at: new Date().toISOString()
     };
 
-    // Step 5: Insert proposal
+    // Step 5: Insert proposal with correct database fields
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
-        ...proposalData,
-        client_reference_id: clientId,
+        title: proposalData.title,
+        agent_id: proposalData.agent_id,
+        content: proposalData.content,
+        system_size_kwp: proposalData.system_size_kwp,
+        annual_energy: proposalData.annual_energy,
+        carbon_credits: proposalData.carbon_credits,
+        client_share_percentage: proposalData.client_share_percentage,
+        agent_commission_percentage: proposalData.agent_commission_percentage,
+        status: proposalData.status,
+        client_id: clientId,
         eligibility_criteria: eligibilityCriteria,
         project_info: projectInfo
       })
@@ -216,10 +224,11 @@ export async function searchSimpleClients(searchTerm: string): Promise<Array<{
   name: string;
   email: string;
   company?: string;
+  isRegistered: boolean;
 }>> {
   const { data, error } = await supabase
     .from('clients')
-    .select('id, first_name, last_name, email, company_name')
+    .select('id, first_name, last_name, email, company_name, user_id')
     .or(`email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%`)
     .limit(10);
 
@@ -232,6 +241,7 @@ export async function searchSimpleClients(searchTerm: string): Promise<Array<{
     id: client.id,
     name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
     email: client.email,
-    company: client.company_name || undefined
+    company: client.company_name || undefined,
+    isRegistered: client.user_id !== null
   })) || [];
 }
