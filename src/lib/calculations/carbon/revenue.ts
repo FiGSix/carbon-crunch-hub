@@ -3,7 +3,7 @@
  * Revenue calculation functions using dynamic pricing exclusively
  */
 import { dynamicCarbonPricingService } from './dynamicPricing';
-import { calculateCarbonCredits } from './energy';
+import { calculateCarbonCredits, normalizeToKWp } from './energy';
 
 /**
  * Calculate projected revenue based on dynamic carbon credit prices by year with pro-rata logic
@@ -14,7 +14,8 @@ import { calculateCarbonCredits } from './energy';
  * @param unit - Optional unit specification
  */
 export async function calculateRevenue(systemSize: string | number, commissionDate?: string | Date, unit?: string): Promise<Record<string, number>> {
-  const carbonCredits = calculateCarbonCredits(systemSize);
+  const systemSizeKWp = normalizeToKWp(systemSize, unit);
+  const carbonCredits = calculateCarbonCredits(systemSizeKWp);
   const revenue: Record<string, number> = {};
   
   // Get dynamic carbon prices (already filtered for current and future years)

@@ -3,7 +3,7 @@
  * Agent commission calculation functions
  */
 import { dynamicCarbonPricingService } from './dynamicPricing';
-import { calculateCarbonCredits } from './energy';
+import { calculateCarbonCredits, normalizeToKWp } from './energy';
 
 /**
  * Calculate agent commission revenue by year with dynamic pricing
@@ -19,7 +19,8 @@ export async function calculateAgentCommissionRevenue(
   commissionDate?: string | Date, 
   unit?: string
 ): Promise<Record<string, number>> {
-  const carbonCredits = calculateCarbonCredits(systemSize);
+  const systemSizeKWp = normalizeToKWp(systemSize, unit);
+  const carbonCredits = calculateCarbonCredits(systemSizeKWp);
   const commissionRevenue: Record<string, number> = {};
   
   // Get dynamic carbon prices (already filtered for current and future years)
