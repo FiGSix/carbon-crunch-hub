@@ -60,7 +60,7 @@ export async function createSimpleProposal(
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio);
     
-    // Step 4: Insert proposal with explicit typing
+    // Step 4: Insert proposal with explicit typing and proper Json casting
     const proposalData: ProposalInsert = {
       title: proposalTitle,
       agent_id: agentId,
@@ -71,9 +71,9 @@ export async function createSimpleProposal(
         eligibilityCriteria,
         projectInfo,
         clientInfo
-      },
-      eligibility_criteria: eligibilityCriteria,
-      project_info: projectInfo,
+      } as any, // Cast to Json to resolve type incompatibility
+      eligibility_criteria: eligibilityCriteria as any, // Cast to Json
+      project_info: projectInfo as any, // Cast to Json
       system_size_kwp: systemSizeKWp,
       annual_energy: annualEnergy,
       carbon_credits: carbonCredits,
