@@ -1,6 +1,6 @@
 
 // Energy calculation functions
-export { calculateAnnualEnergy, calculateCarbonCredits } from './simplified';
+export { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from './simplified';
 export { EMISSION_FACTOR, AVERAGE_SUN_HOURS, DAYS_IN_YEAR } from './simplified';
 
 // Additional energy constants
