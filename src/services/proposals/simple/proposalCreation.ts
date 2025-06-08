@@ -57,27 +57,28 @@ export async function createSimpleProposal(
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio);
     
-    // Step 4: Insert proposal with correct database fields
+    // Step 4: Insert proposal with correct database fields using direct insert
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
       .insert({
+        title: proposalTitle,
         agent_id: agentId,
+        client_reference_id: clientId,
+        status: 'pending',
         content: {
           title: proposalTitle,
           eligibilityCriteria,
           projectInfo,
           clientInfo
         },
+        eligibility_criteria: eligibilityCriteria,
+        project_info: projectInfo,
         system_size_kwp: systemSizeKWp,
         annual_energy: annualEnergy,
         carbon_credits: carbonCredits,
         client_share_percentage: clientSharePercentage,
         agent_commission_percentage: agentCommissionPercentage,
-        agent_portfolio_kwp: totalAgentPortfolio,
-        status: 'pending',
-        client_reference_id: clientId,
-        eligibility_criteria: eligibilityCriteria,
-        project_info: projectInfo
+        agent_portfolio_kwp: totalAgentPortfolio
       })
       .select('id')
       .single();

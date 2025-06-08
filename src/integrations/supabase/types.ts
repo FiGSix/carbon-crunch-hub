@@ -193,7 +193,7 @@ export type Database = {
           signed_at?: string | null
           status?: string
           system_size_kwp?: number | null
-          title: string
+          title?: string
         }
         Update: {
           agent_commission_percentage?: number | null
