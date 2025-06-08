@@ -8,9 +8,5 @@ export { findOrCreateClient } from './simple/clientService';
 export { updateProposalStatus } from './statusUpdateService';
 export type { StatusUpdateResult } from './statusUpdateService';
 
-// Export agent portfolio service
-export { calculateAgentPortfolio } from './agentPortfolioService';
-export type { AgentPortfolioData } from './agentPortfolioService';
-
 // Export the simplified proposal creation service
 export { createSimpleProposal } from './simple/proposalCreation';

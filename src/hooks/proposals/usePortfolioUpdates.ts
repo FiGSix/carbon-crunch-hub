@@ -1,28 +1,34 @@
 
-import { useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
-export function usePortfolioUpdates() {
+export const usePortfolioUpdates = () => {
   const { toast } = useToast();
+  
+  const portfolioLogger = logger.withContext({
+    component: 'PortfolioUpdates',
+    feature: 'portfolio-management'
+  });
 
-  const updatePortfolioPercentages = useCallback(async () => {
-    try {
-      // Portfolio updates are handled automatically in the simplified system
-      toast({
-        title: "Portfolio Updated",
-        description: "Portfolio percentages are calculated automatically.",
-      });
-    } catch (error) {
-      console.error('Portfolio update error:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update portfolio percentages.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
+  const triggerPortfolioUpdate = useCallback((clientId?: string) => {
+    portfolioLogger.info("Portfolio update triggered", { clientId });
+    
+    // Dispatch global event for portfolio updates
+    window.dispatchEvent(new CustomEvent('proposal-status-changed', {
+      detail: { 
+        type: 'portfolio-update',
+        clientId 
+      }
+    }));
+    
+    toast({
+      title: "Portfolio Updated",
+      description: "Client portfolio data has been refreshed.",
+    });
+  }, [toast, portfolioLogger]);
 
   return {
-    updatePortfolioPercentages,
+    triggerPortfolioUpdate
   };
-}
+};

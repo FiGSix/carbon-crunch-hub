@@ -8,7 +8,7 @@ export interface ProposalCreationResult {
 }
 
 /**
- * Legacy proposal creation service - now delegates to simplified service
+ * Main proposal creation service - delegates to simplified service
  */
 export async function createProposal(
   proposalTitle: string,
