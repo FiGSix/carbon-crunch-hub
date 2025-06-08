@@ -8,11 +8,12 @@ import { fetchAndTransformProposalData } from "./utils/dataTransformer";
 import { handleQueryError } from "./utils/queryErrorHandler";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
+import { ProposalFilters } from "./types";
 
 interface UseFetchProposalsProps {
   user: any;
   userRole: UserRole | null;
-  filters: any;
+  filters: ProposalFilters;
   toast: any;
   refreshUser: () => void;
   setProposals: (proposals: ProposalListItem[]) => void;
