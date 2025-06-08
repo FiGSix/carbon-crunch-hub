@@ -166,7 +166,6 @@ export type Database = {
           status: string
           system_size_kwp: number | null
           title: string
-          unit_standard: string | null
         }
         Insert: {
           agent_commission_percentage?: number | null
@@ -195,7 +194,6 @@ export type Database = {
           status?: string
           system_size_kwp?: number | null
           title: string
-          unit_standard?: string | null
         }
         Update: {
           agent_commission_percentage?: number | null
@@ -224,7 +222,6 @@ export type Database = {
           status?: string
           system_size_kwp?: number | null
           title?: string
-          unit_standard?: string | null
         }
         Relationships: [
           {
@@ -292,17 +289,9 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
-      can_create_preview_proposal: {
-        Args: { proposal_row: Database["public"]["Tables"]["proposals"]["Row"] }
-        Returns: boolean
-      }
       delete_proposal: {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
-      }
-      fix_proposal_client_references: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
       format_system_size_for_display: {
         Args: { size_kwp: number; preferred_unit?: string }
@@ -383,48 +372,9 @@ export type Database = {
         Args: { token_param: string }
         Returns: undefined
       }
-      migrate_client_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       normalize_system_size_to_kwp: {
         Args: { size_value: number; unit_type?: string }
         Returns: number
-      }
-      populate_missing_client_references: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          proposal_id: string
-          client_email: string
-          found_client_id: string
-          action_taken: string
-        }[]
-      }
-      recalculate_carbon_values: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          proposal_id: string
-          old_annual_energy: number
-          new_annual_energy: number
-          old_carbon_credits: number
-          new_carbon_credits: number
-          system_size_kwp: number
-        }[]
-      }
-      recalculate_proposal_percentages: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          proposal_id: string
-          old_client_share: number
-          new_client_share: number
-          old_agent_commission: number
-          new_agent_commission: number
-          portfolio_kwp: number
-        }[]
-      }
-      run_comprehensive_data_correction: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
       search_clients: {
         Args: { search_term: string }
@@ -439,15 +389,6 @@ export type Database = {
       set_request_invitation_token: {
         Args: { email_input: string; token_input: string } | { token: string }
         Returns: boolean
-      }
-      update_system_size_kwp: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          proposal_id: string
-          old_system_size_kwp: number
-          new_system_size_kwp: number
-          project_size_from_info: string
-        }[]
       }
       validate_invitation_token: {
         Args: { token: string }

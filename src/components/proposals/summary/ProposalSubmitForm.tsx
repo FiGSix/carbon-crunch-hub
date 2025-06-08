@@ -51,8 +51,11 @@ export function ProposalSubmitForm({
     setCreationStatus({ stage: 'creating-client', message: 'Setting up client profile...' });
     
     try {
+      // Use project name as the proposal title
+      const proposalTitle = projectInfo.name || `Solar Project for ${clientInfo.name}`;
+      
       const result = await createSimpleProposal(
-        projectInfo.name,
+        proposalTitle,
         user.id,
         eligibility,
         projectInfo,
