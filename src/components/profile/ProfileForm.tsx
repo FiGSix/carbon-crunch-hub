@@ -3,27 +3,34 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { PersonalInformationCard } from './PersonalInformationCard';
 import { CompanyInformationCard } from './CompanyInformationCard';
-import { useProfileForm } from '@/hooks/useProfileForm';
-import { UserProfile } from '@/contexts/auth/types';
+import { useOptimizedProfileForm } from '@/hooks/useOptimizedProfileForm';
+import { useAuth } from '@/contexts/auth';
 
 interface ProfileFormProps {
-  profile: UserProfile | null;
-  refreshUser: () => Promise<void>;
+  profile: any; // Keep for compatibility but not used
+  refreshUser: () => Promise<void>; // Keep for compatibility but not used
   isAgent: boolean;
 }
 
-export function ProfileForm({ profile, refreshUser, isAgent }: ProfileFormProps) {
+export function ProfileForm({ isAgent }: ProfileFormProps) {
+  const { user, userRole } = useAuth();
   const {
     formData,
     isLoading,
+    isSubmitting,
     handleInputChange,
     handleCompanyLogoChange,
     handleAvatarChange,
     handleSubmit
-  } = useProfileForm(profile, refreshUser);
+  } = useOptimizedProfileForm(user?.id, userRole);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    const result = await handleSubmit(e);
+    // Additional success handling could go here if needed
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       {/* Personal Information */}
       <PersonalInformationCard
         firstName={formData.firstName}
@@ -33,7 +40,7 @@ export function ProfileForm({ profile, refreshUser, isAgent }: ProfileFormProps)
         avatarUrl={formData.avatarUrl}
         onInputChange={handleInputChange}
         onAvatarChange={handleAvatarChange}
-        isLoading={isLoading}
+        isLoading={isLoading || isSubmitting}
       />
 
       {/* Company Information - Show for Agents */}
@@ -43,17 +50,17 @@ export function ProfileForm({ profile, refreshUser, isAgent }: ProfileFormProps)
           companyLogoUrl={formData.companyLogoUrl}
           onInputChange={handleInputChange}
           onLogoChange={handleCompanyLogoChange}
-          isLoading={isLoading}
+          isLoading={isLoading || isSubmitting}
         />
       )}
 
       <div className="flex justify-end">
         <Button 
           type="submit" 
-          disabled={isLoading}
+          disabled={isLoading || isSubmitting}
           className="min-w-[120px]"
         >
-          {isLoading ? 'Saving...' : 'Save Changes'}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </form>
