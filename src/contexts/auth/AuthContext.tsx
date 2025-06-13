@@ -10,6 +10,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   userRole: UserRole | undefined;
   isLoading: boolean;
+  isAdmin: boolean;
   refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -22,9 +23,15 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const auth = useSimplifiedAuth();
+  
+  // Add the isAdmin computed property
+  const contextValue = {
+    ...auth,
+    isAdmin: auth.userRole === 'admin'
+  };
 
   return (
-    <AuthContext.Provider value={auth}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
