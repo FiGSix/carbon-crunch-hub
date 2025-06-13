@@ -1,15 +1,10 @@
 
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-}
+import { CacheEntry, CacheOperations, CACHE_TTL } from './types';
 
-export class CacheService {
+export class CacheService implements CacheOperations {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
-  set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
+  set<T>(key: string, data: T, ttl: number = CACHE_TTL.DEFAULT): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -41,6 +36,15 @@ export class CacheService {
 
   clear(): void {
     this.cache.clear();
+  }
+
+  // Additional utility methods for testing and monitoring
+  size(): number {
+    return this.cache.size;
+  }
+
+  has(key: string): boolean {
+    return this.cache.has(key) && this.get(key) !== null;
   }
 }
 

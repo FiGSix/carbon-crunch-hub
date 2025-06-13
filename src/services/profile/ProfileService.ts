@@ -1,7 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
-import { cacheService } from '../cache/CacheService';
+import { ProfileOperations, ProfileUpdateResult, ProfileServiceDependencies } from './types';
+import { CACHE_KEYS, CACHE_TTL } from '../cache/types';
 
 // Helper function to safely cast role
 function castUserRole(role: string | null | undefined): UserRole | undefined {
@@ -12,12 +13,14 @@ function castUserRole(role: string | null | undefined): UserRole | undefined {
   return undefined;
 }
 
-export class ProfileService {
-  static async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
-    const cacheKey = `profile_${userId}`;
+export class ProfileService implements ProfileOperations {
+  constructor(private dependencies: ProfileServiceDependencies) {}
+
+  async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
+    const cacheKey = CACHE_KEYS.PROFILE(userId);
     
     if (!forceRefresh) {
-      const cached = cacheService.get<UserProfile>(cacheKey);
+      const cached = this.dependencies.cache.get<UserProfile>(cacheKey);
       if (cached) return cached;
     }
 
@@ -31,7 +34,6 @@ export class ProfileService {
       if (error) throw error;
 
       if (data) {
-        // Transform raw data to UserProfile with proper type casting
         const profile: UserProfile = {
           id: data.id,
           first_name: data.first_name,
@@ -48,7 +50,7 @@ export class ProfileService {
           intro_video_viewed_at: data.intro_video_viewed_at
         };
 
-        cacheService.set(cacheKey, profile, 10 * 60 * 1000); // 10 minutes for profiles
+        this.dependencies.cache.set(cacheKey, profile, CACHE_TTL.MEDIUM);
         return profile;
       }
 
@@ -59,7 +61,7 @@ export class ProfileService {
     }
   }
 
-  static async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
+  async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<ProfileUpdateResult> {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -69,7 +71,7 @@ export class ProfileService {
       if (error) throw error;
 
       // Invalidate profile cache
-      cacheService.invalidate(`profile_${userId}`);
+      this.dependencies.cache.invalidate(CACHE_KEYS.PROFILE(userId));
       
       return { success: true };
     } catch (error: any) {

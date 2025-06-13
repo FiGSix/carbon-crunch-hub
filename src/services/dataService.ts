@@ -5,16 +5,25 @@ import { ProfileService } from './profile/ProfileService';
 import { ProposalService } from './proposal/ProposalService';
 import { DashboardService } from './dashboard/DashboardService';
 import { cacheService } from './cache/CacheService';
+import { ProposalUpdateBatch, BatchUpdateResult } from './proposal/types';
+
+// Create service instances with dependency injection
+const profileService = new ProfileService({ cache: cacheService });
+const proposalService = new ProposalService({ cache: cacheService });
+const dashboardService = new DashboardService({ 
+  proposalService,
+  cache: cacheService 
+});
 
 // Optimized data service that delegates to specialized services
 export class DataService {
   // Profile operations with optimized caching
   static async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
-    return ProfileService.getProfile(userId, forceRefresh);
+    return profileService.getProfile(userId, forceRefresh);
   }
 
   static async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
-    return ProfileService.updateProfile(userId, updates);
+    return profileService.updateProfile(userId, updates);
   }
 
   // Optimized proposals fetching with better query consolidation
@@ -23,21 +32,12 @@ export class DataService {
     userRole: string, 
     forceRefresh = false
   ): Promise<ProposalListItem[]> {
-    return ProposalService.getProposalsWithRelations(userId, userRole, forceRefresh);
+    return proposalService.getProposalsWithRelations(userId, userRole, forceRefresh);
   }
 
   // Batch operations for better performance
-  static async batchUpdateProposals(
-    updates: Array<{ id: string; data: Partial<{ 
-      status: string; 
-      title: string; 
-      carbon_credits: number;
-      client_share_percentage: number;
-      agent_commission_percentage: number;
-      content: any; // Use any for Supabase Json compatibility
-    }> }>
-  ): Promise<{ success: boolean; errors: string[] }> {
-    return ProposalService.batchUpdateProposals(updates);
+  static async batchUpdateProposals(updates: ProposalUpdateBatch[]): Promise<BatchUpdateResult> {
+    return proposalService.batchUpdateProposals(updates);
   }
 
   // Dashboard data with single optimized query
@@ -50,7 +50,7 @@ export class DataService {
     totalRevenue: number;
     co2Offset: number;
   }> {
-    return DashboardService.getDashboardData(userId, userRole);
+    return dashboardService.getDashboardData(userId, userRole);
   }
 
   // Utility methods
