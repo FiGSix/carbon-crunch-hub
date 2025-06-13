@@ -74,7 +74,7 @@ export class ProposalsDataService {
           invitation_sent_at: proposal.invitation_sent_at,
           invitation_viewed_at: proposal.invitation_viewed_at,
           invitation_expires_at: proposal.invitation_expires_at,
-          content: proposal.content as ProposalContent // Cast Json to ProposalContent
+          content: proposal.content as unknown as ProposalContent // Safe cast via unknown
         };
       });
 
