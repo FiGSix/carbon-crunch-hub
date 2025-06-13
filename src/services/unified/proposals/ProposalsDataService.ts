@@ -38,14 +38,12 @@ export class ProposalsDataService {
 
       if (error) throw error;
 
-      // Transform the data to match ProposalListItem type and fix the client field
+      // Transform the data to match ProposalListItem type
       const proposals: ProposalListItem[] = (data || []).map(proposal => {
         // Get client name from various sources
         let clientName = 'Unknown Client';
         
-        if (proposal.agent && proposal.agent.first_name) {
-          clientName = `${proposal.agent.first_name} ${proposal.agent.last_name || ''}`.trim();
-        } else if (proposal.client && proposal.client.first_name) {
+        if (proposal.client && proposal.client.first_name) {
           clientName = `${proposal.client.first_name} ${proposal.client.last_name || ''}`.trim();
         } else if (proposal.client_contact && proposal.client_contact.first_name) {
           clientName = `${proposal.client_contact.first_name} ${proposal.client_contact.last_name || ''}`.trim();
@@ -54,13 +52,29 @@ export class ProposalsDataService {
         return {
           id: proposal.id,
           name: proposal.title || 'Untitled Proposal',
+          title: proposal.title || 'Untitled Proposal',
           date: proposal.created_at,
+          created_at: proposal.created_at,
           status: proposal.status,
           size: proposal.system_size_kwp || 0,
+          system_size_kwp: proposal.system_size_kwp || 0,
           revenue: (proposal.carbon_credits || 0) * 50, // Simple calculation
-          client: clientName, // This should be a string, not an object
-          // Include all original fields
-          ...proposal
+          client: clientName, // This is now correctly a string
+          client_id: proposal.client_id,
+          client_reference_id: proposal.client_reference_id,
+          agent_id: proposal.agent_id,
+          signed_at: proposal.signed_at,
+          archived_at: proposal.archived_at,
+          review_later_until: proposal.review_later_until,
+          annual_energy: proposal.annual_energy,
+          carbon_credits: proposal.carbon_credits,
+          client_share_percentage: proposal.client_share_percentage,
+          agent_commission_percentage: proposal.agent_commission_percentage,
+          agent_portfolio_kwp: proposal.agent_portfolio_kwp,
+          invitation_sent_at: proposal.invitation_sent_at,
+          invitation_viewed_at: proposal.invitation_viewed_at,
+          invitation_expires_at: proposal.invitation_expires_at,
+          content: proposal.content
         };
       });
 
