@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/contexts/auth/types';
-import { ProposalListItem } from '@/types/proposals';
+import { UserProfile, UserRole } from '@/contexts/auth/types';
+import { ProposalListItem, ProposalContent } from '@/types/proposals';
 
 // Cache management
 interface CacheEntry<T> {
@@ -51,6 +51,67 @@ class DataCache {
 
 const cache = new DataCache();
 
+// Helper function to safely cast role
+function castUserRole(role: string | null | undefined): UserRole | undefined {
+  if (!role) return undefined;
+  if (['client', 'agent', 'admin'].includes(role)) {
+    return role as UserRole;
+  }
+  return undefined;
+}
+
+// Helper function to transform raw proposal data to ProposalListItem
+function transformToProposalListItem(rawProposal: any): ProposalListItem {
+  // Extract client and agent names
+  const clientName = rawProposal.client 
+    ? `${rawProposal.client.first_name || ''} ${rawProposal.client.last_name || ''}`.trim() || 'Unknown Client'
+    : rawProposal.client_contact
+    ? `${rawProposal.client_contact.first_name || ''} ${rawProposal.client_contact.last_name || ''}`.trim() || 'Unknown Client'
+    : 'Unknown Client';
+
+  const agentName = rawProposal.agent
+    ? `${rawProposal.agent.first_name || ''} ${rawProposal.agent.last_name || ''}`.trim() || 'Unknown Agent'
+    : 'Unknown Agent';
+
+  // Calculate revenue (simplified calculation)
+  const carbonCredits = rawProposal.carbon_credits || 0;
+  const sharePercentage = rawProposal.client_share_percentage || 0;
+  const revenue = carbonCredits && sharePercentage 
+    ? Math.round(carbonCredits * 25 * (sharePercentage / 100))
+    : 0;
+
+  return {
+    id: rawProposal.id,
+    name: rawProposal.title || `Project ${rawProposal.id}`,
+    title: rawProposal.title || `Project ${rawProposal.id}`,
+    client: clientName,
+    client_name: clientName,
+    client_email: rawProposal.client?.email || rawProposal.client_contact?.email || 'No email',
+    agent: agentName,
+    agent_name: agentName,
+    date: rawProposal.created_at,
+    created_at: rawProposal.created_at,
+    size: rawProposal.system_size_kwp || 0,
+    system_size_kwp: rawProposal.system_size_kwp || 0,
+    status: rawProposal.status,
+    revenue: revenue,
+    signed_at: rawProposal.signed_at,
+    archived_at: rawProposal.archived_at,
+    review_later_until: rawProposal.review_later_until,
+    client_id: rawProposal.client_id,
+    client_reference_id: rawProposal.client_reference_id,
+    agent_id: rawProposal.agent_id,
+    annual_energy: rawProposal.annual_energy,
+    carbon_credits: rawProposal.carbon_credits,
+    client_share_percentage: rawProposal.client_share_percentage,
+    agent_commission_percentage: rawProposal.agent_commission_percentage,
+    invitation_sent_at: rawProposal.invitation_sent_at,
+    invitation_viewed_at: rawProposal.invitation_viewed_at,
+    invitation_expires_at: rawProposal.invitation_expires_at,
+    content: rawProposal.content
+  };
+}
+
 // Optimized data service
 export class DataService {
   // Profile operations with optimized caching
@@ -72,10 +133,28 @@ export class DataService {
       if (error) throw error;
 
       if (data) {
-        cache.set(cacheKey, data, 10 * 60 * 1000); // 10 minutes for profiles
+        // Transform raw data to UserProfile with proper type casting
+        const profile: UserProfile = {
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone,
+          company_name: data.company_name,
+          company_logo_url: data.company_logo_url,
+          avatar_url: data.avatar_url,
+          role: castUserRole(data.role),
+          terms_accepted_at: data.terms_accepted_at,
+          created_at: data.created_at,
+          intro_video_viewed: data.intro_video_viewed,
+          intro_video_viewed_at: data.intro_video_viewed_at
+        };
+
+        cache.set(cacheKey, profile, 10 * 60 * 1000); // 10 minutes for profiles
+        return profile;
       }
 
-      return data;
+      return null;
     } catch (error) {
       console.error('Error fetching profile:', error);
       return null;
@@ -136,7 +215,8 @@ export class DataService {
 
       if (error) throw error;
 
-      const proposals = data || [];
+      // Transform raw data to ProposalListItem[]
+      const proposals = (data || []).map(transformToProposalListItem);
       cache.set(cacheKey, proposals, 3 * 60 * 1000); // 3 minutes for proposals
 
       return proposals;
@@ -148,7 +228,14 @@ export class DataService {
 
   // Batch operations for better performance
   static async batchUpdateProposals(
-    updates: Array<{ id: string; data: Partial<ProposalListItem> }>
+    updates: Array<{ id: string; data: Partial<{ 
+      status: string; 
+      title: string; 
+      carbon_credits: number;
+      client_share_percentage: number;
+      agent_commission_percentage: number;
+      content: any; // Use any for Supabase Json compatibility
+    }> }>
   ): Promise<{ success: boolean; errors: string[] }> {
     const errors: string[] = [];
 
@@ -211,6 +298,7 @@ export class DataService {
       return result;
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Return proper structure even on error
       return {
         proposals: [],
         portfolioSize: 0,
