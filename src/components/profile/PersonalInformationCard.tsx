@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { User } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { ProfilePictureUpload } from '@/components/profile/ProfilePictureUpload';
+import { FormField } from '@/components/common/FormField';
 
 interface PersonalInformationCardProps {
   firstName: string;
@@ -51,55 +51,47 @@ export function PersonalInformationCard({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="firstName">First Name</Label>
-            <Input
-              id="firstName"
-              name="firstName"
-              value={firstName}
-              onChange={onInputChange}
-              disabled={isLoading}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="lastName">Last Name</Label>
-            <Input
-              id="lastName"
-              name="lastName"
-              value={lastName}
-              onChange={onInputChange}
-              disabled={isLoading}
-              required
-            />
-          </div>
-        </div>
-        
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            value={email}
+          <FormField
+            id="firstName"
+            name="firstName"
+            label="First Name"
+            value={firstName}
+            onChange={onInputChange}
+            disabled={isLoading}
+            required
+          />
+          <FormField
+            id="lastName"
+            name="lastName"
+            label="Last Name"
+            value={lastName}
             onChange={onInputChange}
             disabled={isLoading}
             required
           />
         </div>
         
-        <div>
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input
-            id="phone"
-            name="phone"
-            type="tel"
-            value={phone}
-            onChange={onInputChange}
-            disabled={isLoading}
-            placeholder="Optional"
-          />
-        </div>
+        <FormField
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={onInputChange}
+          disabled={isLoading}
+          required
+        />
+        
+        <FormField
+          id="phone"
+          name="phone"
+          label="Phone Number"
+          type="tel"
+          value={phone}
+          onChange={onInputChange}
+          disabled={isLoading}
+          placeholder="Optional"
+        />
       </CardContent>
     </Card>
   );

@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { Building2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { CompanyLogoUpload } from '@/components/profile/CompanyLogoUpload';
 import { CompanyLogo } from '@/components/profile/CompanyLogo';
+import { FormField } from '@/components/common/FormField';
 
 interface CompanyInformationCardProps {
   companyName: string;
@@ -34,17 +34,15 @@ export function CompanyInformationCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label htmlFor="companyName">Company Name</Label>
-          <Input
-            id="companyName"
-            name="companyName"
-            value={companyName}
-            onChange={onInputChange}
-            disabled={isLoading}
-            placeholder="Your company name"
-          />
-        </div>
+        <FormField
+          id="companyName"
+          name="companyName"
+          label="Company Name"
+          value={companyName}
+          onChange={onInputChange}
+          disabled={isLoading}
+          placeholder="Your company name"
+        />
         
         <div>
           <Label>Company Logo</Label>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile } from '@/lib/supabase/profile';
 import { UserProfile } from '@/contexts/auth/types';
+import { useFormValidation } from '@/hooks/useFormValidation';
 
 interface ProfileFormData {
   firstName: string;
@@ -14,18 +15,21 @@ interface ProfileFormData {
   avatarUrl: string;
 }
 
+const initialFormData: ProfileFormData = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  companyName: '',
+  companyLogoUrl: '',
+  avatarUrl: ''
+};
+
 export function useProfileForm(profile: UserProfile | null, refreshUser: () => Promise<void>) {
   const { toast } = useToast();
+  const { validateRequired, validateEmail } = useFormValidation();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<ProfileFormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    companyName: '',
-    companyLogoUrl: '',
-    avatarUrl: ''
-  });
+  const [formData, setFormData] = useState<ProfileFormData>(initialFormData);
 
   // Populate form when profile loads
   useEffect(() => {
@@ -43,23 +47,50 @@ export function useProfileForm(profile: UserProfile | null, refreshUser: () => P
     }
   }, [profile]);
 
+  const updateField = (field: keyof ProfileFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    updateField(name as keyof ProfileFormData, value);
   };
 
   const handleCompanyLogoChange = (logoUrl: string | null) => {
-    setFormData(prev => ({ ...prev, companyLogoUrl: logoUrl || '' }));
+    updateField('companyLogoUrl', logoUrl || '');
   };
 
   const handleAvatarChange = (avatarUrl: string | null) => {
-    setFormData(prev => ({ ...prev, avatarUrl: avatarUrl || '' }));
+    updateField('avatarUrl', avatarUrl || '');
+  };
+
+  const validateForm = (): string | null => {
+    const firstNameError = validateRequired(formData.firstName, 'First name');
+    if (firstNameError) return firstNameError;
+    
+    const lastNameError = validateRequired(formData.lastName, 'Last name');
+    if (lastNameError) return lastNameError;
+    
+    const emailError = validateEmail(formData.email);
+    if (emailError) return emailError;
+    
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    const validationError = validateForm();
+    if (validationError) {
+      toast({
+        title: "Validation Error",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setIsLoading(true);
     console.log('Submitting profile update with data:', formData);
 
     try {
@@ -106,6 +137,7 @@ export function useProfileForm(profile: UserProfile | null, refreshUser: () => P
     handleInputChange,
     handleCompanyLogoChange,
     handleAvatarChange,
-    handleSubmit
+    handleSubmit,
+    updateField
   };
 }
