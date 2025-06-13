@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem, ProposalContent } from '@/types/proposals';
@@ -298,7 +297,7 @@ export class DataService {
       return result;
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Return proper structure even on error
+      // Return proper structure with all required properties, not empty object
       return {
         proposals: [],
         portfolioSize: 0,
