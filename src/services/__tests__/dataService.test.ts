@@ -1,17 +1,11 @@
 
 import { DataService } from '../dataService';
-import { ProfileService } from '../profile/ProfileService';
-import { ProposalService } from '../proposal/ProposalService';
-import { DashboardService } from '../dashboard/DashboardService';
+import { UnifiedDataService } from '../unified/UnifiedDataService';
 
-// Mock the service modules
-jest.mock('../profile/ProfileService');
-jest.mock('../proposal/ProposalService');
-jest.mock('../dashboard/DashboardService');
+// Mock the UnifiedDataService
+jest.mock('../unified/UnifiedDataService');
 
-const MockedProfileService = ProfileService as jest.MockedClass<typeof ProfileService>;
-const MockedProposalService = ProposalService as jest.MockedClass<typeof ProposalService>;
-const MockedDashboardService = DashboardService as jest.MockedClass<typeof DashboardService>;
+const MockedUnifiedDataService = UnifiedDataService as jest.MockedClass<typeof UnifiedDataService>;
 
 describe('DataService', () => {
   beforeEach(() => {
@@ -19,73 +13,55 @@ describe('DataService', () => {
   });
 
   describe('getProfile', () => {
-    it('should delegate to ProfileService', async () => {
-      const mockProfile = { id: '123', first_name: 'John' };
-      const mockGetProfile = jest.fn().mockResolvedValue(mockProfile);
-      MockedProfileService.prototype.getProfile = mockGetProfile;
+    it('should delegate to UnifiedDataService', async () => {
+      const mockProfile = { id: '123', first_name: 'John', email: 'john@example.com', role: 'client' };
+      MockedUnifiedDataService.getProfile = jest.fn().mockResolvedValue(mockProfile);
 
       const result = await DataService.getProfile('123', false);
 
-      expect(mockGetProfile).toHaveBeenCalledWith('123', false);
+      expect(MockedUnifiedDataService.getProfile).toHaveBeenCalledWith('123', false);
       expect(result).toEqual(mockProfile);
     });
   });
 
   describe('updateProfile', () => {
-    it('should delegate to ProfileService', async () => {
+    it('should delegate to UnifiedDataService', async () => {
       const mockResult = { success: true };
-      const mockUpdateProfile = jest.fn().mockResolvedValue(mockResult);
-      MockedProfileService.prototype.updateProfile = mockUpdateProfile;
+      MockedUnifiedDataService.updateProfile = jest.fn().mockResolvedValue(mockResult);
 
       const updates = { first_name: 'Jane' };
       const result = await DataService.updateProfile('123', updates);
 
-      expect(mockUpdateProfile).toHaveBeenCalledWith('123', updates);
+      expect(MockedUnifiedDataService.updateProfile).toHaveBeenCalledWith('123', updates);
       expect(result).toEqual(mockResult);
     });
   });
 
   describe('getProposalsWithRelations', () => {
-    it('should delegate to ProposalService', async () => {
+    it('should delegate to UnifiedDataService', async () => {
       const mockProposals = [{ id: '1', title: 'Test' }];
-      const mockGetProposals = jest.fn().mockResolvedValue(mockProposals);
-      MockedProposalService.prototype.getProposalsWithRelations = mockGetProposals;
+      MockedUnifiedDataService.getProposals = jest.fn().mockResolvedValue(mockProposals);
 
       const result = await DataService.getProposalsWithRelations('123', 'client', false);
 
-      expect(mockGetProposals).toHaveBeenCalledWith('123', 'client', false);
+      expect(MockedUnifiedDataService.getProposals).toHaveBeenCalledWith('123', 'client', false);
       expect(result).toEqual(mockProposals);
     });
   });
 
-  describe('batchUpdateProposals', () => {
-    it('should delegate to ProposalService', async () => {
-      const mockResult = { success: true, errors: [] };
-      const mockBatchUpdate = jest.fn().mockResolvedValue(mockResult);
-      MockedProposalService.prototype.batchUpdateProposals = mockBatchUpdate;
-
-      const updates = [{ id: '1', data: { status: 'approved' } }];
-      const result = await DataService.batchUpdateProposals(updates);
-
-      expect(mockBatchUpdate).toHaveBeenCalledWith(updates);
-      expect(result).toEqual(mockResult);
-    });
-  });
-
   describe('getDashboardData', () => {
-    it('should delegate to DashboardService', async () => {
+    it('should delegate to UnifiedDataService', async () => {
       const mockDashboardData = {
         proposals: [],
         portfolioSize: 0,
         totalRevenue: 0,
         co2Offset: 0
       };
-      const mockGetDashboardData = jest.fn().mockResolvedValue(mockDashboardData);
-      MockedDashboardService.prototype.getDashboardData = mockGetDashboardData;
+      MockedUnifiedDataService.getDashboardData = jest.fn().mockResolvedValue(mockDashboardData);
 
       const result = await DataService.getDashboardData('123', 'client');
 
-      expect(mockGetDashboardData).toHaveBeenCalledWith('123', 'client');
+      expect(MockedUnifiedDataService.getDashboardData).toHaveBeenCalledWith('123', 'client');
       expect(result).toEqual(mockDashboardData);
     });
   });

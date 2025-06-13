@@ -29,6 +29,17 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
     // Additional success handling could go here if needed
   };
 
+  // Create proper input handlers that match the expected signature
+  const handlePersonalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    handleInputChange(name as keyof typeof formData, value);
+  };
+
+  const handleCompanyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    handleInputChange(name as keyof typeof formData, value);
+  };
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Personal Information */}
@@ -38,7 +49,7 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
         email={formData.email}
         phone={formData.phone}
         avatarUrl={formData.avatarUrl}
-        onInputChange={handleInputChange}
+        onInputChange={handlePersonalInputChange}
         onAvatarChange={handleAvatarChange}
         isLoading={isLoading || isSubmitting}
       />
@@ -48,7 +59,7 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
         <CompanyInformationCard
           companyName={formData.companyName}
           companyLogoUrl={formData.companyLogoUrl}
-          onInputChange={handleInputChange}
+          onInputChange={handleCompanyInputChange}
           onLogoChange={handleCompanyLogoChange}
           isLoading={isLoading || isSubmitting}
         />

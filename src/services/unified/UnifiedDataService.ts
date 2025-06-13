@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/contexts/auth/types';
+import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem } from '@/types/proposals';
 
 /**
@@ -57,7 +57,7 @@ export class UnifiedDataService {
           company_name: data.company_name,
           company_logo_url: data.company_logo_url,
           avatar_url: data.avatar_url,
-          role: data.role,
+          role: data.role as UserRole,
           terms_accepted_at: data.terms_accepted_at,
           created_at: data.created_at,
           intro_video_viewed: data.intro_video_viewed,
@@ -127,7 +127,18 @@ export class UnifiedDataService {
 
       if (error) throw error;
 
-      const proposals = data || [];
+      // Transform the data to match ProposalListItem type
+      const proposals: ProposalListItem[] = (data || []).map(proposal => ({
+        id: proposal.id,
+        name: proposal.title || 'Untitled Proposal',
+        date: proposal.created_at,
+        status: proposal.status,
+        size: proposal.system_size_kwp || 0,
+        revenue: (proposal.carbon_credits || 0) * 50, // Simple calculation
+        // Include all original fields
+        ...proposal
+      }));
+
       this.setCache(cacheKey, proposals);
       return proposals;
     } catch (error) {
