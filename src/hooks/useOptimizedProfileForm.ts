@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { useOptimizedData } from '@/hooks/useOptimizedData';
-import { useFormValidation } from '@/hooks/useFormValidation';
-import { UserProfile } from '@/contexts/auth/types';
+import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
+import { useToast } from '@/hooks/use-toast';
+import { UserRole } from '@/contexts/auth/types';
 
-interface ProfileFormData {
+interface FormData {
   firstName: string;
   lastName: string;
   email: string;
@@ -14,93 +14,104 @@ interface ProfileFormData {
   avatarUrl: string;
 }
 
-const initialFormData: ProfileFormData = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  companyName: '',
-  companyLogoUrl: '',
-  avatarUrl: ''
-};
-
-export function useOptimizedProfileForm(userId?: string, userRole?: string) {
-  const { profile, updateProfile, loading } = useOptimizedData({ 
-    userId, 
-    userRole 
+export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
+  const [formData, setFormData] = useState<FormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    companyLogoUrl: '',
+    avatarUrl: ''
   });
-  const { validateRequired, validateEmail } = useFormValidation();
-  const [formData, setFormData] = useState<ProfileFormData>(initialFormData);
+  
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  // Sync form data with profile
+  // Load profile data
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        firstName: profile.first_name || '',
-        lastName: profile.last_name || '',
-        email: profile.email || '',
-        phone: profile.phone || '',
-        companyName: profile.company_name || '',
-        companyLogoUrl: profile.company_logo_url || '',
-        avatarUrl: profile.avatar_url || ''
-      });
+    if (userId) {
+      loadProfile();
     }
-  }, [profile]);
+  }, [userId]);
 
-  const updateField = (field: keyof ProfileFormData, value: string) => {
+  const loadProfile = async () => {
+    if (!userId) return;
+    
+    setIsLoading(true);
+    try {
+      const profile = await UnifiedDataService.getProfile(userId);
+      if (profile) {
+        setFormData({
+          firstName: profile.first_name || '',
+          lastName: profile.last_name || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          companyName: profile.company_name || '',
+          companyLogoUrl: profile.company_logo_url || '',
+          avatarUrl: profile.avatar_url || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load profile data',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    updateField(name as keyof ProfileFormData, value);
-  };
-
   const handleCompanyLogoChange = (logoUrl: string | null) => {
-    updateField('companyLogoUrl', logoUrl || '');
+    setFormData(prev => ({ ...prev, companyLogoUrl: logoUrl || '' }));
   };
 
   const handleAvatarChange = (avatarUrl: string | null) => {
-    updateField('avatarUrl', avatarUrl || '');
-  };
-
-  const validateForm = (): string | null => {
-    const firstNameError = validateRequired(formData.firstName, 'First name');
-    if (firstNameError) return firstNameError;
-    
-    const lastNameError = validateRequired(formData.lastName, 'Last name');
-    if (lastNameError) return lastNameError;
-    
-    const emailError = validateEmail(formData.email);
-    if (emailError) return emailError;
-    
-    return null;
+    setFormData(prev => ({ ...prev, avatarUrl: avatarUrl || '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const validationError = validateForm();
-    if (validationError) {
-      return { success: false, error: validationError };
-    }
+    if (!userId) return { success: false };
 
     setIsSubmitting(true);
-
     try {
-      const updateData = {
+      const updates = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
-        phone: formData.phone || null,
-        company_name: formData.companyName || null,
-        company_logo_url: formData.companyLogoUrl || null,
-        avatar_url: formData.avatarUrl || null,
+        phone: formData.phone,
+        company_name: formData.companyName,
+        company_logo_url: formData.companyLogoUrl,
+        avatar_url: formData.avatarUrl
       };
+
+      const result = await UnifiedDataService.updateProfile(userId, updates);
       
-      const result = await updateProfile(updateData);
-      return result;
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Profile updated successfully'
+        });
+        return { success: true };
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update profile',
+        variant: 'destructive'
+      });
+      return { success: false };
     } finally {
       setIsSubmitting(false);
     }
@@ -108,12 +119,11 @@ export function useOptimizedProfileForm(userId?: string, userRole?: string) {
 
   return {
     formData,
-    isLoading: loading,
+    isLoading,
     isSubmitting,
     handleInputChange,
     handleCompanyLogoChange,
     handleAvatarChange,
-    handleSubmit,
-    updateField
+    handleSubmit
   };
 }

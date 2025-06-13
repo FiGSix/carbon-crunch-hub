@@ -31,21 +31,3 @@ export async function getFormattedCarbonPriceForYear(year: string | number): Pro
   const price = await getCarbonPriceForYear(year);
   return price ? `R ${price.toFixed(2)}` : "";
 }
-
-/**
- * Synchronous versions for backward compatibility - these will be deprecated
- * 
- * @deprecated Use the async versions instead
- */
-export function getCarbonPriceForYearSync(year: string | number): number {
-  console.warn('getCarbonPriceForYearSync is deprecated. Use the async getCarbonPriceForYear function instead.');
-  return 0;
-}
-
-/**
- * @deprecated Use the async versions instead
- */
-export function getFormattedCarbonPriceForYearSync(year: string | number): string {
-  console.warn('getFormattedCarbonPriceForYearSync is deprecated. Use the async getFormattedCarbonPriceForYear function instead.');
-  return "";
-}
