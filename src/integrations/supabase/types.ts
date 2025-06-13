@@ -166,6 +166,7 @@ export type Database = {
           status: string
           system_size_kwp: number | null
           title: string
+          unit_standard: string | null
         }
         Insert: {
           agent_commission_percentage?: number | null
@@ -194,6 +195,7 @@ export type Database = {
           status?: string
           system_size_kwp?: number | null
           title?: string
+          unit_standard?: string | null
         }
         Update: {
           agent_commission_percentage?: number | null
@@ -222,6 +224,7 @@ export type Database = {
           status?: string
           system_size_kwp?: number | null
           title?: string
+          unit_standard?: string | null
         }
         Relationships: [
           {

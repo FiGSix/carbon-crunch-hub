@@ -129,6 +129,7 @@ export interface Database {
           project_info: Json
           system_size_kwp: number | null
           agent_portfolio_kwp: number | null
+          unit_standard: string | null
         }
         Insert: {
           id?: string
@@ -157,6 +158,7 @@ export interface Database {
           project_info?: Json
           system_size_kwp?: number | null
           agent_portfolio_kwp?: number | null
+          unit_standard?: string | null
         }
         Update: {
           id?: string
@@ -185,6 +187,7 @@ export interface Database {
           project_info?: Json
           system_size_kwp?: number | null
           agent_portfolio_kwp?: number | null
+          unit_standard?: string | null
         }
       }
       notifications: {
