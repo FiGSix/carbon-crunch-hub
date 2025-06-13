@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { ProposalListItem } from '@/types/proposals';
+import { ProposalListItem, ProposalContent } from '@/types/proposals';
 import { CacheManager } from '../cache/CacheManager';
 
 /**
@@ -74,7 +74,7 @@ export class ProposalsDataService {
           invitation_sent_at: proposal.invitation_sent_at,
           invitation_viewed_at: proposal.invitation_viewed_at,
           invitation_expires_at: proposal.invitation_expires_at,
-          content: proposal.content
+          content: proposal.content as ProposalContent // Cast Json to ProposalContent
         };
       });
 
