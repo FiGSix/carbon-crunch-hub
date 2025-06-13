@@ -2,9 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../cache/CacheManager';
+import { RLSErrorHandler } from '../utils/RLSErrorHandler';
 
 /**
- * Profile data operations
+ * Profile data operations with improved RLS error handling
  */
 export class ProfileDataService {
   static async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
@@ -22,7 +23,13 @@ export class ProfileDataService {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        const rlsResult = RLSErrorHandler.handleRLSError(error, 'profile fetch');
+        if (rlsResult.shouldReturnEmpty) {
+          return null;
+        }
+        throw error;
+      }
 
       if (data) {
         const profile: UserProfile = {
@@ -59,10 +66,15 @@ export class ProfileDataService {
         .update(updates)
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        const rlsResult = RLSErrorHandler.handleRLSError(error, 'profile update');
+        if (!rlsResult.shouldReturnEmpty) {
+          throw error;
+        }
+        return { success: false, error: rlsResult.message };
+      }
 
       // Clear cache
-      const cacheKey = CacheManager.getCacheKey('profile', userId);
       CacheManager.clearCachePattern('profile');
       
       return { success: true };

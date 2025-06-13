@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
-import { supabase } from '@/lib/supabase';
+import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { logger } from '@/lib/logger';
 
 export interface ClientData {
@@ -35,53 +35,19 @@ export function useMyClients() {
       }
       setError(null);
 
-      let query = supabase
-        .from('clients')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          company_name,
-          proposals!inner(
-            id,
-            system_size_kwp
-          )
-        `);
+      const clientsData = await UnifiedDataService.getClients(user.id, userRole || 'client', isRefresh);
+      
+      // Transform to match expected interface
+      const transformedClients: ClientData[] = clientsData.map(client => ({
+        client_id: client.id,
+        client_name: client.name,
+        client_email: client.email,
+        company_name: client.company_name,
+        project_count: client.project_count,
+        total_mwp: client.total_kwp / 1000 // Convert kWp to MWp
+      }));
 
-      // Filter by user role
-      if (userRole !== 'admin') {
-        query = query.eq('proposals.agent_id', user.id);
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      // Process the data to get client summaries
-      const clientMap = new Map<string, ClientData>();
-
-      data?.forEach((client: any) => {
-        const clientId = client.id;
-        if (!clientMap.has(clientId)) {
-          clientMap.set(clientId, {
-            client_id: clientId,
-            client_name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Unnamed Client',
-            client_email: client.email,
-            company_name: client.company_name,
-            project_count: 0,
-            total_mwp: 0
-          });
-        }
-
-        const clientData = clientMap.get(clientId)!;
-        clientData.project_count++;
-        clientData.total_mwp += (client.proposals?.system_size_kwp || 0) / 1000; // Convert kWp to MWp
-      });
-
-      setClients(Array.from(clientMap.values()));
+      setClients(transformedClients);
     } catch (err) {
       logger.error('Error fetching clients', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to fetch clients');

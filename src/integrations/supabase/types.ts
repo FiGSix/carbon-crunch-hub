@@ -322,6 +322,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_proposal_by_token: {
         Args: { token_param: string }
         Returns: {

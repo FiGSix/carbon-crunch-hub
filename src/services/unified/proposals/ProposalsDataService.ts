@@ -4,7 +4,7 @@ import { ProposalListItem, ProposalContent } from '@/types/proposals';
 import { CacheManager } from '../cache/CacheManager';
 
 /**
- * Proposals data operations
+ * Proposals data operations with improved RLS support
  */
 export class ProposalsDataService {
   static async getProposals(userId: string, userRole: string, forceRefresh = false): Promise<ProposalListItem[]> {
@@ -26,17 +26,22 @@ export class ProposalsDataService {
         `)
         .is('deleted_at', null);
 
-      // Apply role-based filtering
+      // Apply role-based filtering - RLS will handle the access control
+      // but we can optimize queries by adding filters
       if (userRole === 'agent') {
         query = query.eq('agent_id', userId);
       } else if (userRole === 'client') {
-        query = query.eq('client_id', userId);
+        // For clients, we need to check both client_id and client_reference_id
+        query = query.or(`client_id.eq.${userId},client_reference_id.in.(select id from clients where user_id=eq.${userId})`);
       }
-      // Admin sees all proposals
+      // Admin sees all proposals - no additional filter needed
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       // Transform the data to match ProposalListItem type
       const proposals: ProposalListItem[] = (data || []).map(proposal => {
@@ -59,7 +64,7 @@ export class ProposalsDataService {
           size: proposal.system_size_kwp || 0,
           system_size_kwp: proposal.system_size_kwp || 0,
           revenue: (proposal.carbon_credits || 0) * 50, // Simple calculation
-          client: clientName, // This is now correctly a string
+          client: clientName,
           client_id: proposal.client_id,
           client_reference_id: proposal.client_reference_id,
           agent_id: proposal.agent_id,
@@ -74,7 +79,7 @@ export class ProposalsDataService {
           invitation_sent_at: proposal.invitation_sent_at,
           invitation_viewed_at: proposal.invitation_viewed_at,
           invitation_expires_at: proposal.invitation_expires_at,
-          content: proposal.content as unknown as ProposalContent // Safe cast via unknown
+          content: proposal.content as unknown as ProposalContent
         };
       });
 
@@ -82,7 +87,14 @@ export class ProposalsDataService {
       return proposals;
     } catch (error) {
       console.error('Error fetching proposals:', error);
-      return [];
+      
+      // If it's an RLS permission error, return empty array instead of throwing
+      if (error?.code === 'PGRST116' || error?.code === '42501') {
+        console.log('RLS permission issue - returning empty array');
+        return [];
+      }
+      
+      throw error;
     }
   }
 }

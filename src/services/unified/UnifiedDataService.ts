@@ -6,6 +6,7 @@ import { ProfileDataService } from './profile/ProfileDataService';
 import { ProposalsDataService } from './proposals/ProposalsDataService';
 import { DashboardDataService } from './dashboard/DashboardDataService';
 import { ClientSearchService } from './clients/ClientSearchService';
+import { ClientDataService } from './clients/ClientDataService';
 
 /**
  * Unified data service that provides a clean interface for all data operations
@@ -26,17 +27,15 @@ export class UnifiedDataService {
     return ProposalsDataService.getProposals(userId, userRole, forceRefresh);
   }
 
-  // Dashboard data
-  static async getDashboardData(userId: string, userRole: string): Promise<{
-    proposals: ProposalListItem[];
-    portfolioSize: number;
-    totalRevenue: number;
-    co2Offset: number;
-  }> {
-    return DashboardDataService.getDashboardData(userId, userRole);
+  // Client operations
+  static async getClients(userId: string, userRole: string, forceRefresh = false) {
+    return ClientDataService.getClients(userId, userRole, forceRefresh);
   }
 
-  // Client operations
+  static async createClient(clientData: any) {
+    return ClientDataService.createClient(clientData);
+  }
+
   static async searchClients(searchTerm: string): Promise<Array<{
     id: string;
     name: string;
@@ -45,6 +44,16 @@ export class UnifiedDataService {
     isRegistered: boolean;
   }>> {
     return ClientSearchService.searchClients(searchTerm);
+  }
+
+  // Dashboard data
+  static async getDashboardData(userId: string, userRole: string): Promise<{
+    proposals: ProposalListItem[];
+    portfolioSize: number;
+    totalRevenue: number;
+    co2Offset: number;
+  }> {
+    return DashboardDataService.getDashboardData(userId, userRole);
   }
 
   // Utility methods
