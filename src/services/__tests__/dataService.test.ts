@@ -39,7 +39,7 @@ describe('DataService', () => {
 
   describe('getProposalsWithRelations', () => {
     it('should delegate to UnifiedDataService', async () => {
-      const mockProposals = [{ id: '1', title: 'Test' }];
+      const mockProposals = [{ id: '1', title: 'Test', client: 'John Doe' }];
       MockedUnifiedDataService.getProposals = jest.fn().mockResolvedValue(mockProposals);
 
       const result = await DataService.getProposalsWithRelations('123', 'client', false);
