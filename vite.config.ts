@@ -1,4 +1,20 @@
-defineConfig(({ mode }) => ({
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+const componentTagger = () => {
+  return {
+    name: 'component-tagger',
+    transform(code: string, id: string) {
+      if (id.endsWith('.tsx') && !id.includes('node_modules')) {
+        return code;
+      }
+    }
+  };
+};
+
+export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,

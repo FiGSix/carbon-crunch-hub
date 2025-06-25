@@ -63,7 +63,8 @@ export class UnifiedClientService {
       };
     }
 
-    const cacheKey = CacheManager.getCacheKey('unified_clients_paginated', userId, userRole, `${limit}_${offset}`);
+    // Fix cache key generation to use proper method signature
+    const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
     
     if (!forceRefresh) {
       const cached = CacheManager.getFromCache<PaginatedClientsResult>(cacheKey);

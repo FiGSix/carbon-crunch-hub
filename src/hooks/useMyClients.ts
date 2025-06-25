@@ -38,8 +38,8 @@ export function useMyClients() {
 
       const clientsData = await UnifiedDataService.getClients(user.id, userRole || 'client', isRefresh);
       
-      // Transform to match expected interface
-      const transformedClients: ClientData[] = clientsData.map(client => ({
+      // Transform to match expected interface - access clients array from paginated result
+      const transformedClients: ClientData[] = clientsData.clients.map(client => ({
         client_id: client.id,
         client_name: client.name,
         client_email: client.email,
