@@ -50,6 +50,9 @@ export interface CalculationResults {
   yearsData: YearData[];
 }
 
+// Import the functions we need for the calculator
+import { calculateAnnualEnergy, calculateCarbonCredits } from './simplified';
+
 // Calculator results function
 export function calculateResults(
   systemSizeKwp: number, 
