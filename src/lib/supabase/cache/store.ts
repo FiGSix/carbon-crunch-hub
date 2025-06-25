@@ -3,11 +3,19 @@ import { UserRole } from '../types';
 import { ProfileCacheData, CacheEntry, CACHE_TTL } from './types';
 
 /**
- * In-memory cache store implementation with performance optimizations
+ * Generic cache entry for the unified cache store
  */
-class CacheStore {
-  private userRoles: Map<string, CacheEntry<UserRole>> = new Map();
-  private profiles: Map<string, CacheEntry<ProfileCacheData>> = new Map();
+interface GenericCacheEntry {
+  data: any;
+  timestamp: number;
+  ttl: number;
+}
+
+/**
+ * Unified cache store implementation with Map-like interface
+ */
+class UnifiedCacheStore {
+  private cache = new Map<string, GenericCacheEntry>();
   private lastCleanup: number = Date.now();
   private cleanupInterval: number = 5 * 60 * 1000; // 5 minutes
   
@@ -19,90 +27,73 @@ class CacheStore {
   }
   
   /**
-   * Get user role from cache if valid
+   * Get entry from cache if valid
    */
-  getUserRole(userId: string): UserRole | null {
-    const entry = this.userRoles.get(userId);
-    if (!entry) return null;
+  get(key: string): GenericCacheEntry | undefined {
+    const entry = this.cache.get(key);
+    if (!entry) return undefined;
     
-    if (Date.now() > entry.expiry) {
-      this.userRoles.delete(userId);
-      return null;
+    if (Date.now() > entry.timestamp + entry.ttl) {
+      this.cache.delete(key);
+      return undefined;
     }
-    return entry.data;
+    return entry;
   }
   
   /**
-   * Set user role in cache with optional custom TTL
+   * Set entry in cache
    */
-  setUserRole(userId: string, role: UserRole, ttl?: number): void {
-    this.userRoles.set(userId, {
-      data: role,
-      expiry: Date.now() + (ttl || CACHE_TTL)
-    });
+  set(key: string, entry: GenericCacheEntry): void {
+    this.cache.set(key, entry);
   }
   
   /**
-   * Get profile from cache if valid
+   * Delete entry from cache
    */
-  getProfile(userId: string): ProfileCacheData | null {
-    const entry = this.profiles.get(userId);
-    if (!entry) return null;
-    
-    if (Date.now() > entry.expiry) {
-      this.profiles.delete(userId);
-      return null;
-    }
-    return entry.data;
+  delete(key: string): boolean {
+    return this.cache.delete(key);
   }
   
   /**
-   * Set profile in cache with optional custom TTL
+   * Get all cache keys
    */
-  setProfile(userId: string, profile: ProfileCacheData, ttl?: number): void {
-    this.profiles.set(userId, {
-      data: profile,
-      expiry: Date.now() + (ttl || CACHE_TTL)
-    });
+  keys(): IterableIterator<string> {
+    return this.cache.keys();
   }
   
   /**
-   * Check if a cache entry exists and is still valid
+   * Iterate over cache entries
    */
-  isValid(userId: string, type: 'role' | 'profile'): boolean {
-    const map = type === 'role' ? this.userRoles : this.profiles;
-    const entry = map.get(userId);
-    
-    if (!entry) return false;
-    const isValid = entry.expiry > Date.now();
-    
-    // Clean up expired entry if invalid
-    if (!isValid) {
-      map.delete(userId);
-    }
-    
-    return isValid;
-  }
-  
-  /**
-   * Delete specific cache entries for a user
-   */
-  invalidate(userId: string, type?: 'role' | 'profile'): void {
-    if (!type || type === 'role') {
-      this.userRoles.delete(userId);
-    }
-    
-    if (!type || type === 'profile') {
-      this.profiles.delete(userId);
-    }
+  forEach(callback: (entry: GenericCacheEntry, key: string) => void): void {
+    this.cache.forEach(callback);
   }
   
   /**
    * Clear all cache data
    */
   clear(): void {
-    this.userRoles.clear();
-    this.profiles.clear();
+    this.cache.clear();
+  }
+  
+  /**
+   * Check if a cache entry exists and is still valid
+   */
+  has(key: string): boolean {
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+    
+    const isValid = Date.now() <= entry.timestamp + entry.ttl;
+    if (!isValid) {
+      this.cache.delete(key);
+    }
+    return isValid;
+  }
+  
+  /**
+   * Get cache size
+   */
+  get size(): number {
+    return this.cache.size;
   }
   
   /**
@@ -117,18 +108,10 @@ class CacheStore {
     this.lastCleanup = now;
     let expiredCount = 0;
     
-    // Clean up expired user roles
-    for (const [userId, entry] of this.userRoles.entries()) {
-      if (now > entry.expiry) {
-        this.userRoles.delete(userId);
-        expiredCount++;
-      }
-    }
-    
-    // Clean up expired profiles
-    for (const [userId, entry] of this.profiles.entries()) {
-      if (now > entry.expiry) {
-        this.profiles.delete(userId);
+    // Clean up expired entries
+    for (const [key, entry] of this.cache.entries()) {
+      if (now > entry.timestamp + entry.ttl) {
+        this.cache.delete(key);
         expiredCount++;
       }
     }
@@ -137,7 +120,48 @@ class CacheStore {
       console.log(`Cache cleanup: removed ${expiredCount} expired entries`);
     }
   }
+
+  // Legacy compatibility methods for role-specific caching
+  getUserRole(userId: string): UserRole | null {
+    const key = `${userId}_role`;
+    const entry = this.get(key);
+    return entry?.data as UserRole || null;
+  }
+  
+  setUserRole(userId: string, role: UserRole, ttl?: number): void {
+    const key = `${userId}_role`;
+    this.set(key, {
+      data: role,
+      timestamp: Date.now(),
+      ttl: ttl || CACHE_TTL
+    });
+  }
+  
+  getProfile(userId: string): ProfileCacheData | null {
+    const key = `${userId}_profile`;
+    const entry = this.get(key);
+    return entry?.data as ProfileCacheData || null;
+  }
+  
+  setProfile(userId: string, profile: ProfileCacheData, ttl?: number): void {
+    const key = `${userId}_profile`;
+    this.set(key, {
+      data: profile,
+      timestamp: Date.now(),
+      ttl: ttl || CACHE_TTL
+    });
+  }
+  
+  invalidate(userId: string, type?: 'role' | 'profile'): void {
+    if (!type || type === 'role') {
+      this.delete(`${userId}_role`);
+    }
+    
+    if (!type || type === 'profile') {
+      this.delete(`${userId}_profile`);
+    }
+  }
 }
 
 // Export a singleton instance
-export const cacheStore = new CacheStore();
+export const cacheStore = new UnifiedCacheStore();

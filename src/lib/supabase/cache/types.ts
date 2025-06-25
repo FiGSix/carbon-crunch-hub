@@ -12,9 +12,10 @@ export interface ProfileCacheData {
 /**
  * Cache entry with expiry time
  */
-export interface CacheEntry<T> {
+export interface CacheEntry<T = any> {
   data: T;
-  expiry: number;
+  timestamp: number;
+  ttl: number;
 }
 
 /**
