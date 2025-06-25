@@ -9,7 +9,6 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
-import { usePerformanceMonitor } from "@/hooks/performance/usePerformanceMonitor";
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
@@ -81,12 +80,6 @@ MemoizedProposalRow.displayName = "MemoizedProposalRow";
 
 export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
   const { userRole, user } = useAuth();
-  
-  // Performance monitoring
-  usePerformanceMonitor([proposals.length, userRole], {
-    componentName: 'ProposalList',
-    logThreshold: 100
-  });
 
   // Create a contextualized logger
   const proposalLogger = useMemo(() => logger.withContext({
