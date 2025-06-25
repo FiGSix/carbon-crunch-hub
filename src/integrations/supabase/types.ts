@@ -323,6 +323,18 @@ export type Database = {
         }
         Returns: string
       }
+      current_user_is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      current_user_is_agent_or_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       delete_proposal: {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
@@ -362,10 +374,6 @@ export type Database = {
         }[]
       }
       get_client_email: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -417,14 +425,6 @@ export type Database = {
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_agent: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
       }
       mark_invitation_viewed: {
         Args: { token_param: string }

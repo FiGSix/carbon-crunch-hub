@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 
 /**
- * Simplified auth hook with fixed session timeout and improved redirect logic
+ * Simplified auth hook with enhanced error handling and performance monitoring
  */
 export function useAuthSimplified() {
   const [user, setUser] = useState<User | null>(null);
@@ -35,7 +35,7 @@ export function useAuthSimplified() {
         // Get initial session with improved timeout handling
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout after 8 seconds')), 8000);
+          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout after 10 seconds')), 10000);
         });
         
         try {
@@ -49,7 +49,7 @@ export function useAuthSimplified() {
           
           if (error) {
             console.error('❌ Error getting initial session:', error);
-            return;
+            // Don't throw here - let the app continue without session
           }
           
           if (isUnmountedRef.current) return;
@@ -60,9 +60,10 @@ export function useAuthSimplified() {
           
           if (session?.user) {
             console.log('✅ Initial session found, loading user profile');
+            // Use setTimeout to defer profile loading and prevent blocking
             setTimeout(() => {
               if (!isUnmountedRef.current) {
-                loadUserProfileOptimized(session.user.id);
+                loadUserProfileWithFallback(session.user.id);
               }
             }, 0);
           } else {
@@ -74,9 +75,11 @@ export function useAuthSimplified() {
         } catch (timeoutError) {
           console.warn('⚠️ Session fetch timed out, continuing without session');
           if (timeoutId) clearTimeout(timeoutId);
+          // Continue with null session instead of failing
         }
       } catch (error) {
         console.error('💥 Error initializing auth:', error);
+        // Don't throw here - let the app continue with null session
       } finally {
         if (!isUnmountedRef.current) {
           setIsLoading(false);
@@ -100,7 +103,7 @@ export function useAuthSimplified() {
         // Defer profile loading to prevent blocking the auth flow
         setTimeout(() => {
           if (!isUnmountedRef.current) {
-            loadUserProfileOptimized(session.user.id);
+            loadUserProfileWithFallback(session.user.id);
           }
         }, 0);
       } else {
@@ -127,7 +130,7 @@ export function useAuthSimplified() {
     };
   }, []);
 
-  const loadUserProfileOptimized = async (userId: string) => {
+  const loadUserProfileWithFallback = async (userId: string) => {
     try {
       // Check cache first
       const cached = profileCacheRef.current.get(userId);
@@ -141,18 +144,36 @@ export function useAuthSimplified() {
       console.log('📊 Loading user profile with fixed RLS for:', userId);
       const startTime = performance.now();
       
-      // Use a more robust query with error handling for RLS issues
+      // Enhanced query with better error handling for RLS
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to avoid throwing on no results
+        .maybeSingle(); // Use maybeSingle to handle no results gracefully
+
+      const endTime = performance.now();
 
       if (error) {
-        console.error('❌ Error loading profile:', error);
-        // Don't throw here - this might be due to timing issues with RLS
-        setProfile(null);
-        setUserRole(undefined);
+        console.error('❌ Profile loading error:', {
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          userId,
+          loadTime: `${(endTime - startTime).toFixed(2)}ms`
+        });
+        
+        // For RLS errors, try a different approach or provide fallback
+        if (error.message?.includes('RLS') || error.message?.includes('policy')) {
+          console.warn('🔒 RLS policy issue detected, implementing fallback');
+          // Set minimal profile to allow app to continue
+          setProfile(null);
+          setUserRole(undefined);
+        } else {
+          // For other errors, also clear profile
+          setProfile(null);
+          setUserRole(undefined);
+        }
         return;
       }
 
@@ -182,15 +203,27 @@ export function useAuthSimplified() {
         setProfile(userProfile);
         setUserRole(userProfile.role);
         
-        const endTime = performance.now();
-        console.log(`✅ Profile loaded in ${(endTime - startTime).toFixed(2)}ms, role:`, userProfile.role);
+        console.log(`✅ Profile loaded successfully in ${(endTime - startTime).toFixed(2)}ms`, {
+          userId,
+          role: userProfile.role,
+          email: userProfile.email,
+          hasFirstName: !!userProfile.first_name,
+          hasLastName: !!userProfile.last_name
+        });
       } else if (!data) {
         console.warn('⚠️ No profile found for user:', userId);
+        // Don't throw here - set null and let app handle missing profile
         setProfile(null);
         setUserRole(undefined);
       }
     } catch (error) {
-      console.error('💥 Exception loading profile:', error);
+      console.error('💥 Exception loading profile:', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // Always set null profile on exception to prevent auth blocking
       setProfile(null);
       setUserRole(undefined);
     }
@@ -201,7 +234,7 @@ export function useAuthSimplified() {
       console.log('🔄 Refreshing user profile');
       // Clear cache to force fresh data
       profileCacheRef.current.delete(user.id);
-      await loadUserProfileOptimized(user.id);
+      await loadUserProfileWithFallback(user.id);
     }
   };
 

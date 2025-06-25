@@ -26,22 +26,27 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const auth = useAuthSimplified();
   
-  // CRITICAL FIX: isAuthenticated now only depends on user session, not profile
-  // This prevents the dependency mismatch where profile loads after user
+  // ENHANCED: Better authentication check with comprehensive logging
+  const isAuthenticated = !!auth.user && !!auth.session;
+  
   const contextValue: AuthContextType = {
     ...auth,
     isAdmin: auth.userRole === 'admin',
-    isAuthenticated: !!auth.user && !!auth.session // Only session-based authentication check
+    isAuthenticated
   };
 
-  console.log('🔄 AuthContext state:', {
+  // Enhanced logging with session details
+  console.log('🔄 AuthContext state update:', {
     hasUser: !!auth.user,
     hasSession: !!auth.session,
     hasProfile: !!auth.profile,
     userRole: auth.userRole,
-    isAuthenticated: contextValue.isAuthenticated,
+    isAuthenticated,
     isInitialized: auth.isInitialized,
-    isLoading: auth.isLoading
+    isLoading: auth.isLoading,
+    userEmail: auth.user?.email || 'none',
+    sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
+    profileId: auth.profile?.id || 'none'
   });
 
   return (
