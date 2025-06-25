@@ -1,6 +1,7 @@
 
 // Legacy DataService - now delegates to UnifiedDataService for backward compatibility
 import { UnifiedDataService } from './unified/UnifiedDataService';
+import { UserRole } from '@/contexts/auth/types';
 
 /**
  * @deprecated Use UnifiedDataService directly instead
@@ -15,11 +16,11 @@ export class DataService {
     return UnifiedDataService.updateProfile(userId, updates);
   }
 
-  static async getProposalsWithRelations(userId: string, userRole: string, forceRefresh = false) {
+  static async getProposalsWithRelations(userId: string, userRole: UserRole, forceRefresh = false) {
     return UnifiedDataService.getProposals(userId, userRole, forceRefresh);
   }
 
-  static async getDashboardData(userId: string, userRole: string) {
+  static async getDashboardData(userId: string, userRole: UserRole) {
     return UnifiedDataService.getDashboardData(userId, userRole);
   }
 

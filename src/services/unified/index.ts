@@ -6,3 +6,7 @@ export { ProposalsDataService } from './proposals/ProposalsDataService';
 export { DashboardDataService } from './dashboard/DashboardDataService';
 export { ClientSearchService } from './clients/ClientSearchService';
 export { ClientDataService } from './clients/ClientDataService';
+export { UnifiedClientService } from './clients/UnifiedClientService';
+export { CarbonCalculationService } from './calculations/CarbonCalculationService';
+export type { UnifiedClient, ClientSearchResult } from './clients/UnifiedClientService';
+export type { SystemSpecs, CarbonCalculationResult } from './calculations/CarbonCalculationService';

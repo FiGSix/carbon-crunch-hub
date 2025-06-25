@@ -5,8 +5,8 @@ import { CacheManager } from './cache/CacheManager';
 import { ProfileDataService } from './profile/ProfileDataService';
 import { ProposalsDataService } from './proposals/ProposalsDataService';
 import { DashboardDataService } from './dashboard/DashboardDataService';
-import { ClientSearchService } from './clients/ClientSearchService';
-import { ClientDataService } from './clients/ClientDataService';
+import { UnifiedClientService } from './clients/UnifiedClientService';
+import type { ClientSearchResult } from './clients/UnifiedClientService';
 
 /**
  * Unified data service that provides a clean interface for all data operations
@@ -27,23 +27,17 @@ export class UnifiedDataService {
     return ProposalsDataService.getProposals(userId, userRole, forceRefresh);
   }
 
-  // Client operations
+  // Client operations - now using unified service
   static async getClients(userId: string, userRole: UserRole, forceRefresh = false) {
-    return ClientDataService.getClients(userId, userRole, forceRefresh);
+    return UnifiedClientService.getClients(userId, userRole, forceRefresh);
   }
 
   static async createClient(clientData: any) {
-    return ClientDataService.createClient(clientData);
+    return UnifiedClientService.createClient(clientData);
   }
 
-  static async searchClients(searchTerm: string): Promise<Array<{
-    id: string;
-    name: string;
-    email: string;
-    company?: string;
-    isRegistered: boolean;
-  }>> {
-    return ClientSearchService.searchClients(searchTerm);
+  static async searchClients(searchTerm: string): Promise<ClientSearchResult[]> {
+    return UnifiedClientService.searchClients(searchTerm);
   }
 
   // Dashboard data
@@ -59,9 +53,13 @@ export class UnifiedDataService {
   // Utility methods
   static clearCache(): void {
     CacheManager.clearCache();
+    UnifiedClientService.clearCache();
   }
 
   static clearCachePattern(pattern: string): void {
     CacheManager.clearCachePattern(pattern);
+    if (pattern.includes('client')) {
+      UnifiedClientService.clearCache();
+    }
   }
 }
