@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioCalculationService";
+import { calculateClientPortfolio, PortfolioData } from "@/services/proposals/portfolioService";
 import { logger } from "@/lib/logger";
 
 interface UsePortfolioDataProps {

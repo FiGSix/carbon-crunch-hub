@@ -1,8 +1,5 @@
 
-// Client hooks exports
+export { useClientsPaginated } from './useClientsPaginated';
 export { useSimplifiedClients } from './useSimplifiedClients';
-export { useAutoRefresh } from './useAutoRefresh';
 export { useRealtimeSubscription } from './useRealtimeSubscription';
-
-// Types
-export type { ClientData } from './types';
+export * from './types';

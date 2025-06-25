@@ -1,5 +1,5 @@
 
-import { searchSimpleClients } from "./proposals/simple/clientService";
+import { ClientSearch } from "@/services/unified/clients/ClientSearch";
 
 export interface ClientSearchResult {
   id: string;
@@ -15,7 +15,7 @@ export async function searchClients(searchTerm: string): Promise<ClientSearchRes
   }
 
   try {
-    return await searchSimpleClients(searchTerm.trim());
+    return await ClientSearch.searchClients(searchTerm.trim());
   } catch (error) {
     console.error("Error searching clients:", error);
     return [];

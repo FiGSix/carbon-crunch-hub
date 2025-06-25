@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { calculateAgentPortfolio, AgentPortfolioData } from "@/services/proposals/agentPortfolioService";
+import { calculateAgentPortfolio, PortfolioData } from "@/services/proposals/portfolioService";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/auth";
 
@@ -11,7 +11,7 @@ interface UseAgentPortfolioDataProps {
 
 export function useAgentPortfolioData({ systemSize, proposalId }: UseAgentPortfolioDataProps) {
   const { user } = useAuth();
-  const [agentPortfolioData, setAgentPortfolioData] = useState<AgentPortfolioData | null>(null);
+  const [agentPortfolioData, setAgentPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Create logger with useMemo to prevent infinite loops

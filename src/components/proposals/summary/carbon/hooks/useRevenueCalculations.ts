@@ -1,9 +1,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
-import { PortfolioData } from '@/services/proposals/portfolioCalculationService';
+import { PortfolioData } from '@/services/proposals/portfolioService';
 import { optimizedCache } from '@/services/cache/OptimizedCacheService';
-import { usePerformanceMonitor } from '@/hooks/performance/usePerformanceMonitor';
 
 interface UseRevenueCalculationsProps {
   systemSize: string;
@@ -20,11 +19,6 @@ export function useRevenueCalculations({
 }: UseRevenueCalculationsProps) {
   const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  
-  // Performance monitoring
-  usePerformanceMonitor([systemSize, commissionDate, portfolioData?.totalKWp], {
-    componentName: 'useRevenueCalculations'
-  });
 
   const systemSizeKWp = useMemo(() => 
     UnifiedCarbonService.normalizeToKWp(systemSize), 
