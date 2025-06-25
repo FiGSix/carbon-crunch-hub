@@ -1,4 +1,3 @@
-
 import React, { useEffect, memo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
@@ -8,7 +7,7 @@ import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
-import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/simplified";
+import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
