@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 
 /**
- * Simplified auth hook with enhanced error handling and performance monitoring
+ * Simplified auth hook with improved error handling and fallback mechanisms
  */
 export function useAuthSimplified() {
   const [user, setUser] = useState<User | null>(null);
@@ -35,7 +35,7 @@ export function useAuthSimplified() {
         // Get initial session with improved timeout handling
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout after 10 seconds')), 10000);
+          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout after 8 seconds')), 8000);
         });
         
         try {
@@ -60,12 +60,8 @@ export function useAuthSimplified() {
           
           if (session?.user) {
             console.log('✅ Initial session found, loading user profile');
-            // Use setTimeout to defer profile loading and prevent blocking
-            setTimeout(() => {
-              if (!isUnmountedRef.current) {
-                loadUserProfileWithFallback(session.user.id);
-              }
-            }, 0);
+            // Load profile but don't block initialization
+            loadUserProfileWithFallback(session.user.id);
           } else {
             console.log('ℹ️ No initial session found');
           }
@@ -100,12 +96,7 @@ export function useAuthSimplified() {
 
       if (session?.user) {
         console.log('👤 Loading profile for authenticated user');
-        // Defer profile loading to prevent blocking the auth flow
-        setTimeout(() => {
-          if (!isUnmountedRef.current) {
-            loadUserProfileWithFallback(session.user.id);
-          }
-        }, 0);
+        loadUserProfileWithFallback(session.user.id);
       } else {
         console.log('🚪 User signed out, clearing profile');
         setProfile(null);
@@ -144,12 +135,12 @@ export function useAuthSimplified() {
       console.log('📊 Loading user profile with fixed RLS for:', userId);
       const startTime = performance.now();
       
-      // Enhanced query with better error handling for RLS
+      // Use the fixed RLS policies - simple self-access only
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to handle no results gracefully
+        .single();
 
       const endTime = performance.now();
 
@@ -163,17 +154,26 @@ export function useAuthSimplified() {
           loadTime: `${(endTime - startTime).toFixed(2)}ms`
         });
         
-        // For RLS errors, try a different approach or provide fallback
-        if (error.message?.includes('RLS') || error.message?.includes('policy')) {
-          console.warn('🔒 RLS policy issue detected, implementing fallback');
-          // Set minimal profile to allow app to continue
-          setProfile(null);
-          setUserRole(undefined);
-        } else {
-          // For other errors, also clear profile
-          setProfile(null);
-          setUserRole(undefined);
-        }
+        // Create a fallback profile if none exists
+        console.log('🔧 Creating fallback profile for user:', userId);
+        const fallbackProfile: UserProfile = {
+          id: userId,
+          first_name: null,
+          last_name: null,
+          email: user?.email || '',
+          phone: null,
+          company_name: null,
+          company_logo_url: null,
+          avatar_url: null,
+          role: 'client', // Default role
+          terms_accepted_at: null,
+          created_at: new Date().toISOString(),
+          intro_video_viewed: false,
+          intro_video_viewed_at: null
+        };
+        
+        setProfile(fallbackProfile);
+        setUserRole('client');
         return;
       }
 
@@ -210,11 +210,6 @@ export function useAuthSimplified() {
           hasFirstName: !!userProfile.first_name,
           hasLastName: !!userProfile.last_name
         });
-      } else if (!data) {
-        console.warn('⚠️ No profile found for user:', userId);
-        // Don't throw here - set null and let app handle missing profile
-        setProfile(null);
-        setUserRole(undefined);
       }
     } catch (error) {
       console.error('💥 Exception loading profile:', {
@@ -223,9 +218,26 @@ export function useAuthSimplified() {
         stack: error instanceof Error ? error.stack : undefined
       });
       
-      // Always set null profile on exception to prevent auth blocking
-      setProfile(null);
-      setUserRole(undefined);
+      // Create fallback profile on any exception
+      console.log('🔧 Creating fallback profile due to exception for user:', userId);
+      const fallbackProfile: UserProfile = {
+        id: userId,
+        first_name: null,
+        last_name: null,
+        email: user?.email || '',
+        phone: null,
+        company_name: null,
+        company_logo_url: null,
+        avatar_url: null,
+        role: 'client',
+        terms_accepted_at: null,
+        created_at: new Date().toISOString(),
+        intro_video_viewed: false,
+        intro_video_viewed_at: null
+      };
+      
+      setProfile(fallbackProfile);
+      setUserRole('client');
     }
   };
 

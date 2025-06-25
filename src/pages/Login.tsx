@@ -26,7 +26,7 @@ const Login = () => {
   }, []);
   
   useEffect(() => {
-    // Enhanced redirect logic with comprehensive logging
+    // Enhanced redirect logic - simpler approach
     console.log('🔄 Login redirect check:', {
       isInitialized,
       hasUser: !!user,
@@ -39,8 +39,7 @@ const Login = () => {
       intendedDestination: location.state?.from || '/dashboard'
     });
 
-    // Only redirect if we have both user and session, auth is initialized, 
-    // we're not loading, and we haven't redirected yet
+    // Redirect if we have both user and session, regardless of profile loading status
     if (isInitialized && user && session && !authLoading && !hasRedirectedRef.current) {
       console.log('✅ User authenticated with valid session, preparing redirect');
       hasRedirectedRef.current = true;
@@ -48,11 +47,9 @@ const Login = () => {
       const from = location.state?.from || '/dashboard';
       console.log('🎯 Redirecting to:', from);
       
-      // Add a small delay to ensure auth state is fully settled
-      redirectTimeoutRef.current = setTimeout(() => {
-        console.log('🚀 Executing redirect to:', from);
-        navigate(from, { replace: true });
-      }, 100);
+      // Immediate redirect - don't wait for profile loading
+      console.log('🚀 Executing immediate redirect to:', from);
+      navigate(from, { replace: true });
     } else if (isInitialized && !authLoading && (!user || !session)) {
       console.log('ℹ️ No valid authentication found on login page');
     }

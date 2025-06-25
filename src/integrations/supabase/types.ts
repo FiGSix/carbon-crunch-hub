@@ -313,6 +313,14 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
+      auth_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      auth_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       create_test_user_profile: {
         Args: {
           user_id_param: string
@@ -321,18 +329,6 @@ export type Database = {
           first_name_param?: string
           last_name_param?: string
         }
-        Returns: string
-      }
-      current_user_is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      current_user_is_agent_or_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      current_user_role: {
-        Args: Record<PropertyKey, never>
         Returns: string
       }
       delete_proposal: {

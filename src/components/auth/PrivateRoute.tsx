@@ -16,7 +16,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
   const { user, session, userRole, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
-  // Enhanced access check with comprehensive logging
+  // Enhanced access check with fallback role handling
   const accessCheck = useMemo(() => {
     console.log('🔒 PrivateRoute access check with fixed RLS:', { 
       hasUser: !!user,
@@ -36,7 +36,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
       return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
     }
 
-    // CRITICAL: Check for both user AND session (not just user)
+    // Check for both user AND session
     if (!user || !session) {
       console.log('❌ Missing user or session - will redirect to login', {
         hasUser: !!user,
@@ -46,23 +46,19 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
       return { shouldShowLoading: false, hasAccess: false, shouldRedirect: true };
     }
 
-    // NEW: Handle case where we have user/session but profile failed to load
-    // This is more graceful than showing loading forever
-    if (!userRole) {
-      console.log('⚠️ User authenticated but no role found - may indicate profile loading issue');
-      
-      // For critical role-based routes, show loading a bit longer
-      if (requiredRole || adminOnly || (allowedRoles && allowedRoles.length > 0)) {
-        console.log('🔐 Role-based route requires profile, showing loading');
-        return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
-      }
-      
-      // For basic authenticated routes, allow access even without role
-      console.log('🔓 Basic authenticated route, allowing access without role');
+    // If no role requirements, allow access with basic auth
+    if (!requiredRole && !adminOnly && (!allowedRoles || allowedRoles.length === 0)) {
+      console.log('🔓 No role requirements, allowing access with basic auth');
       return { shouldShowLoading: false, hasAccess: true, shouldRedirect: false };
     }
 
-    // Check access permissions once we have role
+    // If role is still loading but we have user/session, wait a bit more
+    if (!userRole) {
+      console.log('⚠️ Role still loading, showing loading state');
+      return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
+    }
+
+    // Check access permissions with role
     let hasAccess = true;
 
     // Admin always has access unless specifically denied
@@ -93,7 +89,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
     return { shouldShowLoading: false, hasAccess, shouldRedirect: false };
   }, [user, session, userRole, isLoading, isInitialized, requiredRole, adminOnly, allowedRoles, location.pathname]);
 
-  // Show loading while auth is initializing or profile is loading
+  // Show loading while auth is initializing
   if (accessCheck.shouldShowLoading) {
     console.log('🔄 Showing loading state');
     return (
