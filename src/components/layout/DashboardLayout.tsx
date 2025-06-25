@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { 
   SidebarProvider, 
   SidebarTrigger,
@@ -30,13 +30,33 @@ export function DashboardLayout({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
+  // Performance optimization: Memoize computed values
+  const { hasAccess, shouldRedirect, dashboardTitle, userInitials } = useMemo(() => {
+    const hasRequiredRole = !requiredRole || userRole === 'admin' || userRole === requiredRole;
+    
+    let title = 'DASHBOARD';
+    if (userRole === 'client') title = isMobile ? 'CLIENT' : 'CLIENT DASHBOARD';
+    else if (userRole === 'agent') title = isMobile ? 'AGENT' : 'AGENT DASHBOARD';
+    else if (userRole === 'admin') title = isMobile ? 'ADMIN' : 'ADMIN DASHBOARD';
+
+    const initials = profile?.first_name?.[0]?.toUpperCase() || userRole?.[0]?.toUpperCase() || '?';
+
+    return {
+      hasAccess: hasRequiredRole,
+      shouldRedirect: !user || !userRole,
+      dashboardTitle: title,
+      userInitials: initials
+    };
+  }, [userRole, requiredRole, isMobile, profile, user]);
+
   console.log('🏠 DashboardLayout render:', { 
     userRole, 
     isLoading, 
     isInitialized, 
     hasProfile: !!profile,
     hasUser: !!user,
-    requiredRole 
+    requiredRole,
+    hasAccess
   });
 
   // Show loading state while auth is initializing
@@ -49,20 +69,15 @@ export function DashboardLayout({
   }
 
   // Redirect to login if not authenticated
-  if (!user || !userRole) {
+  if (shouldRedirect) {
     console.log('❌ User not authenticated in dashboard, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   // Check role-based access
-  if (requiredRole) {
-    const isAdmin = userRole === 'admin';
-    const hasRequiredRole = userRole === requiredRole;
-    
-    if (!isAdmin && !hasRequiredRole) {
-      console.log('❌ Insufficient role for dashboard access, redirecting');
-      return <Navigate to="/dashboard" replace />;
-    }
+  if (!hasAccess) {
+    console.log('❌ Insufficient role for dashboard access, redirecting');
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -78,16 +93,14 @@ export function DashboardLayout({
             )}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.2 }} // Reduced from 0.3s for snappier feel
           >
             <SidebarTrigger className="hover:bg-blue-50 rounded-lg p-2 transition-colors duration-200 touch-manipulation" />
             <div className={cn(
               "ml-2 md:ml-4 font-bold uppercase tracking-wide text-gray-900",
               isMobile ? "text-sm" : "text-lg"
             )}>
-              {userRole === 'client' && (isMobile ? 'CLIENT' : 'CLIENT DASHBOARD')}
-              {userRole === 'agent' && (isMobile ? 'AGENT' : 'AGENT DASHBOARD')}
-              {userRole === 'admin' && (isMobile ? 'ADMIN' : 'ADMIN DASHBOARD')}
+              {dashboardTitle}
             </div>
             <div className="ml-auto flex items-center gap-2 md:gap-4">
               <NotificationBell />
@@ -99,7 +112,7 @@ export function DashboardLayout({
               >
                 <Avatar className="h-7 w-7 md:h-8 md:w-8">
                   <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs md:text-sm">
-                    {profile?.first_name?.[0]?.toUpperCase() || userRole?.[0]?.toUpperCase() || '?'}
+                    {userInitials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -113,7 +126,7 @@ export function DashboardLayout({
             )}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
+            transition={{ duration: 0.2, delay: 0.05 }} // Faster animations
           >
             {children}
           </motion.main>

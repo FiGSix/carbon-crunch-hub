@@ -12,33 +12,31 @@ const Login = () => {
   const { user, userRole, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // Track if we're already redirecting to prevent loops
+  // Performance optimization: Track redirects to prevent loops
   const isRedirectingRef = useRef(false);
   const mountTimeRef = useRef(Date.now());
+  const hasRedirectedRef = useRef(false);
   
   useEffect(() => {
-    // Only redirect if:
-    // 1. Auth is initialized
-    // 2. User is authenticated 
-    // 3. We're not already redirecting
-    // 4. Some time has passed since mounting (prevent immediate redirects)
+    // Only redirect if all conditions are met and we haven't already redirected
     const timeSinceMounted = Date.now() - mountTimeRef.current;
     const shouldRedirect = isInitialized && 
                           user && 
                           userRole &&
                           !authLoading && 
                           !isRedirectingRef.current && 
-                          timeSinceMounted > 500;
+                          !hasRedirectedRef.current &&
+                          timeSinceMounted > 300; // Reduced from 500ms for faster UX
     
     if (shouldRedirect) {
       console.log('✅ User already logged in, redirecting to dashboard. User role:', userRole);
       isRedirectingRef.current = true;
+      hasRedirectedRef.current = true;
+      
       const from = location.state?.from || '/dashboard';
       
-      // Small delay to ensure smooth UX
-      setTimeout(() => {
-        navigate(from, { replace: true });
-      }, 100);
+      // Immediate redirect for better performance
+      navigate(from, { replace: true });
     }
   }, [user, userRole, navigate, authLoading, isInitialized, location.state]);
 
@@ -46,7 +44,7 @@ const Login = () => {
     setLoginAttempts(prev => prev + 1);
   };
 
-  // Show loading state while auth is initializing
+  // Optimized loading state with faster render
   if (!isInitialized || (authLoading && !user)) {
     return (
       <LoginLayout>

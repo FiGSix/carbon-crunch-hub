@@ -1,83 +1,147 @@
 
+import { ProfileCacheData, CacheEntry, CACHE_TTL_SHORT, CACHE_TTL_MEDIUM } from './types';
 import { cacheStore } from './store';
-import { UserRole } from '../types';
-import { ProfileCacheData, CACHE_TTL, CACHE_TTL_LONG } from './types';
 
 /**
- * Check if a cache entry for a user is still valid
+ * Enhanced cache utilities with performance optimizations
  */
-export function isCacheValid(userId: string, type: 'role' | 'profile'): boolean {
-  if (!userId) return false;
-  
-  const isValid = cacheStore.isValid(userId, type);
-  return isValid;
-}
 
-/**
- * Set cache with expiry for user role, profile, or both
- * @param userId The user ID
- * @param role Optional user role to cache
- * @param profile Optional user profile to cache
- * @param ttl Optional custom TTL in milliseconds
- */
-export function setCacheWithExpiry(
-  userId: string, 
-  role?: UserRole, 
-  profile?: ProfileCacheData,
-  ttl?: number
-): void {
-  if (!userId) return;
-  
-  if (role) {
-    console.log(`Caching role for user ${userId}: ${role}`);
-    cacheStore.setUserRole(userId, role, ttl);
-  }
-  
-  if (profile) {
-    console.log(`Caching profile for user ${userId}`);
-    cacheStore.setProfile(userId, profile, ttl);
-  }
-}
-
-/**
- * Invalidate cache for a specific user
- */
-export function invalidateCache(userId: string, type?: 'role' | 'profile'): void {
-  if (!userId) return;
-  
-  console.log(`Invalidating cache for user ${userId}${type ? ` (${type})` : ''}`);
-  cacheStore.invalidate(userId, type);
-}
-
-/**
- * Clear all cache data
- */
-export function clearCache(): void {
-  console.log("Clearing all cache data");
+export function clearCache() {
+  console.log('🧹 Clearing all cache');
   cacheStore.clear();
 }
 
-/**
- * Get cached user role if valid
- */
-export function getCachedUserRole(userId: string): UserRole | null {
-  return cacheStore.getUserRole(userId);
+export function isCacheValid(userId: string, type: 'role' | 'profile'): boolean {
+  const key = `${userId}_${type}`;
+  const entry = cacheStore.get(key);
+  
+  if (!entry) return false;
+  
+  const now = Date.now();
+  const isValid = now - entry.timestamp < entry.ttl;
+  
+  if (!isValid) {
+    // Clean up expired entry
+    cacheStore.delete(key);
+  }
+  
+  return isValid;
 }
 
-/**
- * Get cached profile if valid
- */
+export function setCacheWithExpiry(
+  userId: string, 
+  role?: string, 
+  profile?: any, 
+  customTtl?: number
+) {
+  const now = Date.now();
+  const ttl = customTtl || CACHE_TTL_MEDIUM;
+  
+  if (role) {
+    const roleKey = `${userId}_role`;
+    cacheStore.set(roleKey, {
+      data: role,
+      timestamp: now,
+      ttl
+    });
+  }
+  
+  if (profile) {
+    const profileKey = `${userId}_profile`;
+    cacheStore.set(profileKey, {
+      data: profile,
+      timestamp: now,
+      ttl
+    });
+  }
+}
+
+export function invalidateCache(userId: string, type?: 'role' | 'profile') {
+  if (type) {
+    const key = `${userId}_${type}`;
+    cacheStore.delete(key);
+    console.log(`🗑️ Invalidated ${type} cache for user:`, userId);
+  } else {
+    // Invalidate all cache entries for this user
+    const keysToDelete = Array.from(cacheStore.keys()).filter(key => key.startsWith(userId));
+    keysToDelete.forEach(key => cacheStore.delete(key));
+    console.log(`🗑️ Invalidated all cache for user:`, userId);
+  }
+}
+
+export function getCachedUserRole(userId: string): string | null {
+  const key = `${userId}_role`;
+  const entry = cacheStore.get(key);
+  return entry?.data as string || null;
+}
+
 export function getCachedProfile(userId: string): ProfileCacheData | null {
-  return cacheStore.getProfile(userId);
+  const key = `${userId}_profile`;
+  const entry = cacheStore.get(key);
+  return entry?.data as ProfileCacheData || null;
 }
 
-/**
- * Set long-lived cache entry (useful for data that rarely changes)
- */
-export function setLongTermCache(
-  userId: string,
-  role?: UserRole,
-  profile?: ProfileCacheData
-): void {
-  setCacheWithExpiry(userId, role, profile, CACHE_TTL_LONG);
+export function setLongTermCache(key: string, data: any, customTtl?: number) {
+  const now = Date.now();
+  const ttl = customTtl || CACHE_TTL_MEDIUM;
+  
+  cacheStore.set(key, {
+    data,
+    timestamp: now,
+    ttl
+  });
+}
+
+// Performance optimization: Batch cache operations
+export function batchCacheUpdate(operations: Array<{
+  userId: string;
+  role?: string;
+  profile?: any;
+}>) {
+  const now = Date.now();
+  
+  operations.forEach(({ userId, role, profile }) => {
+    if (role) {
+      const roleKey = `${userId}_role`;
+      cacheStore.set(roleKey, {
+        data: role,
+        timestamp: now,
+        ttl: CACHE_TTL_MEDIUM
+      });
+    }
+    
+    if (profile) {
+      const profileKey = `${userId}_profile`;
+      cacheStore.set(profileKey, {
+        data: profile,
+        timestamp: now,
+        ttl: CACHE_TTL_MEDIUM
+      });
+    }
+  });
+  
+  console.log(`📦 Batch updated cache for ${operations.length} operations`);
+}
+
+// Cleanup expired cache entries periodically
+export function cleanupExpiredCache() {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+  
+  cacheStore.forEach((entry, key) => {
+    if (now - entry.timestamp >= entry.ttl) {
+      keysToDelete.push(key);
+    }
+  });
+  
+  keysToDelete.forEach(key => cacheStore.delete(key));
+  
+  if (keysToDelete.length > 0) {
+    console.log(`🧹 Cleaned up ${keysToDelete.length} expired cache entries`);
+  }
+}
+
+// Auto-cleanup every 5 minutes
+if (typeof window !== 'undefined') {
+  setInterval(cleanupExpiredCache, 5 * 60 * 1000);
 }

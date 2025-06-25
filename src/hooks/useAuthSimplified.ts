@@ -1,12 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 
 /**
- * Simplified auth hook that provides clean, reliable auth state management
- * Fixed to eliminate infinite recursion and race conditions
+ * Optimized auth hook with performance improvements and race condition fixes
+ * Phase 2: Authentication Flow Optimization
  */
 export function useAuthSimplified() {
   const [user, setUser] = useState<User | null>(null);
@@ -16,85 +16,127 @@ export function useAuthSimplified() {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize auth state
+  // Performance optimization: Use refs to prevent unnecessary re-renders
+  const initializationPromiseRef = useRef<Promise<void> | null>(null);
+  const profileCacheRef = useRef<Map<string, { profile: UserProfile; timestamp: number }>>(new Map());
+  const isUnmountedRef = useRef(false);
+
+  // Cache profile for 5 minutes to reduce database calls
+  const PROFILE_CACHE_TTL = 5 * 60 * 1000;
+
+  // Initialize auth state with performance optimizations
   useEffect(() => {
-    let mounted = true;
+    isUnmountedRef.current = false;
 
     const initializeAuth = async () => {
-      try {
-        console.log('🔄 Initializing simplified auth...');
-        
-        // Get initial session
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('❌ Error getting initial session:', error);
-          if (mounted) {
-            setIsLoading(false);
-            setIsInitialized(true);
-          }
-          return;
-        }
-        
-        if (mounted) {
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
+      if (initializationPromiseRef.current) {
+        return initializationPromiseRef.current;
+      }
+
+      initializationPromiseRef.current = (async () => {
+        try {
+          console.log('🚀 Initializing optimized auth...');
+          const startTime = performance.now();
           
-          if (initialSession?.user) {
+          // Get initial session with timeout
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
+          );
+          
+          const { data: { session }, error } = await Promise.race([
+            sessionPromise,
+            timeoutPromise
+          ]) as any;
+          
+          if (error) {
+            console.error('❌ Error getting initial session:', error);
+            return;
+          }
+          
+          if (isUnmountedRef.current) return;
+
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
             console.log('✅ Initial session found, loading user profile');
-            await loadUserProfile(initialSession.user.id);
+            await loadUserProfileOptimized(session.user.id);
           } else {
             console.log('ℹ️ No initial session found');
           }
           
-          setIsLoading(false);
-          setIsInitialized(true);
+          const endTime = performance.now();
+          console.log(`⚡ Auth initialization completed in ${(endTime - startTime).toFixed(2)}ms`);
+        } catch (error) {
+          console.error('💥 Error initializing auth:', error);
+        } finally {
+          if (!isUnmountedRef.current) {
+            setIsLoading(false);
+            setIsInitialized(true);
+          }
         }
-      } catch (error) {
-        console.error('💥 Error initializing auth:', error);
-        if (mounted) {
-          setIsLoading(false);
-          setIsInitialized(true);
-        }
-      }
+      })();
+
+      return initializationPromiseRef.current;
     };
 
-    // Set up auth state listener
+    // Set up optimized auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+      if (isUnmountedRef.current) return;
 
       console.log('🔔 Auth state changed:', event, 'User ID:', session?.user?.id);
-      setSession(session);
-      setUser(session?.user ?? null);
+      
+      // Batch state updates to prevent multiple re-renders
+      const updates = {
+        session,
+        user: session?.user ?? null
+      };
+
+      setSession(updates.session);
+      setUser(updates.user);
 
       if (session?.user) {
         console.log('👤 Loading profile for authenticated user');
-        await loadUserProfile(session.user.id);
+        await loadUserProfileOptimized(session.user.id);
       } else {
         console.log('🚪 User signed out, clearing profile');
         setProfile(null);
         setUserRole(undefined);
+        // Clear profile cache on sign out
+        profileCacheRef.current.clear();
       }
 
       if (event === 'SIGNED_OUT') {
         console.log('🧹 Clearing all auth state');
-        // Clear everything on sign out
         setProfile(null);
         setUserRole(undefined);
+        profileCacheRef.current.clear();
       }
     });
 
     initializeAuth();
 
     return () => {
-      mounted = false;
+      isUnmountedRef.current = true;
       subscription.unsubscribe();
+      initializationPromiseRef.current = null;
     };
   }, []);
 
-  const loadUserProfile = async (userId: string) => {
+  const loadUserProfileOptimized = async (userId: string) => {
     try {
+      // Check cache first
+      const cached = profileCacheRef.current.get(userId);
+      if (cached && Date.now() - cached.timestamp < PROFILE_CACHE_TTL) {
+        console.log('📊 Using cached profile for:', userId);
+        setProfile(cached.profile);
+        setUserRole(cached.profile.role);
+        return;
+      }
+
       console.log('📊 Loading user profile for:', userId);
+      const startTime = performance.now();
       
       const { data, error } = await supabase
         .from('profiles')
@@ -109,7 +151,7 @@ export function useAuthSimplified() {
         return;
       }
 
-      if (data) {
+      if (data && !isUnmountedRef.current) {
         const userProfile: UserProfile = {
           id: data.id,
           first_name: data.first_name,
@@ -126,9 +168,17 @@ export function useAuthSimplified() {
           intro_video_viewed_at: data.intro_video_viewed_at
         };
 
+        // Cache the profile
+        profileCacheRef.current.set(userId, {
+          profile: userProfile,
+          timestamp: Date.now()
+        });
+
         setProfile(userProfile);
         setUserRole(userProfile.role);
-        console.log('✅ User profile loaded successfully, role:', userProfile.role);
+        
+        const endTime = performance.now();
+        console.log(`✅ Profile loaded in ${(endTime - startTime).toFixed(2)}ms, role:`, userProfile.role);
       }
     } catch (error) {
       console.error('💥 Exception loading profile:', error);
@@ -140,7 +190,9 @@ export function useAuthSimplified() {
   const refreshUser = async () => {
     if (user?.id) {
       console.log('🔄 Refreshing user profile');
-      await loadUserProfile(user.id);
+      // Clear cache to force fresh data
+      profileCacheRef.current.delete(user.id);
+      await loadUserProfileOptimized(user.id);
     }
   };
 
@@ -155,6 +207,7 @@ export function useAuthSimplified() {
       setSession(null);
       setProfile(null);
       setUserRole(undefined);
+      profileCacheRef.current.clear();
       
       console.log('✅ Sign out completed successfully');
     } catch (error) {

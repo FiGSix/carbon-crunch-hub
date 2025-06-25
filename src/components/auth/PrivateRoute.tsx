@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { UserRole } from '@/contexts/auth/types';
@@ -16,6 +16,36 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
   const { user, userRole, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
+  // Performance optimization: Memoize access check
+  const accessCheck = useMemo(() => {
+    if (!isInitialized || isLoading) {
+      return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
+    }
+
+    if (!user || !userRole) {
+      return { shouldShowLoading: false, hasAccess: false, shouldRedirect: true };
+    }
+
+    let hasAccess = true;
+
+    // Check admin-only access
+    if (adminOnly && userRole !== 'admin') {
+      hasAccess = false;
+    }
+
+    // Check allowedRoles array
+    if (allowedRoles && allowedRoles.length > 0) {
+      hasAccess = userRole === 'admin' || allowedRoles.includes(userRole);
+    }
+
+    // Check specific role requirement
+    if (requiredRole) {
+      hasAccess = userRole === 'admin' || userRole === requiredRole;
+    }
+
+    return { shouldShowLoading: false, hasAccess, shouldRedirect: false };
+  }, [user, userRole, isLoading, isInitialized, requiredRole, adminOnly, allowedRoles]);
+
   console.log('🔒 PrivateRoute check:', { 
     user: !!user, 
     userRole, 
@@ -23,11 +53,12 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
     isInitialized,
     requiredRole, 
     adminOnly,
-    allowedRoles 
+    allowedRoles,
+    ...accessCheck
   });
 
   // Show loading while auth is initializing
-  if (!isInitialized || isLoading) {
+  if (accessCheck.shouldShowLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -36,33 +67,15 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
   }
 
   // Redirect to login if not authenticated
-  if (!user || !userRole) {
+  if (accessCheck.shouldRedirect || !user || !userRole) {
     console.log('❌ User not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  // Check admin-only access
-  if (adminOnly && userRole !== 'admin') {
-    console.log('❌ Admin access required, redirecting to dashboard');
+  // Check access permissions
+  if (!accessCheck.hasAccess) {
+    console.log('❌ Insufficient permissions, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
-  }
-
-  // Check allowedRoles array (new implementation)
-  if (allowedRoles && allowedRoles.length > 0) {
-    const hasAllowedRole = userRole === 'admin' || allowedRoles.includes(userRole);
-    if (!hasAllowedRole) {
-      console.log('❌ User role not in allowed roles, redirecting to dashboard');
-      return <Navigate to="/dashboard" replace />;
-    }
-  }
-
-  // Check specific role requirement (backward compatibility)
-  if (requiredRole) {
-    const hasAccess = userRole === 'admin' || userRole === requiredRole;
-    if (!hasAccess) {
-      console.log('❌ Insufficient role access, redirecting to dashboard');
-      return <Navigate to="/dashboard" replace />;
-    }
   }
 
   console.log('✅ Access granted');
