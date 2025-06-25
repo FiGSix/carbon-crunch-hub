@@ -1,4 +1,5 @@
-import React, { useEffect, memo } from "react";
+
+import React, { useEffect, memo, useMemo, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
@@ -8,6 +9,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
+import { usePerformanceMonitor } from "@/hooks/performance/usePerformanceMonitor";
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
@@ -17,46 +19,101 @@ interface ProposalRowProps {
   onProposalUpdate?: () => void;
 }
 
-// Create a memoized TableRow component with proper typing to prevent unnecessary re-renders
+// Optimized row component with deep comparison for proposal data
 const MemoizedProposalRow = memo<ProposalRowProps>(({
   proposal,
   userRole,
   isCurrentUser,
   onProposalUpdate
 }) => {
-  return <TableRow className={isCurrentUser ? "bg-carbon-green-50" : ""}>
+  const formattedDate = useMemo(
+    () => new Date(proposal.date).toLocaleDateString(),
+    [proposal.date]
+  );
+  
+  const formattedSize = useMemo(
+    () => formatSystemSizeForDisplay(proposal.size),
+    [proposal.size]
+  );
+  
+  const formattedRevenue = useMemo(
+    () => `R ${proposal.revenue.toLocaleString()}`,
+    [proposal.revenue]
+  );
+
+  return (
+    <TableRow className={isCurrentUser ? "bg-carbon-green-50" : ""}>
       <TableCell className="font-medium">{proposal.name}</TableCell>
       <TableCell>{proposal.client}</TableCell>
-      <TableCell>{new Date(proposal.date).toLocaleDateString()}</TableCell>
-      <TableCell>{formatSystemSizeForDisplay(proposal.size)}</TableCell>
+      <TableCell>{formattedDate}</TableCell>
+      <TableCell>{formattedSize}</TableCell>
       <TableCell>
-        <ProposalStatusDropdown proposalId={proposal.id} currentStatus={proposal.status} onStatusUpdate={onProposalUpdate} />
+        <ProposalStatusDropdown 
+          proposalId={proposal.id} 
+          currentStatus={proposal.status} 
+          onStatusUpdate={onProposalUpdate} 
+        />
       </TableCell>
-      {userRole === "admin" && <TableCell>
-          {proposal.agent || "Unassigned"}
-        </TableCell>}
-      <TableCell className="text-center">R {proposal.revenue.toLocaleString()}</TableCell>
+      {userRole === "admin" && (
+        <TableCell>{proposal.agent || "Unassigned"}</TableCell>
+      )}
+      <TableCell className="text-center">{formattedRevenue}</TableCell>
       <TableCell className="text-right">
-        <ProposalActionButtons proposal={proposal} onProposalUpdate={onProposalUpdate} />
+        <ProposalActionButtons 
+          proposal={proposal} 
+          onProposalUpdate={onProposalUpdate} 
+        />
       </TableCell>
-    </TableRow>;
+    </TableRow>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.proposal.id === nextProps.proposal.id &&
+    prevProps.proposal.status === nextProps.proposal.status &&
+    prevProps.proposal.revenue === nextProps.proposal.revenue &&
+    prevProps.userRole === nextProps.userRole &&
+    prevProps.isCurrentUser === nextProps.isCurrentUser
+  );
 });
+
 MemoizedProposalRow.displayName = "MemoizedProposalRow";
 
-export function ProposalList({
-  proposals,
-  onProposalUpdate
-}: ProposalListProps) {
-  const {
-    userRole,
-    user
-  } = useAuth();
+export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps) {
+  const { userRole, user } = useAuth();
+  
+  // Performance monitoring
+  usePerformanceMonitor([proposals.length, userRole], {
+    componentName: 'ProposalList',
+    logThreshold: 100
+  });
 
   // Create a contextualized logger
-  const proposalLogger = logger.withContext({
+  const proposalLogger = useMemo(() => logger.withContext({
     component: 'ProposalList',
     feature: 'proposals'
-  });
+  }), []);
+
+  // Memoize the empty state message
+  const emptyStateMessage = useMemo(() => {
+    if (userRole === "agent") {
+      return "You don't have any proposals assigned to you. Click 'Create New Proposal' to get started.";
+    } else if (userRole === "client") {
+      return "You don't have any proposals yet. An agent will create a proposal for you.";
+    } else {
+      return "No proposals found matching your criteria. Try changing the filters or create a new proposal.";
+    }
+  }, [userRole]);
+
+  // Memoize the status change handler
+  const handleProposalStatusChange = useCallback((event: Event) => {
+    const customEvent = event as CustomEvent<{ id: string; status: string; }>;
+    proposalLogger.info("Status change event detected", customEvent.detail);
+    if (onProposalUpdate) {
+      proposalLogger.info("Triggering proposal list refresh");
+      onProposalUpdate();
+    }
+  }, [onProposalUpdate, proposalLogger]);
 
   // Enhanced logging for debugging
   useEffect(() => {
@@ -69,34 +126,24 @@ export function ProposalList({
 
   // Listen for global proposal status change events
   useEffect(() => {
-    const handleProposalStatusChange = (event: Event) => {
-      // Cast event to CustomEvent to access detail property
-      const customEvent = event as CustomEvent<{
-        id: string;
-        status: string;
-      }>;
-      proposalLogger.info("Status change event detected", customEvent.detail);
-      if (onProposalUpdate) {
-        proposalLogger.info("Triggering proposal list refresh");
-        onProposalUpdate();
-      }
-    };
     window.addEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
     return () => {
       window.removeEventListener('proposal-status-changed', handleProposalStatusChange as EventListener);
     };
-  }, [onProposalUpdate, proposalLogger]);
+  }, [handleProposalStatusChange]);
 
   // No proposals found state
   if (proposals.length === 0) {
-    return <Alert className="my-4">
+    return (
+      <Alert className="my-4">
         <AlertTitle>No proposals found</AlertTitle>
-        <AlertDescription>
-          {userRole === "agent" ? "You don't have any proposals assigned to you. Click 'Create New Proposal' to get started." : userRole === "client" ? "You don't have any proposals yet. An agent will create a proposal for you." : "No proposals found matching your criteria. Try changing the filters or create a new proposal."}
-        </AlertDescription>
-      </Alert>;
+        <AlertDescription>{emptyStateMessage}</AlertDescription>
+      </Alert>
+    );
   }
-  return <div className="overflow-x-auto">
+
+  return (
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -106,14 +153,22 @@ export function ProposalList({
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
-            <TableHead className="text-center">First
-Yr Est. Revenue</TableHead>
+            <TableHead className="text-center">First Yr Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {proposals.map(proposal => <MemoizedProposalRow key={proposal.id} proposal={proposal} userRole={userRole} isCurrentUser={proposal.agent_id === user?.id} onProposalUpdate={onProposalUpdate} />)}
+          {proposals.map(proposal => (
+            <MemoizedProposalRow 
+              key={proposal.id} 
+              proposal={proposal} 
+              userRole={userRole} 
+              isCurrentUser={proposal.agent_id === user?.id} 
+              onProposalUpdate={onProposalUpdate} 
+            />
+          ))}
         </TableBody>
       </Table>
-    </div>;
+    </div>
+  );
 }

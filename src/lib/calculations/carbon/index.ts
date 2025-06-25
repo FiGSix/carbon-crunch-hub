@@ -50,17 +50,15 @@ export interface CalculationResults {
   yearsData: YearData[];
 }
 
-// Import the functions we need for the calculator
-import { calculateAnnualEnergy, calculateCarbonCredits } from './simplified';
-
-// Calculator results function
+// Calculator results function - optimized version
 export function calculateResults(
   systemSizeKwp: number, 
   commissionDate: Date, 
   unit: string = 'kWp'
 ): CalculationResults {
-  const annualGeneration = calculateAnnualEnergy(systemSizeKwp);
-  const carbonCredits = calculateCarbonCredits(systemSizeKwp);
+  // Use memoized calculations from UnifiedCarbonService
+  const annualGeneration = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKwp);
+  const carbonCredits = UnifiedCarbonService.calculateCarbonCredits(systemSizeKwp);
   const carbonOffset = carbonCredits;
   const coalAvoided = annualGeneration * 0.85; // Approximate coal avoided in kg
   

@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
-import { EnhancedErrorBoundary } from "@/components/common/EnhancedErrorBoundary";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 // Page imports
 import Index from "./pages/Index";
@@ -27,11 +27,31 @@ import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import ViewProposalPage from "./pages/ViewProposal/ViewProposalPage";
 
-const queryClient = new QueryClient();
+// Optimized query client configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx errors
+        if (error?.status >= 400 && error?.status < 500) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      refetchOnWindowFocus: false,
+      refetchOnMount: true
+    },
+    mutations: {
+      retry: 1
+    }
+  }
+});
 
 function App() {
   return (
-    <EnhancedErrorBoundary>
+    <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
@@ -117,7 +137,7 @@ function App() {
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
-    </EnhancedErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
