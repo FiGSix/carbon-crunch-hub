@@ -6,11 +6,13 @@ import { ProfileDataService } from './profile/ProfileDataService';
 import { ProposalsDataService } from './proposals/ProposalsDataService';
 import { DashboardDataService } from './dashboard/DashboardDataService';
 import { UnifiedClientService } from './clients/UnifiedClientService';
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 import type { ClientSearchResult } from './clients/UnifiedClientService';
+import type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
 
 /**
  * Unified data service that provides a clean interface for all data operations
- * Now refactored into smaller, focused modules for better maintainability
+ * Now includes carbon calculation capabilities through UnifiedCarbonService
  */
 export class UnifiedDataService {
   // Profile operations
@@ -27,7 +29,7 @@ export class UnifiedDataService {
     return ProposalsDataService.getProposals(userId, userRole, forceRefresh);
   }
 
-  // Client operations - now using unified service
+  // Client operations
   static async getClients(userId: string, userRole: UserRole, forceRefresh = false) {
     return UnifiedClientService.getClients(userId, userRole, forceRefresh);
   }
@@ -48,6 +50,24 @@ export class UnifiedDataService {
     co2Offset: number;
   }> {
     return DashboardDataService.getDashboardData(userId, userRole);
+  }
+
+  // Carbon calculation operations - NEW
+  static async calculateCarbonCredits(specs: SystemSpecs, portfolioKWp?: number, userRole?: UserRole): Promise<CarbonCalculationResult> {
+    return UnifiedCarbonService.calculateComplete(specs, portfolioKWp, userRole);
+  }
+
+  static validateSystemSize(sizeKwp: number, unitStandard?: string) {
+    const normalizedSize = UnifiedCarbonService.normalizeToKWp(sizeKwp, unitStandard);
+    return UnifiedCarbonService.validateSystemSize(normalizedSize);
+  }
+
+  static formatSystemSize(sizeKwp: number, preferredUnit?: 'auto' | 'kWp' | 'MWp'): string {
+    return UnifiedCarbonService.formatSystemSize(sizeKwp, preferredUnit);
+  }
+
+  static calculatePortfolioMetrics(proposals: ProposalListItem[]) {
+    return UnifiedCarbonService.calculatePortfolioTotals(proposals);
   }
 
   // Utility methods

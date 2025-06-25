@@ -1,5 +1,7 @@
 
-// Simplified carbon calculations entry point
+// Unified carbon calculations entry point
+// Now uses the consolidated UnifiedCarbonService
+
 export {
   normalizeToKWp,
   calculateAnnualEnergy,
@@ -11,9 +13,13 @@ export {
   EMISSION_FACTOR,
   AVERAGE_SUN_HOURS,
   DAYS_IN_YEAR
-} from './simplified';
+} from './unified';
+
+// Export the main service
+export { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 
 // Export types
+export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
 export type { CalculationResults, YearData } from './types';
 
 // Export additional functions needed by other modules
