@@ -5,8 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 
 /**
- * Optimized auth hook with performance improvements and race condition fixes
- * Phase 2: Authentication Flow Optimization
+ * Simplified auth hook with fixed session timeout and improved redirect logic
  */
 export function useAuthSimplified() {
   const [user, setUser] = useState<User | null>(null);
@@ -16,38 +15,37 @@ export function useAuthSimplified() {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Performance optimization: Use refs to prevent unnecessary re-renders
-  const initializationPromiseRef = useRef<Promise<void> | null>(null);
-  const profileCacheRef = useRef<Map<string, { profile: UserProfile; timestamp: number }>>(new Map());
+  // Prevent memory leaks and race conditions
   const isUnmountedRef = useRef(false);
-
+  const profileCacheRef = useRef<Map<string, { profile: UserProfile; timestamp: number }>>(new Map());
+  
   // Cache profile for 5 minutes to reduce database calls
   const PROFILE_CACHE_TTL = 5 * 60 * 1000;
 
-  // Initialize auth state with performance optimizations
+  // Initialize auth state with improved error handling
   useEffect(() => {
     isUnmountedRef.current = false;
+    let timeoutId: NodeJS.Timeout;
 
     const initializeAuth = async () => {
-      if (initializationPromiseRef.current) {
-        return initializationPromiseRef.current;
-      }
-
-      initializationPromiseRef.current = (async () => {
+      try {
+        console.log('🚀 Initializing auth with improved session handling...');
+        const startTime = performance.now();
+        
+        // Get initial session with improved timeout handling
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout after 8 seconds')), 8000);
+        });
+        
         try {
-          console.log('🚀 Initializing optimized auth...');
-          const startTime = performance.now();
-          
-          // Get initial session with timeout
-          const sessionPromise = supabase.auth.getSession();
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
-          );
-          
           const { data: { session }, error } = await Promise.race([
             sessionPromise,
             timeoutPromise
-          ]) as any;
+          ]);
+          
+          // Clear timeout if successful
+          if (timeoutId) clearTimeout(timeoutId);
           
           if (error) {
             console.error('❌ Error getting initial session:', error);
@@ -56,54 +54,59 @@ export function useAuthSimplified() {
           
           if (isUnmountedRef.current) return;
 
+          // Update state in batches to prevent multiple re-renders
           setSession(session);
           setUser(session?.user ?? null);
           
           if (session?.user) {
             console.log('✅ Initial session found, loading user profile');
-            await loadUserProfileOptimized(session.user.id);
+            setTimeout(() => {
+              if (!isUnmountedRef.current) {
+                loadUserProfileOptimized(session.user.id);
+              }
+            }, 0);
           } else {
             console.log('ℹ️ No initial session found');
           }
           
           const endTime = performance.now();
           console.log(`⚡ Auth initialization completed in ${(endTime - startTime).toFixed(2)}ms`);
-        } catch (error) {
-          console.error('💥 Error initializing auth:', error);
-        } finally {
-          if (!isUnmountedRef.current) {
-            setIsLoading(false);
-            setIsInitialized(true);
-          }
+        } catch (timeoutError) {
+          console.warn('⚠️ Session fetch timed out, continuing without session');
+          if (timeoutId) clearTimeout(timeoutId);
         }
-      })();
-
-      return initializationPromiseRef.current;
+      } catch (error) {
+        console.error('💥 Error initializing auth:', error);
+      } finally {
+        if (!isUnmountedRef.current) {
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
+      }
     };
 
-    // Set up optimized auth state listener
+    // Set up auth state listener with improved error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isUnmountedRef.current) return;
 
       console.log('🔔 Auth state changed:', event, 'User ID:', session?.user?.id);
       
       // Batch state updates to prevent multiple re-renders
-      const updates = {
-        session,
-        user: session?.user ?? null
-      };
-
-      setSession(updates.session);
-      setUser(updates.user);
+      setSession(session);
+      setUser(session?.user ?? null);
 
       if (session?.user) {
         console.log('👤 Loading profile for authenticated user');
-        await loadUserProfileOptimized(session.user.id);
+        // Defer profile loading to prevent blocking the auth flow
+        setTimeout(() => {
+          if (!isUnmountedRef.current) {
+            loadUserProfileOptimized(session.user.id);
+          }
+        }, 0);
       } else {
         console.log('🚪 User signed out, clearing profile');
         setProfile(null);
         setUserRole(undefined);
-        // Clear profile cache on sign out
         profileCacheRef.current.clear();
       }
 
@@ -120,7 +123,7 @@ export function useAuthSimplified() {
     return () => {
       isUnmountedRef.current = true;
       subscription.unsubscribe();
-      initializationPromiseRef.current = null;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 

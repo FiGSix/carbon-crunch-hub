@@ -30,14 +30,16 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
     setIsSubmitting(true);
     
     try {
-      console.log(`Attempting to sign in with email: ${email}`);
+      console.log(`🔐 Attempting to sign in with email: ${email}`);
       const { error } = await signIn(email, password);
       
       if (error) {
         throw error;
       }
       
-      console.log('Sign in successful, refreshing user data');
+      console.log('✅ Sign in successful, refreshing user data');
+      
+      // Refresh user data and wait for it to complete
       await refreshUser();
       
       toast({
@@ -45,11 +47,17 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
         description: 'You have successfully logged in',
       });
       
+      // Simplified redirect logic - let the auth state change handle the redirect
       const from = location.state?.from || '/dashboard';
-      console.log(`Redirecting to: ${from}`);
-      navigate(from);
+      console.log(`🔄 Redirecting to: ${from}`);
+      
+      // Small delay to ensure auth state is updated
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
+      
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       onLoginAttempt();
       toast({
         title: 'Login failed',

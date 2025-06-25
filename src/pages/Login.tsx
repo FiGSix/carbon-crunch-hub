@@ -12,30 +12,19 @@ const Login = () => {
   const { user, userRole, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // Performance optimization: Track redirects to prevent loops
-  const isRedirectingRef = useRef(false);
-  const mountTimeRef = useRef(Date.now());
+  // Simplified redirect tracking
   const hasRedirectedRef = useRef(false);
   
   useEffect(() => {
-    // Only redirect if all conditions are met and we haven't already redirected
-    const timeSinceMounted = Date.now() - mountTimeRef.current;
-    const shouldRedirect = isInitialized && 
-                          user && 
-                          userRole &&
-                          !authLoading && 
-                          !isRedirectingRef.current && 
-                          !hasRedirectedRef.current &&
-                          timeSinceMounted > 300; // Reduced from 500ms for faster UX
-    
-    if (shouldRedirect) {
+    // Only redirect if we have a user, role, auth is initialized, and we haven't redirected yet
+    if (isInitialized && user && userRole && !authLoading && !hasRedirectedRef.current) {
       console.log('✅ User already logged in, redirecting to dashboard. User role:', userRole);
-      isRedirectingRef.current = true;
       hasRedirectedRef.current = true;
       
       const from = location.state?.from || '/dashboard';
+      console.log('🔄 Redirecting to:', from);
       
-      // Immediate redirect for better performance
+      // Use replace to prevent back button issues
       navigate(from, { replace: true });
     }
   }, [user, userRole, navigate, authLoading, isInitialized, location.state]);
@@ -44,8 +33,8 @@ const Login = () => {
     setLoginAttempts(prev => prev + 1);
   };
 
-  // Optimized loading state with faster render
-  if (!isInitialized || (authLoading && !user)) {
+  // Show loading while auth is initializing or if we're about to redirect
+  if (!isInitialized || authLoading || (user && userRole)) {
     return (
       <LoginLayout>
         <div className="flex items-center justify-center min-h-[200px]">

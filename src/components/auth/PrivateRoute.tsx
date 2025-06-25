@@ -16,31 +16,39 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
   const { user, userRole, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
-  // Performance optimization: Memoize access check
+  // Simplified access check with better performance
   const accessCheck = useMemo(() => {
+    // Still loading/initializing
     if (!isInitialized || isLoading) {
       return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
     }
 
+    // Not authenticated
     if (!user || !userRole) {
       return { shouldShowLoading: false, hasAccess: false, shouldRedirect: true };
     }
 
+    // Check access permissions
     let hasAccess = true;
 
-    // Check admin-only access
-    if (adminOnly && userRole !== 'admin') {
-      hasAccess = false;
-    }
+    // Admin always has access unless specifically denied
+    if (userRole === 'admin') {
+      hasAccess = true;
+    } else {
+      // Check admin-only access
+      if (adminOnly) {
+        hasAccess = false;
+      }
 
-    // Check allowedRoles array
-    if (allowedRoles && allowedRoles.length > 0) {
-      hasAccess = userRole === 'admin' || allowedRoles.includes(userRole);
-    }
+      // Check allowedRoles array
+      if (allowedRoles && allowedRoles.length > 0) {
+        hasAccess = allowedRoles.includes(userRole);
+      }
 
-    // Check specific role requirement
-    if (requiredRole) {
-      hasAccess = userRole === 'admin' || userRole === requiredRole;
+      // Check specific role requirement
+      if (requiredRole) {
+        hasAccess = userRole === requiredRole;
+      }
     }
 
     return { shouldShowLoading: false, hasAccess, shouldRedirect: false };
@@ -67,7 +75,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
   }
 
   // Redirect to login if not authenticated
-  if (accessCheck.shouldRedirect || !user || !userRole) {
+  if (accessCheck.shouldRedirect) {
     console.log('❌ User not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
