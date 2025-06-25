@@ -9,7 +9,14 @@ import { UserRole } from '@/contexts/auth/types';
 import type { Database } from '@/integrations/supabase/types';
 
 type ProposalRow = Database['public']['Tables']['proposals']['Row'];
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+
+// Create a minimal profile type for this service
+type MinimalProfile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+};
 
 /**
  * Proposals data operations with enhanced security validation
@@ -84,7 +91,7 @@ export class ProposalsDataService {
       });
 
       // Fetch client profiles
-      let clientProfiles: ProfileRow[] = [];
+      let clientProfiles: MinimalProfile[] = [];
       if (clientIds.size > 0) {
         const { data: clientData, error: clientError } = await supabase
           .from('profiles')
@@ -97,7 +104,7 @@ export class ProposalsDataService {
       }
 
       // Fetch agent profiles
-      let agentProfiles: ProfileRow[] = [];
+      let agentProfiles: MinimalProfile[] = [];
       if (agentIds.size > 0) {
         const { data: agentData, error: agentError } = await supabase
           .from('profiles')
