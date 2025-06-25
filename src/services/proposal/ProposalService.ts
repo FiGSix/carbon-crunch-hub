@@ -4,6 +4,11 @@ import { ProposalListItem } from '@/types/proposals';
 import { ProposalOperations, ProposalServiceDependencies, ProposalUpdateBatch, BatchUpdateResult } from './types';
 import { ProposalTransformer } from './ProposalTransformer';
 import { CACHE_KEYS, CACHE_TTL } from '../cache/types';
+import type { Database } from '@/integrations/supabase/types';
+
+type ProposalRow = Database['public']['Tables']['proposals']['Row'];
+type ProposalUpdate = Database['public']['Tables']['proposals']['Update'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 export class ProposalService implements ProposalOperations {
   constructor(private dependencies: ProposalServiceDependencies) {}
@@ -59,9 +64,10 @@ export class ProposalService implements ProposalOperations {
     try {
       const promises = updates.map(async ({ id, data }) => {
         try {
+          const updateData: ProposalUpdate = data;
           const { error } = await supabase
             .from('proposals')
-            .update(data)
+            .update(updateData)
             .eq('id', id);
 
           if (error) throw error;

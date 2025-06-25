@@ -4,6 +4,9 @@ import { logger } from "@/lib/logger";
 import { buildBaseProposalsQuery } from "./queryBuilders";
 import { RawProposalData, ProposalFilters } from "../types";
 import { UserRole } from "@/contexts/auth/types";
+import type { Database } from '@/integrations/supabase/types';
+
+type ProposalRow = Database['public']['Tables']['proposals']['Row'];
 
 /**
  * Core function to fetch proposals from Supabase
@@ -41,5 +44,29 @@ export async function fetchProposalsCore(
   }
 
   fetchLogger.info("Raw proposals fetched", { count: proposalsData.length });
-  return proposalsData as RawProposalData[];
+  
+  // Transform ProposalRow[] to RawProposalData[]
+  return (proposalsData as ProposalRow[]).map(proposal => ({
+    id: proposal.id,
+    title: proposal.title || 'Untitled Proposal',
+    status: proposal.status || 'draft',
+    created_at: proposal.created_at,
+    signed_at: proposal.signed_at,
+    archived_at: proposal.archived_at,
+    deleted_at: proposal.deleted_at,
+    review_later_until: proposal.review_later_until,
+    client_id: proposal.client_id,
+    client_reference_id: proposal.client_reference_id,
+    agent_id: proposal.agent_id,
+    content: proposal.content,
+    annual_energy: proposal.annual_energy,
+    carbon_credits: proposal.carbon_credits,
+    client_share_percentage: proposal.client_share_percentage,
+    agent_commission_percentage: proposal.agent_commission_percentage,
+    system_size_kwp: proposal.system_size_kwp,
+    unit_standard: proposal.unit_standard,
+    invitation_sent_at: proposal.invitation_sent_at,
+    invitation_viewed_at: proposal.invitation_viewed_at,
+    invitation_expires_at: proposal.invitation_expires_at
+  }));
 }

@@ -5,6 +5,10 @@ import { CacheManager } from '../cache/CacheManager';
 import { RoleValidator } from '../utils/RoleValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { UnifiedClient, PaginatedClientsResult, CreateClientData } from './types';
+import type { Database } from '@/integrations/supabase/types';
+
+type ClientRow = Database['public']['Tables']['clients']['Row'];
+type ClientInsert = Database['public']['Tables']['clients']['Insert'];
 
 export class ClientOperations {
   /**
@@ -113,32 +117,33 @@ export class ClientOperations {
   /**
    * Create a new client contact (unified approach)
    */
-  static async createClient(clientData: CreateClientData): Promise<{ success: boolean; client?: any; error?: string }> {
+  static async createClient(clientData: CreateClientData): Promise<{ success: boolean; client?: ClientRow; error?: string }> {
     try {
-      // Use the edge function for client creation to ensure proper validation
-      const { data, error } = await supabase.functions.invoke('manage-client-profile', {
-        body: {
-          email: clientData.email,
-          firstName: clientData.firstName,
-          lastName: clientData.lastName,
-          phone: clientData.phone,
-          companyName: clientData.companyName,
-          existingClient: false
-        }
-      });
+      // Map CreateClientData to ClientInsert
+      const insertData: ClientInsert = {
+        first_name: clientData.firstName,
+        last_name: clientData.lastName,
+        email: clientData.email,
+        phone: clientData.phone,
+        company_name: clientData.companyName,
+        notes: clientData.notes,
+        created_by: clientData.createdBy
+      };
+
+      const { data, error } = await supabase
+        .from('clients')
+        .insert(insertData)
+        .select()
+        .single();
 
       if (error) {
         return { success: false, error: error.message };
       }
 
-      if (!data.success) {
-        return { success: false, error: data.error };
-      }
-
       // Clear cache to force refresh
       CacheManager.clearCachePattern('unified_clients');
 
-      return { success: true, client: { id: data.clientId } };
+      return { success: true, client: data };
     } catch (error: any) {
       console.error('Error creating unified client:', error);
       return { success: false, error: error.message };

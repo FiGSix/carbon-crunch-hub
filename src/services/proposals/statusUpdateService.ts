@@ -1,6 +1,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import type { Database } from '@/integrations/supabase/types';
+
+type ProposalUpdate = Database['public']['Tables']['proposals']['Update'];
 
 export interface StatusUpdateResult {
   success: boolean;
@@ -36,14 +39,16 @@ export async function updateProposalStatus(
       };
     }
 
-    // Update the proposal status
+    // Update the proposal status with proper typing
+    const updateData: ProposalUpdate = {
+      status: newStatus,
+      // Set signed_at when approved
+      ...(newStatus === 'approved' && { signed_at: new Date().toISOString() })
+    };
+
     const { error } = await supabase
       .from('proposals')
-      .update({ 
-        status: newStatus,
-        // Set signed_at when approved
-        ...(newStatus === 'approved' && { signed_at: new Date().toISOString() })
-      })
+      .update(updateData)
       .eq('id', proposalId);
 
     if (error) {

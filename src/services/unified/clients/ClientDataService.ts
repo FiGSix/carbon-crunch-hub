@@ -4,6 +4,10 @@ import { CacheManager } from '../cache/CacheManager';
 import { RoleValidator } from '../utils/RoleValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UserRole } from '@/contexts/auth/types';
+import type { Database } from '@/integrations/supabase/types';
+
+type ClientRow = Database['public']['Tables']['clients']['Row'];
+type ClientInsert = Database['public']['Tables']['clients']['Insert'];
 
 export interface ClientListItem {
   id: string;
@@ -88,11 +92,21 @@ export class ClientDataService {
     company_name?: string;
     notes?: string;
     created_by: string;
-  }): Promise<{ success: boolean; client?: any; error?: string }> {
+  }): Promise<{ success: boolean; client?: ClientRow; error?: string }> {
     try {
+      const insertData: ClientInsert = {
+        first_name: clientData.first_name,
+        last_name: clientData.last_name,
+        email: clientData.email,
+        phone: clientData.phone,
+        company_name: clientData.company_name,
+        notes: clientData.notes,
+        created_by: clientData.created_by
+      };
+
       const { data, error } = await supabase
         .from('clients')
-        .insert([clientData])
+        .insert(insertData)
         .select()
         .single();
 

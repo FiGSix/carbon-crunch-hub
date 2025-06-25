@@ -1,5 +1,8 @@
 
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/integrations/supabase/types';
+
+type ClientRow = Database['public']['Tables']['clients']['Row'];
 
 export interface ClientSearchResult {
   id: string;
@@ -19,13 +22,13 @@ export async function searchClientsByName(searchTerm: string): Promise<ClientSea
 
     if (error) throw error;
 
-    return data?.map(client => ({
+    return (data || []).map((client: ClientRow) => ({
       id: client.id,
       name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
       email: client.email,
-      company: client.company_name,
+      company: client.company_name || undefined,
       isRegistered: !!client.user_id
-    })) || [];
+    }));
   } catch (error) {
     console.error('Error searching clients:', error);
     return [];
@@ -42,13 +45,13 @@ export async function searchSimpleClients(searchTerm: string): Promise<ClientSea
 
     if (error) throw error;
 
-    return data?.map(client => ({
+    return (data || []).map((client: ClientRow) => ({
       id: client.id,
       name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
       email: client.email,
-      company: client.company_name,
+      company: client.company_name || undefined,
       isRegistered: !!client.user_id
-    })) || [];
+    }));
   } catch (error) {
     console.error('Error searching simple clients:', error);
     return [];

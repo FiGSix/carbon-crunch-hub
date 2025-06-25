@@ -6,6 +6,10 @@ import { RoleValidator } from '../utils/RoleValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { transformToProposalListItems } from '@/utils/proposals/simplifiedTransformers';
 import { UserRole } from '@/contexts/auth/types';
+import type { Database } from '@/integrations/supabase/types';
+
+type ProposalRow = Database['public']['Tables']['proposals']['Row'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 /**
  * Proposals data operations with enhanced security validation
@@ -73,14 +77,14 @@ export class ProposalsDataService {
       const clientIds = new Set<string>();
       const agentIds = new Set<string>();
 
-      data.forEach(proposal => {
+      data.forEach((proposal: ProposalRow) => {
         if (proposal.client_id) clientIds.add(proposal.client_id);
         if (proposal.client_reference_id) clientIds.add(proposal.client_reference_id);
         if (proposal.agent_id) agentIds.add(proposal.agent_id);
       });
 
       // Fetch client profiles
-      let clientProfiles: any[] = [];
+      let clientProfiles: ProfileRow[] = [];
       if (clientIds.size > 0) {
         const { data: clientData, error: clientError } = await supabase
           .from('profiles')
@@ -93,7 +97,7 @@ export class ProposalsDataService {
       }
 
       // Fetch agent profiles
-      let agentProfiles: any[] = [];
+      let agentProfiles: ProfileRow[] = [];
       if (agentIds.size > 0) {
         const { data: agentData, error: agentError } = await supabase
           .from('profiles')

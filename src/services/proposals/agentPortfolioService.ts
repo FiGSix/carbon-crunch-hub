@@ -1,6 +1,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import type { Database } from '@/integrations/supabase/types';
+
+type ProposalRow = Database['public']['Tables']['proposals']['Row'];
 
 export interface AgentPortfolioData {
   totalKWp: number;
@@ -20,7 +23,7 @@ export async function calculateAgentPortfolio(agentId: string): Promise<AgentPor
   try {
     portfolioLogger.info("Calculating agent portfolio", { agentId });
 
-    const { data: proposals, error } = await supabase
+    const { data, error } = await supabase
       .from('proposals')
       .select('system_size_kwp')
       .eq('agent_id', agentId)
@@ -33,13 +36,13 @@ export async function calculateAgentPortfolio(agentId: string): Promise<AgentPor
       throw error;
     }
 
-    const totalKWp = (proposals || []).reduce((sum, proposal) => {
+    const totalKWp = (data || []).reduce((sum: number, proposal: ProposalRow) => {
       return sum + (proposal.system_size_kwp || 0);
     }, 0);
 
     const result = {
       totalKWp,
-      projectCount: proposals?.length || 0,
+      projectCount: data?.length || 0,
       agentId
     };
 
