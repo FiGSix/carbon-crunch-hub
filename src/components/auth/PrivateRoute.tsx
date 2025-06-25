@@ -9,9 +9,10 @@ interface PrivateRouteProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
   adminOnly?: boolean;
+  allowedRoles?: UserRole[];
 }
 
-export function PrivateRoute({ children, requiredRole, adminOnly }: PrivateRouteProps) {
+export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }: PrivateRouteProps) {
   const { user, userRole, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
@@ -21,7 +22,8 @@ export function PrivateRoute({ children, requiredRole, adminOnly }: PrivateRoute
     isLoading, 
     isInitialized,
     requiredRole, 
-    adminOnly 
+    adminOnly,
+    allowedRoles 
   });
 
   // Show loading while auth is initializing
@@ -45,7 +47,16 @@ export function PrivateRoute({ children, requiredRole, adminOnly }: PrivateRoute
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Check specific role requirement
+  // Check allowedRoles array (new implementation)
+  if (allowedRoles && allowedRoles.length > 0) {
+    const hasAllowedRole = userRole === 'admin' || allowedRoles.includes(userRole);
+    if (!hasAllowedRole) {
+      console.log('❌ User role not in allowed roles, redirecting to dashboard');
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  // Check specific role requirement (backward compatibility)
   if (requiredRole) {
     const hasAccess = userRole === 'admin' || userRole === requiredRole;
     if (!hasAccess) {
