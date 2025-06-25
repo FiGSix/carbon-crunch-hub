@@ -17,6 +17,7 @@ export type Database = {
           email: string
           first_name: string | null
           id: string
+          last_modified_by: string | null
           last_name: string | null
           notes: string | null
           phone: string | null
@@ -30,6 +31,7 @@ export type Database = {
           email: string
           first_name?: string | null
           id?: string
+          last_modified_by?: string | null
           last_name?: string | null
           notes?: string | null
           phone?: string | null
@@ -43,13 +45,22 @@ export type Database = {
           email?: string
           first_name?: string | null
           id?: string
+          last_modified_by?: string | null
           last_name?: string | null
           notes?: string | null
           phone?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -160,6 +171,7 @@ export type Database = {
           invitation_sent_at: string | null
           invitation_token: string | null
           invitation_viewed_at: string | null
+          last_modified_by: string | null
           project_info: Json
           review_later_until: string | null
           signed_at: string | null
@@ -189,6 +201,7 @@ export type Database = {
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
+          last_modified_by?: string | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -218,6 +231,7 @@ export type Database = {
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
+          last_modified_by?: string | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -246,6 +260,13 @@ export type Database = {
             columns: ["client_reference_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -326,6 +347,18 @@ export type Database = {
           total_mwp: number
           agent_id: string
           agent_name: string
+        }[]
+      }
+      get_agent_clients_optimized: {
+        Args: { agent_id_param?: string }
+        Returns: {
+          client_id: string
+          client_name: string
+          client_email: string
+          company_name: string
+          is_registered: boolean
+          project_count: number
+          total_mwp: number
         }[]
       }
       get_client_email: {
