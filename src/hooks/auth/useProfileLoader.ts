@@ -7,7 +7,7 @@ import { authCache } from './authCache';
 
 interface UseProfileLoaderProps {
   user: User | null;
-  isUnmountedRef: React.RefObject<boolean>;
+  isUnmountedRef: React.MutableRefObject<boolean>;
   updateProfileState: (profile: UserProfile | null) => void;
 }
 

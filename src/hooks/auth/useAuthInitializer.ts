@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { authCache } from './authCache';
 
 interface UseAuthInitializerProps {
-  isUnmountedRef: React.RefObject<boolean>;
+  isUnmountedRef: React.MutableRefObject<boolean>;
   setIsLoading: (loading: boolean) => void;
   setIsInitialized: (initialized: boolean) => void;
   updateAuthState: (session: Session | null) => void;
