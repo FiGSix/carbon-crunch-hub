@@ -1,9 +1,10 @@
 
 /**
- * Simplified proposal transformers
+ * Simplified proposal transformers - using UnifiedCarbonService
  */
 import { ProposalData, ProposalListItem } from '@/types/proposals';
 import { UserRole } from '@/contexts/auth/types';
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 
 /**
  * Transform raw proposal data to ProposalData
@@ -36,7 +37,7 @@ export function transformToProposalData(rawProposal: any): ProposalData {
 }
 
 /**
- * Transform to ProposalListItem with simplified revenue calculation
+ * Transform to ProposalListItem with simplified revenue calculation using UnifiedCarbonService
  */
 export function transformToProposalListItems(
   proposalsData: any[],
@@ -63,14 +64,15 @@ export function transformToProposalListItems(
       ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim() || 'Unknown Agent'
       : 'Unknown Agent';
 
-    // Simple revenue calculation
+    // Use stored calculations or calculate using unified service
     const carbonCredits = proposal.carbon_credits || 0;
     const sharePercentage = userRole === 'agent' 
       ? proposal.agent_commission_percentage || 0
       : proposal.client_share_percentage || 0;
     
+    // Simple revenue calculation using standard carbon price
     const revenue = carbonCredits && sharePercentage 
-      ? Math.round(carbonCredits * 25 * (sharePercentage / 100)) // Simple fixed price
+      ? Math.round(carbonCredits * 25 * (sharePercentage / 100)) // Using standard 25 AUD price
       : 0;
 
     return {

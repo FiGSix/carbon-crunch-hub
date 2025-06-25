@@ -1,11 +1,12 @@
 
 /**
- * Revenue calculation utilities for proposals
+ * Revenue calculation utilities for proposals - now using UnifiedCarbonService
  */
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
 
 /**
- * Calculate revenue using dynamic carbon pricing
+ * Calculate revenue using dynamic carbon pricing and unified service
  */
 export async function calculateProposalRevenue(
   carbonCredits: number, 
@@ -37,7 +38,7 @@ export async function calculateProposalRevenue(
 }
 
 /**
- * Calculate agent commission revenue using dynamic carbon pricing
+ * Calculate agent commission revenue using unified service
  */
 export async function calculateAgentCommissionRevenue(
   carbonCredits: number, 
@@ -65,5 +66,26 @@ export async function calculateAgentCommissionRevenue(
   } catch (error) {
     console.error('Error calculating agent commission revenue:', error);
     return 0;
+  }
+}
+
+/**
+ * Calculate complete proposal financials using unified service
+ */
+export async function calculateCompleteProposalFinancials(
+  systemSizeKWp: number,
+  portfolioKWp?: number,
+  commissionDate?: string
+) {
+  try {
+    const result = await UnifiedCarbonService.calculateComplete({
+      sizeKwp: systemSizeKWp,
+      commissionDate
+    }, portfolioKWp);
+
+    return result;
+  } catch (error) {
+    console.error('Error calculating complete proposal financials:', error);
+    return null;
   }
 }

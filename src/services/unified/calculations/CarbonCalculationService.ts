@@ -3,14 +3,10 @@ import { UnifiedCarbonService, SystemSpecs, CarbonCalculationResult } from '@/se
 import { UserRole } from '@/contexts/auth/types';
 
 /**
- * @deprecated Use UnifiedCarbonService directly instead
- * This service is kept for backward compatibility and delegates to UnifiedCarbonService
+ * @deprecated This service is deprecated. Use UnifiedCarbonService directly instead.
+ * This is now just a simple wrapper around UnifiedCarbonService for backward compatibility.
  */
 export class CarbonCalculationService {
-  // Re-export types for backward compatibility
-  static readonly SystemSpecs = UnifiedCarbonService;
-  static readonly CarbonCalculationResult = UnifiedCarbonService;
-
   /**
    * @deprecated Use UnifiedCarbonService.validateSystemSize instead
    */

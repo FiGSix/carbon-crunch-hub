@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { normalizeToKWp } from '@/lib/calculations/carbon';
-import { calculateClientSpecificRevenue } from '@/lib/calculations/carbon/clientPricing';
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 import { calculateYearlyCarbonCredits } from '../carbonCalculations';
 import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
 import { PortfolioData } from '@/services/proposals/portfolioCalculationService';
@@ -22,24 +21,22 @@ export function useRevenueCalculations({
   const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   
-  const systemSizeKWp = normalizeToKWp(systemSize);
+  const systemSizeKWp = UnifiedCarbonService.normalizeToKWp(systemSize);
 
   useEffect(() => {
     const calculateRevenues = async () => {
       try {
         setLoading(true);
         
-        const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
         const portfolioSize = portfolioData?.totalKWp || systemSizeKWp;
-        const revenues: Record<string, number> = {};
+        
+        // Use the unified service to calculate complete financials
+        const result = await UnifiedCarbonService.calculateComplete({
+          sizeKwp: systemSizeKWp,
+          commissionDate
+        }, portfolioSize);
 
-        for (const [year] of Object.entries(carbonPrices)) {
-          const carbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
-          const revenue = await calculateClientSpecificRevenue(year, carbonCredits, portfolioSize);
-          revenues[year] = revenue;
-        }
-
-        setClientSpecificRevenue(revenues);
+        setClientSpecificRevenue(result.revenueByYear);
       } catch (error) {
         console.error('Error calculating revenues:', error);
         setClientSpecificRevenue({});
@@ -49,7 +46,7 @@ export function useRevenueCalculations({
     };
 
     calculateRevenues();
-  }, [systemSize, commissionDate, portfolioData, proposalId]);
+  }, [systemSize, commissionDate, portfolioData, proposalId, systemSizeKWp]);
 
   return {
     clientSpecificRevenue,

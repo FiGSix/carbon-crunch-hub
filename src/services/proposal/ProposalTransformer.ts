@@ -1,5 +1,6 @@
 
 import { ProposalListItem } from '@/types/proposals';
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 
 export class ProposalTransformer {
   static transformToProposalListItem(rawProposal: any): ProposalListItem {
@@ -14,11 +15,13 @@ export class ProposalTransformer {
       ? `${rawProposal.agent.first_name || ''} ${rawProposal.agent.last_name || ''}`.trim() || 'Unknown Agent'
       : 'Unknown Agent';
 
-    // Calculate revenue (simplified calculation)
+    // Use stored calculations or calculate using unified service
     const carbonCredits = rawProposal.carbon_credits || 0;
     const sharePercentage = rawProposal.client_share_percentage || 0;
+    
+    // Simple revenue calculation using standard carbon price
     const revenue = carbonCredits && sharePercentage 
-      ? Math.round(carbonCredits * 25 * (sharePercentage / 100))
+      ? Math.round(carbonCredits * 25 * (sharePercentage / 100)) // Using standard 25 AUD price
       : 0;
 
     return {

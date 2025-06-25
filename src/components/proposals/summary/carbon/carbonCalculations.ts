@@ -1,8 +1,8 @@
 
-import { calculateAnnualEnergy, calculateCarbonCredits } from '@/lib/calculations/carbon';
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 
 export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string): number {
-  const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
+  const annualEnergy = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKWp);
   
   // Pro-rate for commission year if needed
   if (commissionDate && year === new Date(commissionDate).getFullYear()) {

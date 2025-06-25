@@ -11,8 +11,8 @@ import type { ClientSearchResult } from './clients/UnifiedClientService';
 import type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
 
 /**
- * Unified data service that provides a clean interface for all data operations
- * Now includes carbon calculation capabilities through UnifiedCarbonService
+ * Unified data service - single interface for all data operations
+ * Now uses consolidated UnifiedCarbonService for all calculations
  */
 export class UnifiedDataService {
   // Profile operations
@@ -52,7 +52,7 @@ export class UnifiedDataService {
     return DashboardDataService.getDashboardData(userId, userRole);
   }
 
-  // Carbon calculation operations - NEW
+  // Carbon calculation operations - using consolidated UnifiedCarbonService
   static async calculateCarbonCredits(specs: SystemSpecs, portfolioKWp?: number, userRole?: UserRole): Promise<CarbonCalculationResult> {
     return UnifiedCarbonService.calculateComplete(specs, portfolioKWp, userRole);
   }
