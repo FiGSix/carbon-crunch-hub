@@ -1,4 +1,3 @@
-
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem } from '@/types/proposals';
 import { CacheManager } from './cache/CacheManager';
@@ -30,8 +29,14 @@ export class UnifiedDataService {
   }
 
   // Client operations
-  static async getClients(userId: string, userRole: UserRole, forceRefresh = false) {
-    return UnifiedClientService.getClients(userId, userRole, forceRefresh);
+  static async getClients(
+    userId: string, 
+    userRole: UserRole, 
+    forceRefresh = false,
+    limit = 20,
+    offset = 0
+  ) {
+    return UnifiedClientService.getClients(userId, userRole, forceRefresh, limit, offset);
   }
 
   static async createClient(clientData: any) {

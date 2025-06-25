@@ -3,24 +3,27 @@ import React from 'react';
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
-import { useMyClients } from '@/hooks/useMyClients';
+import { useClientsPaginated } from '@/hooks/clients/useClientsPaginated';
 
 const MyClients = () => {
   const { userRole } = useAuth();
   const { 
     clients, 
     isLoading, 
-    isRefreshing, 
+    isLoadingMore,
+    hasMore,
+    totalCount,
     error, 
-    refreshClients
-  } = useMyClients();
+    loadMore,
+    refresh
+  } = useClientsPaginated();
   
   const isAdmin = userRole === 'admin';
 
   console.log('=== MyClients Page Render ===');
   console.log('User Role:', userRole, 'Is Admin:', isAdmin);
-  console.log('Loading:', isLoading, 'Refreshing:', isRefreshing);
-  console.log('Error:', error, 'Clients:', clients.length);
+  console.log('Loading:', isLoading, 'LoadingMore:', isLoadingMore, 'HasMore:', hasMore);
+  console.log('Error:', error, 'Clients:', clients.length, 'Total:', totalCount);
 
   return (
     <DashboardLayout>
@@ -43,9 +46,11 @@ const MyClients = () => {
                 <span>•</span>
                 <span>Loading: {isLoading ? 'Yes' : 'No'}</span>
                 <span>•</span>
-                <span>Refreshing: {isRefreshing ? 'Yes' : 'No'}</span>
+                <span>LoadingMore: {isLoadingMore ? 'Yes' : 'No'}</span>
                 <span>•</span>
-                <span>Clients: {clients.length}</span>
+                <span>Clients: {clients.length}/{totalCount}</span>
+                <span>•</span>
+                <span>HasMore: {hasMore ? 'Yes' : 'No'}</span>
               </div>
             </div>
           </div>
@@ -53,10 +58,13 @@ const MyClients = () => {
           <ClientsTable 
             clients={clients}
             isLoading={isLoading}
-            isRefreshing={isRefreshing}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            totalCount={totalCount}
             error={error}
             isAdmin={isAdmin}
-            onRefresh={refreshClients}
+            onRefresh={refresh}
+            onLoadMore={loadMore}
           />
         </div>
       </div>
