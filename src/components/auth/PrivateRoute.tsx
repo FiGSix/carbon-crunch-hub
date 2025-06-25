@@ -1,7 +1,8 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth'; // Updated import path
-import { UserRole } from '@/contexts/auth/types'; // Updated import path
+import { useAuth } from '@/contexts/auth';
+import { UserRole } from '@/contexts/auth/types';
+import { RoleValidator } from '@/services/unified/utils/RoleValidator';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -14,10 +15,39 @@ interface PrivateRouteProps {
 }
 
 export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
-  const { user, userRole, isLoading, refreshUser } = useAuth(); // Now using modern context
+  const { user, userRole, isLoading, refreshUser } = useAuth();
   const location = useLocation();
   const [refreshAttempted, setRefreshAttempted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Enhanced role validation using the new RoleValidator
+  const hasRequiredRole = (role: UserRole | undefined, required: UserRole[]): boolean => {
+    if (!role || !required.length) return true;
+    
+    // Use RoleValidator for consistent role checking
+    if (required.includes('admin') && RoleValidator.isAdmin(role)) return true;
+    if (required.includes('agent') && RoleValidator.isAgent(role)) return true;
+    if (required.includes('client') && RoleValidator.isClient(role)) return true;
+    
+    return required.includes(role);
+  };
+
+  // Listen for auth-required events from security violations
+  useEffect(() => {
+    const handleAuthRequired = () => {
+      console.log("Security violation detected - refreshing authentication");
+      if (!isRefreshing) {
+        setIsRefreshing(true);
+        refreshUser().finally(() => {
+          setIsRefreshing(false);
+          setRefreshAttempted(true);
+        });
+      }
+    };
+
+    window.addEventListener('auth-required', handleAuthRequired);
+    return () => window.removeEventListener('auth-required', handleAuthRequired);
+  }, [refreshUser, isRefreshing]);
 
   // More focused effect for handling user role refresh
   useEffect(() => {
@@ -34,12 +64,15 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
 
   // Debug logging with enhanced context information
   useEffect(() => {
-    console.log("PrivateRoute - Current path:", location.pathname);
-    console.log("PrivateRoute - Current user:", user?.id);
-    console.log("PrivateRoute - Current role:", userRole);
-    console.log("PrivateRoute - Allowed roles:", allowedRoles);
-    console.log("PrivateRoute - Is loading:", isLoading);
-    console.log("PrivateRoute - Refresh attempted:", refreshAttempted);
+    console.log("PrivateRoute - Enhanced Security Check:", {
+      path: location.pathname,
+      userId: user?.id,
+      userRole,
+      allowedRoles,
+      isLoading,
+      refreshAttempted,
+      hasValidRole: hasRequiredRole(userRole, allowedRoles || [])
+    });
   }, [user, userRole, allowedRoles, isLoading, refreshAttempted, location.pathname]);
 
   // Handle retry for refresh with better error handling
@@ -55,7 +88,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     }
   };
 
-  // Show loading state while checking authentication with a more informative message
+  // Show loading state while checking authentication
   if (isLoading || isRefreshing) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -69,60 +102,61 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     );
   }
 
-  // If not authenticated, redirect to login with the current path for redirect after login
+  // If not authenticated, redirect to login
   if (!user) {
     console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  // Special case: if we know there should be a role but it's missing, show force-logout option
-  // This handles corrupted auth states more gracefully
-  if (allowedRoles && !userRole && refreshAttempted) {
-    console.log("Role required but missing, showing force-logout option");
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          <AlertTitle className="font-medium">Authentication Issue Detected</AlertTitle>
-          <AlertDescription className="mt-2">
-            <p className="mb-4">
-              Your session appears to be corrupted. Your user account exists, but your role information is missing.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                variant="outline" 
-                onClick={handleRetryRefresh}
-                className="flex-1"
-                disabled={isRefreshing}
-              >
-                {isRefreshing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Refreshing...
-                  </>
-                ) : "Try Again"}
-              </Button>
-              <Button 
-                variant="destructive"
-                className="flex-1"
-                asChild
-              >
-                <Link to="/force-logout">Force Logout</Link>
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  // Enhanced role validation error handling
+  if (allowedRoles && !hasRequiredRole(userRole, allowedRoles)) {
+    if (!userRole && refreshAttempted) {
+      console.log("Role required but missing after refresh, showing force-logout option");
+      return (
+        <div className="flex h-screen w-full flex-col items-center justify-center p-4">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertTitle className="font-medium">Authentication Issue Detected</AlertTitle>
+            <AlertDescription className="mt-2">
+              <p className="mb-4">
+                Your session appears to be corrupted or you don't have the required permissions.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleRetryRefresh}
+                  className="flex-1"
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Refreshing...
+                    </>
+                  ) : "Try Again"}
+                </Button>
+                <Button 
+                  variant="destructive"
+                  className="flex-1"
+                  asChild
+                >
+                  <Link to="/force-logout">Force Logout</Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
 
-  // If role-specific route and user doesn't have permission, redirect to dashboard
-  if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
-    console.log(`User role ${userRole} not allowed (needs ${allowedRoles.join(' or ')}), redirecting to dashboard`);
-    return <Navigate to="/dashboard" replace />;
+    // If user has role but doesn't have required permissions
+    if (userRole) {
+      console.log(`User role ${userRole} not allowed (needs ${allowedRoles.join(' or ')}), redirecting to dashboard`);
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // Render children if authenticated and authorized
-  console.log("User authorized, rendering protected content");
+  console.log("User authorized with enhanced security validation, rendering protected content");
   return <>{children}</>;
 }

@@ -2,10 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../cache/CacheManager';
-import { RLSErrorHandler } from '../utils/RLSErrorHandler';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 /**
- * Profile data operations with improved RLS error handling
+ * Profile data operations with enhanced security validation
  */
 export class ProfileDataService {
   static async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
@@ -24,8 +24,12 @@ export class ProfileDataService {
         .single();
 
       if (error) {
-        const rlsResult = RLSErrorHandler.handleRLSError(error, 'profile fetch');
-        if (rlsResult.shouldReturnEmpty) {
+        const errorResult = ErrorHandler.handleRLSError(error, 'profile fetch');
+        if (errorResult.shouldReturnEmpty) {
+          if (errorResult.requiresReauth) {
+            // Signal that re-authentication is needed
+            window.dispatchEvent(new CustomEvent('auth-required'));
+          }
           return null;
         }
         throw error;
@@ -55,6 +59,13 @@ export class ProfileDataService {
       return null;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      ErrorHandler.logSecurityEvent({
+        type: 'access_denied',
+        userId,
+        resource: 'profile',
+        action: 'fetch',
+        details: error
+      });
       return null;
     }
   }
@@ -67,11 +78,11 @@ export class ProfileDataService {
         .eq('id', userId);
 
       if (error) {
-        const rlsResult = RLSErrorHandler.handleRLSError(error, 'profile update');
-        if (!rlsResult.shouldReturnEmpty) {
-          throw error;
+        const errorResult = ErrorHandler.handleRLSError(error, 'profile update');
+        if (errorResult.requiresReauth) {
+          window.dispatchEvent(new CustomEvent('auth-required'));
         }
-        return { success: false, error: rlsResult.message };
+        return { success: false, error: errorResult.message };
       }
 
       // Clear cache
@@ -80,6 +91,13 @@ export class ProfileDataService {
       return { success: true };
     } catch (error: any) {
       console.error('Error updating profile:', error);
+      ErrorHandler.logSecurityEvent({
+        type: 'access_denied',
+        userId,
+        resource: 'profile',
+        action: 'update',
+        details: error
+      });
       return { success: false, error: error.message };
     }
   }

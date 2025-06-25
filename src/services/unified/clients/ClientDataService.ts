@@ -1,6 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { CacheManager } from '../cache/CacheManager';
+import { RoleValidator } from '../utils/RoleValidator';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 export interface ClientListItem {
   id: string;
@@ -14,10 +16,21 @@ export interface ClientListItem {
 }
 
 /**
- * Client data operations with proper foreign key handling
+ * Client data operations with enhanced security validation
  */
 export class ClientDataService {
   static async getClients(userId: string, userRole: string, forceRefresh = false): Promise<ClientListItem[]> {
+    // Validate user can access clients
+    if (!RoleValidator.canManageClients(userRole)) {
+      ErrorHandler.logSecurityEvent({
+        type: 'unauthorized_access',
+        userId,
+        resource: 'clients',
+        action: 'list'
+      });
+      return [];
+    }
+
     const cacheKey = CacheManager.getCacheKey('clients', userId, userRole);
     
     if (!forceRefresh) {
@@ -31,7 +44,13 @@ export class ClientDataService {
         agent_id_param: userRole === 'admin' ? null : userId
       });
 
-      if (error) throw error;
+      if (error) {
+        const errorResult = ErrorHandler.handleRLSError(error, 'clients fetch');
+        if (errorResult.requiresReauth) {
+          window.dispatchEvent(new CustomEvent('auth-required'));
+        }
+        return [];
+      }
 
       // Transform the data to match ClientListItem type
       const clients: ClientListItem[] = (data || []).map(client => ({
@@ -49,6 +68,13 @@ export class ClientDataService {
       return clients;
     } catch (error) {
       console.error('Error fetching clients:', error);
+      ErrorHandler.logSecurityEvent({
+        type: 'access_denied',
+        userId,
+        resource: 'clients',
+        action: 'list',
+        details: error
+      });
       return [];
     }
   }
@@ -69,7 +95,13 @@ export class ClientDataService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        const errorResult = ErrorHandler.handleRLSError(error, 'client creation');
+        if (errorResult.requiresReauth) {
+          window.dispatchEvent(new CustomEvent('auth-required'));
+        }
+        return { success: false, error: errorResult.message };
+      }
 
       // Clear cache to force refresh
       CacheManager.clearCachePattern('clients');
@@ -77,6 +109,13 @@ export class ClientDataService {
       return { success: true, client: data };
     } catch (error: any) {
       console.error('Error creating client:', error);
+      ErrorHandler.logSecurityEvent({
+        type: 'access_denied',
+        userId: clientData.created_by,
+        resource: 'clients',
+        action: 'create',
+        details: error
+      });
       return { success: false, error: error.message };
     }
   }

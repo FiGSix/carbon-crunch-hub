@@ -292,6 +292,16 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
+      create_test_user_profile: {
+        Args: {
+          user_id_param: string
+          email_param: string
+          role_param: string
+          first_name_param?: string
+          last_name_param?: string
+        }
+        Returns: string
+      }
       delete_proposal: {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
@@ -375,6 +385,14 @@ export type Database = {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
       }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_agent: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       mark_invitation_viewed: {
         Args: { token_param: string }
         Returns: undefined
@@ -396,6 +414,17 @@ export type Database = {
       set_request_invitation_token: {
         Args: { email_input: string; token_input: string } | { token: string }
         Returns: boolean
+      }
+      test_rls_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          test_name: string
+          table_name: string
+          operation: string
+          role: string
+          result: string
+          success: boolean
+        }[]
       }
       validate_invitation_token: {
         Args: { token: string }
