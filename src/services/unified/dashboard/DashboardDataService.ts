@@ -1,12 +1,13 @@
 
 import { ProposalListItem } from '@/types/proposals';
 import { ProposalsDataService } from '../proposals/ProposalsDataService';
+import { UserRole } from '@/contexts/auth/types';
 
 /**
  * Dashboard data calculations and operations
  */
 export class DashboardDataService {
-  static async getDashboardData(userId: string, userRole: string): Promise<{
+  static async getDashboardData(userId: string, userRole: UserRole): Promise<{
     proposals: ProposalListItem[];
     portfolioSize: number;
     totalRevenue: number;

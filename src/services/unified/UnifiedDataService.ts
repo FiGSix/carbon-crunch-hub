@@ -1,5 +1,5 @@
 
-import { UserProfile } from '@/contexts/auth/types';
+import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem } from '@/types/proposals';
 import { CacheManager } from './cache/CacheManager';
 import { ProfileDataService } from './profile/ProfileDataService';
@@ -23,12 +23,12 @@ export class UnifiedDataService {
   }
 
   // Proposals operations
-  static async getProposals(userId: string, userRole: string, forceRefresh = false): Promise<ProposalListItem[]> {
+  static async getProposals(userId: string, userRole: UserRole, forceRefresh = false): Promise<ProposalListItem[]> {
     return ProposalsDataService.getProposals(userId, userRole, forceRefresh);
   }
 
   // Client operations
-  static async getClients(userId: string, userRole: string, forceRefresh = false) {
+  static async getClients(userId: string, userRole: UserRole, forceRefresh = false) {
     return ClientDataService.getClients(userId, userRole, forceRefresh);
   }
 
@@ -47,7 +47,7 @@ export class UnifiedDataService {
   }
 
   // Dashboard data
-  static async getDashboardData(userId: string, userRole: string): Promise<{
+  static async getDashboardData(userId: string, userRole: UserRole): Promise<{
     proposals: ProposalListItem[];
     portfolioSize: number;
     totalRevenue: number;

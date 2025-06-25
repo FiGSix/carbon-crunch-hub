@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CacheManager } from '../cache/CacheManager';
 import { RoleValidator } from '../utils/RoleValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
+import { UserRole } from '@/contexts/auth/types';
 
 export interface ClientListItem {
   id: string;
@@ -19,7 +20,7 @@ export interface ClientListItem {
  * Client data operations with enhanced security validation
  */
 export class ClientDataService {
-  static async getClients(userId: string, userRole: string, forceRefresh = false): Promise<ClientListItem[]> {
+  static async getClients(userId: string, userRole: UserRole, forceRefresh = false): Promise<ClientListItem[]> {
     // Validate user can access clients
     if (!RoleValidator.canManageClients(userRole)) {
       ErrorHandler.logSecurityEvent({
