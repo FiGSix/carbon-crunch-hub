@@ -7,9 +7,11 @@ export { DashboardDataService } from './dashboard/DashboardDataService';
 export { ClientSearchService } from './clients/ClientSearchService';
 export { ClientDataService } from './clients/ClientDataService';
 export { UnifiedClientService } from './clients/UnifiedClientService';
+export { ClientOperations } from './clients/ClientOperations';
+export { ClientSearch } from './clients/ClientSearch';
 
 // Export the unified carbon calculation service
 export { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 
-export type { UnifiedClient, ClientSearchResult } from './clients/UnifiedClientService';
+export type { UnifiedClient, ClientSearchResult, PaginatedClientsResult, CreateClientData } from './clients/types';
 export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';

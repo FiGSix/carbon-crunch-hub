@@ -1,38 +1,16 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../cache/CacheManager';
-import { RoleValidator } from '../utils/RoleValidator';
-import { ErrorHandler } from '../utils/ErrorHandler';
+import { ClientOperations } from './ClientOperations';
+import { ClientSearch } from './ClientSearch';
 
-export interface UnifiedClient {
-  id: string;
-  name: string;
-  email: string;
-  company?: string;
-  phone?: string;
-  isRegistered: boolean;
-  userId?: string;
-  projectCount: number;
-  totalKwp: number;
-  createdAt: string;
-  createdBy?: string;
-}
-
-export interface ClientSearchResult {
-  id: string;
-  name: string;
-  email: string;
-  company?: string;
-  isRegistered: boolean;
-}
-
-export interface PaginatedClientsResult {
-  clients: UnifiedClient[];
-  hasMore: boolean;
-  totalCount: number;
-  nextOffset: number;
-}
+// Re-export types for backward compatibility
+export type { 
+  UnifiedClient, 
+  ClientSearchResult, 
+  PaginatedClientsResult,
+  CreateClientData 
+} from './types';
 
 /**
  * Unified client service that consolidates registered users and contact clients
@@ -48,126 +26,15 @@ export class UnifiedClientService {
     forceRefresh = false,
     limit = 20,
     offset = 0
-  ): Promise<PaginatedClientsResult> {
-    if (!RoleValidator.canManageClients(userRole)) {
-      ErrorHandler.logSecurityEvent({
-        type: 'unauthorized_access',
-        userId,
-        resource: 'clients',
-        action: 'list'
-      });
-      return {
-        clients: [],
-        hasMore: false,
-        totalCount: 0,
-        nextOffset: 0
-      };
-    }
-
-    // Fix cache key generation to use proper method signature
-    const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
-    
-    if (!forceRefresh) {
-      const cached = CacheManager.getFromCache<PaginatedClientsResult>(cacheKey);
-      if (cached) return cached;
-    }
-
-    try {
-      // First get the total count - fix the select method call
-      const { count, error: countError } = await supabase.rpc('get_agent_clients_optimized', {
-        agent_id_param: userRole === 'admin' ? null : userId
-      }).select('*', { count: 'exact', head: true });
-
-      if (countError) {
-        throw countError;
-      }
-
-      const totalCount = count || 0;
-
-      // Then get the paginated data
-      const { data, error } = await supabase.rpc('get_agent_clients_optimized', {
-        agent_id_param: userRole === 'admin' ? null : userId
-      }).range(offset, offset + limit - 1);
-
-      if (error) {
-        const errorResult = ErrorHandler.handleRLSError(error, 'unified clients fetch');
-        if (errorResult.requiresReauth) {
-          window.dispatchEvent(new CustomEvent('auth-required'));
-        }
-        return {
-          clients: [],
-          hasMore: false,
-          totalCount: 0,
-          nextOffset: 0
-        };
-      }
-
-      const clients: UnifiedClient[] = (data || []).map(client => ({
-        id: client.client_id,
-        name: client.client_name || 'Unknown Client',
-        email: client.client_email,
-        company: client.company_name,
-        isRegistered: client.is_registered || false,
-        projectCount: client.project_count || 0,
-        totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
-        createdAt: client.created_at || new Date().toISOString()
-      }));
-
-      const hasMore = offset + limit < totalCount;
-      const nextOffset = hasMore ? offset + limit : totalCount;
-
-      const result: PaginatedClientsResult = {
-        clients,
-        hasMore,
-        totalCount,
-        nextOffset
-      };
-
-      CacheManager.setCache(cacheKey, result);
-      return result;
-    } catch (error) {
-      console.error('Error fetching unified clients:', error);
-      ErrorHandler.logSecurityEvent({
-        type: 'access_denied',
-        userId,
-        resource: 'unified_clients',
-        action: 'list',
-        details: error
-      });
-      return {
-        clients: [],
-        hasMore: false,
-        totalCount: 0,
-        nextOffset: 0
-      };
-    }
+  ) {
+    return ClientOperations.getClients(userId, userRole, forceRefresh, limit, offset);
   }
 
   /**
    * Search for clients across both registered users and contacts
    */
-  static async searchClients(searchTerm: string): Promise<ClientSearchResult[]> {
-    try {
-      const { data, error } = await supabase.rpc('search_clients', {
-        search_term: searchTerm
-      });
-
-      if (error) {
-        console.error('Error searching clients:', error);
-        return [];
-      }
-
-      return (data || []).map(client => ({
-        id: client.id,
-        name: client.name,
-        email: client.email,
-        company: client.company,
-        isRegistered: client.is_registered
-      }));
-    } catch (error) {
-      console.error('Error in client search:', error);
-      return [];
-    }
+  static async searchClients(searchTerm: string) {
+    return ClientSearch.searchClients(searchTerm);
   }
 
   /**
@@ -181,36 +48,8 @@ export class UnifiedClientService {
     companyName?: string;
     notes?: string;
     createdBy: string;
-  }): Promise<{ success: boolean; client?: any; error?: string }> {
-    try {
-      // Use the edge function for client creation to ensure proper validation
-      const { data, error } = await supabase.functions.invoke('manage-client-profile', {
-        body: {
-          email: clientData.email,
-          firstName: clientData.firstName,
-          lastName: clientData.lastName,
-          phone: clientData.phone,
-          companyName: clientData.companyName,
-          existingClient: false
-        }
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (!data.success) {
-        return { success: false, error: data.error };
-      }
-
-      // Clear cache to force refresh
-      CacheManager.clearCachePattern('unified_clients');
-
-      return { success: true, client: { id: data.clientId } };
-    } catch (error: any) {
-      console.error('Error creating unified client:', error);
-      return { success: false, error: error.message };
-    }
+  }) {
+    return ClientOperations.createClient(clientData);
   }
 
   /**
