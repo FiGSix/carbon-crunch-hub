@@ -6,8 +6,8 @@ import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 
 /**
- * Simplified auth hook that provides clean, reliable auth state management
- * This can eventually replace the complex auth architecture
+ * Simplified auth hook that replaces the complex auth architecture
+ * Provides clean, reliable auth state management
  */
 export function useAuthSimplified() {
   const [user, setUser] = useState<User | null>(null);
@@ -23,6 +23,8 @@ export function useAuthSimplified() {
 
     const initializeAuth = async () => {
       try {
+        console.log('Initializing simplified auth...');
+        
         // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
@@ -31,6 +33,7 @@ export function useAuthSimplified() {
           setUser(initialSession?.user ?? null);
           
           if (initialSession?.user) {
+            console.log('Initial session found, loading user profile');
             await loadUserProfile(initialSession.user.id);
           }
           
@@ -50,7 +53,7 @@ export function useAuthSimplified() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      console.log('Auth state changed:', event);
+      console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -62,6 +65,7 @@ export function useAuthSimplified() {
       }
 
       if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing cache');
         UnifiedDataService.clearCache();
       }
     });
@@ -76,9 +80,11 @@ export function useAuthSimplified() {
 
   const loadUserProfile = async (userId: string) => {
     try {
+      console.log('Loading user profile for:', userId);
       const userProfile = await UnifiedDataService.getProfile(userId);
       setProfile(userProfile);
       setUserRole(userProfile?.role as UserRole);
+      console.log('User profile loaded, role:', userProfile?.role);
     } catch (error) {
       console.error('Error loading profile:', error);
       setProfile(null);
@@ -88,12 +94,14 @@ export function useAuthSimplified() {
 
   const refreshUser = async () => {
     if (user?.id) {
+      console.log('Refreshing user profile');
       await loadUserProfile(user.id);
     }
   };
 
-  const signOut = async (): Promise<boolean> => {
+  const signOut = async () => {
     try {
+      console.log('Signing out user');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -104,10 +112,10 @@ export function useAuthSimplified() {
       setUserRole(undefined);
       UnifiedDataService.clearCache();
       
-      return true;
+      console.log('Sign out completed successfully');
     } catch (error) {
       console.error('Error signing out:', error);
-      return false;
+      throw error;
     }
   };
 
@@ -119,9 +127,6 @@ export function useAuthSimplified() {
     isLoading,
     isInitialized,
     refreshUser,
-    signOut,
-    // Computed properties
-    isAdmin: userRole === 'admin',
-    isAuthenticated: !!user
+    signOut
   };
 }

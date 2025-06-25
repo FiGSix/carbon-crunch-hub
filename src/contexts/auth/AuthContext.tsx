@@ -2,7 +2,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { UserProfile, UserRole } from './types';
-import { useSimplifiedAuth } from '@/hooks/useSimplifiedAuth';
+import { useAuthSimplified } from '@/hooks/useAuthSimplified';
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +11,7 @@ interface AuthContextType {
   userRole: UserRole | undefined;
   isLoading: boolean;
   isAdmin: boolean;
+  isAuthenticated: boolean;
   refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -22,12 +23,13 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const auth = useSimplifiedAuth();
+  const auth = useAuthSimplified();
   
-  // Add the isAdmin computed property
-  const contextValue = {
+  // Add computed properties for backward compatibility
+  const contextValue: AuthContextType = {
     ...auth,
-    isAdmin: auth.userRole === 'admin'
+    isAdmin: auth.userRole === 'admin',
+    isAuthenticated: !!auth.user
   };
 
   return (

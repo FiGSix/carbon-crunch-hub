@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,19 +23,12 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // Use a ref to track if we're already redirecting to prevent loops
-  const isRedirectingRef = React.useRef(false);
-  
-  // Keep track of when the component was mounted to prevent redirect
-  // too soon after a potential logout
+  // Track if we're already redirecting to prevent loops
+  const isRedirectingRef = useRef(false);
   const mountTimeRef = useRef(Date.now());
   
   useEffect(() => {
-    // Only redirect if:
-    // 1. User is logged in
-    // 2. We're not already redirecting
-    // 3. Auth loading is complete
-    // 4. Component has been mounted for at least 1 second (prevents immediate redirect after logout)
+    // Only redirect if user is authenticated and we're not already redirecting
     const timeSinceMounted = Date.now() - mountTimeRef.current;
     const shouldRedirect = user && 
                           !authLoading && 
@@ -45,7 +39,6 @@ const Login = () => {
       console.log("User already logged in, redirecting to dashboard. User role:", userRole);
       isRedirectingRef.current = true;
       const from = location.state?.from || "/dashboard";
-      // Use a slight delay to ensure state updates are processed
       setTimeout(() => {
         navigate(from);
       }, 300);
@@ -58,7 +51,7 @@ const Login = () => {
     
     try {
       console.log(`Attempting to sign in with email: ${email}`);
-      const { data, error } = await signIn(email, password);
+      const { error } = await signIn(email, password);
       
       if (error) {
         throw error;
@@ -72,9 +65,7 @@ const Login = () => {
         description: "You have successfully logged in",
       });
       
-      // Set redirecting flag to prevent login loops
       isRedirectingRef.current = true;
-      
       const from = location.state?.from || "/dashboard";
       console.log(`Redirecting to: ${from}`);
       navigate(from);
@@ -89,10 +80,6 @@ const Login = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
   };
   
   return (
@@ -161,7 +148,7 @@ const Login = () => {
                     <button
                       type="button"
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-crunch-black/50 hover:text-crunch-black focus:outline-none mt-1"
-                      onClick={togglePasswordVisibility}
+                      onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       disabled={isSubmitting}
                     >
