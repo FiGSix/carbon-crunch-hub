@@ -13,22 +13,42 @@ interface PrivateRouteProps {
 }
 
 export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }: PrivateRouteProps) {
-  const { user, userRole, isLoading, isInitialized } = useAuth();
+  const { user, session, userRole, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
-  // Simplified access check with better performance
+  // Enhanced access check with better session validation
   const accessCheck = useMemo(() => {
+    console.log('🔒 PrivateRoute access check:', { 
+      hasUser: !!user,
+      hasSession: !!session, 
+      userRole,
+      isLoading, 
+      isInitialized,
+      requiredRole, 
+      adminOnly,
+      allowedRoles
+    });
+
     // Still loading/initializing
     if (!isInitialized || isLoading) {
+      console.log('⏳ Auth still initializing or loading');
       return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
     }
 
-    // Not authenticated
-    if (!user || !userRole) {
+    // CRITICAL: Check for both user AND session (not just user)
+    if (!user || !session) {
+      console.log('❌ Missing user or session - redirecting to login');
       return { shouldShowLoading: false, hasAccess: false, shouldRedirect: true };
     }
 
-    // Check access permissions
+    // If we have user and session but no role yet, show loading
+    // This handles the case where profile is still loading
+    if (!userRole) {
+      console.log('⏳ User authenticated but profile/role still loading');
+      return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
+    }
+
+    // Check access permissions once we have role
     let hasAccess = true;
 
     // Admin always has access unless specifically denied
@@ -51,21 +71,11 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
       }
     }
 
+    console.log('✅ Access check completed:', { hasAccess });
     return { shouldShowLoading: false, hasAccess, shouldRedirect: false };
-  }, [user, userRole, isLoading, isInitialized, requiredRole, adminOnly, allowedRoles]);
+  }, [user, session, userRole, isLoading, isInitialized, requiredRole, adminOnly, allowedRoles]);
 
-  console.log('🔒 PrivateRoute check:', { 
-    user: !!user, 
-    userRole, 
-    isLoading, 
-    isInitialized,
-    requiredRole, 
-    adminOnly,
-    allowedRoles,
-    ...accessCheck
-  });
-
-  // Show loading while auth is initializing
+  // Show loading while auth is initializing or profile is loading
   if (accessCheck.shouldShowLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">

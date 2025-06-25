@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +16,6 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
   const { refreshUser } = useAuth();
   const [email, setEmail] = useState('');
@@ -47,14 +45,8 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
         description: 'You have successfully logged in',
       });
       
-      // Simplified redirect logic - let the auth state change handle the redirect
-      const from = location.state?.from || '/dashboard';
-      console.log(`🔄 Redirecting to: ${from}`);
-      
-      // Small delay to ensure auth state is updated
-      setTimeout(() => {
-        navigate(from, { replace: true });
-      }, 100);
+      // REMOVED: All redirect logic - let Login.tsx handle this via auth state changes
+      console.log('🔄 Login successful, auth state will trigger redirect');
       
     } catch (error: any) {
       console.error('❌ Login error:', error);

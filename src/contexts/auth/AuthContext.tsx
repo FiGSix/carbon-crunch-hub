@@ -26,12 +26,23 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const auth = useAuthSimplified();
   
-  // Add computed properties for backward compatibility
+  // CRITICAL FIX: isAuthenticated now only depends on user session, not profile
+  // This prevents the dependency mismatch where profile loads after user
   const contextValue: AuthContextType = {
     ...auth,
     isAdmin: auth.userRole === 'admin',
-    isAuthenticated: !!auth.user && !!auth.profile
+    isAuthenticated: !!auth.user && !!auth.session // Only session-based authentication check
   };
+
+  console.log('🔄 AuthContext state:', {
+    hasUser: !!auth.user,
+    hasSession: !!auth.session,
+    hasProfile: !!auth.profile,
+    userRole: auth.userRole,
+    isAuthenticated: contextValue.isAuthenticated,
+    isInitialized: auth.isInitialized,
+    isLoading: auth.isLoading
+  });
 
   return (
     <AuthContext.Provider value={contextValue}>
