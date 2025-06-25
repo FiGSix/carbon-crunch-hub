@@ -8,11 +8,8 @@ export { ClientSearchService } from './clients/ClientSearchService';
 export { ClientDataService } from './clients/ClientDataService';
 export { UnifiedClientService } from './clients/UnifiedClientService';
 
-// Export the new unified carbon calculation service
+// Export the unified carbon calculation service
 export { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
-
-// Deprecated - use UnifiedCarbonService instead
-export { CarbonCalculationService } from './calculations/CarbonCalculationService';
 
 export type { UnifiedClient, ClientSearchResult } from './clients/UnifiedClientService';
 export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';

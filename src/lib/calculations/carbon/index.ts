@@ -4,6 +4,9 @@
  * All calculation logic has been consolidated into a single service
  */
 
+// Import the unified service
+import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+
 // Export the main service
 export { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
 
