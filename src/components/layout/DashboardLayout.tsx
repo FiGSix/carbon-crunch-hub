@@ -1,9 +1,9 @@
 
 import { ReactNode } from "react";
 import { 
-  Sidebar, 
   SidebarProvider, 
-  SidebarTrigger 
+  SidebarTrigger,
+  SidebarInset
 } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ import { Footer } from "./footer";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth"; 
 import { Navigate, useNavigate } from "react-router-dom";
-import { Loader2, User } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export function DashboardLayout({
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-crunch-yellow" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function DashboardLayout({
       <div className="min-h-screen flex w-full bg-gray-50">
         <DashboardSidebar />
         
-        <div className="flex-1 flex flex-col">
+        <SidebarInset className="flex-1">
           <motion.header 
             className={cn(
               "h-14 md:h-16 border-b border-gray-200 flex items-center px-3 md:px-4 bg-white shadow-sm",
@@ -62,9 +62,9 @@ export function DashboardLayout({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <SidebarTrigger className="hover:bg-crunch-yellow/10 rounded-lg p-2 transition-colors duration-200 touch-manipulation" />
+            <SidebarTrigger className="hover:bg-blue-50 rounded-lg p-2 transition-colors duration-200 touch-manipulation" />
             <div className={cn(
-              "ml-2 md:ml-4 font-bold uppercase tracking-wide text-crunch-black",
+              "ml-2 md:ml-4 font-bold uppercase tracking-wide text-gray-900",
               isMobile ? "text-sm" : "text-lg"
             )}>
               {userRole === 'client' && (isMobile ? 'CLIENT' : 'CLIENT DASHBOARD')}
@@ -76,11 +76,11 @@ export function DashboardLayout({
               <Button 
                 variant="ghost" 
                 size="sm"
-                className="rounded-full p-0 h-8 w-8 md:h-9 md:w-9 flex items-center justify-center hover:bg-crunch-yellow/10 touch-manipulation"
+                className="rounded-full p-0 h-8 w-8 md:h-9 md:w-9 flex items-center justify-center hover:bg-blue-50 touch-manipulation"
                 onClick={() => navigate('/profile')}
               >
                 <Avatar className="h-7 w-7 md:h-8 md:w-8">
-                  <AvatarFallback className="bg-crunch-yellow/20 text-crunch-black font-medium text-xs md:text-sm">
+                  <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs md:text-sm">
                     {profile?.first_name?.[0]?.toUpperCase() || profile?.role?.[0]?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
@@ -101,7 +101,7 @@ export function DashboardLayout({
           </motion.main>
           
           <Footer />
-        </div>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );

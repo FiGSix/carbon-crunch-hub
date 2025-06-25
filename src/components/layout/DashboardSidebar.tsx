@@ -63,7 +63,7 @@ export function DashboardSidebar() {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,
-      roles: ["admin"]
+      roles: ["admin", "agent"]
     },
     {
       name: "Agents",
@@ -91,8 +91,8 @@ export function DashboardSidebar() {
   );
 
   return (
-    <Sidebar className="border-r border-carbon-gray-200">
-      <SidebarContent>
+    <Sidebar className="border-r border-gray-200 bg-white">
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
@@ -104,28 +104,33 @@ export function DashboardSidebar() {
                     <SidebarMenuButton 
                       asChild 
                       isActive={isActive(item.href)}
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      className={`flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-gray-100 ${
                         isActive(item.href)
-                          ? "bg-carbon-blue-50 text-carbon-blue-700"
-                          : "text-carbon-gray-700 hover:bg-carbon-gray-50"
+                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
+                          : "text-gray-700 hover:text-gray-900"
                       }`}
                     >
-                      <Link to={item.href}>
-                        <Icon className="mr-3 h-5 w-5" />
-                        <span>{item.name}</span>
+                      <Link to={item.href} className="flex items-center w-full">
+                        <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
               
+              {/* Separator */}
+              <li className="my-2">
+                <hr className="border-gray-200" />
+              </li>
+              
               {/* Sign Out Button */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleSignOut}
-                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50"
+                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50 hover:text-red-700"
                 >
-                  <LogOut className="mr-3 h-5 w-5" />
+                  <LogOut className="mr-3 h-5 w-5 flex-shrink-0" />
                   <span>Sign Out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

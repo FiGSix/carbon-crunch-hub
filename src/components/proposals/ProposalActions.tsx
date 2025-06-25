@@ -8,18 +8,20 @@ export function ProposalActions() {
   const navigate = useNavigate();
   const { userRole } = useAuth();
   
+  // Only show for agents and admins
+  if (userRole !== "agent" && userRole !== "admin") {
+    return null;
+  }
+  
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
-      {/* Only agents and admins can create new proposals */}
-      {(userRole === "agent" || userRole === "admin") && (
-        <Button 
-          className="retro-button"
-          onClick={() => navigate("/create-proposal")}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Create New Proposal
-        </Button>
-      )}
+      <Button 
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+        onClick={() => navigate("/create-proposal")}
+      >
+        <Plus className="h-5 w-5 mr-2" />
+        Create New Proposal
+      </Button>
     </div>
   );
 }
