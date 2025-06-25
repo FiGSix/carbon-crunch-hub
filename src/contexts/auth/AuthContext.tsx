@@ -12,6 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAdmin: boolean;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -29,7 +30,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const contextValue: AuthContextType = {
     ...auth,
     isAdmin: auth.userRole === 'admin',
-    isAuthenticated: !!auth.user
+    isAuthenticated: !!auth.user && !!auth.profile
   };
 
   return (

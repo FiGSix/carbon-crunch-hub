@@ -26,12 +26,21 @@ export function DashboardLayout({
   children, 
   requiredRole 
 }: DashboardLayoutProps) {
-  const { userRole, isLoading, isAdmin, profile } = useAuth();
+  const { userRole, isLoading, isInitialized, profile, user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  // Show loading state
-  if (isLoading) {
+  console.log('🏠 DashboardLayout render:', { 
+    userRole, 
+    isLoading, 
+    isInitialized, 
+    hasProfile: !!profile,
+    hasUser: !!user,
+    requiredRole 
+  });
+
+  // Show loading state while auth is initializing
+  if (!isInitialized || isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -39,10 +48,19 @@ export function DashboardLayout({
     );
   }
 
-  // Redirect if user doesn't have the required role
+  // Redirect to login if not authenticated
+  if (!user || !userRole) {
+    console.log('❌ User not authenticated in dashboard, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check role-based access
   if (requiredRole) {
-    // Admin can access any page regardless of required role
-    if (!isAdmin && userRole !== requiredRole) {
+    const isAdmin = userRole === 'admin';
+    const hasRequiredRole = userRole === requiredRole;
+    
+    if (!isAdmin && !hasRequiredRole) {
+      console.log('❌ Insufficient role for dashboard access, redirecting');
       return <Navigate to="/dashboard" replace />;
     }
   }
@@ -81,7 +99,7 @@ export function DashboardLayout({
               >
                 <Avatar className="h-7 w-7 md:h-8 md:w-8">
                   <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs md:text-sm">
-                    {profile?.first_name?.[0]?.toUpperCase() || profile?.role?.[0]?.toUpperCase() || '?'}
+                    {profile?.first_name?.[0]?.toUpperCase() || userRole?.[0]?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
