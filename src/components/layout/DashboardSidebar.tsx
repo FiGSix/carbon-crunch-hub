@@ -12,6 +12,15 @@ import {
   User
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 
 export function DashboardSidebar() {
   const location = useLocation();
@@ -69,13 +78,6 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
-      name: "Sign Out",
-      href: "#",
-      icon: LogOut,
-      roles: ["admin", "agent", "client"],
-      isSignOut: true
-    },
-    {
       name: "System Settings",
       href: "/system-settings",
       icon: Settings,
@@ -89,42 +91,48 @@ export function DashboardSidebar() {
   );
 
   return (
-    <aside className="w-64 bg-white border-r border-carbon-gray-200 h-full flex flex-col">
-      <nav className="p-4 space-y-2 flex-1">
-        {filteredNavItems.map((item) => {
-          const Icon = item.icon;
-          
-          // Handle Sign Out item differently
-          if (item.isSignOut) {
-            return (
-              <button
-                key={item.name}
-                onClick={handleSignOut}
-                className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50"
-              >
-                <Icon className="mr-3 h-5 w-5" />
-                {item.name}
-              </button>
-            );
-          }
-          
-          // Handle regular navigation items
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                isActive(item.href)
-                  ? "bg-carbon-blue-50 text-carbon-blue-700"
-                  : "text-carbon-gray-700 hover:bg-carbon-gray-50"
-              }`}
-            >
-              <Icon className="mr-3 h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+    <Sidebar className="border-r border-carbon-gray-200">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {filteredNavItems.map((item) => {
+                const Icon = item.icon;
+                
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive(item.href)}
+                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        isActive(item.href)
+                          ? "bg-carbon-blue-50 text-carbon-blue-700"
+                          : "text-carbon-gray-700 hover:bg-carbon-gray-50"
+                      }`}
+                    >
+                      <Link to={item.href}>
+                        <Icon className="mr-3 h-5 w-5" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+              
+              {/* Sign Out Button */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleSignOut}
+                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="mr-3 h-5 w-5" />
+                  <span>Sign Out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 }
