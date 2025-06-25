@@ -1,19 +1,27 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
-import { CacheManager } from '../cache/CacheManager';
+import { cacheStore } from '@/lib/supabase/cache';
 import { ErrorHandler } from '../utils/ErrorHandler';
 
 /**
  * Profile data operations with enhanced security validation
  */
 export class ProfileDataService {
+  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  static getCacheKey(type: string, userId: string): string {
+    return `${userId}_${type}`;
+  }
+
   static async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
-    const cacheKey = CacheManager.getCacheKey('profile', userId);
+    const cacheKey = this.getCacheKey('profile', userId);
     
     if (!forceRefresh) {
-      const cached = CacheManager.getFromCache<UserProfile>(cacheKey);
-      if (cached) return cached;
+      const entry = cacheStore.get(cacheKey);
+      if (entry && Date.now() - entry.timestamp < this.CACHE_TTL) {
+        return entry.data as UserProfile;
+      }
     }
 
     try {
@@ -52,7 +60,12 @@ export class ProfileDataService {
           intro_video_viewed_at: data.intro_video_viewed_at
         };
 
-        CacheManager.setCache(cacheKey, profile);
+        cacheStore.set(cacheKey, {
+          data: profile,
+          timestamp: Date.now(),
+          ttl: this.CACHE_TTL
+        });
+        
         return profile;
       }
 
@@ -85,8 +98,9 @@ export class ProfileDataService {
         return { success: false, error: errorResult.message };
       }
 
-      // Clear cache
-      CacheManager.clearCachePattern('profile');
+      // Clear cache for this user
+      const profileKey = this.getCacheKey('profile', userId);
+      cacheStore.delete(profileKey);
       
       return { success: true };
     } catch (error: any) {

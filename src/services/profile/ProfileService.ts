@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProfileOperations, ProfileUpdateResult, ProfileServiceDependencies } from './types';
-import { CACHE_KEYS, CACHE_TTL } from '../cache/types';
+import { cacheStore } from '@/lib/supabase/cache';
 
 // Helper function to safely cast role
 function castUserRole(role: string | null | undefined): UserRole | undefined {
@@ -14,14 +14,22 @@ function castUserRole(role: string | null | undefined): UserRole | undefined {
 }
 
 export class ProfileService implements ProfileOperations {
+  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   constructor(private dependencies: ProfileServiceDependencies) {}
 
+  private getCacheKey(userId: string): string {
+    return `${userId}_profile`;
+  }
+
   async getProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
-    const cacheKey = CACHE_KEYS.PROFILE(userId);
+    const cacheKey = this.getCacheKey(userId);
     
     if (!forceRefresh) {
-      const cached = this.dependencies.cache.get<UserProfile>(cacheKey);
-      if (cached) return cached;
+      const entry = cacheStore.get(cacheKey);
+      if (entry && Date.now() - entry.timestamp < ProfileService.CACHE_TTL) {
+        return entry.data as UserProfile;
+      }
     }
 
     try {
@@ -50,7 +58,12 @@ export class ProfileService implements ProfileOperations {
           intro_video_viewed_at: data.intro_video_viewed_at
         };
 
-        this.dependencies.cache.set(cacheKey, profile, CACHE_TTL.MEDIUM);
+        cacheStore.set(cacheKey, {
+          data: profile,
+          timestamp: Date.now(),
+          ttl: ProfileService.CACHE_TTL
+        });
+        
         return profile;
       }
 
@@ -71,7 +84,8 @@ export class ProfileService implements ProfileOperations {
       if (error) throw error;
 
       // Invalidate profile cache
-      this.dependencies.cache.invalidate(CACHE_KEYS.PROFILE(userId));
+      const cacheKey = this.getCacheKey(userId);
+      cacheStore.delete(cacheKey);
       
       return { success: true };
     } catch (error: any) {

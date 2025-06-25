@@ -1,19 +1,12 @@
 
+import { cacheStore } from '@/lib/supabase/cache';
+
 /**
  * Enhanced cache manager with LRU eviction and better performance
+ * Now uses the unified cache store
  */
-interface CacheEntry {
-  data: any;
-  expires: number;
-  hits: number;
-  lastAccessed: number;
-  size: number;
-}
-
 export class CacheManager {
-  private static cache = new Map<string, CacheEntry>();
   private static readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
-  private static readonly MAX_SIZE = 100; // Maximum number of entries
   private static hitCount = 0;
   private static missCount = 0;
 
@@ -24,8 +17,8 @@ export class CacheManager {
   }
 
   static getFromCache<T>(key: string): T | null {
-    const cached = this.cache.get(key);
-    if (!cached) {
+    const entry = cacheStore.get(key);
+    if (!entry) {
       this.missCount++;
       return null;
     }
@@ -33,42 +26,26 @@ export class CacheManager {
     const now = Date.now();
     
     // Check if expired
-    if (now > cached.expires) {
-      this.cache.delete(key);
+    if (now > entry.timestamp + entry.ttl) {
+      cacheStore.delete(key);
       this.missCount++;
       return null;
     }
 
-    // Update access statistics
-    cached.hits++;
-    cached.lastAccessed = now;
     this.hitCount++;
-    
-    return cached.data;
+    return entry.data as T;
   }
 
   static setCache<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
-    const now = Date.now();
-    
-    // Estimate size (rough approximation)
-    const size = this.estimateSize(data);
-    
-    // Ensure we don't exceed max size
-    this.evictIfNecessary();
-    
-    const entry: CacheEntry = {
+    cacheStore.set(key, {
       data,
-      expires: now + ttl,
-      hits: 0,
-      lastAccessed: now,
-      size
-    };
-
-    this.cache.set(key, entry);
+      timestamp: Date.now(),
+      ttl
+    });
   }
 
   static clearCache(): void {
-    this.cache.clear();
+    cacheStore.clear();
     this.hitCount = 0;
     this.missCount = 0;
   }
@@ -76,13 +53,13 @@ export class CacheManager {
   static clearCachePattern(pattern: string): void {
     const keysToDelete: string[] = [];
     
-    for (const key of this.cache.keys()) {
+    for (const key of cacheStore.keys()) {
       if (key.includes(pattern)) {
         keysToDelete.push(key);
       }
     }
     
-    keysToDelete.forEach(key => this.cache.delete(key));
+    keysToDelete.forEach(key => cacheStore.delete(key));
   }
 
   static getStats() {
@@ -90,7 +67,7 @@ export class CacheManager {
     const hitRate = totalRequests > 0 ? (this.hitCount / totalRequests * 100).toFixed(2) : '0';
     
     return {
-      size: this.cache.size,
+      size: cacheStore.size,
       hitCount: this.hitCount,
       missCount: this.missCount,
       hitRate: `${hitRate}%`,
@@ -98,40 +75,15 @@ export class CacheManager {
     };
   }
 
-  private static evictIfNecessary(): void {
-    if (this.cache.size >= this.MAX_SIZE) {
-      // Find LRU entry (least recently used with lowest hit count)
-      let lruKey: string | null = null;
-      let lruScore = Infinity;
-      
-      for (const [key, entry] of this.cache.entries()) {
-        // Score based on recency and hit count (lower is worse)
-        const score = entry.lastAccessed + (entry.hits * 1000);
-        if (score < lruScore) {
-          lruScore = score;
-          lruKey = key;
-        }
-      }
-      
-      if (lruKey) {
-        this.cache.delete(lruKey);
-      }
-    }
-  }
-
-  private static estimateSize(data: any): number {
-    try {
-      return JSON.stringify(data).length;
-    } catch {
-      return 1000; // Default estimate for non-serializable data
-    }
-  }
-
   private static getTotalSize(): string {
     let totalSize = 0;
-    for (const entry of this.cache.values()) {
-      totalSize += entry.size;
-    }
+    cacheStore.forEach((entry) => {
+      try {
+        totalSize += JSON.stringify(entry.data).length;
+      } catch {
+        totalSize += 1000; // Default estimate for non-serializable data
+      }
+    });
     return `${(totalSize / 1024).toFixed(2)} KB`;
   }
 }
