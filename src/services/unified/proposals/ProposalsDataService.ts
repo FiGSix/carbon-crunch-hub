@@ -4,12 +4,14 @@ import { ProposalListItem } from '@/types/proposals';
 import { CacheManager } from '../cache/CacheManager';
 import { RoleValidator } from '../utils/RoleValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
+import { transformToProposalListItems } from '@/utils/proposals/simplifiedTransformers';
+import { UserRole } from '@/contexts/auth/types';
 
 /**
  * Proposals data operations with enhanced security validation
  */
 export class ProposalsDataService {
-  static async getProposals(userId: string, userRole: string, forceRefresh = false): Promise<ProposalListItem[]> {
+  static async getProposals(userId: string, userRole: UserRole, forceRefresh = false): Promise<ProposalListItem[]> {
     const cacheKey = CacheManager.getCacheKey('proposals', userId, userRole);
     
     if (!forceRefresh) {
@@ -67,29 +69,49 @@ export class ProposalsDataService {
 
       if (!data) return [];
 
-      // Transform to ProposalListItem format
-      const proposals: ProposalListItem[] = data.map(proposal => ({
-        id: proposal.id,
-        title: proposal.title,
-        status: proposal.status as 'draft' | 'pending' | 'approved' | 'rejected',
-        created_at: proposal.created_at,
-        signed_at: proposal.signed_at,
-        archived_at: proposal.archived_at,
-        review_later_until: proposal.review_later_until,
-        client_id: proposal.client_id,
-        client_reference_id: proposal.client_reference_id,
-        agent_id: proposal.agent_id,
-        content: proposal.content,
-        annual_energy: proposal.annual_energy,
-        carbon_credits: proposal.carbon_credits,
-        client_share_percentage: proposal.client_share_percentage,
-        agent_commission_percentage: proposal.agent_commission_percentage,
-        system_size_kwp: proposal.system_size_kwp,
-        unit_standard: proposal.unit_standard,
-        invitation_sent_at: proposal.invitation_sent_at,
-        invitation_viewed_at: proposal.invitation_viewed_at,
-        invitation_expires_at: proposal.invitation_expires_at
-      }));
+      // Get unique client and agent IDs to fetch profiles
+      const clientIds = new Set<string>();
+      const agentIds = new Set<string>();
+
+      data.forEach(proposal => {
+        if (proposal.client_id) clientIds.add(proposal.client_id);
+        if (proposal.client_reference_id) clientIds.add(proposal.client_reference_id);
+        if (proposal.agent_id) agentIds.add(proposal.agent_id);
+      });
+
+      // Fetch client profiles
+      let clientProfiles: any[] = [];
+      if (clientIds.size > 0) {
+        const { data: clientData, error: clientError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', Array.from(clientIds));
+
+        if (!clientError && clientData) {
+          clientProfiles = clientData;
+        }
+      }
+
+      // Fetch agent profiles
+      let agentProfiles: any[] = [];
+      if (agentIds.size > 0) {
+        const { data: agentData, error: agentError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', Array.from(agentIds));
+
+        if (!agentError && agentData) {
+          agentProfiles = agentData;
+        }
+      }
+
+      // Transform proposals using the utility function
+      const proposals = transformToProposalListItems(
+        data,
+        clientProfiles,
+        agentProfiles,
+        userRole
+      );
 
       CacheManager.setCache(cacheKey, proposals);
       return proposals;
