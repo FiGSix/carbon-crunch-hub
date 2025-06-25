@@ -42,9 +42,9 @@ export function useMyClients() {
         client_id: client.id,
         client_name: client.name,
         client_email: client.email,
-        company_name: client.company_name,
-        project_count: client.project_count,
-        total_mwp: client.total_kwp / 1000 // Convert kWp to MWp
+        company_name: client.company, // Fixed: use 'company' instead of 'company_name'
+        project_count: client.projectCount, // Fixed: use 'projectCount' instead of 'project_count'
+        total_mwp: client.totalKwp / 1000 // Fixed: use 'totalKwp' instead of 'total_kwp' and convert kWp to MWp
       }));
 
       setClients(transformedClients);

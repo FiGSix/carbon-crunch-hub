@@ -1,13 +1,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DataService } from '@/services/dataService';
-import { UserProfile } from '@/contexts/auth/types';
+import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem } from '@/types/proposals';
 import { useToast } from '@/hooks/use-toast';
 
 interface UseOptimizedDataOptions {
   userId?: string;
-  userRole?: string;
+  userRole?: UserRole; // Fixed: Use UserRole type instead of string
   enableRealtime?: boolean;
   refetchInterval?: number;
 }
@@ -46,7 +46,7 @@ export function useOptimizedData({
     try {
       const [profileData, dashboardInfo] = await Promise.all([
         DataService.getProfile(userId, forceRefresh),
-        DataService.getDashboardData(userId, userRole)
+        DataService.getDashboardData(userId, userRole) // Fixed: Now userRole is properly typed as UserRole
       ]);
 
       setProfile(profileData);
