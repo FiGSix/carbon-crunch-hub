@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../cache/CacheManager';
@@ -72,7 +73,7 @@ export class UnifiedClientService {
     }
 
     try {
-      // First get the total count
+      // First get the total count - fix the select method call
       const { count, error: countError } = await supabase.rpc('get_agent_clients_optimized', {
         agent_id_param: userRole === 'admin' ? null : userId
       }).select('*', { count: 'exact', head: true });
