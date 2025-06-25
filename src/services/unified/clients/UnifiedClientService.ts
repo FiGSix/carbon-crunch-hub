@@ -75,7 +75,7 @@ export class UnifiedClientService {
         isRegistered: client.is_registered || false,
         projectCount: client.project_count || 0,
         totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
-        createdAt: new Date().toISOString() // Placeholder
+        createdAt: client.created_at || new Date().toISOString()
       }));
 
       CacheManager.setCache(cacheKey, clients);

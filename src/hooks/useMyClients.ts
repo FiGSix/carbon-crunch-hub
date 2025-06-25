@@ -11,6 +11,7 @@ export interface ClientData {
   company_name?: string;
   project_count: number;
   total_mwp: number;
+  created_at?: string;
 }
 
 export function useMyClients() {
@@ -42,9 +43,10 @@ export function useMyClients() {
         client_id: client.id,
         client_name: client.name,
         client_email: client.email,
-        company_name: client.company, // Fixed: use 'company' instead of 'company_name'
-        project_count: client.projectCount, // Fixed: use 'projectCount' instead of 'project_count'
-        total_mwp: client.totalKwp / 1000 // Fixed: use 'totalKwp' instead of 'total_kwp' and convert kWp to MWp
+        company_name: client.company,
+        project_count: client.projectCount,
+        total_mwp: client.totalKwp / 1000, // Convert kWp to MWp
+        created_at: client.createdAt
       }));
 
       setClients(transformedClients);

@@ -62,7 +62,7 @@ export class ClientDataService {
         project_count: client.project_count || 0,
         total_kwp: (client.total_mwp || 0) * 1000, // Convert MWp back to kWp
         is_registered: client.is_registered || false,
-        created_at: new Date().toISOString() // Placeholder since not returned by function
+        created_at: client.created_at || new Date().toISOString()
       }));
 
       CacheManager.setCache(cacheKey, clients);

@@ -355,6 +355,7 @@ export type Database = {
           total_mwp: number
           agent_id: string
           agent_name: string
+          created_at: string
         }[]
       }
       get_agent_clients_optimized: {
@@ -367,6 +368,7 @@ export type Database = {
           is_registered: boolean
           project_count: number
           total_mwp: number
+          created_at: string
         }[]
       }
       get_client_email: {
