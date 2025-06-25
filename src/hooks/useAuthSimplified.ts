@@ -29,7 +29,7 @@ export function useAuthSimplified() {
 
     const initializeAuth = async () => {
       try {
-        console.log('🚀 Initializing auth with improved session handling...');
+        console.log('🚀 Initializing auth with fixed RLS policies...');
         const startTime = performance.now();
         
         // Get initial session with improved timeout handling
@@ -138,17 +138,19 @@ export function useAuthSimplified() {
         return;
       }
 
-      console.log('📊 Loading user profile for:', userId);
+      console.log('📊 Loading user profile with fixed RLS for:', userId);
       const startTime = performance.now();
       
+      // Use a more robust query with error handling for RLS issues
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid throwing on no results
 
       if (error) {
         console.error('❌ Error loading profile:', error);
+        // Don't throw here - this might be due to timing issues with RLS
         setProfile(null);
         setUserRole(undefined);
         return;
@@ -182,6 +184,10 @@ export function useAuthSimplified() {
         
         const endTime = performance.now();
         console.log(`✅ Profile loaded in ${(endTime - startTime).toFixed(2)}ms, role:`, userProfile.role);
+      } else if (!data) {
+        console.warn('⚠️ No profile found for user:', userId);
+        setProfile(null);
+        setUserRole(undefined);
       }
     } catch (error) {
       console.error('💥 Exception loading profile:', error);

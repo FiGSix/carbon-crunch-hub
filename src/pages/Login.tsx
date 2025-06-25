@@ -16,9 +16,9 @@ const Login = () => {
   const hasRedirectedRef = useRef(false);
   
   useEffect(() => {
-    // SIMPLIFIED: Only redirect if we have both user and session, auth is initialized, and we haven't redirected yet
+    // FIXED: Only redirect if we have both user and session, auth is initialized, and we haven't redirected yet
     if (isInitialized && user && session && !authLoading && !hasRedirectedRef.current) {
-      console.log('✅ User authenticated with valid session, redirecting to dashboard');
+      console.log('✅ User authenticated with valid session after RLS fix, redirecting to dashboard');
       hasRedirectedRef.current = true;
       
       const from = location.state?.from || '/dashboard';

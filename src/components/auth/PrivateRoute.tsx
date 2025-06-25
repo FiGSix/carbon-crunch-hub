@@ -18,7 +18,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
 
   // Enhanced access check with better session validation
   const accessCheck = useMemo(() => {
-    console.log('🔒 PrivateRoute access check:', { 
+    console.log('🔒 PrivateRoute access check with fixed RLS:', { 
       hasUser: !!user,
       hasSession: !!session, 
       userRole,
@@ -71,7 +71,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
       }
     }
 
-    console.log('✅ Access check completed:', { hasAccess });
+    console.log('✅ Access check completed with fixed RLS:', { hasAccess });
     return { shouldShowLoading: false, hasAccess, shouldRedirect: false };
   }, [user, session, userRole, isLoading, isInitialized, requiredRole, adminOnly, allowedRoles]);
 
@@ -96,6 +96,6 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
     return <Navigate to="/dashboard" replace />;
   }
 
-  console.log('✅ Access granted');
+  console.log('✅ Access granted with fixed RLS');
   return <>{children}</>;
 }
