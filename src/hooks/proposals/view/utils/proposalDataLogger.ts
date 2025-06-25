@@ -23,10 +23,12 @@ export function logProposalFetchStart(proposalId?: string, invitationToken?: str
     tokenPrefix: invitationToken ? invitationToken.substring(0, 8) : null
   });
   
-  console.log("🔄 === FETCHING PROPOSAL ===");
-  console.log(`📋 Proposal ID: ${proposalId}`);
-  console.log(`🎫 Has token: ${!!invitationToken}`);
-  console.log(`🎫 Token prefix: ${invitationToken ? invitationToken.substring(0, 8) : 'none'}`);
+  if (import.meta.env.DEV) {
+    console.log("🔄 === FETCHING PROPOSAL ===");
+    console.log(`📋 Proposal ID: ${proposalId}`);
+    console.log(`🎫 Has token: ${!!invitationToken}`);
+    console.log(`🎫 Token prefix: ${invitationToken ? invitationToken.substring(0, 8) : 'none'}`);
+  }
 }
 
 /**
@@ -54,12 +56,14 @@ export function logProposalFetchError(
     hasProposalId: !!proposalId
   });
   
-  console.error("❌ === PROPOSAL FETCH FAILED ===", {
-    error: err,
-    errorMessage,
-    hasToken: !!invitationToken,
-    hasProposalId: !!proposalId
-  });
+  if (import.meta.env.DEV) {
+    console.error("❌ === PROPOSAL FETCH FAILED ===", {
+      error: err,
+      errorMessage,
+      hasToken: !!invitationToken,
+      hasProposalId: !!proposalId
+    });
+  }
   
   return errorMessage;
 }

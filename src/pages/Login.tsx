@@ -26,43 +26,52 @@ const Login = () => {
   }, []);
   
   useEffect(() => {
-    // Enhanced redirect logic - simpler approach
-    console.log('🔄 Login redirect check:', {
-      isInitialized,
-      hasUser: !!user,
-      hasSession: !!session,
-      authLoading,
-      hasRedirected: hasRedirectedRef.current,
-      userEmail: user?.email || 'none',
-      sessionExpiry: session?.expires_at || 'none',
-      currentPath: location.pathname,
-      intendedDestination: location.state?.from || '/dashboard'
-    });
+    if (import.meta.env.DEV) {
+      console.log('🔄 Login redirect check:', {
+        isInitialized,
+        hasUser: !!user,
+        hasSession: !!session,
+        authLoading,
+        hasRedirected: hasRedirectedRef.current,
+        currentPath: location.pathname,
+        intendedDestination: location.state?.from || '/dashboard'
+      });
+    }
 
     // Redirect if we have both user and session, regardless of profile loading status
     if (isInitialized && user && session && !authLoading && !hasRedirectedRef.current) {
-      console.log('✅ User authenticated with valid session, preparing redirect');
+      if (import.meta.env.DEV) {
+        console.log('✅ User authenticated with valid session, preparing redirect');
+      }
       hasRedirectedRef.current = true;
       
       const from = location.state?.from || '/dashboard';
-      console.log('🎯 Redirecting to:', from);
+      if (import.meta.env.DEV) {
+        console.log('🎯 Redirecting to:', from);
+        console.log('🚀 Executing immediate redirect to:', from);
+      }
       
       // Immediate redirect - don't wait for profile loading
-      console.log('🚀 Executing immediate redirect to:', from);
       navigate(from, { replace: true });
     } else if (isInitialized && !authLoading && (!user || !session)) {
-      console.log('ℹ️ No valid authentication found on login page');
+      if (import.meta.env.DEV) {
+        console.log('ℹ️ No valid authentication found on login page');
+      }
     }
   }, [user, session, navigate, authLoading, isInitialized, location.state]);
 
   const handleLoginAttempt = () => {
-    console.log('📈 Login attempt incremented');
+    if (import.meta.env.DEV) {
+      console.log('📈 Login attempt incremented');
+    }
     setLoginAttempts(prev => prev + 1);
   };
 
   // Show loading while auth is initializing or if we're about to redirect
   if (!isInitialized || authLoading || (user && session && !hasRedirectedRef.current)) {
-    console.log('⏳ Showing login loading state');
+    if (import.meta.env.DEV) {
+      console.log('⏳ Showing login loading state');
+    }
     return (
       <LoginLayout>
         <div className="flex items-center justify-center min-h-[200px]">
@@ -77,7 +86,9 @@ const Login = () => {
     );
   }
   
-  console.log('📋 Rendering login form');
+  if (import.meta.env.DEV) {
+    console.log('📋 Rendering login form');
+  }
   return (
     <LoginLayout>
       <LoginHeader />

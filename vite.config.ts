@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -30,14 +31,14 @@ export default defineConfig(({ mode }) => ({
     },
     terserOptions: {
       compress: {
-        // Keep console.error for debugging critical issues in production
-        // but remove other console methods
+        // Remove all console statements in production build
         drop_console: true,
         pure_funcs: [
           'console.log', 
           'console.info', 
           'console.debug', 
-          'console.warn'
+          'console.warn',
+          'console.error'
         ],
       },
     },

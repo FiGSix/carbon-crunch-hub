@@ -29,7 +29,9 @@ export function useAuthSimplified() {
 
     const initializeAuth = async () => {
       try {
-        console.log('🚀 Initializing auth with fixed RLS policies...');
+        if (import.meta.env.DEV) {
+          console.log('🚀 Initializing auth with fixed RLS policies...');
+        }
         const startTime = performance.now();
         
         // Get initial session with improved timeout handling
@@ -48,7 +50,6 @@ export function useAuthSimplified() {
           if (timeoutId) clearTimeout(timeoutId);
           
           if (error) {
-            console.error('❌ Error getting initial session:', error);
             // Don't throw here - let the app continue without session
           }
           
@@ -59,22 +60,29 @@ export function useAuthSimplified() {
           setUser(session?.user ?? null);
           
           if (session?.user) {
-            console.log('✅ Initial session found, loading user profile');
+            if (import.meta.env.DEV) {
+              console.log('✅ Initial session found, loading user profile');
+            }
             // Load profile but don't block initialization
             loadUserProfileWithFallback(session.user.id);
           } else {
-            console.log('ℹ️ No initial session found');
+            if (import.meta.env.DEV) {
+              console.log('ℹ️ No initial session found');
+            }
           }
           
           const endTime = performance.now();
-          console.log(`⚡ Auth initialization completed in ${(endTime - startTime).toFixed(2)}ms`);
+          if (import.meta.env.DEV) {
+            console.log(`⚡ Auth initialization completed in ${(endTime - startTime).toFixed(2)}ms`);
+          }
         } catch (timeoutError) {
-          console.warn('⚠️ Session fetch timed out, continuing without session');
+          if (import.meta.env.DEV) {
+            console.warn('⚠️ Session fetch timed out, continuing without session');
+          }
           if (timeoutId) clearTimeout(timeoutId);
           // Continue with null session instead of failing
         }
       } catch (error) {
-        console.error('💥 Error initializing auth:', error);
         // Don't throw here - let the app continue with null session
       } finally {
         if (!isUnmountedRef.current) {
@@ -88,24 +96,32 @@ export function useAuthSimplified() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isUnmountedRef.current) return;
 
-      console.log('🔔 Auth state changed:', event, 'User ID:', session?.user?.id);
+      if (import.meta.env.DEV) {
+        console.log('🔔 Auth state changed:', event);
+      }
       
       // Batch state updates to prevent multiple re-renders
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        console.log('👤 Loading profile for authenticated user');
+        if (import.meta.env.DEV) {
+          console.log('👤 Loading profile for authenticated user');
+        }
         loadUserProfileWithFallback(session.user.id);
       } else {
-        console.log('🚪 User signed out, clearing profile');
+        if (import.meta.env.DEV) {
+          console.log('🚪 User signed out, clearing profile');
+        }
         setProfile(null);
         setUserRole(undefined);
         profileCacheRef.current.clear();
       }
 
       if (event === 'SIGNED_OUT') {
-        console.log('🧹 Clearing all auth state');
+        if (import.meta.env.DEV) {
+          console.log('🧹 Clearing all auth state');
+        }
         setProfile(null);
         setUserRole(undefined);
         profileCacheRef.current.clear();
@@ -126,13 +142,17 @@ export function useAuthSimplified() {
       // Check cache first
       const cached = profileCacheRef.current.get(userId);
       if (cached && Date.now() - cached.timestamp < PROFILE_CACHE_TTL) {
-        console.log('📊 Using cached profile for:', userId);
+        if (import.meta.env.DEV) {
+          console.log('📊 Using cached profile for:', userId);
+        }
         setProfile(cached.profile);
         setUserRole(cached.profile.role);
         return;
       }
 
-      console.log('📊 Loading user profile with fixed RLS for:', userId);
+      if (import.meta.env.DEV) {
+        console.log('📊 Loading user profile with fixed RLS for:', userId);
+      }
       const startTime = performance.now();
       
       // Use the fixed RLS policies - simple self-access only
@@ -145,17 +165,10 @@ export function useAuthSimplified() {
       const endTime = performance.now();
 
       if (error) {
-        console.error('❌ Profile loading error:', {
-          error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          userId,
-          loadTime: `${(endTime - startTime).toFixed(2)}ms`
-        });
-        
         // Create a fallback profile if none exists
-        console.log('🔧 Creating fallback profile for user:', userId);
+        if (import.meta.env.DEV) {
+          console.log('🔧 Creating fallback profile for user:', userId);
+        }
         const fallbackProfile: UserProfile = {
           id: userId,
           first_name: null,
@@ -203,23 +216,20 @@ export function useAuthSimplified() {
         setProfile(userProfile);
         setUserRole(userProfile.role);
         
-        console.log(`✅ Profile loaded successfully in ${(endTime - startTime).toFixed(2)}ms`, {
-          userId,
-          role: userProfile.role,
-          email: userProfile.email,
-          hasFirstName: !!userProfile.first_name,
-          hasLastName: !!userProfile.last_name
-        });
+        if (import.meta.env.DEV) {
+          console.log(`✅ Profile loaded successfully in ${(endTime - startTime).toFixed(2)}ms`, {
+            userId,
+            role: userProfile.role,
+            hasFirstName: !!userProfile.first_name,
+            hasLastName: !!userProfile.last_name
+          });
+        }
       }
     } catch (error) {
-      console.error('💥 Exception loading profile:', {
-        error: error instanceof Error ? error.message : error,
-        userId,
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      
       // Create fallback profile on any exception
-      console.log('🔧 Creating fallback profile due to exception for user:', userId);
+      if (import.meta.env.DEV) {
+        console.log('🔧 Creating fallback profile due to exception for user:', userId);
+      }
       const fallbackProfile: UserProfile = {
         id: userId,
         first_name: null,
@@ -243,7 +253,9 @@ export function useAuthSimplified() {
 
   const refreshUser = async () => {
     if (user?.id) {
-      console.log('🔄 Refreshing user profile');
+      if (import.meta.env.DEV) {
+        console.log('🔄 Refreshing user profile');
+      }
       // Clear cache to force fresh data
       profileCacheRef.current.delete(user.id);
       await loadUserProfileWithFallback(user.id);
@@ -252,7 +264,9 @@ export function useAuthSimplified() {
 
   const signOut = async () => {
     try {
-      console.log('🚪 Signing out user');
+      if (import.meta.env.DEV) {
+        console.log('🚪 Signing out user');
+      }
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -263,9 +277,10 @@ export function useAuthSimplified() {
       setUserRole(undefined);
       profileCacheRef.current.clear();
       
-      console.log('✅ Sign out completed successfully');
+      if (import.meta.env.DEV) {
+        console.log('✅ Sign out completed successfully');
+      }
     } catch (error) {
-      console.error('❌ Error signing out:', error);
       throw error;
     }
   };

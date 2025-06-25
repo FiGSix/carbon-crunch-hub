@@ -28,14 +28,18 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
     setIsSubmitting(true);
     
     try {
-      console.log(`🔐 Attempting to sign in with email: ${email}`);
+      if (import.meta.env.DEV) {
+        console.log(`🔐 Attempting to sign in with email: ${email}`);
+      }
       const { error } = await signIn(email, password);
       
       if (error) {
         throw error;
       }
       
-      console.log('✅ Sign in successful, refreshing user data');
+      if (import.meta.env.DEV) {
+        console.log('✅ Sign in successful, refreshing user data');
+      }
       
       // Refresh user data and wait for it to complete
       await refreshUser();
@@ -46,10 +50,11 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
       });
       
       // REMOVED: All redirect logic - let Login.tsx handle this via auth state changes
-      console.log('🔄 Login successful, auth state will trigger redirect');
+      if (import.meta.env.DEV) {
+        console.log('🔄 Login successful, auth state will trigger redirect');
+      }
       
     } catch (error: any) {
-      console.error('❌ Login error:', error);
       onLoginAttempt();
       toast({
         title: 'Login failed',

@@ -36,18 +36,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Enhanced logging with session details
-  console.log('🔄 AuthContext state update:', {
-    hasUser: !!auth.user,
-    hasSession: !!auth.session,
-    hasProfile: !!auth.profile,
-    userRole: auth.userRole,
-    isAuthenticated,
-    isInitialized: auth.isInitialized,
-    isLoading: auth.isLoading,
-    userEmail: auth.user?.email || 'none',
-    sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
-    profileId: auth.profile?.id || 'none'
-  });
+  if (import.meta.env.DEV) {
+    console.log('🔄 AuthContext state update:', {
+      hasUser: !!auth.user,
+      hasSession: !!auth.session,
+      hasProfile: !!auth.profile,
+      userRole: auth.userRole,
+      isAuthenticated,
+      isInitialized: auth.isInitialized,
+      isLoading: auth.isLoading,
+      sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
+      profileId: auth.profile?.id || 'none'
+    });
+  }
 
   return (
     <AuthContext.Provider value={contextValue}>
