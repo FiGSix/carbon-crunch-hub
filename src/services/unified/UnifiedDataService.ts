@@ -1,7 +1,9 @@
+
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem } from '@/types/proposals';
 import { CacheManager } from './cache/CacheManager';
 import { ProfileDataService } from './profile/ProfileDataService';
+import { SecureProfileService } from '../profile/SecureProfileService';
 import { ProposalsDataService } from './proposals/ProposalsDataService';
 import { DashboardDataService } from './dashboard/DashboardDataService';
 import { UnifiedClientService } from './clients/UnifiedClientService';
@@ -21,6 +23,18 @@ export class UnifiedDataService {
 
   static async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
     return ProfileDataService.updateProfile(userId, updates);
+  }
+
+  /**
+   * SECURE: Get profile by ID with proper authorization
+   * Requires current user context for security validation
+   */
+  static async getProfileById(
+    targetProfileId: string,
+    currentUserId: string,
+    currentUserRole: UserRole
+  ): Promise<{ profile: Partial<UserProfile> | null; error?: string }> {
+    return SecureProfileService.getProfileById(targetProfileId, currentUserId, currentUserRole);
   }
 
   // Proposals operations
@@ -73,6 +87,15 @@ export class UnifiedDataService {
 
   static calculatePortfolioMetrics(proposals: ProposalListItem[]) {
     return UnifiedCarbonService.calculatePortfolioTotals(proposals);
+  }
+
+  // Security audit operations
+  static getSecurityAuditLogs(currentUserRole: UserRole) {
+    return SecureProfileService.getAuditLogs(currentUserRole);
+  }
+
+  static clearSecurityAuditLogs(currentUserRole: UserRole): boolean {
+    return SecureProfileService.clearAuditLogs(currentUserRole);
   }
 
   // Utility methods

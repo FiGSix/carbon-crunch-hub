@@ -8,6 +8,8 @@ import {
   invalidateCache,
   CACHE_TTL_MEDIUM
 } from './cache'
+import { SecureProfileService } from '../services/profile/SecureProfileService'
+import { UserRole } from '@/contexts/auth/types'
 
 /**
  * Get the current user's profile data with improved caching
@@ -163,8 +165,8 @@ export async function updateProfile(updates: Partial<{
 }
 
 /**
- * Get a profile by ID with permission check
- * This is useful for fetching other users' profiles when needed
+ * SECURE: Get a profile by ID with proper authorization
+ * This function requires authentication and enforces role-based access control
  */
 export async function getProfileById(profileId: string) {
   if (!profileId) {
@@ -172,17 +174,36 @@ export async function getProfileById(profileId: string) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profileId)
-      .maybeSingle()
-
-    if (error) {
-      console.error(`Error fetching profile ${profileId}:`, error);
+    // Get current user for authorization
+    const { user, error: authError } = await getCurrentUser()
+    if (authError || !user) {
+      return { 
+        profile: null, 
+        error: new Error("Authentication required to access profiles")
+      }
     }
 
-    return { profile: data, error }
+    // Get user's role from their profile
+    const { profile: currentUserProfile } = await getProfile()
+    if (!currentUserProfile?.role) {
+      return { 
+        profile: null, 
+        error: new Error("Unable to determine user role")
+      }
+    }
+
+    // Use secure profile service with proper authorization
+    const result = await SecureProfileService.getProfileById(
+      profileId,
+      user.id,
+      currentUserProfile.role as UserRole
+    );
+
+    return { 
+      profile: result.profile, 
+      error: result.error ? new Error(result.error) : null 
+    };
+
   } catch (fetchError) {
     console.error(`Exception fetching profile ${profileId}:`, fetchError);
     return { 
