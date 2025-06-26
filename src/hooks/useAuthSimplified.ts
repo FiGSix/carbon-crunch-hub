@@ -6,7 +6,7 @@ import { useAuthInitializer } from './auth/useAuthInitializer';
 import { authCache } from './auth/authCache';
 
 /**
- * Simplified auth hook with improved error handling
+ * Simplified auth hook with improved session persistence and error handling
  */
 export function useAuthSimplified() {
   const {
@@ -42,19 +42,32 @@ export function useAuthSimplified() {
   const signOut = async () => {
     try {
       if (import.meta.env.DEV) {
-        console.log('🚪 Signing out user');
+        console.log('🚪 Starting sign out process');
       }
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       
-      // Clear all state immediately
+      // Clear state first to prevent UI flickering
       clearAuthState();
       authCache.clear();
+      
+      // Then perform the actual sign out
+      const { error } = await supabase.auth.signOut({
+        scope: 'global' // Sign out from all devices
+      });
+      
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('❌ Sign out error:', error);
+        }
+        throw error;
+      }
       
       if (import.meta.env.DEV) {
         console.log('✅ Sign out completed successfully');
       }
     } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('💥 Exception during sign out:', error);
+      }
       throw error;
     }
   };

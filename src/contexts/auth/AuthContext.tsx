@@ -3,7 +3,6 @@ import React, { createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { UserProfile, UserRole } from './types';
 import { useAuthSimplified } from '@/hooks/useAuthSimplified';
-import { useAuthRequiredListener } from '@/hooks/auth/useAuthRequiredListener';
 
 interface AuthContextType {
   user: User | null;
@@ -27,8 +26,8 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const auth = useAuthSimplified();
   
-  // ENHANCED: Better authentication check with comprehensive logging
-  const isAuthenticated = !!auth.user && !!auth.session;
+  // Enhanced authentication check with better session validation
+  const isAuthenticated = !!(auth.user && auth.session && auth.session.expires_at && new Date(auth.session.expires_at * 1000) > new Date());
   
   const contextValue: AuthContextType = {
     ...auth,
@@ -36,13 +35,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated
   };
 
-  // Add global auth-required event listener
-  useAuthRequiredListener({
-    signOut: auth.signOut,
-    isAuthenticated
-  });
-
-  // Enhanced logging with session details
+  // Enhanced logging with session validation details
   if (import.meta.env.DEV) {
     console.log('🔄 AuthContext state update:', {
       hasUser: !!auth.user,
@@ -53,6 +46,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isInitialized: auth.isInitialized,
       isLoading: auth.isLoading,
       sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
+      sessionExpiresAt: auth.session?.expires_at ? new Date(auth.session.expires_at * 1000).toISOString() : 'none',
       profileId: auth.profile?.id || 'none'
     });
   }
