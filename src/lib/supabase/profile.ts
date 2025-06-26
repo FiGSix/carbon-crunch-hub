@@ -1,4 +1,3 @@
-
 import { supabase } from './client'
 import { getCurrentUser } from './auth'
 import { 
@@ -10,6 +9,7 @@ import {
 } from './cache'
 import { SecureProfileService } from '../../services/profile/SecureProfileService'
 import { UserRole } from '@/contexts/auth/types'
+import { authLogger } from '@/lib/logger'
 
 /**
  * Enhanced role detection from user metadata
@@ -20,7 +20,7 @@ async function getUserRoleFromMetadata(userId: string): Promise<UserRole> {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user || user.id !== userId) {
-      console.warn("Could not get user metadata for role detection:", error?.message);
+      authLogger.warn("Could not get user metadata for role detection", { userId, error: error?.message });
       return 'client'; // Safe default
     }
     
@@ -28,14 +28,14 @@ async function getUserRoleFromMetadata(userId: string): Promise<UserRole> {
     const metadataRole = user.user_metadata?.role || user.app_metadata?.role;
     
     if (metadataRole && ['client', 'agent', 'admin'].includes(metadataRole)) {
-      console.log(`✅ Role detected from metadata: ${metadataRole} for user ${userId}`);
+      authLogger.info("Role detected from metadata", { userId, metadataRole });
       return metadataRole as UserRole;
     }
     
-    console.log(`⚠️ No valid role in metadata for user ${userId}, defaulting to 'client'`);
+    authLogger.warn("No valid role in metadata, defaulting to client", { userId });
     return 'client';
   } catch (error) {
-    console.error("Exception getting user role from metadata:", error);
+    authLogger.error("Exception getting user role from metadata", { userId, error });
     return 'client';
   }
 }
@@ -45,7 +45,7 @@ async function getUserRoleFromMetadata(userId: string): Promise<UserRole> {
  */
 export async function synchronizeUserRole(userId: string): Promise<{ success: boolean; role?: UserRole; error?: string }> {
   try {
-    console.log(`🔄 Starting role synchronization for user: ${userId}`);
+    authLogger.info("Starting role synchronization", { userId });
     
     // Get role from auth metadata
     const metadataRole = await getUserRoleFromMetadata(userId);
@@ -58,13 +58,17 @@ export async function synchronizeUserRole(userId: string): Promise<{ success: bo
       .maybeSingle();
     
     if (profileError) {
-      console.error("Error fetching profile for role sync:", profileError);
+      authLogger.error("Error fetching profile for role sync", { userId, error: profileError });
       return { success: false, error: profileError.message };
     }
     
     // If profile doesn't exist or role mismatch, update it
     if (!currentProfile || currentProfile.role !== metadataRole) {
-      console.log(`🔧 Role sync needed: profile role '${currentProfile?.role}' → metadata role '${metadataRole}'`);
+      authLogger.info("Role sync needed", { 
+        userId, 
+        currentRole: currentProfile?.role, 
+        targetRole: metadataRole 
+      });
       
       const { error: updateError } = await supabase
         .from('profiles')
@@ -72,22 +76,22 @@ export async function synchronizeUserRole(userId: string): Promise<{ success: bo
         .eq('id', userId);
       
       if (updateError) {
-        console.error("Error updating profile role:", updateError);
+        authLogger.error("Error updating profile role", { userId, error: updateError });
         return { success: false, error: updateError.message };
       }
       
       // Invalidate cache after role update
       invalidateCache(userId, 'profile');
       
-      console.log(`✅ Role synchronized successfully: ${metadataRole} for user ${userId}`);
+      authLogger.info("Role synchronized successfully", { userId, role: metadataRole });
       return { success: true, role: metadataRole };
     }
     
-    console.log(`✓ Role already synchronized: ${metadataRole} for user ${userId}`);
+    authLogger.info("Role already synchronized", { userId, role: metadataRole });
     return { success: true, role: metadataRole };
     
   } catch (error) {
-    console.error("Exception during role synchronization:", error);
+    authLogger.error("Exception during role synchronization", { userId, error });
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Unknown error during role sync"
@@ -99,7 +103,7 @@ export async function synchronizeUserRole(userId: string): Promise<{ success: bo
  * Enhanced profile creation with proper role detection
  */
 async function createProfileWithCorrectRole(userId: string, userEmail: string): Promise<any> {
-  console.log(`🆕 Creating new profile for user: ${userId}`);
+  authLogger.info("Creating new profile", { userId });
   
   // Get the correct role from auth metadata
   const detectedRole = await getUserRoleFromMetadata(userId);
@@ -113,7 +117,7 @@ async function createProfileWithCorrectRole(userId: string, userEmail: string): 
     created_at: new Date().toISOString()
   };
   
-  console.log(`📝 Creating profile with role: ${detectedRole} for user ${userId}`);
+  authLogger.info("Creating profile with detected role", { userId, detectedRole });
   
   const { data: createdProfile, error: createError } = await supabase
     .from('profiles')
@@ -122,11 +126,11 @@ async function createProfileWithCorrectRole(userId: string, userEmail: string): 
     .single();
   
   if (createError) {
-    console.error("❌ Error creating profile:", createError);
+    authLogger.error("Error creating profile", { userId, error: createError });
     return { profile: null, error: createError };
   }
   
-  console.log(`✅ Profile created successfully with role: ${detectedRole} for user ${userId}`);
+  authLogger.info("Profile created successfully", { userId, role: detectedRole });
   return { profile: createdProfile, error: null };
 }
 
@@ -136,17 +140,17 @@ async function createProfileWithCorrectRole(userId: string, userEmail: string): 
 export async function getProfile() {
   const { user, error: userError } = await getCurrentUser()
   if (userError || !user) {
-    console.error("Cannot get profile - no authenticated user:", userError?.message);
+    authLogger.error("Cannot get profile - no authenticated user", { error: userError?.message });
     return { profile: null, error: userError || new Error("No authenticated user") }
   }
 
   // Check cache first with expiry check
   if (user.id && isCacheValid(user.id, 'profile')) {
-    console.log("Using cached profile for user:", user.id);
+    authLogger.debug("Using cached profile", { userId: user.id });
     return { profile: getCachedProfile(user.id), error: null };
   }
 
-  console.log("Fetching profile from database for user:", user.id);
+  authLogger.info("Fetching profile from database", { userId: user.id });
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -155,13 +159,13 @@ export async function getProfile() {
       .maybeSingle()
       
     if (error) {
-      console.error("Error fetching profile:", error);
+      authLogger.error("Error fetching profile", { userId: user.id, error });
       return { profile: null, error }
     }
     
     // If no profile exists, create one with correct role detection
     if (!data) {
-      console.log("No profile found, creating new profile for user:", user.id);
+      authLogger.info("No profile found, creating new profile", { userId: user.id });
       const createResult = await createProfileWithCorrectRole(user.id, user.email || '');
       
       if (createResult.error) {
@@ -179,16 +183,20 @@ export async function getProfile() {
     // Validate existing profile role against metadata
     const metadataRole = await getUserRoleFromMetadata(user.id);
     if (data.role !== metadataRole) {
-      console.log(`⚠️ Role mismatch detected: profile has '${data.role}', metadata has '${metadataRole}'`);
+      authLogger.warn("Role mismatch detected", { 
+        userId: user.id, 
+        profileRole: data.role, 
+        metadataRole 
+      });
       
       // Attempt to synchronize role
       const syncResult = await synchronizeUserRole(user.id);
       if (syncResult.success && syncResult.role) {
         // Update the data object with corrected role
         data.role = syncResult.role;
-        console.log(`✅ Role corrected to: ${syncResult.role}`);
+        authLogger.info("Role corrected", { userId: user.id, correctedRole: syncResult.role });
       } else {
-        console.warn(`⚠️ Role sync failed: ${syncResult.error}`);
+        authLogger.warn("Role sync failed", { userId: user.id, error: syncResult.error });
       }
     }
       
@@ -199,7 +207,7 @@ export async function getProfile() {
 
     return { profile: data, error: null }
   } catch (fetchError) {
-    console.error("Exception fetching profile:", fetchError);
+    authLogger.error("Exception fetching profile", { userId: user.id, error: fetchError });
     return { 
       profile: null, 
       error: fetchError instanceof Error ? fetchError : new Error("Unknown error fetching profile")
@@ -222,7 +230,7 @@ export async function updateProfile(updates: Partial<{
 }>) {
   const { user, error: userError } = await getCurrentUser()
   if (userError || !user) {
-    console.error("Cannot update profile - no authenticated user:", userError?.message);
+    authLogger.error("Cannot update profile - no authenticated user", { error: userError?.message });
     return { error: userError || new Error("No authenticated user") }
   }
 
@@ -277,7 +285,7 @@ export async function updateProfile(updates: Partial<{
 
     return { data, error }
   } catch (updateError) {
-    console.error("Exception updating profile:", updateError);
+    authLogger.error("Exception updating profile", { userId: user.id, error: updateError });
     return { 
       data: null, 
       error: updateError instanceof Error ? updateError : new Error("Unknown error updating profile")
@@ -326,7 +334,7 @@ export async function getProfileById(profileId: string) {
     };
 
   } catch (fetchError) {
-    console.error(`Exception fetching profile ${profileId}:`, fetchError);
+    authLogger.error(`Exception fetching profile ${profileId}:`, fetchError);
     return { 
       profile: null, 
       error: fetchError instanceof Error ? fetchError : new Error("Unknown error fetching profile by ID")

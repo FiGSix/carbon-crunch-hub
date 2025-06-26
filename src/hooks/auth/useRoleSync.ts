@@ -4,6 +4,7 @@ import { useAuthSimplified } from '@/hooks/useAuthSimplified';
 import { RoleValidationService } from '@/services/auth/RoleValidationService';
 import { synchronizeUserRole } from '@/lib/supabase/profile';
 import { UserRole } from '@/contexts/auth/types';
+import { authLogger } from '@/lib/logger';
 
 export interface RoleSyncStatus {
   isChecking: boolean;
@@ -34,7 +35,7 @@ export function useRoleSync() {
       setSyncStatus(prev => ({ ...prev, isChecking: true, error: undefined }));
 
       try {
-        console.log(`🔄 Auto role sync for user: ${user.id}`);
+        authLogger.info("Auto role sync started", { userId: user.id });
         
         // Validate current role
         const validation = await RoleValidationService.validateUserRole(user.id);
@@ -42,7 +43,7 @@ export function useRoleSync() {
         if (!mounted) return;
 
         if (validation.mismatchDetected || validation.correctionNeeded) {
-          console.log(`🔧 Role sync needed:`, validation);
+          authLogger.warn("Role sync needed", { userId: user.id, validation });
           
           // Attempt synchronization
           const syncResult = await synchronizeUserRole(user.id);
@@ -56,7 +57,10 @@ export function useRoleSync() {
               correctedRole: syncResult.role,
               lastChecked: new Date()
             });
-            console.log(`✅ Role sync completed: ${syncResult.role}`);
+            authLogger.info("Role sync completed successfully", { 
+              userId: user.id, 
+              correctedRole: syncResult.role 
+            });
           } else {
             setSyncStatus({
               isChecking: false,
@@ -64,7 +68,7 @@ export function useRoleSync() {
               error: syncResult.error,
               lastChecked: new Date()
             });
-            console.error(`❌ Role sync failed: ${syncResult.error}`);
+            authLogger.error("Role sync failed", { userId: user.id, error: syncResult.error });
           }
         } else {
           setSyncStatus({
@@ -72,13 +76,16 @@ export function useRoleSync() {
             isValid: true,
             lastChecked: new Date()
           });
-          console.log(`✅ Role validation passed: ${validation.detectedRole}`);
+          authLogger.info("Role validation passed", { 
+            userId: user.id, 
+            detectedRole: validation.detectedRole 
+          });
         }
 
       } catch (error) {
         if (!mounted) return;
         
-        console.error('Role sync error:', error);
+        authLogger.error("Role sync error", { userId: user.id, error });
         setSyncStatus({
           isChecking: false,
           isValid: false,
@@ -106,10 +113,11 @@ export function useRoleSync() {
 
   const manualSync = async (): Promise<boolean> => {
     if (!user?.id) {
-      console.warn('No user available for manual role sync');
+      authLogger.warn("No user available for manual role sync");
       return false;
     }
 
+    authLogger.info("Manual role sync started", { userId: user.id });
     setSyncStatus(prev => ({ ...prev, isChecking: true, error: undefined }));
 
     try {
@@ -123,12 +131,23 @@ export function useRoleSync() {
         lastChecked: new Date()
       });
 
+      if (syncResult.success) {
+        authLogger.info("Manual role sync completed successfully", { 
+          userId: user.id, 
+          correctedRole: syncResult.role 
+        });
+      } else {
+        authLogger.error("Manual role sync failed", { userId: user.id, error: syncResult.error });
+      }
+
       return syncResult.success;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Manual sync failed';
+      authLogger.error("Manual role sync exception", { userId: user.id, error });
       setSyncStatus({
         isChecking: false,
         isValid: false,
-        error: error instanceof Error ? error.message : 'Manual sync failed',
+        error: errorMessage,
         lastChecked: new Date()
       });
       return false;

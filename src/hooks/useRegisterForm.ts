@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { signUp } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { RoleValidationService } from "@/services/auth/RoleValidationService";
+import { authLogger } from "@/lib/logger";
 
 interface RegisterFormData {
   firstName: string;
@@ -44,7 +45,7 @@ export function useRegisterForm(initialRole: "client" | "agent") {
   };
   
   const handleRoleChange = (value: string) => {
-    console.log(`🔄 Role changed to: ${value}`);
+    authLogger.info("Role changed during registration", { newRole: value });
     setFormData((prev) => ({ ...prev, role: value as "client" | "agent" }));
   };
 
@@ -76,7 +77,10 @@ export function useRegisterForm(initialRole: "client" | "agent") {
     setIsLoading(true);
     
     try {
-      console.log(`📝 Starting registration with role: ${formData.role}`);
+      authLogger.info("Starting registration process", { 
+        email: formData.email, 
+        role: formData.role 
+      });
       
       const { data, error } = await signUp(
         formData.email,
@@ -98,7 +102,10 @@ export function useRegisterForm(initialRole: "client" | "agent") {
       
       // Validate role assignment after successful signup
       if (data?.user?.id) {
-        console.log(`🔍 Validating role assignment for new user: ${data.user.id}`);
+        authLogger.info("Post-registration role validation starting", { 
+          userId: data.user.id,
+          expectedRole: formData.role 
+        });
         
         // Give the database trigger time to create the profile
         setTimeout(async () => {
@@ -106,24 +113,44 @@ export function useRegisterForm(initialRole: "client" | "agent") {
             const validation = await RoleValidationService.validateUserRole(data.user.id);
             
             if (!validation.isValid || validation.mismatchDetected) {
-              console.warn(`⚠️ Role validation issue detected:`, validation);
+              authLogger.warn("Role validation issue detected after registration", { 
+                userId: data.user.id,
+                validation 
+              });
               
               // Attempt to correct the role
               const correction = await RoleValidationService.correctUserRole(data.user.id);
               
               if (correction.success) {
-                console.log(`✅ Role corrected to: ${correction.correctedRole}`);
+                authLogger.info("Post-registration role corrected", { 
+                  userId: data.user.id,
+                  correctedRole: correction.correctedRole 
+                });
               } else {
-                console.error(`❌ Role correction failed: ${correction.error}`);
+                authLogger.error("Post-registration role correction failed", { 
+                  userId: data.user.id,
+                  error: correction.error 
+                });
               }
             } else {
-              console.log(`✅ Role validation successful: ${validation.detectedRole}`);
+              authLogger.info("Post-registration role validation successful", { 
+                userId: data.user.id,
+                detectedRole: validation.detectedRole 
+              });
             }
           } catch (validationError) {
-            console.error('Post-registration role validation failed:', validationError);
+            authLogger.error("Post-registration role validation failed", { 
+              userId: data.user.id,
+              error: validationError 
+            });
           }
         }, 2000); // Wait 2 seconds for database trigger to complete
       }
+      
+      authLogger.info("Registration completed successfully", { 
+        email: formData.email,
+        role: formData.role 
+      });
       
       toast({
         title: "Registration successful!",
@@ -134,7 +161,11 @@ export function useRegisterForm(initialRole: "client" | "agent") {
       navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       
     } catch (error: any) {
-      console.error('Registration error:', error);
+      authLogger.error("Registration failed", { 
+        email: formData.email,
+        role: formData.role,
+        error: error.message 
+      });
       toast({
         title: "Registration failed",
         description: error.message || "Please check your information and try again",

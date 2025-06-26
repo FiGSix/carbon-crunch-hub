@@ -15,21 +15,25 @@ export function logError(
   additionalContext: LogContext = {}
 ): void {
   const logContext: LogContext = {
+    context,
     ...additionalContext,
     ...(details ? { details } : {}),
     ...(code ? { code } : {})
   };
 
+  // Use the appropriate logger based on context
+  const contextLogger = logger.withCategory('general').withContext({ context });
+
   switch (severity) {
     case "info":
-      logger.info(`[${context}] ${message}`, logContext);
+      contextLogger.info(message, logContext);
       break;
     case "warning":
-      logger.warn(`[${context}] ${message}`, logContext);
+      contextLogger.warn(message, logContext);
       break;
     case "error":
     case "fatal":
-      logger.error(`[${context}] ${message}`, logContext);
+      contextLogger.error(message, logContext);
       break;
   }
 }

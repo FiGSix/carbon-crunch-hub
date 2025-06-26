@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/contexts/auth/types';
+import { authLogger } from '@/lib/logger';
 
 export interface RoleValidationResult {
   isValid: boolean;
@@ -21,12 +22,13 @@ export class RoleValidationService {
    */
   static async validateUserRole(userId: string): Promise<RoleValidationResult> {
     try {
-      console.log(`🔍 Validating role for user: ${userId}`);
+      authLogger.info("Validating role for user", { userId });
       
       // Get user auth metadata
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user || user.id !== userId) {
+        authLogger.warn("Unable to access user auth data", { userId, error: authError });
         return {
           isValid: false,
           detectedRole: 'client',
@@ -47,6 +49,10 @@ export class RoleValidationService {
         .maybeSingle();
       
       if (profileError) {
+        authLogger.error("Profile access error during role validation", { 
+          userId, 
+          error: profileError.message 
+        });
         return {
           isValid: false,
           detectedRole: metadataRole,
@@ -59,7 +65,12 @@ export class RoleValidationService {
       const profileRole = profile?.role as UserRole;
       const mismatchDetected = profileRole && profileRole !== metadataRole;
       
-      console.log(`📊 Role validation result: metadata=${metadataRole}, profile=${profileRole}, mismatch=${mismatchDetected}`);
+      authLogger.info("Role validation completed", { 
+        userId,
+        metadataRole, 
+        profileRole, 
+        mismatchDetected 
+      });
       
       return {
         isValid: !mismatchDetected && profileRole === metadataRole,
@@ -70,7 +81,7 @@ export class RoleValidationService {
       };
       
     } catch (error) {
-      console.error('Exception during role validation:', error);
+      authLogger.error("Exception during role validation", { userId, error });
       return {
         isValid: false,
         detectedRole: 'client',
@@ -89,6 +100,7 @@ export class RoleValidationService {
       const validation = await this.validateUserRole(userId);
       
       if (!validation.correctionNeeded) {
+        authLogger.info("Role correction not needed", { userId, currentRole: validation.profileRole });
         return { 
           success: true, 
           correctedRole: validation.profileRole || validation.detectedRole 
@@ -99,13 +111,18 @@ export class RoleValidationService {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user || user.id !== userId) {
+        authLogger.error("Unable to access user auth data for correction", { userId, error: authError });
         return { 
           success: false, 
           error: 'Unable to access user auth data for correction' 
         };
       }
       
-      console.log(`🔧 Correcting role for user ${userId}: ${validation.profileRole || 'none'} → ${validation.detectedRole}`);
+      authLogger.info("Correcting user role", { 
+        userId, 
+        fromRole: validation.profileRole || 'none', 
+        toRole: validation.detectedRole 
+      });
       
       // Update or insert profile with correct role, including required email
       const { error: upsertError } = await supabase
@@ -119,21 +136,21 @@ export class RoleValidationService {
         });
       
       if (upsertError) {
-        console.error('Error correcting user role:', upsertError);
+        authLogger.error("Error correcting user role", { userId, error: upsertError });
         return { 
           success: false, 
           error: `Failed to correct role: ${upsertError.message}` 
         };
       }
       
-      console.log(`✅ Role corrected successfully: ${validation.detectedRole} for user ${userId}`);
+      authLogger.info("Role corrected successfully", { userId, correctedRole: validation.detectedRole });
       return { 
         success: true, 
         correctedRole: validation.detectedRole 
       };
       
     } catch (error) {
-      console.error('Exception during role correction:', error);
+      authLogger.error("Exception during role correction", { userId, error });
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown correction error' 
@@ -145,12 +162,14 @@ export class RoleValidationService {
    * Batch validate roles for multiple users (admin only)
    */
   static async batchValidateRoles(userIds: string[]): Promise<{ [userId: string]: RoleValidationResult }> {
+    authLogger.info("Starting batch role validation", { userCount: userIds.length });
     const results: { [userId: string]: RoleValidationResult } = {};
     
     for (const userId of userIds) {
       results[userId] = await this.validateUserRole(userId);
     }
     
+    authLogger.info("Batch role validation completed", { userCount: userIds.length });
     return results;
   }
 }
