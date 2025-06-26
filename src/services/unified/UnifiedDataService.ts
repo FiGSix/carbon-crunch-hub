@@ -1,4 +1,3 @@
-
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProposalListItem } from '@/types/proposals';
 import { CacheManager } from './cache/CacheManager';
@@ -8,12 +7,14 @@ import { ProposalsDataService } from './proposals/ProposalsDataService';
 import { DashboardDataService } from './dashboard/DashboardDataService';
 import { UnifiedClientService } from './clients/UnifiedClientService';
 import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { RoleValidationService } from '../auth/RoleValidationService';
+import { synchronizeUserRole } from '@/lib/supabase/profile';
 import type { ClientSearchResult } from './clients/UnifiedClientService';
 import type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
 
 /**
  * Unified data service - single interface for all data operations
- * Now uses consolidated UnifiedCarbonService for all calculations
+ * Now includes role validation and synchronization capabilities
  */
 export class UnifiedDataService {
   // Profile operations
@@ -35,6 +36,23 @@ export class UnifiedDataService {
     currentUserRole: UserRole
   ): Promise<{ profile: Partial<UserProfile> | null; error?: string }> {
     return SecureProfileService.getProfileById(targetProfileId, currentUserId, currentUserRole);
+  }
+
+  // Role validation and synchronization operations
+  static async validateUserRole(userId: string) {
+    return RoleValidationService.validateUserRole(userId);
+  }
+
+  static async correctUserRole(userId: string) {
+    return RoleValidationService.correctUserRole(userId);
+  }
+
+  static async synchronizeUserRole(userId: string) {
+    return synchronizeUserRole(userId);
+  }
+
+  static async batchValidateRoles(userIds: string[]) {
+    return RoleValidationService.batchValidateRoles(userIds);
   }
 
   // Proposals operations

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signUp } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { RoleValidationService } from "@/services/auth/RoleValidationService";
 
 interface RegisterFormData {
   firstName: string;
@@ -43,6 +44,7 @@ export function useRegisterForm(initialRole: "client" | "agent") {
   };
   
   const handleRoleChange = (value: string) => {
+    console.log(`🔄 Role changed to: ${value}`);
     setFormData((prev) => ({ ...prev, role: value as "client" | "agent" }));
   };
 
@@ -74,6 +76,8 @@ export function useRegisterForm(initialRole: "client" | "agent") {
     setIsLoading(true);
     
     try {
+      console.log(`📝 Starting registration with role: ${formData.role}`);
+      
       const { data, error } = await signUp(
         formData.email,
         formData.password,
@@ -92,15 +96,45 @@ export function useRegisterForm(initialRole: "client" | "agent") {
         throw error;
       }
       
+      // Validate role assignment after successful signup
+      if (data?.user?.id) {
+        console.log(`🔍 Validating role assignment for new user: ${data.user.id}`);
+        
+        // Give the database trigger time to create the profile
+        setTimeout(async () => {
+          try {
+            const validation = await RoleValidationService.validateUserRole(data.user.id);
+            
+            if (!validation.isValid || validation.mismatchDetected) {
+              console.warn(`⚠️ Role validation issue detected:`, validation);
+              
+              // Attempt to correct the role
+              const correction = await RoleValidationService.correctUserRole(data.user.id);
+              
+              if (correction.success) {
+                console.log(`✅ Role corrected to: ${correction.correctedRole}`);
+              } else {
+                console.error(`❌ Role correction failed: ${correction.error}`);
+              }
+            } else {
+              console.log(`✅ Role validation successful: ${validation.detectedRole}`);
+            }
+          } catch (validationError) {
+            console.error('Post-registration role validation failed:', validationError);
+          }
+        }, 2000); // Wait 2 seconds for database trigger to complete
+      }
+      
       toast({
         title: "Registration successful!",
-        description: "Please check your email to verify your account.",
+        description: `Your ${formData.role} account has been created. Please check your email to verify your account.`,
       });
       
       // Redirect to verification page with email parameter
       navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       
     } catch (error: any) {
+      console.error('Registration error:', error);
       toast({
         title: "Registration failed",
         description: error.message || "Please check your information and try again",
