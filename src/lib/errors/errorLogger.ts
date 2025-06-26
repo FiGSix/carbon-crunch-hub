@@ -2,6 +2,7 @@
 import { logger } from "@/lib/logger";
 import { ErrorSeverity } from "@/hooks/useErrorHandler";
 import { LogContext } from "@/lib/logger";
+import { AuthEventService } from '@/services/auth/AuthEventService';
 
 /**
  * Log an error with the appropriate severity level
@@ -21,6 +22,17 @@ export function logError(
     ...(code ? { code } : {})
   };
 
+  // Check if this error indicates auth is required
+  const errorInfo = {
+    message,
+    code,
+    details
+  };
+
+  const isAuthError = AuthEventService.handlePotentialAuthError(errorInfo, {
+    operation: context
+  });
+
   // Use the appropriate logger based on context
   const contextLogger = logger.withCategory('general').withContext({ context });
 
@@ -33,7 +45,10 @@ export function logError(
       break;
     case "error":
     case "fatal":
-      contextLogger.error(message, logContext);
+      contextLogger.error(message, {
+        ...logContext,
+        authErrorDispatchedWhen: isAuthError ? 'error_logged' : 'not_auth_error'
+      });
       break;
   }
 }

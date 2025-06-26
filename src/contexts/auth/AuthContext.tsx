@@ -3,6 +3,7 @@ import React, { createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { UserProfile, UserRole } from './types';
 import { useAuthSimplified } from '@/hooks/useAuthSimplified';
+import { useAuthRequiredListener } from '@/hooks/auth/useAuthRequiredListener';
 
 interface AuthContextType {
   user: User | null;
@@ -34,6 +35,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin: auth.userRole === 'admin',
     isAuthenticated
   };
+
+  // Add global auth-required event listener
+  useAuthRequiredListener({
+    signOut: auth.signOut,
+    isAuthenticated
+  });
 
   // Enhanced logging with session details
   if (import.meta.env.DEV) {
