@@ -22,8 +22,8 @@ export function useMyClients() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchClients = async (isRefresh = false) => {
-    if (!user?.id) {
-      setError('User not authenticated');
+    if (!user?.id || !userRole) {
+      setError('User not authenticated or role not determined');
       setIsLoading(false);
       return;
     }
@@ -36,7 +36,7 @@ export function useMyClients() {
       }
       setError(null);
 
-      const clientsData = await UnifiedDataService.getClients(user.id, userRole || 'client', isRefresh);
+      const clientsData = await UnifiedDataService.getClients(user.id, userRole, isRefresh);
       
       // Transform to match expected interface - access clients array from paginated result
       const transformedClients: ClientData[] = clientsData.clients.map(client => ({
@@ -64,7 +64,11 @@ export function useMyClients() {
   };
 
   useEffect(() => {
-    fetchClients();
+    if (user?.id && userRole) {
+      fetchClients();
+    } else {
+      setIsLoading(false);
+    }
   }, [user?.id, userRole]);
 
   return {

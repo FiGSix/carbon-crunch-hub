@@ -33,8 +33,8 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   const { toast } = useToast();
 
   const fetchClients = useCallback(async (currentOffset = 0, isLoadMore = false, forceRefresh = false) => {
-    if (!user?.id) {
-      setError('User not authenticated');
+    if (!user?.id || !userRole) {
+      setError('User not authenticated or role not determined');
       setIsLoading(false);
       return;
     }
@@ -49,7 +49,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
 
       const result = await UnifiedDataService.getClients(
         user.id, 
-        userRole || 'client', 
+        userRole, 
         forceRefresh,
         PAGE_SIZE,
         currentOffset
@@ -118,9 +118,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
     fetchClients(0, false, true);
   }, [fetchClients]);
 
-  // Initial fetch
+  // Initial fetch - wait for both user and userRole
   useEffect(() => {
-    if (user) {
+    if (user && userRole) {
       fetchClients(0, false, false);
     } else {
       setIsLoading(false);
