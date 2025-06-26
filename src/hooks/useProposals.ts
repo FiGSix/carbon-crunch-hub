@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -18,10 +18,10 @@ export function useProposals(): UseProposalsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const proposalsLogger = logger.withContext({
+  const proposalsLogger = useMemo(() => logger.withContext({
     component: 'UseProposals',
     feature: 'proposals'
-  });
+  }), []);
 
   const { fetchProposals: fetchProposalsCore } = useFetchProposals({
     user,
@@ -57,7 +57,7 @@ export function useProposals(): UseProposalsResult {
     }
   }, [proposals, filters]);
 
-  // Listen for proposal status change events to refresh data
+  // Listen for proposal status change events to refresh data - STABLE EVENT LISTENER
   useEffect(() => {
     const handleProposalStatusChange = () => {
       proposalsLogger.info("Proposal status change detected - refreshing");
@@ -72,12 +72,12 @@ export function useProposals(): UseProposalsResult {
     };
   }, [fetchProposals, proposalsLogger]);
 
-  // Initial fetch
+  // Initial fetch - STABLE DEPENDENCIES
   useEffect(() => {
-    if (user && userRole) {
+    if (user?.id && userRole) {
       fetchProposals();
     }
-  }, [user, userRole, fetchProposals]);
+  }, [user?.id, userRole]); // Stable dependencies - only refetch when user or role changes
 
   return {
     proposals,
