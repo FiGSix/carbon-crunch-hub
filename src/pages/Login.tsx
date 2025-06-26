@@ -12,7 +12,7 @@ const Login = () => {
   const { user, session, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // Enhanced redirect tracking with better logging
+  // Enhanced redirect tracking with timeout protection
   const hasRedirectedRef = useRef(false);
   const redirectTimeoutRef = useRef<NodeJS.Timeout>();
   
@@ -38,21 +38,31 @@ const Login = () => {
       });
     }
 
-    // Redirect if we have both user and session, regardless of profile loading status
-    if (isInitialized && user && session && !authLoading && !hasRedirectedRef.current) {
+    // SIMPLIFIED REDIRECT LOGIC: Redirect immediately if we have both user and session
+    if (isInitialized && user && session && !hasRedirectedRef.current) {
       if (import.meta.env.DEV) {
-        console.log('✅ User authenticated with valid session, preparing redirect');
+        console.log('✅ User authenticated with valid session, executing immediate redirect');
       }
       hasRedirectedRef.current = true;
       
       const from = location.state?.from || '/dashboard';
       if (import.meta.env.DEV) {
-        console.log('🎯 Redirecting to:', from);
-        console.log('🚀 Executing immediate redirect to:', from);
+        console.log('🚀 Redirecting to:', from);
       }
       
       // Immediate redirect - don't wait for profile loading
       navigate(from, { replace: true });
+      
+      // Fallback redirect with timeout protection
+      redirectTimeoutRef.current = setTimeout(() => {
+        if (!hasRedirectedRef.current) {
+          if (import.meta.env.DEV) {
+            console.log('⏰ Timeout fallback redirect triggered');
+          }
+          hasRedirectedRef.current = true;
+          navigate(from, { replace: true });
+        }
+      }, 2000); // 2 second timeout
     } else if (isInitialized && !authLoading && (!user || !session)) {
       if (import.meta.env.DEV) {
         console.log('ℹ️ No valid authentication found on login page');

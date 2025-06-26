@@ -42,23 +42,51 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
       }
       
       // Refresh user data and wait for it to complete
-      await refreshUser();
-      
-      toast({
-        title: 'Success',
-        description: 'You have successfully logged in',
-      });
-      
-      // REMOVED: All redirect logic - let Login.tsx handle this via auth state changes
-      if (import.meta.env.DEV) {
-        console.log('🔄 Login successful, auth state will trigger redirect');
+      try {
+        await refreshUser();
+        
+        toast({
+          title: 'Success',
+          description: 'You have successfully logged in',
+        });
+        
+        if (import.meta.env.DEV) {
+          console.log('🔄 Login successful, auth state will trigger redirect');
+        }
+      } catch (refreshError) {
+        if (import.meta.env.DEV) {
+          console.warn('⚠️ User refresh failed after login:', refreshError);
+        }
+        // Still show success toast as login was successful
+        toast({
+          title: 'Success',
+          description: 'You have successfully logged in',
+        });
       }
       
     } catch (error: any) {
       onLoginAttempt();
+      
+      // Enhanced error handling with better user messages
+      let errorMessage = 'Please check your credentials and try again';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Login timed out. Please check your connection and try again.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (import.meta.env.DEV) {
+        console.error('❌ Login error:', error);
+      }
+      
       toast({
         title: 'Login failed',
-        description: error.message || 'Please check your credentials and try again',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
