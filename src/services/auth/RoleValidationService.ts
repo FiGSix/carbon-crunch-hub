@@ -94,14 +94,25 @@ export class RoleValidationService {
           correctedRole: validation.profileRole || validation.detectedRole 
         };
       }
+
+      // Get user data for email
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user || user.id !== userId) {
+        return { 
+          success: false, 
+          error: 'Unable to access user auth data for correction' 
+        };
+      }
       
       console.log(`🔧 Correcting role for user ${userId}: ${validation.profileRole || 'none'} → ${validation.detectedRole}`);
       
-      // Update or insert profile with correct role
+      // Update or insert profile with correct role, including required email
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert({
           id: userId,
+          email: user.email || '',
           role: validation.detectedRole
         }, {
           onConflict: 'id'
