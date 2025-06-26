@@ -8,6 +8,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SecurityConfig, validateSecurityConfig } from '@/lib/config/security';
+import { AppConfig } from '@/lib/config';
 import { authLogger } from '@/lib/logger';
 
 export interface SecurityAuditResult {
@@ -39,14 +40,14 @@ export async function performSecurityAudit(): Promise<SecurityAuditResult> {
   });
 
   // Check 2: Supabase client configuration
-  const supabaseConfig = supabase.supabaseUrl && supabase.supabaseKey;
+  const supabaseConfigured = AppConfig.supabase.url && AppConfig.supabase.anonKey;
   checks.push({
     name: 'Supabase Configuration',
-    passed: !!supabaseConfig,
-    message: supabaseConfig 
+    passed: !!supabaseConfigured,
+    message: supabaseConfigured 
       ? 'Supabase client is properly configured'
       : 'Supabase client configuration is missing',
-    severity: supabaseConfig ? 'info' : 'error',
+    severity: supabaseConfigured ? 'info' : 'error',
   });
 
   // Check 3: Session persistence
@@ -137,7 +138,7 @@ export function quickSecurityCheck(): {
   let critical = false;
 
   // Check for critical security issues
-  if (!supabase.supabaseUrl || !supabase.supabaseKey) {
+  if (!AppConfig.supabase.url || !AppConfig.supabase.anonKey) {
     warnings.push('Supabase configuration is missing');
     critical = true;
   }
