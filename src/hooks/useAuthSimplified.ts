@@ -6,7 +6,7 @@ import { useAuthInitializer } from './auth/useAuthInitializer';
 import { authCache } from './auth/authCache';
 
 /**
- * Simplified auth hook with improved error handling and fallback mechanisms
+ * Simplified auth hook with improved error handling
  */
 export function useAuthSimplified() {
   const {

@@ -12,18 +12,8 @@ const Login = () => {
   const { user, session, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // Enhanced redirect tracking with timeout protection
+  // Simplified redirect tracking
   const hasRedirectedRef = useRef(false);
-  const redirectTimeoutRef = useRef<NodeJS.Timeout>();
-  
-  useEffect(() => {
-    // Clear any existing timeout on component unmount
-    return () => {
-      if (redirectTimeoutRef.current) {
-        clearTimeout(redirectTimeoutRef.current);
-      }
-    };
-  }, []);
   
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -33,15 +23,14 @@ const Login = () => {
         hasSession: !!session,
         authLoading,
         hasRedirected: hasRedirectedRef.current,
-        currentPath: location.pathname,
-        intendedDestination: location.state?.from || '/dashboard'
+        currentPath: location.pathname
       });
     }
 
-    // SIMPLIFIED REDIRECT LOGIC: Redirect immediately if we have both user and session
+    // SIMPLIFIED: Redirect immediately if we have both user and session
     if (isInitialized && user && session && !hasRedirectedRef.current) {
       if (import.meta.env.DEV) {
-        console.log('✅ User authenticated with valid session, executing immediate redirect');
+        console.log('✅ User authenticated, executing redirect');
       }
       hasRedirectedRef.current = true;
       
@@ -50,25 +39,9 @@ const Login = () => {
         console.log('🚀 Redirecting to:', from);
       }
       
-      // Immediate redirect - don't wait for profile loading
       navigate(from, { replace: true });
-      
-      // Fallback redirect with timeout protection
-      redirectTimeoutRef.current = setTimeout(() => {
-        if (!hasRedirectedRef.current) {
-          if (import.meta.env.DEV) {
-            console.log('⏰ Timeout fallback redirect triggered');
-          }
-          hasRedirectedRef.current = true;
-          navigate(from, { replace: true });
-        }
-      }, 2000); // 2 second timeout
-    } else if (isInitialized && !authLoading && (!user || !session)) {
-      if (import.meta.env.DEV) {
-        console.log('ℹ️ No valid authentication found on login page');
-      }
     }
-  }, [user, session, navigate, authLoading, isInitialized, location.state]);
+  }, [user, session, navigate, isInitialized, location.state]);
 
   const handleLoginAttempt = () => {
     if (import.meta.env.DEV) {
@@ -99,6 +72,7 @@ const Login = () => {
   if (import.meta.env.DEV) {
     console.log('📋 Rendering login form');
   }
+  
   return (
     <LoginLayout>
       <LoginHeader />

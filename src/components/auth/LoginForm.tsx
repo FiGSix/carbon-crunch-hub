@@ -8,7 +8,6 @@ import { Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth';
 
 interface LoginFormProps {
   loginAttempts: number;
@@ -17,7 +16,6 @@ interface LoginFormProps {
 
 export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +29,7 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
       if (import.meta.env.DEV) {
         console.log(`🔐 Attempting to sign in with email: ${email}`);
       }
+      
       const { error } = await signIn(email, password);
       
       if (error) {
@@ -38,31 +37,13 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
       }
       
       if (import.meta.env.DEV) {
-        console.log('✅ Sign in successful, refreshing user data');
+        console.log('✅ Sign in successful, auth state will trigger redirect');
       }
       
-      // Refresh user data and wait for it to complete
-      try {
-        await refreshUser();
-        
-        toast({
-          title: 'Success',
-          description: 'You have successfully logged in',
-        });
-        
-        if (import.meta.env.DEV) {
-          console.log('🔄 Login successful, auth state will trigger redirect');
-        }
-      } catch (refreshError) {
-        if (import.meta.env.DEV) {
-          console.warn('⚠️ User refresh failed after login:', refreshError);
-        }
-        // Still show success toast as login was successful
-        toast({
-          title: 'Success',
-          description: 'You have successfully logged in',
-        });
-      }
+      toast({
+        title: 'Success',
+        description: 'You have successfully logged in',
+      });
       
     } catch (error: any) {
       onLoginAttempt();

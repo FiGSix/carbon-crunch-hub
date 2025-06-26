@@ -24,88 +24,50 @@ export function useAuthInitializer({
 
   useEffect(() => {
     isUnmountedRef.current = false;
-    let timeoutId: NodeJS.Timeout;
-    let initializationTimeoutId: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       try {
         if (import.meta.env.DEV) {
-          console.log('🚀 Initializing auth with enhanced error handling...');
+          console.log('🚀 Initializing auth...');
         }
-        const startTime = performance.now();
         
-        // Set a maximum initialization time of 15 seconds
-        initializationTimeoutId = setTimeout(() => {
-          if (!isUnmountedRef.current) {
-            if (import.meta.env.DEV) {
-              console.warn('⏰ Auth initialization timed out, proceeding without session');
-            }
-            setIsLoading(false);
-            setIsInitialized(true);
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          if (import.meta.env.DEV) {
+            console.warn('⚠️ Session fetch error:', error.message);
           }
-        }, 15000);
+        }
         
-        // Get initial session with improved timeout handling
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout after 10 seconds')), 10000);
-        });
-        
-        try {
-          const { data: { session }, error } = await Promise.race([
-            sessionPromise,
-            timeoutPromise
-          ]);
-          
-          // Clear timeout if successful
-          if (timeoutId) clearTimeout(timeoutId);
-          if (initializationTimeoutId) clearTimeout(initializationTimeoutId);
-          
-          if (error) {
-            if (import.meta.env.DEV) {
-              console.warn('⚠️ Session fetch error (continuing without session):', error.message);
-            }
-            // Don't throw here - let the app continue without session
-          }
-          
-          if (isUnmountedRef.current) return;
+        if (isUnmountedRef.current) return;
 
-          // Update state in batches to prevent multiple re-renders
-          updateAuthState(session);
-          
-          if (session?.user) {
-            if (import.meta.env.DEV) {
-              console.log('✅ Initial session found, loading user profile');
-            }
-            // Load profile but don't block initialization
-            loadUserProfileWithFallback(session.user.id).catch(error => {
-              if (import.meta.env.DEV) {
-                console.warn('⚠️ Profile loading failed during initialization:', error);
-              }
-            });
-          } else {
-            if (import.meta.env.DEV) {
-              console.log('ℹ️ No initial session found');
-            }
-          }
-          
-          const endTime = performance.now();
+        // Update auth state
+        updateAuthState(session);
+        
+        if (session?.user) {
           if (import.meta.env.DEV) {
-            console.log(`⚡ Auth initialization completed in ${(endTime - startTime).toFixed(2)}ms`);
+            console.log('✅ Initial session found, loading user profile');
           }
-        } catch (timeoutError) {
+          // Load profile but don't block initialization
+          loadUserProfileWithFallback(session.user.id).catch(error => {
+            if (import.meta.env.DEV) {
+              console.warn('⚠️ Profile loading failed during initialization:', error);
+            }
+          });
+        } else {
           if (import.meta.env.DEV) {
-            console.warn('⚠️ Session fetch timed out, continuing without session');
+            console.log('ℹ️ No initial session found');
           }
-          if (timeoutId) clearTimeout(timeoutId);
-          if (initializationTimeoutId) clearTimeout(initializationTimeoutId);
-          // Continue with null session instead of failing
+        }
+        
+        if (import.meta.env.DEV) {
+          console.log(`⚡ Auth initialization completed`);
         }
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error('💥 Auth initialization error:', error);
         }
-        // Don't throw here - let the app continue with null session
       } finally {
         if (!isUnmountedRef.current) {
           setIsLoading(false);
@@ -114,7 +76,7 @@ export function useAuthInitializer({
       }
     };
 
-    // Set up auth state listener with improved error handling
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isUnmountedRef.current) return;
 
@@ -122,7 +84,7 @@ export function useAuthInitializer({
         console.log('🔔 Auth state changed:', event, session ? 'session exists' : 'no session');
       }
       
-      // Batch state updates to prevent multiple re-renders
+      // Update auth state
       updateAuthState(session);
 
       if (session?.user) {
@@ -157,8 +119,6 @@ export function useAuthInitializer({
     return () => {
       isUnmountedRef.current = true;
       subscription.unsubscribe();
-      if (timeoutId) clearTimeout(timeoutId);
-      if (initializationTimeoutId) clearTimeout(initializationTimeoutId);
     };
   }, [isUnmountedRef, setIsLoading, setIsInitialized, updateAuthState, updateProfileState, loadUserProfileWithFallback]);
 }
