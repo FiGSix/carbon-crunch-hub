@@ -27,18 +27,18 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">
-      <Card className="border border-red-200 bg-red-50 shadow-sm">
+      <Card className="border border-red-700 bg-red-600 text-white shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-700">
-            <AlertCircle className="h-6 w-6 text-red-500" />
+          <CardTitle className="flex items-center gap-2 text-white">
+            <AlertCircle className="h-6 w-6 text-red-200" />
             Error Loading Proposal
           </CardTitle>
         </CardHeader>
         
         <CardContent>
-          <p className="text-red-600 mb-6 font-medium">{errorMessage}</p>
+          <p className="text-white mb-6 font-medium">{errorMessage}</p>
           
-          <div className="bg-white border border-red-100 rounded-md p-4 text-sm text-gray-600 mb-4">
+          <div className="bg-red-700 border border-red-600 rounded-md p-4 text-sm text-red-100 mb-4">
             <p className="font-medium mb-2">Common reasons for this error:</p>
             <ul className="list-disc pl-5 space-y-1">
               {isTokenError && (
@@ -61,7 +61,7 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
           </div>
 
           {isTokenError && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-800 mb-4">
+            <div className="bg-blue-600 border border-blue-500 rounded-md p-4 text-sm text-blue-100 mb-4">
               <p className="font-medium mb-1">💡 If you received this link via email:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Make sure you&apos;re using the complete link from the email</li>
@@ -74,7 +74,7 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
         
         <CardFooter className="flex flex-wrap gap-3 pt-2">
           <Link to="/">
-            <Button variant="outline" className="flex items-center">
+            <Button variant="outline" className="flex items-center bg-transparent border-red-300 text-white hover:bg-red-500">
               <Home className="mr-2 h-4 w-4" />
               Return to Home
             </Button>
@@ -84,14 +84,14 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
             <Button 
               variant="default" 
               onClick={onRetry}
-              className="flex items-center"
+              className="flex items-center bg-white text-red-600 hover:bg-red-100"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               Try Again
             </Button>
           )}
 
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="bg-transparent border-red-300 text-white hover:bg-red-500">
             <a 
               href={supportEmailUrl}
               target="_blank" 

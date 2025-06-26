@@ -67,9 +67,9 @@ export function ErrorDisplay({
       case "warning":
         return "text-amber-500";
       case "error":
-        return "text-destructive";
+        return "text-white";
       case "fatal":
-        return "text-red-700";
+        return "text-white";
     }
   };
   
@@ -102,7 +102,7 @@ export function ErrorDisplay({
       <CardContent>
         <p className={cn(
           "text-carbon-gray-700",
-          severity === "fatal" && "text-destructive font-medium"
+          (severity === "error" || severity === "fatal") && "text-white font-medium"
         )}>
           {message}
         </p>
@@ -133,4 +133,3 @@ export function ErrorDisplay({
     </Card>
   );
 }
-
