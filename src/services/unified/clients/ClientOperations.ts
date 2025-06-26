@@ -44,8 +44,8 @@ export class ClientOperations {
     }
 
     try {
-      // First get the total count - fix the query to get count properly
-      const { data: countData, error: countError } = await supabase.rpc('get_agent_clients_optimized', {
+      // Get total count efficiently using the new function
+      const { data: countData, error: countError } = await supabase.rpc('get_agent_clients_count', {
         agent_id_param: userRole === 'admin' ? null : userId
       });
 
@@ -53,12 +53,14 @@ export class ClientOperations {
         throw countError;
       }
 
-      const totalCount = countData?.length || 0;
+      const totalCount = countData || 0;
 
-      // Then get the paginated data
-      const { data, error } = await supabase.rpc('get_agent_clients_optimized', {
-        agent_id_param: userRole === 'admin' ? null : userId
-      }).range(offset, offset + limit - 1);
+      // Get paginated data using the new optimized function
+      const { data, error } = await supabase.rpc('get_agent_clients_paginated', {
+        agent_id_param: userRole === 'admin' ? null : userId,
+        limit_param: limit,
+        offset_param: offset
+      });
 
       if (error) {
         const errorResult = ErrorHandler.handleRLSError(error, 'unified clients fetch');

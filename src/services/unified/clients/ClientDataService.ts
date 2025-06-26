@@ -44,8 +44,8 @@ export class ClientDataService {
     }
 
     try {
-      // Use the database function that handles the complex joins properly
-      const { data, error } = await supabase.rpc('get_agent_clients', {
+      // Use the optimized database function
+      const { data, error } = await supabase.rpc('get_agent_clients_optimized', {
         agent_id_param: userRole === 'admin' ? null : userId
       });
 

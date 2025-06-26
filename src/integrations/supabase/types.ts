@@ -358,6 +358,10 @@ export type Database = {
           created_at: string
         }[]
       }
+      get_agent_clients_count: {
+        Args: { agent_id_param?: string }
+        Returns: number
+      }
       get_agent_clients_optimized: {
         Args: { agent_id_param?: string }
         Returns: {
@@ -371,7 +375,28 @@ export type Database = {
           created_at: string
         }[]
       }
+      get_agent_clients_paginated: {
+        Args: {
+          agent_id_param?: string
+          limit_param?: number
+          offset_param?: number
+        }
+        Returns: {
+          client_id: string
+          client_name: string
+          client_email: string
+          company_name: string
+          is_registered: boolean
+          project_count: number
+          total_mwp: number
+          created_at: string
+        }[]
+      }
       get_client_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -423,6 +448,14 @@ export type Database = {
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_agent: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       mark_invitation_viewed: {
         Args: { token_param: string }

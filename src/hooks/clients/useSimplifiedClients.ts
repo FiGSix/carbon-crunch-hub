@@ -1,7 +1,8 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
-import { fetchClientsData } from './clientDataProcessor';
+import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { ClientData } from './types';
 import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
 
@@ -32,9 +33,9 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
     console.log('=== fetchClients: Starting ===');
     console.log('User:', user?.id, 'Role:', userRole, 'Manual:', isManualRefresh);
 
-    if (!user) {
-      console.log('No user - setting loading to false');
-      const errorMessage = 'User not authenticated';
+    if (!user?.id || !userRole) {
+      console.log('No user or role - setting loading to false');
+      const errorMessage = 'User not authenticated or role not determined';
       setIsLoading(false);
       setError(errorMessage);
       
@@ -62,20 +63,32 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
       // Clear previous errors
       setError(null);
 
-      // Fetch the data
-      console.log('Calling fetchClientsData...');
-      const clientsData = await fetchClientsData(userRole || '', user.id);
-      console.log('fetchClientsData completed with', clientsData.length, 'clients');
+      // Fetch the data using the optimized service
+      console.log('Calling UnifiedDataService.getClients...');
+      const result = await UnifiedDataService.getClients(user.id, userRole, isManualRefresh);
+      
+      // Transform to match expected interface
+      const transformedClients: ClientData[] = result.clients.map(client => ({
+        client_id: client.id,
+        client_name: client.name,
+        client_email: client.email,
+        company_name: client.company,
+        project_count: client.projectCount,
+        total_mwp: client.totalKwp / 1000, // Convert kWp to MWp
+        created_at: client.createdAt
+      }));
+      
+      console.log('UnifiedDataService.getClients completed with', transformedClients.length, 'clients');
       
       // Only update state if component is still mounted
       if (mountedRef.current) {
-        setClients(clientsData);
+        setClients(transformedClients);
         console.log('State updated with clients data');
         
         if (isManualRefresh) {
           toast({
             title: "Clients Updated",
-            description: `Found ${clientsData.length} clients`,
+            description: `Found ${transformedClients.length} clients`,
           });
         }
       }
@@ -111,13 +124,13 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
   // Initial fetch - simplified
   useEffect(() => {
     console.log('Initial fetch effect triggered');
-    if (user) {
+    if (user?.id && userRole) {
       fetchClients(false);
     } else {
-      console.log('No user - setting loading to false immediately');
+      console.log('No user or role - setting loading to false immediately');
       setIsLoading(false);
     }
-  }, [user, userRole]); // Only depend on user and userRole
+  }, [user?.id, userRole, fetchClients]);
 
   // Cleanup on unmount
   useEffect(() => {
