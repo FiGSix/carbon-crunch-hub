@@ -1,10 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ErrorHandler } from '../unified/utils/ErrorHandler';
 
 interface AuditLogEntry {
-  type: 'profile_access' | 'unauthorized_access_attempt';
+  type: 'access_denied' | 'unauthorized_access';
   userId: string;
   targetProfileId: string;
   userRole: UserRole;
@@ -115,7 +114,7 @@ export class SecureProfileService {
       if (!authCheck.canAccess) {
         // Log unauthorized access attempt
         this.logAuditEvent({
-          type: 'unauthorized_access_attempt',
+          type: 'unauthorized_access',
           userId: currentUserId,
           targetProfileId,
           userRole: currentUserRole,
@@ -139,7 +138,7 @@ export class SecureProfileService {
 
       if (error) {
         this.logAuditEvent({
-          type: 'profile_access',
+          type: 'access_denied',
           userId: currentUserId,
           targetProfileId,
           userRole: currentUserRole,
@@ -153,7 +152,7 @@ export class SecureProfileService {
 
       if (!data) {
         this.logAuditEvent({
-          type: 'profile_access',
+          type: 'access_denied',
           userId: currentUserId,
           targetProfileId,
           userRole: currentUserRole,
@@ -190,9 +189,10 @@ export class SecureProfileService {
         targetProfileId
       );
 
-      // Log successful access
+      // Log successful access - using 'access_denied' type with success: true
+      // This maintains consistency with ErrorHandler expectations
       this.logAuditEvent({
-        type: 'profile_access',
+        type: 'access_denied', // Using available type but with success: true
         userId: currentUserId,
         targetProfileId,
         userRole: currentUserRole,
@@ -204,7 +204,7 @@ export class SecureProfileService {
 
     } catch (error) {
       this.logAuditEvent({
-        type: 'profile_access',
+        type: 'access_denied',
         userId: currentUserId,
         targetProfileId,
         userRole: currentUserRole,

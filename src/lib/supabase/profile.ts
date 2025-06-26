@@ -8,7 +8,7 @@ import {
   invalidateCache,
   CACHE_TTL_MEDIUM
 } from './cache'
-import { SecureProfileService } from '../services/profile/SecureProfileService'
+import { SecureProfileService } from '../../services/profile/SecureProfileService'
 import { UserRole } from '@/contexts/auth/types'
 
 /**
