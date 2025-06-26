@@ -13,5 +13,7 @@ export {
 } from './auth/index'
 export { 
   getProfile, 
-  updateProfile 
+  updateProfile,
+  getProfileById,
+  synchronizeUserRole
 } from './profile'

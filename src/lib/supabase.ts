@@ -18,6 +18,8 @@ export {
 export {
   getProfile,
   updateProfile,
+  getProfileById,
+  synchronizeUserRole,
 } from '@/lib/supabase/profile'
 
 // Re-export types using the proper 'export type' syntax
