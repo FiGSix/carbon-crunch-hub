@@ -2,9 +2,10 @@
 import { ProposalListItem } from '@/types/proposals';
 import { ProposalsDataService } from '../proposals/ProposalsDataService';
 import { UserRole } from '@/contexts/auth/types';
+import { UnifiedDashboardCalculations } from '@/services/dashboard/UnifiedDashboardCalculations';
 
 /**
- * Dashboard data calculations and operations
+ * Dashboard data calculations and operations - now optimized with single-pass calculations
  */
 export class DashboardDataService {
   static async getDashboardData(userId: string, userRole: UserRole): Promise<{
@@ -15,16 +16,14 @@ export class DashboardDataService {
   }> {
     const proposals = await ProposalsDataService.getProposals(userId, userRole);
     
-    // Simple calculations
-    const portfolioSize = proposals.reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
-    const totalRevenue = proposals.reduce((sum, p) => sum + (p.carbon_credits || 0) * 50, 0);
-    const co2Offset = proposals.reduce((sum, p) => sum + (p.carbon_credits || 0), 0);
+    // Use unified calculations for single-pass processing
+    const metrics = UnifiedDashboardCalculations.calculateAllMetrics(proposals, userRole);
 
     return {
       proposals,
-      portfolioSize,
-      totalRevenue,
-      co2Offset
+      portfolioSize: metrics.portfolioSize,
+      totalRevenue: metrics.totalRevenue,
+      co2Offset: metrics.co2Offset
     };
   }
 }

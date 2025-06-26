@@ -1,24 +1,22 @@
 
 import { ProposalListItem } from '@/types/proposals';
+import { OptimizedDashboardCalculator } from './OptimizedDashboardCalculator';
 
 export class DashboardCalculator {
   static calculatePortfolioSize(proposals: ProposalListItem[]): number {
-    return proposals.reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
+    return OptimizedDashboardCalculator.calculatePortfolioSize(proposals);
   }
 
   static calculateTotalRevenue(proposals: ProposalListItem[]): number {
-    return proposals.reduce((sum, p) => sum + (p.carbon_credits || 0) * 50, 0); // Assuming R50 per credit
+    return OptimizedDashboardCalculator.calculateTotalRevenue(proposals);
   }
 
   static calculateCO2Offset(proposals: ProposalListItem[]): number {
-    return proposals.reduce((sum, p) => sum + (p.carbon_credits || 0), 0);
+    return OptimizedDashboardCalculator.calculateCO2Offset(proposals);
   }
 
   static calculateDashboardMetrics(proposals: ProposalListItem[]) {
-    return {
-      portfolioSize: this.calculatePortfolioSize(proposals),
-      totalRevenue: this.calculateTotalRevenue(proposals),
-      co2Offset: this.calculateCO2Offset(proposals)
-    };
+    // Use the optimized single-loop calculation
+    return OptimizedDashboardCalculator.calculateDashboardMetrics(proposals);
   }
 }
