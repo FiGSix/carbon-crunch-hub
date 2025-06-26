@@ -1,10 +1,10 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { ClientData } from '@/hooks/useMyClients';
 import { logger } from '@/lib/logger';
+import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
 
 export interface UseClientsPaginatedResult {
   clients: ClientData[];
@@ -31,11 +31,22 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   const mountedRef = useRef(true);
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  const handleFetchError = createFetchErrorHandler(toast);
 
   const fetchClients = useCallback(async (currentOffset = 0, isLoadMore = false, forceRefresh = false) => {
     if (!user?.id || !userRole) {
-      setError('User not authenticated or role not determined');
+      const errorMessage = 'User not authenticated or role not determined';
+      setError(errorMessage);
       setIsLoading(false);
+      
+      // Show toast for initial fetch authentication errors
+      if (currentOffset === 0 && !isLoadMore) {
+        handleFetchError(new Error(errorMessage), {
+          isInitialFetch: true,
+          toastTitle: 'Authentication Required',
+          context: 'clients'
+        });
+      }
       return;
     }
 
@@ -86,18 +97,16 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
 
     } catch (err) {
       logger.error('Error fetching clients', { error: err });
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clients';
       
       if (mountedRef.current) {
-        setError(errorMessage);
+        const errorMessage = handleFetchError(err, {
+          isInitialFetch: currentOffset === 0 && !isLoadMore,
+          isRefresh: forceRefresh && !isLoadMore,
+          context: 'clients',
+          showToast: true // Always show toast for load more failures and initial/refresh errors
+        });
         
-        if (isLoadMore) {
-          toast({
-            title: "Load More Failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
+        setError(errorMessage);
       }
     } finally {
       if (mountedRef.current) {
@@ -105,7 +114,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         setIsLoadingMore(false);
       }
     }
-  }, [user, userRole, toast]);
+  }, [user, userRole, toast, handleFetchError]);
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {

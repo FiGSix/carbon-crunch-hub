@@ -1,9 +1,9 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 import { fetchClientsData } from './clientDataProcessor';
 import { ClientData } from './types';
+import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
 
 interface UseSimplifiedClientsResult {
   clients: ClientData[];
@@ -25,6 +25,7 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
   
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  const handleFetchError = createFetchErrorHandler(toast);
 
   // Simplified fetch function with clear state transitions
   const fetchClients = useCallback(async (isManualRefresh = false) => {
@@ -33,8 +34,18 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
 
     if (!user) {
       console.log('No user - setting loading to false');
+      const errorMessage = 'User not authenticated';
       setIsLoading(false);
-      setError('User not authenticated');
+      setError(errorMessage);
+      
+      // Show toast for initial fetch authentication errors
+      if (!isManualRefresh) {
+        handleFetchError(new Error(errorMessage), {
+          isInitialFetch: true,
+          toastTitle: 'Authentication Required',
+          context: 'clients'
+        });
+      }
       return;
     }
 
@@ -70,18 +81,16 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
       }
     } catch (err) {
       console.error('=== Client fetch error ===', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clients';
       
       if (mountedRef.current) {
-        setError(errorMessage);
+        const errorMessage = handleFetchError(err, {
+          isInitialFetch: !isManualRefresh,
+          isRefresh: isManualRefresh,
+          context: 'clients',
+          showToast: true
+        });
         
-        if (isManualRefresh) {
-          toast({
-            title: "Refresh Failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
+        setError(errorMessage);
       }
     } finally {
       // Always clear loading states
@@ -91,7 +100,7 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
         setIsRefreshing(false);
       }
     }
-  }, [user, userRole, toast]);
+  }, [user, userRole, toast, handleFetchError]);
 
   // Manual refresh function
   const refreshClients = useCallback(() => {

@@ -1,8 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { logger } from '@/lib/logger';
+import { useToast } from '@/hooks/use-toast';
+import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
 
 export interface ClientData {
   client_id: string;
@@ -16,6 +17,9 @@ export interface ClientData {
 
 export function useMyClients() {
   const { user, userRole } = useAuth();
+  const { toast } = useToast();
+  const handleFetchError = createFetchErrorHandler(toast);
+  
   const [clients, setClients] = useState<ClientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -23,8 +27,18 @@ export function useMyClients() {
 
   const fetchClients = async (isRefresh = false) => {
     if (!user?.id || !userRole) {
-      setError('User not authenticated or role not determined');
+      const errorMessage = 'User not authenticated or role not determined';
+      setError(errorMessage);
       setIsLoading(false);
+      
+      // Show toast for initial fetch authentication errors
+      if (!isRefresh) {
+        handleFetchError(new Error(errorMessage), {
+          isInitialFetch: true,
+          toastTitle: 'Authentication Required',
+          context: 'clients'
+        });
+      }
       return;
     }
 
@@ -52,7 +66,15 @@ export function useMyClients() {
       setClients(transformedClients);
     } catch (err) {
       logger.error('Error fetching clients', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to fetch clients');
+      
+      const errorMessage = handleFetchError(err, {
+        isInitialFetch: !isRefresh,
+        isRefresh: isRefresh,
+        context: 'clients',
+        showToast: true
+      });
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
