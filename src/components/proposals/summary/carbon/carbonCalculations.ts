@@ -19,7 +19,7 @@ export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commi
 
 export function calculateYearlyCarbonCredits(systemSizeKWp: number, year: number, commissionDate?: string): number {
   const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, year, commissionDate);
-  return (yearlyEnergy / 1000) * 0.928; // Convert to MWh and apply emission factor
+  return (yearlyEnergy / 1000) * 1.0334; // Convert to MWh and apply Crunch Carbon's emission factor
 }
 
 export function calculateTotalMWhGenerated(systemSizeKWp: number, revenue: Record<string, number>, commissionDate?: string): number {

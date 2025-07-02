@@ -15,8 +15,8 @@ export function calculateCrunchCommission(clientShare: number, agentCommission: 
   return 100 - clientShare - agentCommission;
 }
 
-// Additional constants for backward compatibility
-export const EMISSION_FACTOR = 0.928; // tCO₂/MWh
+// Additional constants for backward compatibility  
+export const EMISSION_FACTOR = 1.0334; // tCO₂/MWh (Crunch Carbon's unique grid emission factor)
 export const AVERAGE_SUN_HOURS = 4.5;
 export const DAYS_IN_YEAR = 365;
 
