@@ -101,7 +101,7 @@ export function useProposalData(id?: string, token?: string | null) {
       }
       setLoading(false);
     }
-  }, [id, token, fetchProposal]);
+  }, [id, token]); // ✅ Removed fetchProposal from dependencies to prevent infinite loop
 
   return {
     proposal,
