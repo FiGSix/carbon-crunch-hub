@@ -10,6 +10,7 @@ import { ChartsSection } from "@/components/dashboard/sections/ChartsSection";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
+import { useOptimizedAgentPortfolio } from "@/hooks/dashboard/useOptimizedAgentPortfolio";
 
 const Dashboard = () => {
   const {
@@ -32,6 +33,12 @@ const Dashboard = () => {
     markVideoAsViewed,
     skipVideo
   } = useAgentIntroVideo();
+
+  // Load agent portfolio data at dashboard level for better performance
+  const { 
+    portfolioData: agentPortfolioData, 
+    loading: agentPortfolioLoading 
+  } = useOptimizedAgentPortfolio();
   
   return (
     <DashboardLayout>
@@ -61,6 +68,8 @@ const Dashboard = () => {
         co2Offset={co2Offset}
         proposals={proposals}
         loading={loading}
+        agentPortfolioData={agentPortfolioData}
+        agentPortfolioLoading={agentPortfolioLoading}
       />
       
       {userRole !== 'agent' && renderCharts(userRole) && (

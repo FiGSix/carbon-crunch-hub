@@ -1,6 +1,6 @@
-import React from "react";
+import React, { memo } from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { CommissionCard } from "@/components/dashboard/preview/CommissionCard";
+import { OptimizedCommissionCard } from "@/components/dashboard/preview/OptimizedCommissionCard";
 import { CommissionProjectionCard } from "@/components/dashboard/preview/CommissionProjectionCard";
 import { DealStatusCard } from "@/components/dashboard/preview/DealStatusCard";
 import { FileText, TrendingUp, Wind, Leaf } from "lucide-react";
@@ -8,6 +8,7 @@ import { UserRole } from "@/lib/supabase/types";
 import { ProposalListItem } from "@/types/proposals";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
 import { useAgentCommissionStats } from "@/hooks/dashboard/useAgentCommissionStats";
+import { PortfolioData } from "@/services/proposals/portfolioService";
 
 interface StatsCardsSectionProps {
   userRole: string | null;
@@ -17,9 +18,11 @@ interface StatsCardsSectionProps {
   co2Offset: number;
   proposals?: ProposalListItem[];
   loading?: boolean;
+  agentPortfolioData?: PortfolioData | null;
+  agentPortfolioLoading?: boolean;
 }
 
-export function StatsCardsSection({
+function StatsCardsSectionComponent({
   userRole,
   portfolioSize,
   totalProposals,
@@ -27,6 +30,8 @@ export function StatsCardsSection({
   co2Offset,
   proposals = [],
   loading = false,
+  agentPortfolioData = null,
+  agentPortfolioLoading = false,
 }: StatsCardsSectionProps) {
   
   // Get agent commission stats for the new card
@@ -71,7 +76,10 @@ export function StatsCardsSection({
           color="emerald"
         />
         
-        <CommissionCard portfolioSize={portfolioSize} />
+        <OptimizedCommissionCard 
+          portfolioData={agentPortfolioData} 
+          loading={agentPortfolioLoading}
+        />
         
         <CommissionProjectionCard 
           projectedCommission={agentCommissionStats.projectedCommission}
@@ -123,3 +131,6 @@ export function StatsCardsSection({
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const StatsCardsSection = memo(StatsCardsSectionComponent);
