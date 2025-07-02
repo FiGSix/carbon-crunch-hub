@@ -13,7 +13,22 @@ interface UseProfileLoaderProps {
 
 export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: UseProfileLoaderProps) {
   
-  const createFallbackProfile = useCallback((userId: string): UserProfile => {
+  const createFallbackProfile = useCallback(async (userId: string): Promise<UserProfile> => {
+    // Try to determine the user's role by checking JWT metadata or existing data
+    let userRole: UserRole = 'client'; // Default fallback
+    
+    try {
+      // Check if role is in JWT metadata
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.app_metadata?.role) {
+        userRole = authUser.app_metadata.role as UserRole;
+      } else if (authUser?.user_metadata?.role) {
+        userRole = authUser.user_metadata.role as UserRole;
+      }
+    } catch (error) {
+      console.warn('Could not retrieve user metadata for role detection');
+    }
+
     return {
       id: userId,
       first_name: null,
@@ -23,7 +38,7 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
       company_name: null,
       company_logo_url: null,
       avatar_url: null,
-      role: 'client', // Default role
+      role: userRole,
       terms_accepted_at: null,
       created_at: new Date().toISOString(),
       intro_video_viewed: false,
@@ -62,7 +77,7 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
         if (import.meta.env.DEV) {
           console.log('🔧 Creating fallback profile for user:', userId);
         }
-        const fallbackProfile = createFallbackProfile(userId);
+        const fallbackProfile = await createFallbackProfile(userId);
         updateProfileState(fallbackProfile);
         return;
       }
@@ -102,7 +117,7 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
       if (import.meta.env.DEV) {
         console.log('🔧 Creating fallback profile due to exception for user:', userId);
       }
-      const fallbackProfile = createFallbackProfile(userId);
+      const fallbackProfile = await createFallbackProfile(userId);
       updateProfileState(fallbackProfile);
     }
   }, [user?.email, isUnmountedRef, updateProfileState, createFallbackProfile]);
