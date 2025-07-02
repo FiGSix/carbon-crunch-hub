@@ -32,7 +32,20 @@ export function ClientsTable({
   onRefresh,
   onLoadMore
 }: ClientsTableProps) {
-  // Debug logging removed for production
+  console.log('=== ClientsTable Component ===');
+  console.log('Props received:', {
+    clientsCount: clients.length,
+    isLoading,
+    isRefreshing,
+    isLoadingMore,
+    hasMore,
+    totalCount,
+    error,
+    isAdmin,
+    hasOnRefresh: !!onRefresh,
+    hasOnLoadMore: !!onLoadMore
+  });
+  console.log('Clients data:', clients);
 
   // Show loading skeleton only on initial load
   if (isLoading && clients.length === 0) {

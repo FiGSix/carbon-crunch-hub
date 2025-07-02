@@ -24,6 +24,21 @@ const MyClients = () => {
   console.log('User Role:', userRole, 'Is Admin:', isAdmin);
   console.log('Loading:', isLoading, 'LoadingMore:', isLoadingMore, 'HasMore:', hasMore);
   console.log('Error:', error, 'Clients:', clients.length, 'Total:', totalCount);
+  console.log('Raw clients data:', clients);
+  
+  // Additional render condition debugging
+  console.log('Will render ClientsTable?', true);
+  console.log('ClientsTable props being passed:', {
+    clients,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    totalCount,
+    error,
+    isAdmin,
+    onRefresh: !!refresh,
+    onLoadMore: !!loadMore
+  });
 
   return (
     <DashboardLayout>

@@ -31,6 +31,15 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   const mountedRef = useRef(true);
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+
+  console.log('=== useClientsPaginated Hook State ===');
+  console.log('User ID:', user?.id);
+  console.log('User Role:', userRole);
+  console.log('Clients Count:', clients.length);
+  console.log('Is Loading:', isLoading);
+  console.log('Error:', error);
+  console.log('Total Count:', totalCount);
+  console.log('Has More:', hasMore);
   
   // Memoize the error handler to prevent unnecessary re-renders
   const handleFetchError = useMemo(() => createFetchErrorHandler(toast), [toast]);
@@ -60,6 +69,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       }
       setError(null);
 
+      console.log('=== Fetching Clients ===');
+      console.log('Params:', { userId: user.id, userRole, forceRefresh, pageSize: PAGE_SIZE, currentOffset });
+      
       const result = await UnifiedDataService.getClients(
         user.id, 
         userRole, 
@@ -68,18 +80,31 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         currentOffset
       );
       
+      console.log('=== UnifiedDataService Response ===');
+      console.log('Raw result:', result);
+      console.log('Clients array:', result.clients);
+      console.log('Clients count:', result.clients?.length);
+      console.log('Sample client:', result.clients?.[0]);
+      
       if (!mountedRef.current) return;
 
       // Transform to match expected interface
-      const transformedClients: ClientData[] = result.clients.map(client => ({
-        client_id: client.id,
-        client_name: client.name,
-        client_email: client.email,
-        company_name: client.company,
-        project_count: client.projectCount,
-        total_mwp: client.totalKwp / 1000, // Convert kWp to MWp
-        created_at: client.createdAt
-      }));
+      const transformedClients: ClientData[] = result.clients.map(client => {
+        console.log('Transforming client:', client);
+        return {
+          client_id: client.id,
+          client_name: client.name,
+          client_email: client.email,
+          company_name: client.company,
+          project_count: client.projectCount,
+          total_mwp: client.totalKwp / 1000, // Convert kWp to MWp
+          created_at: client.createdAt
+        };
+      });
+
+      console.log('=== Transformed Clients ===');
+      console.log('Transformed clients:', transformedClients);
+      console.log('Transformed count:', transformedClients.length);
 
       if (isLoadMore) {
         setClients(prev => [...prev, ...transformedClients]);

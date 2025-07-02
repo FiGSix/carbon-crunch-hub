@@ -21,7 +21,11 @@ export class ClientOperations {
     limit = 20,
     offset = 0
   ): Promise<PaginatedClientsResult> {
+    console.log('=== ClientOperations.getClients ===');
+    console.log('Params:', { userId, userRole, forceRefresh, limit, offset });
+    
     if (!RoleValidator.canManageClients(userRole)) {
+      console.log('Role validation failed - user cannot manage clients');
       ErrorHandler.logSecurityEvent({
         type: 'unauthorized_access',
         userId,
@@ -35,6 +39,8 @@ export class ClientOperations {
         nextOffset: 0
       };
     }
+    
+    console.log('Role validation passed - user can manage clients');
 
     const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
     
@@ -44,16 +50,21 @@ export class ClientOperations {
     }
 
     try {
+      console.log('=== Database Operations ===');
       // Get total count efficiently using the new function
       const { data: countData, error: countError } = await supabase.rpc('get_agent_clients_count', {
         agent_id_param: userRole === 'admin' ? null : userId
       });
 
+      console.log('Count RPC result:', { countData, countError });
+
       if (countError) {
+        console.error('Count error:', countError);
         throw countError;
       }
 
       const totalCount = countData || 0;
+      console.log('Total count:', totalCount);
 
       // Get paginated data using the new optimized function
       const { data, error } = await supabase.rpc('get_agent_clients_paginated', {
@@ -62,7 +73,12 @@ export class ClientOperations {
         offset_param: offset
       });
 
+      console.log('Paginated RPC result:', { data, error });
+      console.log('Data array length:', data?.length);
+      console.log('Sample data item:', data?.[0]);
+
       if (error) {
+        console.error('Paginated data error:', error);
         const errorResult = ErrorHandler.handleRLSError(error, 'unified clients fetch');
         if (errorResult.requiresReauth) {
           window.dispatchEvent(new CustomEvent('auth-required'));
@@ -75,16 +91,23 @@ export class ClientOperations {
         };
       }
 
-      const clients: UnifiedClient[] = (data || []).map(client => ({
-        id: client.client_id,
-        name: client.client_name || 'Unknown Client',
-        email: client.client_email,
-        company: client.company_name,
-        isRegistered: client.is_registered || false,
-        projectCount: client.project_count || 0,
-        totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
-        createdAt: client.created_at || new Date().toISOString()
-      }));
+      const clients: UnifiedClient[] = (data || []).map(client => {
+        console.log('Mapping client:', client);
+        return {
+          id: client.client_id,
+          name: client.client_name || 'Unknown Client',
+          email: client.client_email,
+          company: client.company_name,
+          isRegistered: client.is_registered || false,
+          projectCount: client.project_count || 0,
+          totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
+          createdAt: client.created_at || new Date().toISOString()
+        };
+      });
+
+      console.log('=== Final mapped clients ===');
+      console.log('Mapped clients:', clients);
+      console.log('Mapped clients count:', clients.length);
 
       const hasMore = offset + limit < totalCount;
       const nextOffset = hasMore ? offset + limit : totalCount;
@@ -95,6 +118,9 @@ export class ClientOperations {
         totalCount,
         nextOffset
       };
+
+      console.log('=== Final result ===');
+      console.log('Result:', result);
 
       CacheManager.setCache(cacheKey, result);
       return result;
