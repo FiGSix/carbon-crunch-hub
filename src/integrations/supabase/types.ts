@@ -457,6 +457,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_proposal_client: {
+        Args: { proposal_client_reference_id: string }
+        Returns: boolean
+      }
       mark_invitation_viewed: {
         Args: { token_param: string }
         Returns: undefined
