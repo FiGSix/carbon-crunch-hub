@@ -449,11 +449,11 @@ export type Database = {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
       }
-      is_admin: {
+      is_current_user_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      is_agent: {
+      is_current_user_agent: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
