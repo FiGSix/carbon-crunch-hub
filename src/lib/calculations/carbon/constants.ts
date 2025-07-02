@@ -6,9 +6,14 @@ export {
   DEFAULT_ANNUAL_GENERATION_FACTOR,
   DEFAULT_CARBON_FACTOR,
   DEFAULT_CLIENT_SHARE,
-  DEFAULT_AGENT_COMMISSION,
-  CRUNCH_COMMISSION
+  AGENT_COMMISSION_LOW,
+  AGENT_COMMISSION_HIGH
 } from '@/services/calculations/carbon/constants';
+
+// Function to calculate Crunch commission dynamically
+export function calculateCrunchCommission(clientShare: number, agentCommission: number): number {
+  return 100 - clientShare - agentCommission;
+}
 
 // Additional constants for backward compatibility
 export const EMISSION_FACTOR = 0.928; // tCO₂/MWh

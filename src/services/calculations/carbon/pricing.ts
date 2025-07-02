@@ -1,4 +1,5 @@
 import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
+import { AGENT_COMMISSION_LOW, AGENT_COMMISSION_HIGH } from './constants';
 
 /**
  * Get client share percentage based on portfolio size
@@ -12,10 +13,32 @@ export function getClientSharePercentage(portfolioKWp: number): number {
 }
 
 /**
- * Get agent commission percentage based on portfolio size
+ * Get agent commission percentage based on portfolio size and signed projects
+ * If no agent involved (added by Crunch Carbon), returns 0%
+ * If agent involved, returns 4% or 7% based on their signed projects
  */
-export function getAgentCommissionPercentage(portfolioKWp: number): number {
-  return portfolioKWp < 15000 ? 4 : 7;
+export function getAgentCommissionPercentage(
+  portfolioKWp: number, 
+  signedProjects?: number,
+  hasAgent: boolean = true
+): number {
+  // If no agent involved (added directly by Crunch Carbon)
+  if (!hasAgent) return 0;
+  
+  // If agent is involved, determine commission based on signed projects
+  // For now, using portfolio size as proxy. Can be updated to use signedProjects parameter
+  return portfolioKWp < 15000 ? AGENT_COMMISSION_LOW : AGENT_COMMISSION_HIGH;
+}
+
+/**
+ * Calculate Crunch Carbon platform fee dynamically
+ * Formula: 100% - Client Share % - Agent Commission %
+ */
+export function getCrunchCommissionPercentage(
+  clientSharePercentage: number,
+  agentCommissionPercentage: number
+): number {
+  return 100 - clientSharePercentage - agentCommissionPercentage;
 }
 
 /**

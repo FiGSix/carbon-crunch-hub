@@ -1,9 +1,9 @@
 import { UserRole } from '@/contexts/auth/types';
 import { SystemSpecs, CarbonCalculationResult } from './types';
-import { CRUNCH_COMMISSION } from './constants';
+import { AGENT_COMMISSION_LOW, AGENT_COMMISSION_HIGH } from './constants';
 import { normalizeToKWp, validateSystemSize } from './validation';
 import { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
-import { getClientSharePercentage, getAgentCommissionPercentage, calculateRevenueByYear } from './pricing';
+import { getClientSharePercentage, getAgentCommissionPercentage, getCrunchCommissionPercentage, calculateRevenueByYear } from './pricing';
 
 /**
  * Main calculation method - comprehensive carbon credits and revenue calculation
@@ -45,7 +45,10 @@ export async function calculateComplete(
   const totalRevenuePerYear = Math.round(carbonCreditsPerYear * 25); // Fallback calculation
   const clientRevenuePerYear = currentYearRevenue;
   const agentCommissionPerYear = Math.round(totalRevenuePerYear * (agentCommissionPercentage / 100));
-  const crunchCommissionPerYear = Math.round(totalRevenuePerYear * (CRUNCH_COMMISSION / 100));
+  
+  // Calculate Crunch commission dynamically using the new function
+  const crunchCommissionPercentage = getCrunchCommissionPercentage(clientSharePercentage, agentCommissionPercentage);
+  const crunchCommissionPerYear = Math.round(totalRevenuePerYear * (crunchCommissionPercentage / 100));
 
   return {
     annualEnergyKwh,

@@ -11,8 +11,8 @@ export {
   DEFAULT_ANNUAL_GENERATION_FACTOR,
   DEFAULT_CARBON_FACTOR,
   DEFAULT_CLIENT_SHARE,
-  DEFAULT_AGENT_COMMISSION,
-  CRUNCH_COMMISSION
+  AGENT_COMMISSION_LOW,
+  AGENT_COMMISSION_HIGH
 } from './constants';
 
 // Export validation functions
@@ -25,6 +25,7 @@ export { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
 export { 
   getClientSharePercentage, 
   getAgentCommissionPercentage, 
+  getCrunchCommissionPercentage,
   calculateRevenueByYear 
 } from './pricing';
 
@@ -44,11 +45,11 @@ export { calculateComplete } from './core';
  */
 export class UnifiedCarbonService {
   // Re-export constants as static properties for backward compatibility
-  static readonly DEFAULT_ANNUAL_GENERATION_FACTOR = 1200;
-  static readonly DEFAULT_CARBON_FACTOR = 0.928;
+  static readonly DEFAULT_ANNUAL_GENERATION_FACTOR = 1642.50;
+  static readonly DEFAULT_CARBON_FACTOR = 1.0334;
   static readonly DEFAULT_CLIENT_SHARE = 75;
-  static readonly DEFAULT_AGENT_COMMISSION = 15;
-  static readonly CRUNCH_COMMISSION = 10;
+  static readonly AGENT_COMMISSION_LOW = 4;
+  static readonly AGENT_COMMISSION_HIGH = 7;
 
   // Import and re-export all functions as static methods
   static normalizeToKWp = normalizeToKWp;
@@ -57,6 +58,7 @@ export class UnifiedCarbonService {
   static calculateCarbonCredits = calculateCarbonCredits;
   static getClientSharePercentage = getClientSharePercentage;
   static getAgentCommissionPercentage = getAgentCommissionPercentage;
+  static getCrunchCommissionPercentage = getCrunchCommissionPercentage;
   static calculateRevenueByYear = calculateRevenueByYear;
   static formatSystemSize = formatSystemSize;
   static calculatePortfolioTotals = calculatePortfolioTotals;
@@ -66,7 +68,7 @@ export class UnifiedCarbonService {
 // Import individual functions
 import { normalizeToKWp, validateSystemSize } from './validation';
 import { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
-import { getClientSharePercentage, getAgentCommissionPercentage, calculateRevenueByYear } from './pricing';
+import { getClientSharePercentage, getAgentCommissionPercentage, getCrunchCommissionPercentage, calculateRevenueByYear } from './pricing';
 import { formatSystemSize } from './formatting';
 import { calculatePortfolioTotals } from './portfolio';
 import { calculateComplete } from './core';
