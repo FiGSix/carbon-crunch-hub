@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
@@ -31,7 +31,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   const mountedRef = useRef(true);
   const { user, userRole } = useAuth();
   const { toast } = useToast();
-  const handleFetchError = createFetchErrorHandler(toast);
+  
+  // Memoize the error handler to prevent unnecessary re-renders
+  const handleFetchError = useMemo(() => createFetchErrorHandler(toast), [toast]);
 
   const fetchClients = useCallback(async (currentOffset = 0, isLoadMore = false, forceRefresh = false) => {
     if (!user?.id || !userRole) {
@@ -114,7 +116,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         setIsLoadingMore(false);
       }
     }
-  }, [user, userRole, toast, handleFetchError]);
+  }, [user?.id, userRole, handleFetchError]);
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
@@ -129,12 +131,12 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
 
   // Initial fetch - wait for both user and userRole
   useEffect(() => {
-    if (user && userRole) {
+    if (user?.id && userRole) {
       fetchClients(0, false, false);
     } else {
       setIsLoading(false);
     }
-  }, [user, userRole]);
+  }, [user?.id, userRole, fetchClients]);
 
   // Cleanup on unmount
   useEffect(() => {
