@@ -20,7 +20,7 @@ export const EMISSION_FACTOR = 0.928; // tCO₂/MWh
 export const AVERAGE_SUN_HOURS = 4.5;
 export const DAYS_IN_YEAR = 365;
 
-// Carbon prices fallback
+// Carbon prices fallback (in Rands per tonne CO₂)
 export const CARBON_PRICES: Record<string, number> = {
   "2024": 78.36,
   "2025": 97.34,
