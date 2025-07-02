@@ -90,15 +90,15 @@ export class UnifiedCarbonService {
    * Calculate annual energy generation
    */
   static calculateAnnualEnergy(systemSizeKwp: number): number {
-    return systemSizeKwp * this.DEFAULT_ANNUAL_GENERATION_FACTOR;
+    return systemSizeKwp * UnifiedCarbonService.DEFAULT_ANNUAL_GENERATION_FACTOR;
   }
 
   /**
    * Calculate carbon credits (tonnes CO2 per year)
    */
   static calculateCarbonCredits(systemSizeKwp: number): number {
-    const annualEnergyKwh = this.calculateAnnualEnergy(systemSizeKwp);
-    return (annualEnergyKwh / 1000) * this.DEFAULT_CARBON_FACTOR;
+    const annualEnergyKwh = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKwp);
+    return (annualEnergyKwh / 1000) * UnifiedCarbonService.DEFAULT_CARBON_FACTOR;
   }
 
   /**
@@ -161,24 +161,24 @@ export class UnifiedCarbonService {
     userRole?: UserRole
   ): Promise<CarbonCalculationResult> {
     // Normalize and validate system size
-    const systemSizeKwp = this.normalizeToKWp(specs.sizeKwp, specs.unitStandard);
-    const validation = this.validateSystemSize(systemSizeKwp);
+    const systemSizeKwp = UnifiedCarbonService.normalizeToKWp(specs.sizeKwp, specs.unitStandard);
+    const validation = UnifiedCarbonService.validateSystemSize(systemSizeKwp);
     
     if (!validation.isValid) {
       throw new Error(validation.error);
     }
 
     // Calculate basic metrics
-    const annualEnergyKwh = this.calculateAnnualEnergy(systemSizeKwp);
-    const carbonCreditsPerYear = this.calculateCarbonCredits(systemSizeKwp);
+    const annualEnergyKwh = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKwp);
+    const carbonCreditsPerYear = UnifiedCarbonService.calculateCarbonCredits(systemSizeKwp);
 
     // Determine portfolio size for share calculations
     const effectivePortfolioKWp = portfolioKWp || systemSizeKwp;
-    const clientSharePercentage = this.getClientSharePercentage(effectivePortfolioKWp);
-    const agentCommissionPercentage = this.getAgentCommissionPercentage(effectivePortfolioKWp);
+    const clientSharePercentage = UnifiedCarbonService.getClientSharePercentage(effectivePortfolioKWp);
+    const agentCommissionPercentage = UnifiedCarbonService.getAgentCommissionPercentage(effectivePortfolioKWp);
 
     // Calculate revenue by year
-    const revenueByYear = await this.calculateRevenueByYear(
+    const revenueByYear = await UnifiedCarbonService.calculateRevenueByYear(
       carbonCreditsPerYear,
       clientSharePercentage,
       specs.commissionDate
@@ -192,7 +192,7 @@ export class UnifiedCarbonService {
     const totalRevenuePerYear = Math.round(carbonCreditsPerYear * 25); // Fallback calculation
     const clientRevenuePerYear = currentYearRevenue;
     const agentCommissionPerYear = Math.round(totalRevenuePerYear * (agentCommissionPercentage / 100));
-    const crunchCommissionPerYear = Math.round(totalRevenuePerYear * (this.CRUNCH_COMMISSION / 100));
+    const crunchCommissionPerYear = Math.round(totalRevenuePerYear * (UnifiedCarbonService.CRUNCH_COMMISSION / 100));
 
     return {
       annualEnergyKwh,
