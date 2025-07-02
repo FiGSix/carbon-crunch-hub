@@ -6,11 +6,11 @@ import { SecureProfileService } from '../profile/SecureProfileService';
 import { ProposalsDataService } from './proposals/ProposalsDataService';
 import { DashboardDataService } from './dashboard/DashboardDataService';
 import { UnifiedClientService } from './clients/UnifiedClientService';
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 import { RoleValidationService } from '../auth/RoleValidationService';
 import { synchronizeUserRole } from '@/lib/supabase/profile';
 import type { ClientSearchResult } from './clients/UnifiedClientService';
-import type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
+import type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/carbon';
 
 /**
  * Unified data service - single interface for all data operations

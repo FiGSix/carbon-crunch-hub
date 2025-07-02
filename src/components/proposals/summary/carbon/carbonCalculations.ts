@@ -1,5 +1,5 @@
 
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string): number {
   const annualEnergy = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKWp);

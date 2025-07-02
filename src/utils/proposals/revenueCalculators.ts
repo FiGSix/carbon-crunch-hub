@@ -2,7 +2,7 @@
 /**
  * Revenue calculation utilities for proposals - now using UnifiedCarbonService
  */
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
 
 /**

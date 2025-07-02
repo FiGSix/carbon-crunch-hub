@@ -32,20 +32,17 @@ export function ClientsTable({
   onRefresh,
   onLoadMore
 }: ClientsTableProps) {
-  console.log('=== ClientsTable Render ===');
-  console.log('State - Loading:', isLoading, 'Refreshing:', isRefreshing, 'LoadingMore:', isLoadingMore);
-  console.log('Data - Error:', error, 'Clients:', clients.length, 'HasMore:', hasMore, 'Total:', totalCount);
-  console.log('Config - Is Admin:', isAdmin);
+  // Debug logging removed for production
 
   // Show loading skeleton only on initial load
   if (isLoading && clients.length === 0) {
-    console.log('Showing loading state (initial load)');
+    // Loading state
     return <ClientsTableLoading onRefresh={onRefresh} />;
   }
 
   // Show error state if there's an error and no cached data
   if (error && clients.length === 0) {
-    console.log('Showing error state (no cached data)');
+    // Error state
     return (
       <ClientsTableError 
         error={error} 
@@ -57,7 +54,7 @@ export function ClientsTable({
 
   // Show empty state if no clients and no error
   if (clients.length === 0 && !error && !isLoading) {
-    console.log('Showing empty state');
+    // Empty state
     return (
       <ClientsTableEmpty 
         isAdmin={isAdmin}
@@ -68,7 +65,7 @@ export function ClientsTable({
   }
 
   // Show content with data (this handles refreshing state while showing data)
-  console.log('Showing content with', clients.length, 'clients');
+  // Rendering content
   return (
     <div className="space-y-4">
       <ClientsTableContent 

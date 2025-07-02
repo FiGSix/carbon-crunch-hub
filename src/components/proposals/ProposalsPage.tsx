@@ -1,6 +1,6 @@
 
 import { ProposalActions } from "./ProposalActions";
-import { ProposalsSection } from "./ProposalsSection";
+import { ProposalsSectionOptimized } from "./ProposalsSectionOptimized";
 
 export function ProposalsPage() {
   return (
@@ -9,7 +9,7 @@ export function ProposalsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Proposals</h1>
         <ProposalActions />
       </div>
-      <ProposalsSection />
+      <ProposalsSectionOptimized />
     </div>
   );
 }

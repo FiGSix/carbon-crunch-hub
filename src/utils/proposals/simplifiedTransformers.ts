@@ -4,7 +4,7 @@
  */
 import { ProposalData, ProposalListItem } from '@/types/proposals';
 import { UserRole } from '@/contexts/auth/types';
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 /**
  * Transform raw proposal data to ProposalData

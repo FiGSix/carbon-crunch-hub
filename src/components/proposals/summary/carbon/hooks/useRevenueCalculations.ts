@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 import { PortfolioData } from '@/services/proposals/portfolioService';
 import { optimizedCache } from '@/services/cache/OptimizedCacheService';
 

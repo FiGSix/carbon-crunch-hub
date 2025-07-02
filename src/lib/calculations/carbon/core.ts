@@ -3,7 +3,7 @@
  * Core carbon calculation functions - consolidated from UnifiedCarbonService
  * This file provides direct access to core calculation functions for backward compatibility
  */
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 // Re-export core functions from UnifiedCarbonService
 export const normalizeToKWp = UnifiedCarbonService.normalizeToKWp;
@@ -14,7 +14,7 @@ export const getAgentCommissionPercentage = UnifiedCarbonService.getAgentCommiss
 export const formatSystemSizeForDisplay = UnifiedCarbonService.formatSystemSize;
 
 // Export types
-export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
+export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/carbon';
 
 // Constants
 export const EMISSION_FACTOR = 0.928; // tCO₂/MWh

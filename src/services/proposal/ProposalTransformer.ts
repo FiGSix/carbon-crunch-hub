@@ -1,6 +1,6 @@
 
 import { ProposalListItem } from '@/types/proposals';
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 export class ProposalTransformer {
   static transformToProposalListItem(rawProposal: any): ProposalListItem {

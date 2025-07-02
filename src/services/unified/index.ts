@@ -11,7 +11,7 @@ export { ClientOperations } from './clients/ClientOperations';
 export { ClientSearch } from './clients/ClientSearch';
 
 // Export the unified carbon calculation service
-export { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+export { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 export type { UnifiedClient, ClientSearchResult, PaginatedClientsResult, CreateClientData } from './clients/types';
-export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
+export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/carbon';

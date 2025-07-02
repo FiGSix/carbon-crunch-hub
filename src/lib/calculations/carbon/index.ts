@@ -5,13 +5,13 @@
  */
 
 // Import the unified service
-import { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 // Export the main service
-export { UnifiedCarbonService } from '@/services/calculations/UnifiedCarbonService';
+export { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 // Export types
-export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/UnifiedCarbonService';
+export type { SystemSpecs, CarbonCalculationResult } from '@/services/calculations/carbon';
 
 // Export simplified functions for backward compatibility
 export { 
@@ -59,7 +59,7 @@ export function calculateResults(
   commissionDate: Date, 
   unit: string = 'kWp'
 ): CalculationResults {
-  // Use memoized calculations from UnifiedCarbonService
+  // Use calculations from the consolidated carbon service
   const annualGeneration = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKwp);
   const carbonCredits = UnifiedCarbonService.calculateCarbonCredits(systemSizeKwp);
   const carbonOffset = carbonCredits;

@@ -21,7 +21,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForceLogout from "./pages/ForceLogout";
 import Dashboard from "./pages/Dashboard";
 import CreateProposal from "./pages/CreateProposal";
-import Proposals from "./pages/Proposals";
+import ProposalsOptimized from "./pages/ProposalsOptimized";
 import Profile from "./pages/Profile";
 import MyClients from "./pages/MyClients";
 import SystemSettings from "./pages/SystemSettings";
@@ -97,7 +97,7 @@ function App() {
                   path="/proposals" 
                   element={
                     <PrivateRoute>
-                      <Proposals />
+                      <ProposalsOptimized />
                     </PrivateRoute>
                   } 
                 />

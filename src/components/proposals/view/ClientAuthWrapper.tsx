@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { ClientRegistrationForm } from './ClientRegistrationForm';
-import { ClientLoginForm } from './ClientLoginForm';
+import { RegistrationForm } from './client-registration/RegistrationForm';
+import { LoginForm } from './client-login/LoginForm';
 import { useAuth } from "@/contexts/auth";
 import { logger } from "@/lib/logger";
 import { AuthTabSwitcher } from './auth/AuthTabSwitcher';
@@ -66,7 +66,7 @@ export function ClientAuthWrapper({
 
   // Components for each tab
   const registrationForm = (
-    <ClientRegistrationForm 
+    <RegistrationForm 
       proposalId={proposalId} 
       clientEmail={clientEmail} 
       onComplete={handleAuthComplete}
@@ -75,7 +75,7 @@ export function ClientAuthWrapper({
   );
   
   const loginForm = (
-    <ClientLoginForm 
+    <LoginForm 
       clientEmail={clientEmail} 
       onComplete={handleAuthComplete}
       onError={handleAuthError}

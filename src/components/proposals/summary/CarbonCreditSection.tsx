@@ -1,8 +1,8 @@
 
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CarbonCreditSummary } from "./carbon/CarbonCreditSummary";
 import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
+import { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from "@/lib/calculations/carbon";
 import { 
   calculateTotalMWhGenerated, 
   calculateTotalCarbonCredits
@@ -58,11 +58,24 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     );
   }
 
+  // Calculate inline summary data  
+  const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
+  const carbonCredits = calculateCarbonCredits(systemSizeKWp);
+
   return (
     <div>
       <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Carbon Credit Projection</h3>
       
-      <CarbonCreditSummary systemSize={systemSize} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <p className="text-sm text-carbon-gray-500">Estimated Annual Energy</p>
+          <p className="font-medium">{annualEnergy.toLocaleString()} kWh</p>
+        </div>
+        <div>
+          <p className="text-sm text-carbon-gray-500">Estimated Annual Carbon Credits</p>
+          <p className="font-medium">{carbonCredits.toFixed(2)} tCO₂</p>
+        </div>
+      </div>
       
       <h4 className="font-medium text-carbon-gray-700 mb-2">Client Revenue by Year</h4>
       
