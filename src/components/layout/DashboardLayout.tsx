@@ -30,7 +30,7 @@ export function DashboardLayout({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  // Performance optimization: Memoize computed values
+  // Performance optimization: Memoize computed values with redirect protection
   const { hasAccess, shouldRedirect, dashboardTitle, userInitials } = useMemo(() => {
     const hasRequiredRole = !requiredRole || userRole === 'admin' || userRole === requiredRole;
     
@@ -41,13 +41,16 @@ export function DashboardLayout({
 
     const initials = profile?.first_name?.[0]?.toUpperCase() || userRole?.[0]?.toUpperCase() || '?';
 
+    // Only redirect if both user and role are missing (not just loading)
+    const shouldRedirectToLogin = !isInitialized || (!user && !isLoading);
+
     return {
       hasAccess: hasRequiredRole,
-      shouldRedirect: !user || !userRole,
+      shouldRedirect: shouldRedirectToLogin,
       dashboardTitle: title,
       userInitials: initials
     };
-  }, [userRole, requiredRole, isMobile, profile, user]);
+  }, [userRole, requiredRole, isMobile, profile, user, isInitialized, isLoading]);
 
   console.log('🏠 DashboardLayout render:', { 
     userRole, 

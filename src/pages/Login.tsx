@@ -27,21 +27,28 @@ const Login = () => {
       });
     }
 
-    // SIMPLIFIED: Redirect immediately if we have both user and session
-    if (isInitialized && user && session && !hasRedirectedRef.current) {
-      if (import.meta.env.DEV) {
-        console.log('✅ User authenticated, executing redirect');
+    // IMPROVED: Only redirect if we have valid session and auth is fully initialized
+    if (isInitialized && !authLoading && user && session && !hasRedirectedRef.current) {
+      // Validate session is not expired
+      if (session.expires_at && new Date(session.expires_at * 1000) > new Date()) {
+        if (import.meta.env.DEV) {
+          console.log('✅ User authenticated with valid session, executing redirect');
+        }
+        hasRedirectedRef.current = true;
+        
+        const from = location.state?.from || '/dashboard';
+        if (import.meta.env.DEV) {
+          console.log('🚀 Redirecting to:', from);
+        }
+        
+        navigate(from, { replace: true });
+      } else {
+        if (import.meta.env.DEV) {
+          console.log('⚠️ Session expired, staying on login page');
+        }
       }
-      hasRedirectedRef.current = true;
-      
-      const from = location.state?.from || '/dashboard';
-      if (import.meta.env.DEV) {
-        console.log('🚀 Redirecting to:', from);
-      }
-      
-      navigate(from, { replace: true });
     }
-  }, [user, session, navigate, isInitialized, location.state]);
+  }, [user, session, navigate, isInitialized, authLoading, location.state]);
 
   const handleLoginAttempt = () => {
     if (import.meta.env.DEV) {

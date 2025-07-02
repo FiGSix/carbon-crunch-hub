@@ -16,10 +16,10 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
   const { user, session, userRole, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
-  // Enhanced access check with fallback role handling
+  // Enhanced access check with redirect protection
   const accessCheck = useMemo(() => {
     if (import.meta.env.DEV) {
-      console.log('🔒 PrivateRoute access check with fixed RLS:', { 
+      console.log('🔒 PrivateRoute access check:', { 
         hasUser: !!user,
         hasSession: !!session, 
         userRole,
@@ -33,20 +33,28 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
     }
 
     // Still loading/initializing - show loading state
-    if (!isInitialized || isLoading) {
+    if (!isInitialized) {
       if (import.meta.env.DEV) {
-        console.log('⏳ Auth still initializing or loading, showing spinner');
+        console.log('⏳ Auth still initializing, showing spinner');
       }
       return { shouldShowLoading: true, hasAccess: false, shouldRedirect: false };
     }
 
-    // Check for both user AND session
+    // Check for valid session first
     if (!user || !session) {
       if (import.meta.env.DEV) {
         console.log('❌ Missing user or session - will redirect to login', {
           hasUser: !!user,
           hasSession: !!session
         });
+      }
+      return { shouldShowLoading: false, hasAccess: false, shouldRedirect: true };
+    }
+
+    // Validate session expiry
+    if (session.expires_at && new Date(session.expires_at * 1000) <= new Date()) {
+      if (import.meta.env.DEV) {
+        console.log('❌ Session expired - will redirect to login');
       }
       return { shouldShowLoading: false, hasAccess: false, shouldRedirect: true };
     }
@@ -59,8 +67,8 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
       return { shouldShowLoading: false, hasAccess: true, shouldRedirect: false };
     }
 
-    // If role is still loading but we have user/session, wait a bit more
-    if (!userRole) {
+    // If role is still loading but we have valid user/session, wait a bit more
+    if (!userRole && isLoading) {
       if (import.meta.env.DEV) {
         console.log('⚠️ Role still loading, showing loading state');
       }
@@ -103,7 +111,7 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
     }
 
     if (import.meta.env.DEV) {
-      console.log('✅ Access check completed with fixed RLS:', { hasAccess, finalUserRole: userRole });
+      console.log('✅ Access check completed:', { hasAccess, finalUserRole: userRole });
     }
     return { shouldShowLoading: false, hasAccess, shouldRedirect: false };
   }, [user, session, userRole, isLoading, isInitialized, requiredRole, adminOnly, allowedRoles, location.pathname]);

@@ -26,8 +26,13 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const auth = useAuthSimplified();
   
-  // Enhanced authentication check with better session validation
-  const isAuthenticated = !!(auth.user && auth.session && auth.session.expires_at && new Date(auth.session.expires_at * 1000) > new Date());
+  // Enhanced authentication check with session validation and redirect protection
+  const isAuthenticated = !!(
+    auth.user && 
+    auth.session && 
+    auth.session.expires_at && 
+    new Date(auth.session.expires_at * 1000) > new Date()
+  );
   
   const contextValue: AuthContextType = {
     ...auth,

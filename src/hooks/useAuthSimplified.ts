@@ -45,11 +45,7 @@ export function useAuthSimplified() {
         console.log('🚪 Starting sign out process');
       }
       
-      // Clear state first to prevent UI flickering
-      clearAuthState();
-      authCache.clear();
-      
-      // Then perform the actual sign out
+      // Perform the actual sign out first
       const { error } = await supabase.auth.signOut({
         scope: 'global' // Sign out from all devices
       });
@@ -60,6 +56,10 @@ export function useAuthSimplified() {
         }
         throw error;
       }
+      
+      // Clear state and cache after successful sign out
+      clearAuthState();
+      authCache.clear();
       
       if (import.meta.env.DEV) {
         console.log('✅ Sign out completed successfully');
