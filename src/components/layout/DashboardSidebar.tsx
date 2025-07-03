@@ -67,12 +67,6 @@ export function DashboardSidebar() {
       roles: ["admin", "agent"]
     },
     {
-      name: "Agents",
-      href: "/agents",
-      icon: UserPlus,
-      roles: ["admin"]
-    },
-    {
       name: "Agent Management",
       href: "/admin/agents",
       icon: UserCog,
