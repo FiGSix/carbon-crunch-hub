@@ -10,8 +10,10 @@ import {
 import { ProjectInfoFormWithConflictCheck } from "@/components/proposals/project-info/ProjectInfoFormWithConflictCheck";
 import { ProjectInfoHelpCard } from "@/components/proposals/project-info/ProjectInfoHelpCard";
 import { ProjectInfoStepFooter } from "@/components/proposals/project-info/ProjectInfoStepFooter";
+import { DateRejectionDialog } from "@/components/proposals/project-info/DateRejectionDialog";
 import { ProjectInformation } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
+import { validateCommissionDate } from "@/utils/dateValidation";
 
 interface ProjectInfoStepProps {
   projectInfo: ProjectInformation;
@@ -28,6 +30,29 @@ export function ProjectInfoStep({
 }: ProjectInfoStepProps) {
   const { toast } = useToast();
   const [addressInputError, setAddressInputError] = useState(false);
+  const [showDateRejectionDialog, setShowDateRejectionDialog] = useState(false);
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null);
+
+  // Enhanced project info handler with date validation
+  const handleProjectInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // If it's the commission date, validate it
+    if (name === 'commissionDate' && value) {
+      const validation = validateCommissionDate(value);
+      if (!validation.isValid) {
+        setDateValidationError(validation.error || 'Invalid date');
+        if (validation.error?.includes('date constraints')) {
+          setShowDateRejectionDialog(true);
+        }
+      } else {
+        setDateValidationError(null);
+      }
+    }
+    
+    // Call the original update function
+    updateProjectInfo(e);
+  };
 
   // Add a direct setter for address field since GoogleAddressAutocomplete 
   // doesn't use standard onChange events
@@ -60,7 +85,8 @@ export function ProjectInfoStep({
     projectInfo.address && 
     projectInfo.size && 
     projectInfo.commissionDate && 
-    !addressInputError
+    !addressInputError &&
+    !dateValidationError
   );
   
   return (
@@ -76,8 +102,9 @@ export function ProjectInfoStep({
         <div className="space-y-4">
           <ProjectInfoFormWithConflictCheck 
             projectInfo={projectInfo} 
-            updateProjectInfo={updateProjectInfo} 
+            updateProjectInfo={handleProjectInfoChange} 
             handleAddressChange={handleAddressChange}
+            dateValidationError={dateValidationError}
           />
           <ProjectInfoHelpCard />
         </div>
@@ -87,6 +114,11 @@ export function ProjectInfoStep({
         nextStep={nextStep} 
         prevStep={prevStep} 
         isFormValid={isFormValid} 
+      />
+      
+      <DateRejectionDialog
+        open={showDateRejectionDialog}
+        onClose={() => setShowDateRejectionDialog(false)}
       />
     </Card>
   );

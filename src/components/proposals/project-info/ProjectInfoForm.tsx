@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "lucide-react";
 import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
 import { ProjectInformation } from "@/types/proposals";
+import { getMinimumDateString } from "@/utils/dateValidation";
 
 interface ProjectInfoFormProps {
   projectInfo: ProjectInformation;
@@ -79,7 +80,7 @@ export function ProjectInfoForm({
             onChange={updateProjectInfo}
             className="retro-input"
             required
-            min="2022-09-15"
+            min={getMinimumDateString()}
           />
           <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-carbon-gray-400 pointer-events-none" />
         </div>

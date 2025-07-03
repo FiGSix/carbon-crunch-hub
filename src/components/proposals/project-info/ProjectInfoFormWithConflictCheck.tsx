@@ -11,13 +11,15 @@ interface ProjectInfoFormWithConflictCheckProps {
   projectInfo: ProjectInformation;
   updateProjectInfo: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleAddressChange: (address: string) => void;
+  dateValidationError?: string | null;
 }
 
 export function ProjectInfoFormWithConflictCheck({ 
   proposalId,
   projectInfo,
   updateProjectInfo,
-  handleAddressChange
+  handleAddressChange,
+  dateValidationError
 }: ProjectInfoFormWithConflictCheckProps) {
   const {
     isChecking,
@@ -94,6 +96,14 @@ export function ProjectInfoFormWithConflictCheck({
         </div>
       )}
 
+      {/* Show date validation error */}
+      {dateValidationError && (
+        <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 border border-destructive/20 rounded-md p-3">
+          <div className="h-4 w-4 rounded-full bg-destructive flex-shrink-0"></div>
+          {dateValidationError}
+        </div>
+      )}
+
       {/* Original form */}
       <ProjectInfoForm 
         projectInfo={projectInfo}
@@ -101,11 +111,14 @@ export function ProjectInfoFormWithConflictCheck({
         handleAddressChange={handleAddressChange}
       />
       
-      {/* Block form submission if there's a conflict without override */}
-      {isBlocked && (
+      {/* Block form submission if there's a conflict without override or date error */}
+      {(isBlocked || dateValidationError) && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-700 font-medium">
-            This form cannot be submitted until the address conflict is resolved.
+            {isBlocked 
+              ? "This form cannot be submitted until the address conflict is resolved."
+              : "This form cannot be submitted until the date issue is resolved."
+            }
           </p>
         </div>
       )}
