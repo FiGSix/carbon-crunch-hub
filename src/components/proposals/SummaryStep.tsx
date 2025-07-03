@@ -13,7 +13,7 @@ import { ClientInformationSection } from "./summary/ClientInformationSection";
 import { ProjectInformationSection } from "./summary/ProjectInformationSection";
 import { CarbonCreditSection } from "./summary/CarbonCreditSection";
 import { RevenueDistributionSection } from "./summary/RevenueDistributionSection";
-import { ProposalSubmitForm } from "./summary/ProposalSubmitForm";
+import { ProposalSubmitFormReliable } from "./summary/ProposalSubmitFormReliable";
 
 interface SummaryStepProps {
   eligibility: EligibilityCriteria;
@@ -60,14 +60,14 @@ export function SummaryStep({
         </div>
       </CardContent>
       <CardFooter>
-        <ProposalSubmitForm
-          eligibility={eligibility}
-          clientInfo={clientInfo}
-          projectInfo={projectInfo}
-          nextStep={nextStep}
-          prevStep={prevStep}
-          selectedClientId={selectedClientId}
-        />
+          <ProposalSubmitFormReliable
+            eligibility={eligibility}
+            clientInfo={clientInfo}
+            projectInfo={projectInfo}
+            nextStep={nextStep}
+            prevStep={prevStep}
+            selectedClientId={selectedClientId}
+          />
       </CardFooter>
     </Card>
   );
