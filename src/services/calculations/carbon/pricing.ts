@@ -16,14 +16,21 @@ export function getClientSharePercentage(portfolioKWp: number): number {
  * Get agent commission percentage based on portfolio size and signed projects
  * If no agent involved (added by Crunch Carbon), returns 0%
  * If agent involved, returns 4% or 7% based on their signed projects
+ * If commission override is provided, it takes precedence
  */
 export function getAgentCommissionPercentage(
   portfolioKWp: number, 
   signedProjects?: number,
-  hasAgent: boolean = true
+  hasAgent: boolean = true,
+  commissionOverride?: number | null
 ): number {
   // If no agent involved (added directly by Crunch Carbon)
   if (!hasAgent) return 0;
+  
+  // If commission override is set, use it
+  if (commissionOverride !== null && commissionOverride !== undefined) {
+    return commissionOverride;
+  }
   
   // If agent is involved, determine commission based on signed projects
   // For now, using portfolio size as proxy. Can be updated to use signedProjects parameter

@@ -21,7 +21,11 @@ function calculateClientSharePercentage(portfolioKWp: number): number {
   return 73.5;
 }
 
-function calculateAgentCommissionPercentage(portfolioKWp: number): number {
+function calculateAgentCommissionPercentage(portfolioKWp: number, commissionOverride?: number | null): number {
+  // If commission override is set, use it
+  if (commissionOverride !== null && commissionOverride !== undefined) {
+    return commissionOverride;
+  }
   return portfolioKWp < 15000 ? 4 : 7;
 }
 
@@ -100,7 +104,14 @@ export async function createProposal(
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
     const carbonCredits = calculateCarbonCredits(systemSizeKWp);
     
-    // Step 3: Get portfolio sizes
+    // Step 3: Get agent profile to check for commission override
+    const { data: agentProfile } = await supabase
+      .from('profiles')
+      .select('commission_override')
+      .eq('id', agentId)
+      .single();
+    
+    // Step 4: Get portfolio sizes
     const [clientPortfolioKWp, agentPortfolioKWp] = await Promise.all([
       getPortfolioSize(supabase.from('proposals').select('system_size_kwp').eq('client_id', clientId).not('system_size_kwp', 'is', null)),
       getPortfolioSize(supabase.from('proposals').select('system_size_kwp').eq('agent_id', agentId).not('system_size_kwp', 'is', null))
@@ -110,7 +121,7 @@ export async function createProposal(
     const totalAgentPortfolio = agentPortfolioKWp + systemSizeKWp;
     
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
-    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio);
+    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio, agentProfile?.commission_override);
     
     // Step 4: Insert proposal
     const proposalData: ProposalInsert = {
