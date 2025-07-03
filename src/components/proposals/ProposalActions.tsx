@@ -16,7 +16,6 @@ export function ProposalActions() {
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
       <Button 
-        className="bg-blue-600 hover:bg-blue-700 text-white"
         onClick={() => navigate("/create-proposal")}
       >
         <Plus className="h-5 w-5 mr-2" />
