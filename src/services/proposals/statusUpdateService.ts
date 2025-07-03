@@ -27,7 +27,7 @@ export async function updateProposalStatus(
   });
 
   try {
-    statusLogger.info("Starting status update");
+    statusLogger.info("Starting status update with audit trail");
 
     // Validate the new status
     const validStatuses = ['draft', 'pending', 'approved', 'rejected'];
@@ -39,9 +39,31 @@ export async function updateProposalStatus(
       };
     }
 
-    // Update the proposal status with proper typing
+    // Get current proposal data for audit trail
+    const { data: currentProposal, error: fetchError } = await supabase
+      .from('proposals')
+      .select('status, title')
+      .eq('id', proposalId)
+      .single();
+
+    if (fetchError) {
+      statusLogger.error("Failed to fetch current proposal", { error: fetchError.message });
+      return {
+        success: false,
+        error: fetchError.message
+      };
+    }
+
+    // Don't update if status is the same
+    if (currentProposal.status === newStatus) {
+      statusLogger.info("Status unchanged, skipping update");
+      return { success: true };
+    }
+
+    // Update the proposal status with proper typing and audit trail
     const updateData: ProposalUpdate = {
       status: newStatus,
+      last_modified_by: userId,
       // Set signed_at when approved
       ...(newStatus === 'approved' && { signed_at: new Date().toISOString() })
     };
@@ -59,7 +81,12 @@ export async function updateProposalStatus(
       };
     }
 
-    statusLogger.info("Status update completed successfully");
+    statusLogger.info("Status update completed successfully with audit trail", { 
+      previousStatus: currentProposal.status,
+      newStatus,
+      proposalTitle: currentProposal.title 
+    });
+    
     return { success: true };
 
   } catch (error) {

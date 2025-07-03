@@ -321,21 +321,29 @@ export class ReliableProposalService {
   }
 
   /**
-   * Submit proposal for review with reliability
+   * Submit proposal for review with enhanced reliability and audit trail
    */
   async submitProposalReliably(proposalId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    const serviceLogger = logger.withContext({
+      component: 'ReliableProposalService',
+      method: 'submitProposalReliably',
+      proposalId,
+      userId
+    });
+
+    serviceLogger.info('Starting reliable proposal submission with audit trail');
+
     const result = await RetryService.executeWithRetry(
       () => this.connectionManager.executeWithHealthCheck(async () => {
-        const { data, error } = await supabase
-          .from('proposals')
-          .update({ status: 'pending' })
-          .eq('id', proposalId)
-          .eq('agent_id', userId)
-          .eq('status', 'draft')
-          .select();
+        const { updateProposalStatus } = await import('./statusUpdateService');
+        
+        const updateResult = await updateProposalStatus(proposalId, 'pending', userId);
+        
+        if (!updateResult.success) {
+          throw new Error(`Status update failed: ${updateResult.error}`);
+        }
 
-        if (error) throw error;
-        return data;
+        return { proposalId, status: 'pending' };
       }),
       {
         maxAttempts: 3,
@@ -343,6 +351,28 @@ export class ReliableProposalService {
         timeoutMs: 15000
       }
     );
+
+    if (result.success) {
+      serviceLogger.info('Proposal submission completed successfully with audit trail');
+      
+      // Queue background notification
+      this.taskManager.queueTask({
+        id: `notify-submission-${proposalId}`,
+        operation: async () => {
+          await supabase.from('notifications').insert({
+            user_id: userId,
+            type: 'proposal_submitted',
+            title: 'Proposal Submitted',
+            message: 'Your proposal has been successfully submitted for review.',
+            related_type: 'proposal',
+            related_id: proposalId
+          });
+        },
+        priority: 'normal'
+      });
+    } else {
+      serviceLogger.error('Proposal submission failed', { error: result.error?.message });
+    }
 
     return {
       success: result.success,
