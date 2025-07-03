@@ -51,6 +51,32 @@ export class ClientOperations {
 
     try {
       console.log('=== Database Operations ===');
+      
+      // Debug current session state before making database calls
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Current session state:', {
+        hasSession: !!session,
+        sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
+        sessionError: sessionError?.message,
+        userId: session?.user?.id
+      });
+
+      // Test auth.uid() function directly
+      const { data: authTest, error: authTestError } = await supabase.rpc('auth_user_id');
+      console.log('auth.uid() test result:', { authTest, authTestError });
+
+      if (authTestError || !authTest) {
+        console.error('❌ auth.uid() is returning null - authentication not properly synchronized');
+        
+        // Try to refresh session to fix auth.uid() issue
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        console.log('Session refresh attempt:', { refreshData: !!refreshData.session, refreshError });
+        
+        if (refreshError) {
+          throw new Error('Authentication session invalid. Please sign out and sign in again.');
+        }
+      }
+      
       // Get total count efficiently using the new function
       const { data: countData, error: countError } = await supabase.rpc('get_agent_clients_count', {
         agent_id_param: userRole === 'admin' ? null : userId

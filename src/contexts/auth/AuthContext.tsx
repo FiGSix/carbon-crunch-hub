@@ -13,7 +13,9 @@ interface AuthContextType {
   isAdmin: boolean;
   isAuthenticated: boolean;
   isInitialized: boolean;
+  authError: string | null;
   refreshUser: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isAuthenticated,
       isInitialized: auth.isInitialized,
       isLoading: auth.isLoading,
+      authError: auth.authError,
       sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
       sessionExpiresAt: auth.session?.expires_at ? new Date(auth.session.expires_at * 1000).toISOString() : 'none',
       profileId: auth.profile?.id || 'none'

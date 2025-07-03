@@ -1,14 +1,22 @@
 
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthState } from './auth/useAuthState';
 import { useProfileLoader } from './auth/useProfileLoader';
 import { useAuthInitializer } from './auth/useAuthInitializer';
+import { useAuthStateSync } from './auth/useAuthStateSync';
+import { useAuthReliability } from './auth/useAuthReliability';
 import { authCache } from './auth/authCache';
+import { useToast } from './use-toast';
 
 /**
  * Simplified auth hook with improved session persistence and error handling
+ * Now includes authentication state synchronization and reliability features
  */
 export function useAuthSimplified() {
+  const { toast } = useToast();
+  const [authError, setAuthError] = useState<string | null>(null);
+  
   const {
     user,
     session,
@@ -39,11 +47,35 @@ export function useAuthSimplified() {
     loadUserProfileWithFallback
   });
 
+  // Add auth state synchronization to prevent auth.uid() returning null
+  useAuthStateSync({
+    session,
+    onAuthStateChange: updateAuthState
+  });
+
+  // Add reliability features for connection monitoring and recovery
+  const { recoverSession } = useAuthReliability({
+    session,
+    isInitialized,
+    onAuthStateChange: updateAuthState,
+    onError: (error) => {
+      setAuthError(error);
+      toast({
+        title: "Authentication Issue",
+        description: error,
+        variant: "destructive"
+      });
+    }
+  });
+
   const signOut = async () => {
     try {
       if (import.meta.env.DEV) {
         console.log('🚪 Starting sign out process');
       }
+      
+      // Clear auth error state
+      setAuthError(null);
       
       // Perform the actual sign out first
       const { error } = await supabase.auth.signOut({
@@ -72,6 +104,29 @@ export function useAuthSimplified() {
     }
   };
 
+  const refreshAuth = async () => {
+    try {
+      setAuthError(null);
+      const recovered = await recoverSession();
+      if (!recovered) {
+        setAuthError('Unable to refresh authentication');
+        toast({
+          title: "Authentication Error", 
+          description: "Please sign in again",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown auth error';
+      setAuthError(errorMessage);
+      toast({
+        title: "Authentication Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  };
+
   return {
     user,
     session,
@@ -79,7 +134,9 @@ export function useAuthSimplified() {
     userRole,
     isLoading,
     isInitialized,
+    authError,
     refreshUser,
+    refreshAuth,
     signOut
   };
 }

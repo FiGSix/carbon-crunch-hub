@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
+import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 // Page imports
@@ -59,6 +60,7 @@ function App() {
           <AuthProvider>
             <AuthNavigationHandler />
             <TooltipProvider>
+              <AuthStatusMonitor />
               <Toaster />
               <Sonner />
               <Routes>
