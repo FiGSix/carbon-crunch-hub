@@ -42,7 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated
   };
 
-  // Enhanced logging with session validation details
+  // Enhanced logging with session validation details (development only)
   if (import.meta.env.DEV) {
     console.log('🔄 AuthContext state update:', {
       hasUser: !!auth.user,

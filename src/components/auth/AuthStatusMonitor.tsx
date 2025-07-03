@@ -18,8 +18,10 @@ export function AuthStatusMonitor() {
     }
   };
 
-  // Only show in development or when there's an auth error
-  if (!import.meta.env.DEV && !authError) {
+  // Only show debug info in development, but always show auth errors
+  const showDebugInfo = import.meta.env.DEV;
+  
+  if (!authError && !showDebugInfo) {
     return null;
   }
 
@@ -49,7 +51,7 @@ export function AuthStatusMonitor() {
         </Alert>
       )}
 
-      {import.meta.env.DEV && (
+      {showDebugInfo && (
         <div className="bg-background border rounded-lg p-3 shadow-lg text-xs space-y-2">
           <div className="font-semibold text-foreground">Auth Status</div>
           

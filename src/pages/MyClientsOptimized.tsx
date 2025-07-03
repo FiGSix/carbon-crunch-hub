@@ -20,10 +20,12 @@ const MyClientsOptimized = () => {
   
   const isAdmin = userRole === 'admin';
 
-  console.log('=== MyClientsOptimized Page Render ===');
-  console.log('User Role:', userRole, 'Is Admin:', isAdmin);
-  console.log('Loading:', isLoading, 'LoadingMore:', isLoadingMore, 'HasMore:', hasMore);
-  console.log('Error:', error, 'Clients:', clients.length, 'Total:', totalCount);
+  if (import.meta.env.DEV) {
+    console.log('=== MyClientsOptimized Page Render ===');
+    console.log('User Role:', userRole, 'Is Admin:', isAdmin);
+    console.log('Loading:', isLoading, 'LoadingMore:', isLoadingMore, 'HasMore:', hasMore);
+    console.log('Error:', error, 'Clients:', clients.length, 'Total:', totalCount);
+  }
 
   return (
     <DashboardLayout>
@@ -40,18 +42,20 @@ const MyClientsOptimized = () => {
                   : 'View your client relationships and project data'
                 }
               </p>
-              {/* Debug info - can be removed in production */}
-              <div className="text-xs text-gray-400 mt-1 space-x-2">
-                <span>Role: {userRole}</span>
-                <span>•</span>
-                <span>Loading: {isLoading ? 'Yes' : 'No'}</span>
-                <span>•</span>
-                <span>LoadingMore: {isLoadingMore ? 'Yes' : 'No'}</span>
-                <span>•</span>
-                <span>Clients: {clients.length}/{totalCount}</span>
-                <span>•</span>
-                <span>HasMore: {hasMore ? 'Yes' : 'No'}</span>
-              </div>
+              {/* Debug info - only shown in development */}
+              {import.meta.env.DEV && (
+                <div className="text-xs text-gray-400 mt-1 space-x-2">
+                  <span>Role: {userRole}</span>
+                  <span>•</span>
+                  <span>Loading: {isLoading ? 'Yes' : 'No'}</span>
+                  <span>•</span>
+                  <span>LoadingMore: {isLoadingMore ? 'Yes' : 'No'}</span>
+                  <span>•</span>
+                  <span>Clients: {clients.length}/{totalCount}</span>
+                  <span>•</span>
+                  <span>HasMore: {hasMore ? 'Yes' : 'No'}</span>
+                </div>
+              )}
             </div>
           </div>
 
