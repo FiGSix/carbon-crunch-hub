@@ -15,6 +15,7 @@ import { CommissionOverrideDialog } from './CommissionOverrideDialog';
 import { AgentDetailsDialog } from './AgentDetailsDialog';
 import { AgentData } from './AgentsManagementTable';
 import { MoreHorizontal, Eye, TrendingUp, Users, Award } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,9 @@ interface AgentsTableContentProps {
   data: AgentData[];
   isLoading: boolean;
   error: any;
+  selectedAgents: string[];
+  onAgentSelection: (agentId: string, isSelected: boolean) => void;
+  onSelectAllAgents: (isSelected: boolean) => void;
   onUpdateStatus: (agentId: string, status: string) => void;
   onUpdateCommission: (agentId: string, commission: number | null) => void;
   isUpdating: boolean;
@@ -38,6 +42,9 @@ export function AgentsTableContent({
   data,
   isLoading,
   error,
+  selectedAgents,
+  onAgentSelection,
+  onSelectAllAgents,
   onUpdateStatus,
   onUpdateCommission,
   isUpdating
@@ -103,6 +110,13 @@ export function AgentsTableContent({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={data.length > 0 && selectedAgents.length === data.length}
+                  onCheckedChange={onSelectAllAgents}
+                  aria-label="Select all agents"
+                />
+              </TableHead>
               <TableHead>Agent</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Performance</TableHead>
@@ -114,6 +128,13 @@ export function AgentsTableContent({
           <TableBody>
             {data.map((agent) => (
               <TableRow key={agent.agent_id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedAgents.includes(agent.agent_id)}
+                    onCheckedChange={(checked) => onAgentSelection(agent.agent_id, !!checked)}
+                    aria-label={`Select ${agent.agent_name}`}
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="space-y-1">
                     <div className="font-medium">{agent.agent_name}</div>
