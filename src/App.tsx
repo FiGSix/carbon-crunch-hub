@@ -9,26 +9,38 @@ import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { Suspense, lazy } from "react";
 
-// Page imports
+// Immediate load for critical public pages
 import Index from "./pages/Index";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Calculator from "./pages/Calculator";
-import Agents from "./pages/Agents";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import VerifyEmail from "./pages/VerifyEmail";
-import ForceLogout from "./pages/ForceLogout";
-import Dashboard from "./pages/Dashboard";
-import CreateProposal from "./pages/CreateProposal";
-import ProposalsOptimized from "./pages/ProposalsOptimized";
-import Profile from "./pages/Profile";
-import MyClients from "./pages/MyClients";
-import SystemSettings from "./pages/SystemSettings";
-import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
-import ViewProposalPage from "./pages/ViewProposal/ViewProposalPage";
+
+// Lazy load non-critical public pages
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Calculator = lazy(() => import("./pages/Calculator"));
+const Agents = lazy(() => import("./pages/Agents"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const ForceLogout = lazy(() => import("./pages/ForceLogout"));
+
+// Lazy load protected pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const CreateProposal = lazy(() => import("./pages/CreateProposal"));
+const ProposalsOptimized = lazy(() => import("./pages/ProposalsOptimized"));
+const Profile = lazy(() => import("./pages/Profile"));
+const MyClients = lazy(() => import("./pages/MyClients"));
+const SystemSettings = lazy(() => import("./pages/SystemSettings"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const ViewProposalPage = lazy(() => import("./pages/ViewProposal/ViewProposalPage"));
+
+// Loading component for suspense fallbacks
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 // Optimized query client configuration
 const queryClient = new QueryClient({
@@ -66,24 +78,26 @@ function App() {
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/calculator" element={<Calculator />} />
-                <Route path="/agents" element={<Agents />} />
+                <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
+                <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
+                <Route path="/calculator" element={<Suspense fallback={<PageLoader />}><Calculator /></Suspense>} />
+                <Route path="/agents" element={<Suspense fallback={<PageLoader />}><Agents /></Suspense>} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/verify-email" element={<VerifyEmail />} />
-                <Route path="/force-logout" element={<ForceLogout />} />
+                <Route path="/verify-email" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
+                <Route path="/force-logout" element={<Suspense fallback={<PageLoader />}><ForceLogout /></Suspense>} />
                 
                 {/* Proposal viewing - accessible with token */}
-                <Route path="/proposals/:id" element={<ViewProposalPage />} />
+                <Route path="/proposals/:id" element={<Suspense fallback={<PageLoader />}><ViewProposalPage /></Suspense>} />
                 
                 {/* Protected routes */}
                 <Route 
                   path="/dashboard" 
                   element={
                     <PrivateRoute>
-                      <Dashboard />
+                      <Suspense fallback={<PageLoader />}>
+                        <Dashboard />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
@@ -91,7 +105,9 @@ function App() {
                   path="/create-proposal" 
                   element={
                     <PrivateRoute allowedRoles={['agent', 'admin']}>
-                      <CreateProposal />
+                      <Suspense fallback={<PageLoader />}>
+                        <CreateProposal />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
@@ -99,7 +115,9 @@ function App() {
                   path="/proposals" 
                   element={
                     <PrivateRoute>
-                      <ProposalsOptimized />
+                      <Suspense fallback={<PageLoader />}>
+                        <ProposalsOptimized />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
@@ -107,7 +125,9 @@ function App() {
                   path="/profile" 
                   element={
                     <PrivateRoute>
-                      <Profile />
+                      <Suspense fallback={<PageLoader />}>
+                        <Profile />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
@@ -115,7 +135,9 @@ function App() {
                   path="/my-clients" 
                   element={
                     <PrivateRoute allowedRoles={['agent', 'admin']}>
-                      <MyClients />
+                      <Suspense fallback={<PageLoader />}>
+                        <MyClients />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
@@ -123,7 +145,9 @@ function App() {
                   path="/system-settings" 
                   element={
                     <PrivateRoute allowedRoles={['admin']}>
-                      <SystemSettings />
+                      <Suspense fallback={<PageLoader />}>
+                        <SystemSettings />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
@@ -131,7 +155,9 @@ function App() {
                   path="/notifications" 
                   element={
                     <PrivateRoute>
-                      <Notifications />
+                      <Suspense fallback={<PageLoader />}>
+                        <Notifications />
+                      </Suspense>
                     </PrivateRoute>
                   } 
                 />
