@@ -3,9 +3,22 @@ import { Users, UserPlus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AgentCreationDialog } from './AgentCreationDialog';
+import { ExportDialog } from './export/ExportDialog';
 
-export function AgentsManagementHeader() {
+interface AgentsManagementHeaderProps {
+  currentFilters: {
+    statusFilter: string;
+    searchTerm: string;
+    accessLevelFilter: string;
+    commissionFilter: string;
+    onboardingFilter: string;
+    joinDateFilter: { from?: Date; to?: Date } | null;
+  };
+}
+
+export function AgentsManagementHeader({ currentFilters }: AgentsManagementHeaderProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
@@ -21,7 +34,7 @@ export function AgentsManagementHeader() {
         </p>
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => setShowExportDialog(true)}>
           <Download className="h-4 w-4 mr-2" />
           Export Data
         </Button>
@@ -34,6 +47,12 @@ export function AgentsManagementHeader() {
       <AgentCreationDialog 
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+      
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        currentFilters={currentFilters}
       />
     </div>
   );

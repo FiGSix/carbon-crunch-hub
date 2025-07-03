@@ -5,6 +5,8 @@ import { AgentsTableFilters } from './AgentsTableFilters';
 import { AgentsTableContent } from './AgentsTableContent';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { TablePagination } from './TablePagination';
+import { AgentsAdvancedFilters } from './enhanced-filters/AgentsAdvancedFilters';
+import { useAgentsRealtime } from './realtime/useAgentsRealtime';
 import { useToast } from '@/hooks/use-toast';
 
 export interface AgentData {
@@ -31,11 +33,21 @@ export function AgentsManagementTable() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   
+  // Advanced filters
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [accessLevelFilter, setAccessLevelFilter] = useState<string>('all');
+  const [commissionFilter, setCommissionFilter] = useState<string>('all');
+  const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
+  const [joinDateFilter, setJoinDateFilter] = useState<{ from?: Date; to?: Date } | null>(null);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Enable real-time updates
+  useAgentsRealtime();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['agents-management', statusFilter, searchTerm, currentPage, pageSize],
+    queryKey: ['agents-management', statusFilter, searchTerm, accessLevelFilter, commissionFilter, onboardingFilter, joinDateFilter, currentPage, pageSize],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_agents_management_data', {
         status_filter: statusFilter === 'all' ? null : statusFilter,
@@ -45,25 +57,51 @@ export function AgentsManagementTable() {
       });
 
       if (error) throw error;
-      return data as AgentData[];
+      
+      let filteredData = data as AgentData[];
+
+      // Apply client-side advanced filters
+      if (accessLevelFilter !== 'all') {
+        filteredData = filteredData.filter(agent => agent.access_level === accessLevelFilter);
+      }
+
+      if (commissionFilter !== 'all') {
+        if (commissionFilter === 'default') {
+          filteredData = filteredData.filter(agent => !agent.commission_override);
+        } else if (commissionFilter === 'override') {
+          filteredData = filteredData.filter(agent => agent.commission_override);
+        }
+      }
+
+      if (onboardingFilter !== 'all') {
+        if (onboardingFilter === 'completed') {
+          filteredData = filteredData.filter(agent => agent.onboarding_completed);
+        } else if (onboardingFilter === 'pending') {
+          filteredData = filteredData.filter(agent => !agent.onboarding_completed);
+        }
+      }
+
+      if (joinDateFilter?.from || joinDateFilter?.to) {
+        filteredData = filteredData.filter(agent => {
+          if (!agent.join_date) return false;
+          const joinDate = new Date(agent.join_date);
+          
+          if (joinDateFilter?.from && joinDate < joinDateFilter.from) {
+            return false;
+          }
+          if (joinDateFilter?.to && joinDate > joinDateFilter.to) {
+            return false;
+          }
+          return true;
+        });
+      }
+
+      return filteredData;
     }
   });
 
-  // Get total count for pagination
-  const { data: totalCount } = useQuery({
-    queryKey: ['agents-management-count', statusFilter, searchTerm],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'agent')
-        .ilike('agent_status', statusFilter === 'all' ? '%' : statusFilter)
-        .or(searchTerm ? `email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%` : '1.eq.1');
-
-      if (error) throw error;
-      return count || 0;
-    }
-  });
+  // Get total count for pagination (use data length for filtered results)
+  const totalCount = data ? data.length : 0;
 
   const updateAgentStatusMutation = useMutation({
     mutationFn: async ({ agentId, status }: { agentId: string; status: string }) => {
@@ -145,6 +183,35 @@ export function AgentsManagementTable() {
     }
   };
 
+  const clearAllFilters = () => {
+    setStatusFilter('all');
+    setSearchTerm('');
+    setAccessLevelFilter('all');
+    setCommissionFilter('all');
+    setOnboardingFilter('all');
+    setJoinDateFilter(null);
+    setCurrentPage(1);
+    setSelectedAgents([]);
+  };
+
+  const activeFilterCount = [
+    statusFilter !== 'all' ? 1 : 0,
+    searchTerm.length > 0 ? 1 : 0,
+    accessLevelFilter !== 'all' ? 1 : 0,
+    commissionFilter !== 'all' ? 1 : 0,
+    onboardingFilter !== 'all' ? 1 : 0,
+    joinDateFilter ? 1 : 0
+  ].reduce((sum, val) => sum + val, 0);
+
+  const getCurrentFilters = () => ({
+    statusFilter,
+    searchTerm,
+    accessLevelFilter,
+    commissionFilter,
+    onboardingFilter,
+    joinDateFilter
+  });
+
   return (
     <div className="space-y-4">
       <AgentsTableFilters
@@ -160,7 +227,40 @@ export function AgentsManagementTable() {
           setCurrentPage(1);
           setSelectedAgents([]);
         }}
+        showAdvancedFilters={showAdvancedFilters}
+        onToggleAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
       />
+
+      {showAdvancedFilters && (
+        <AgentsAdvancedFilters
+          accessLevelFilter={accessLevelFilter}
+          onAccessLevelFilterChange={(value) => {
+            setAccessLevelFilter(value);
+            setCurrentPage(1);
+            setSelectedAgents([]);
+          }}
+          commissionFilter={commissionFilter}
+          onCommissionFilterChange={(value) => {
+            setCommissionFilter(value);
+            setCurrentPage(1);
+            setSelectedAgents([]);
+          }}
+          onboardingFilter={onboardingFilter}
+          onOnboardingFilterChange={(value) => {
+            setOnboardingFilter(value);
+            setCurrentPage(1);
+            setSelectedAgents([]);
+          }}
+          joinDateFilter={joinDateFilter}
+          onJoinDateFilterChange={(dates) => {
+            setJoinDateFilter(dates);
+            setCurrentPage(1);
+            setSelectedAgents([]);
+          }}
+          onClearFilters={clearAllFilters}
+          activeFilterCount={activeFilterCount}
+        />
+      )}
       
       <BulkActionsToolbar
         selectedAgents={selectedAgents}

@@ -1,21 +1,26 @@
 import React from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface AgentsTableFiltersProps {
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
+  showAdvancedFilters: boolean;
+  onToggleAdvancedFilters: () => void;
 }
 
 export function AgentsTableFilters({
   statusFilter,
   onStatusFilterChange,
   searchTerm,
-  onSearchTermChange
+  onSearchTermChange,
+  showAdvancedFilters,
+  onToggleAdvancedFilters
 }: AgentsTableFiltersProps) {
   const statusOptions = [
     { value: 'all', label: 'All Statuses', count: null },
@@ -58,6 +63,16 @@ export function AgentsTableFilters({
             ))}
           </SelectContent>
         </Select>
+
+        <Button
+          variant={showAdvancedFilters ? "default" : "outline"}
+          size="sm"
+          onClick={onToggleAdvancedFilters}
+          className="h-10"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Advanced
+        </Button>
       </div>
       
       {searchTerm && (
