@@ -33,6 +33,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const MyClients = lazy(() => import("./pages/MyClients"));
 const SystemSettings = lazy(() => import("./pages/SystemSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const AdminAgentManagement = lazy(() => import("./pages/AdminAgentManagement"));
 const ViewProposalPage = lazy(() => import("./pages/ViewProposal/ViewProposalPage"));
 
 // Loading component for suspense fallbacks
@@ -147,6 +148,16 @@ function App() {
                     <PrivateRoute allowedRoles={['admin']}>
                       <Suspense fallback={<PageLoader />}>
                         <SystemSettings />
+                      </Suspense>
+                    </PrivateRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/agents" 
+                  element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <Suspense fallback={<PageLoader />}>
+                        <AdminAgentManagement />
                       </Suspense>
                     </PrivateRoute>
                   } 

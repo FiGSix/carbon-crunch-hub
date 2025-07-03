@@ -9,6 +9,114 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_activities: {
+        Row: {
+          activity_data: Json | null
+          activity_type: string
+          agent_id: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+        }
+        Insert: {
+          activity_data?: Json | null
+          activity_type: string
+          agent_id: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+        }
+        Update: {
+          activity_data?: Json | null
+          activity_type?: string
+          agent_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_activities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_commissions: {
+        Row: {
+          agent_id: string
+          approved_at: string | null
+          approved_by: string | null
+          base_rate: number
+          calculated_at: string
+          commission_amount: number
+          commission_status: string | null
+          final_rate: number
+          id: string
+          notes: string | null
+          override_rate: number | null
+          paid_at: string | null
+          proposal_id: string | null
+        }
+        Insert: {
+          agent_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          base_rate?: number
+          calculated_at?: string
+          commission_amount?: number
+          commission_status?: string | null
+          final_rate: number
+          id?: string
+          notes?: string | null
+          override_rate?: number | null
+          paid_at?: string | null
+          proposal_id?: string | null
+        }
+        Update: {
+          agent_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          base_rate?: number
+          calculated_at?: string
+          commission_amount?: number
+          commission_status?: string | null
+          final_rate?: number
+          id?: string
+          notes?: string | null
+          override_rate?: number | null
+          paid_at?: string | null
+          proposal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_commissions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           company_name: string | null
@@ -100,7 +208,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_level: string | null
+          agent_status: string | null
           avatar_url: string | null
+          commission_override: number | null
           company_logo_url: string | null
           company_name: string | null
           created_at: string
@@ -109,14 +220,25 @@ export type Database = {
           id: string
           intro_video_viewed: boolean | null
           intro_video_viewed_at: string | null
+          join_date: string | null
+          last_active_at: string | null
           last_name: string | null
+          license_number: string | null
+          notes: string | null
+          onboarding_completed: boolean | null
           phone: string | null
           role: string
+          status_changed_at: string | null
+          status_changed_by: string | null
           terms_accepted_at: string | null
+          territory: string | null
           updated_at: string | null
         }
         Insert: {
+          access_level?: string | null
+          agent_status?: string | null
           avatar_url?: string | null
+          commission_override?: number | null
           company_logo_url?: string | null
           company_name?: string | null
           created_at?: string
@@ -125,14 +247,25 @@ export type Database = {
           id: string
           intro_video_viewed?: boolean | null
           intro_video_viewed_at?: string | null
+          join_date?: string | null
+          last_active_at?: string | null
           last_name?: string | null
+          license_number?: string | null
+          notes?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           role: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
           terms_accepted_at?: string | null
+          territory?: string | null
           updated_at?: string | null
         }
         Update: {
+          access_level?: string | null
+          agent_status?: string | null
           avatar_url?: string | null
+          commission_override?: number | null
           company_logo_url?: string | null
           company_name?: string | null
           created_at?: string
@@ -141,13 +274,29 @@ export type Database = {
           id?: string
           intro_video_viewed?: boolean | null
           intro_video_viewed_at?: string | null
+          join_date?: string | null
+          last_active_at?: string | null
           last_name?: string | null
+          license_number?: string | null
+          notes?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           role?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
           terms_accepted_at?: string | null
+          territory?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposals: {
         Row: {
@@ -395,6 +544,41 @@ export type Database = {
           created_at: string
         }[]
       }
+      get_agent_dashboard_stats: {
+        Args: { agent_id_param: string }
+        Returns: {
+          total_proposals: number
+          active_proposals: number
+          signed_proposals: number
+          total_clients: number
+          total_carbon_credits: number
+          total_revenue: number
+        }[]
+      }
+      get_agents_management_data: {
+        Args: {
+          status_filter?: string
+          search_term?: string
+          limit_param?: number
+          offset_param?: number
+        }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          agent_email: string
+          company_name: string
+          agent_status: string
+          access_level: string
+          commission_override: number
+          last_active_at: string
+          total_proposals: number
+          active_proposals: number
+          signed_proposals: number
+          total_commission: number
+          join_date: string
+          onboarding_completed: boolean
+        }[]
+      }
       get_client_email: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -480,6 +664,21 @@ export type Database = {
           email: string
           company: string
           is_registered: boolean
+        }[]
+      }
+      search_clients_optimized: {
+        Args: {
+          search_term: string
+          agent_id_param?: string
+          limit_param?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          company: string
+          is_registered: boolean
+          relevance_score: number
         }[]
       }
       set_request_invitation_token: {

@@ -9,7 +9,8 @@ import {
   Bell,
   Settings,
   LogOut,
-  User
+  User,
+  UserCog
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -69,6 +70,12 @@ export function DashboardSidebar() {
       name: "Agents",
       href: "/agents",
       icon: UserPlus,
+      roles: ["admin"]
+    },
+    {
+      name: "Agent Management",
+      href: "/admin/agents",
+      icon: UserCog,
       roles: ["admin"]
     },
     {
