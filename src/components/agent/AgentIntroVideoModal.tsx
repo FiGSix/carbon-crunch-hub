@@ -16,13 +16,15 @@ interface AgentIntroVideoModalProps {
   onVideoComplete: () => void;
   onSkip: () => void;
   isUpdating: boolean;
+  onClose?: () => void;
 }
 
 export function AgentIntroVideoModal({
   isOpen,
   onVideoComplete,
   onSkip,
-  isUpdating
+  isUpdating,
+  onClose
 }: AgentIntroVideoModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -36,17 +38,24 @@ export function AgentIntroVideoModal({
     }
   };
 
+  const handleClose = () => {
+    if (!isUpdating && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] p-0 overflow-hidden">
         <div className="relative">
           <div className="absolute top-4 right-4 z-10">
             <Button
               variant="ghost"
               size="sm"
-              onClick={onSkip}
+              onClick={handleClose}
               disabled={isUpdating}
               className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm"
+              title="Close welcome video"
             >
               <X className="h-4 w-4" />
             </Button>

@@ -31,7 +31,8 @@ const Dashboard = () => {
     isModalOpen,
     isUpdating,
     markVideoAsViewed,
-    skipVideo
+    skipVideo,
+    closeModal
   } = useAgentIntroVideo();
 
   // Load agent portfolio data at dashboard level for better performance
@@ -90,6 +91,7 @@ const Dashboard = () => {
         onVideoComplete={markVideoAsViewed}
         onSkip={skipVideo}
         isUpdating={isUpdating}
+        onClose={closeModal}
       />
     </DashboardLayout>
   );
