@@ -57,49 +57,28 @@ export function AgentCreationDialog({ open, onOpenChange }: AgentCreationDialogP
 
   const createAgentMutation = useMutation({
     mutationFn: async (data: AgentFormData) => {
-      // First create the auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: data.email,
-        email_confirm: true,
-        user_metadata: {
-          first_name: data.firstName,
-          last_name: data.lastName,
-          company_name: data.companyName,
-          role: 'agent',
-        },
+      const { data: result, error } = await supabase.rpc('create_agent_user', {
+        email_param: data.email,
+        first_name_param: data.firstName,
+        last_name_param: data.lastName,
+        company_name_param: data.companyName || null,
+        phone_param: data.phone || null,
+        license_number_param: data.licenseNumber || null,
+        territory_param: data.territory || null,
+        agent_status_param: data.agentStatus,
+        access_level_param: data.accessLevel,
+        commission_override_param: data.commissionOverride || null,
       });
 
-      if (authError) throw authError;
-
-      // Then update the profile with agent-specific data
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          company_name: data.companyName,
-          phone: data.phone,
-          license_number: data.licenseNumber,
-          territory: data.territory,
-          agent_status: data.agentStatus,
-          access_level: data.accessLevel,
-          commission_override: data.commissionOverride || null,
-          role: 'agent',
-          onboarding_completed: false,
-          join_date: new Date().toISOString().split('T')[0],
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
-
-      return authData.user;
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents-management'] });
       queryClient.invalidateQueries({ queryKey: ['agent-management-stats'] });
       toast({
         title: "Agent Created",
-        description: "New agent account has been created successfully.",
+        description: "New agent profile has been created. They can now sign up with their email.",
       });
       onOpenChange(false);
       resetForm();

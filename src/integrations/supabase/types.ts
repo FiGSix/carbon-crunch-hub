@@ -473,6 +473,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      create_agent_user: {
+        Args: {
+          email_param: string
+          first_name_param: string
+          last_name_param: string
+          company_name_param?: string
+          phone_param?: string
+          license_number_param?: string
+          territory_param?: string
+          agent_status_param?: string
+          access_level_param?: string
+          commission_override_param?: number
+        }
+        Returns: string
+      }
       create_test_user_profile: {
         Args: {
           user_id_param: string
