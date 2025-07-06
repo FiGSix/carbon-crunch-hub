@@ -38,45 +38,40 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Core vendor libraries
+          // Simplified chunking to prevent initialization race conditions
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
+            // Group critical React dependencies together
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-core';
             }
-            if (id.includes('react-router')) {
-              return 'router-vendor';
+            
+            // Group UI libraries that work together
+            if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'ui-core';
             }
-            if (id.includes('@tanstack/react-query')) {
-              return 'query-vendor';
+            
+            // Backend & data fetching
+            if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
+              return 'data-core';
             }
-            if (id.includes('@supabase')) {
-              return 'supabase-vendor';
+            
+            // Charts and heavy libraries
+            if (id.includes('recharts') || id.includes('framer-motion')) {
+              return 'charts-animation';
             }
-            if (id.includes('lucide-react') || id.includes('@radix-ui')) {
-              return 'ui-vendor';
-            }
-            if (id.includes('recharts')) {
-              return 'charts-vendor';
-            }
-            // All other vendor libraries
+            
+            // All other vendor libraries in one chunk to prevent circular deps
             return 'vendor';
           }
           
-          // Split by feature/domain
+          // Reduce feature splitting to avoid circular dependencies
           if (id.includes('/pages/')) {
-            return 'pages';
+            return 'app-pages';
           }
-          if (id.includes('/components/dashboard')) {
-            return 'dashboard';
-          }
-          if (id.includes('/components/proposals')) {
-            return 'proposals';
-          }
-          if (id.includes('/services/')) {
-            return 'services';
-          }
-          if (id.includes('/hooks/')) {
-            return 'hooks';
+          
+          // Keep components together
+          if (id.includes('/components/') || id.includes('/hooks/') || id.includes('/services/')) {
+            return 'app-core';
           }
         },
         chunkFileNames: (chunkInfo) => {
