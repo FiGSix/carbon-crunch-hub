@@ -82,7 +82,7 @@ const testimonials: Testimonial[] = [{
   location: "Nuvo Energy",
   quote: "With Crunch Carbon's support, our clients have been able to leverage their renewable energy systems to not only reduce emissions but also earn from their commitment to sustainability."
 }, {
-  name: "G. Scott",
+  name: "Craig Scott",
   location: "Grid Volt",
   quote: "After years of installing solar panels, we finally found a way to make them even more valuable to our clients. The annual payouts makes returns jump making for happy customers!"
 }, {
