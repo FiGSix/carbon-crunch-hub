@@ -143,8 +143,39 @@
 
 /* Component styles and utilities */
 @layer components {
+  /* CRITICAL: Self-contained grid-container - no external dependencies */
   .grid-container {
-    @apply container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 80rem; /* 1280px */
+    width: 100%;
+  }
+  
+  @media (min-width: 768px) {
+    .grid-container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .grid-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+  
+  /* CSS Loading Diagnostics */
+  .css-loaded-indicator {
+    position: fixed;
+    top: -1px;
+    left: -1px;
+    width: 1px;
+    height: 1px;
+    background: green;
+    z-index: 999999;
   }
   
   .section {
