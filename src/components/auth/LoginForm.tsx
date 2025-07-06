@@ -8,6 +8,7 @@ import { Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { authLogger } from '@/lib/logger';
 
 interface LoginFormProps {
   loginAttempts: number;
@@ -26,19 +27,15 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
     setIsSubmitting(true);
     
     try {
-      if (import.meta.env.DEV) {
-        console.log(`🔐 Attempting to sign in with email: ${email}`);
-      }
+      authLogger.debug('Attempting to sign in', { email });
       
       const { error } = await signIn(email, password);
       
       if (error) {
         throw error;
       }
-      
-      if (import.meta.env.DEV) {
-        console.log('✅ Sign in successful, auth state will trigger redirect');
-      }
+
+      authLogger.info('Sign in successful, auth state will trigger redirect');
       
       toast({
         title: 'Success',

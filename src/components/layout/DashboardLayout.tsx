@@ -16,6 +16,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { componentLogger } from '@/lib/logger';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -52,7 +53,7 @@ export function DashboardLayout({
     };
   }, [userRole, requiredRole, isMobile, profile, user, isInitialized, isLoading]);
 
-  console.log('🏠 DashboardLayout render:', { 
+  componentLogger.debug('DashboardLayout render', { 
     userRole, 
     isLoading, 
     isInitialized, 
@@ -73,13 +74,13 @@ export function DashboardLayout({
 
   // Redirect to login if not authenticated
   if (shouldRedirect) {
-    console.log('❌ User not authenticated in dashboard, redirecting to login');
+    componentLogger.info('User not authenticated in dashboard, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   // Check role-based access
   if (!hasAccess) {
-    console.log('❌ Insufficient role for dashboard access, redirecting');
+    componentLogger.warn('Insufficient role for dashboard access, redirecting');
     return <Navigate to="/dashboard" replace />;
   }
 

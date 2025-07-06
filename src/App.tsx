@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { Suspense, lazy } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
 import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics";
+import { logger } from '@/lib/logger';
 
 // Immediate load for critical public pages
 import Index from "./pages/Index";
@@ -75,9 +76,7 @@ const queryClient = new QueryClient({
 
 function App() {
   // Diagnostic logging in development only
-  if (import.meta.env.DEV) {
-    console.log("[App] Initializing application");
-  }
+  logger.info("Application initializing");
   
   return (
     <ErrorBoundary showDetails={import.meta.env.DEV}>
