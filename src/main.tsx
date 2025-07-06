@@ -8,7 +8,7 @@ import './index.css'
 import { validateSecurityConfig } from './lib/security/headers'
 
 Sentry.init({
-  dsn: 'YOUR_SENTRY_DSN_HERE',
+  dsn: 'https://669ac1685d2fcf5433f0f9c4e485c91e@o4509622599352320.ingest.us.sentry.io/4509622601187328',
   integrations: [new BrowserTracing()],
   tracesSampleRate: 1.0,
 });
