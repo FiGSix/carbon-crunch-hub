@@ -1,6 +1,7 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { createHtmlPlugin } from 'vite-plugin-html';
 import path from 'path';
 
 const componentTagger = () => {
@@ -21,6 +22,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    createHtmlPlugin({ minify: true }),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
