@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => ({
     minify: 'terser',
     target: 'es2020',
     cssCodeSplit: true,
-    sourcemap: false,
+    sourcemap: 'hidden',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
