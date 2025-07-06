@@ -1,48 +1,106 @@
-import React from "react";
-import { motion, MotionProps } from "framer-motion";
+import React from 'react';
+import { motion } from 'framer-motion';
 
-interface SafeMotionDivProps extends MotionProps {
+interface SafeMotionDivProps {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
+  id?: string;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseEnter?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseLeave?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  
+  // Motion-specific props
+  initial?: any;
+  animate?: any;
+  exit?: any;
+  whileHover?: any;
+  whileTap?: any;
+  transition?: any;
+  variants?: any;
+  
+  // Control props
+  fallback?: React.ReactNode;
+  enableAnimation?: boolean;
 }
 
 /**
- * Safe wrapper for motion.div that handles animation errors gracefully
+ * Phase 3: Safe Motion wrapper with graceful fallbacks
+ * Provides animation with automatic fallback to regular div on errors
  */
-export function SafeMotionDiv({ children, fallback, className, ...motionProps }: SafeMotionDivProps) {
-  const [hasError, setHasError] = React.useState(false);
+export const SafeMotionDiv: React.FC<SafeMotionDivProps> = ({ 
+  children, 
+  className,
+  style,
+  id,
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+  initial,
+  animate,
+  exit,
+  whileHover,
+  whileTap,
+  transition,
+  variants,
+  fallback,
+  enableAnimation = true
+}) => {
+  const [hasAnimationError, setHasAnimationError] = React.useState(false);
 
-  // Reset error state when props change
+  // Disable animations in reduced motion preference
+  const prefersReducedMotion = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  // Error boundary for motion components
   React.useEffect(() => {
-    setHasError(false);
-  }, [motionProps]);
+    const handleError = (event: ErrorEvent) => {
+      if (event.error?.message?.includes('framer') || event.error?.message?.includes('motion')) {
+        console.warn('[SafeMotionDiv] Animation error detected, falling back to static div');
+        setHasAnimationError(true);
+      }
+    };
 
-  if (hasError) {
-    console.warn("[SafeMotionDiv] Animation error detected, falling back to static div");
-    return <div className={className}>{fallback || children}</div>;
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  // Regular div props (safe to spread)
+  const divProps = {
+    className,
+    style,
+    id,
+    onClick,
+    onMouseEnter,
+    onMouseLeave
+  };
+
+  // Motion props
+  const motionProps = {
+    ...divProps,
+    initial,
+    animate,
+    exit,
+    whileHover,
+    whileTap,
+    transition,
+    variants
+  };
+
+  // Fall back to regular div if:
+  // - Animation is disabled
+  // - User prefers reduced motion
+  // - Animation error occurred
+  if (!enableAnimation || prefersReducedMotion || hasAnimationError) {
+    return <div {...divProps}>{children}</div>;
   }
 
   try {
-    return (
-      <motion.div
-        className={className}
-        {...motionProps}
-        onAnimationComplete={(definition) => {
-          console.log("[SafeMotionDiv] Animation completed:", definition);
-          motionProps.onAnimationComplete?.(definition);
-        }}
-        onError={() => {
-          console.error("[SafeMotionDiv] Animation error occurred");
-          setHasError(true);
-        }}
-      >
-        {children}
-      </motion.div>
-    );
+    return <motion.div {...motionProps}>{children}</motion.div>;
   } catch (error) {
-    console.error("[SafeMotionDiv] Motion component error:", error);
-    setHasError(true);
-    return <div className={className}>{fallback || children}</div>;
+    console.warn('[SafeMotionDiv] Motion component failed, using fallback:', error);
+    return <div {...divProps}>{fallback || children}</div>;
   }
-}
+};

@@ -1,5 +1,5 @@
 import React from "react";
-import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ProgressiveErrorBoundary } from "@/components/common/ProgressiveErrorBoundary";
 import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics";
 import { CSSFallbackDiagnostics } from "@/components/diagnostics/CSSFallbackDiagnostics";
 import { SimplifiedHeroSection } from "@/pages/home/SimplifiedHeroSection";
@@ -21,70 +21,44 @@ const SimplifiedIndex = () => {
       <>
         <DisplayDiagnostics />
         <CSSFallbackDiagnostics />
-        <Header />
+        <ProgressiveErrorBoundary level="page" name="Header">
+          <Header />
+        </ProgressiveErrorBoundary>
         <main>
-          <ErrorBoundary
+          <ProgressiveErrorBoundary 
+            level="section" 
+            name="Hero Section"
             fallback={
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-red-600 mb-4">Hero Section Error</h1>
-                  <p>The hero section failed to render</p>
+                  <h1 className="text-4xl font-bold text-primary mb-4">CrunchCarbon</h1>
+                  <p className="text-xl text-muted-foreground">Carbon Made Simple</p>
                 </div>
               </div>
             }
           >
             <SimplifiedHeroSection />
-          </ErrorBoundary>
+          </ProgressiveErrorBoundary>
           
-          <ErrorBoundary
-            fallback={
-              <div className="py-20 text-center">
-                <p>How It Works section failed to render</p>
-              </div>
-            }
-          >
+          <ProgressiveErrorBoundary level="section" name="How It Works">
             <HowItWorksSection />
-          </ErrorBoundary>
+          </ProgressiveErrorBoundary>
           
-          <ErrorBoundary
-            fallback={
-              <div className="py-20 text-center">
-                <p>Testimonials section failed to render</p>
-              </div>
-            }
-          >
+          <ProgressiveErrorBoundary level="section" name="Testimonials">
             <SimplifiedTestimonialsSection />
-          </ErrorBoundary>
+          </ProgressiveErrorBoundary>
           
-          <ErrorBoundary
-            fallback={
-              <div className="py-20 text-center">
-                <p>Social Proof section failed to render</p>
-              </div>
-            }
-          >
+          <ProgressiveErrorBoundary level="section" name="Social Proof">
             <SocialProofSection />
-          </ErrorBoundary>
+          </ProgressiveErrorBoundary>
           
-          <ErrorBoundary
-            fallback={
-              <div className="py-20 text-center">
-                <p>CTA section failed to render</p>
-              </div>
-            }
-          >
+          <ProgressiveErrorBoundary level="section" name="CTA">
             <CTASection />
-          </ErrorBoundary>
+          </ProgressiveErrorBoundary>
         </main>
-        <ErrorBoundary
-          fallback={
-            <div className="py-8 text-center">
-              <p>Footer failed to render</p>
-            </div>
-          }
-        >
+        <ProgressiveErrorBoundary level="section" name="Footer">
           <Footer />
-        </ErrorBoundary>
+        </ProgressiveErrorBoundary>
       </>
     );
   } catch (error) {

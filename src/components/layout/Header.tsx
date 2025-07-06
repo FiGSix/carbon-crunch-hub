@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { SafeMotionDiv } from "@/components/common/SafeMotionDiv";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function Header() {
@@ -80,16 +81,22 @@ export function Header() {
               {menuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             
-            <a 
-              href="/" 
-              className="flex items-center touch-manipulation hover:opacity-90 transition-opacity duration-200"
+            <SafeMotionDiv
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
-              <img 
-                src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
-                alt="CrunchCarbon Logo" 
-                className="h-10 md:h-12 drop-shadow-sm" 
-              />
-            </a>
+              <a 
+                href="/" 
+                className="flex items-center touch-manipulation hover:opacity-90 transition-opacity duration-200"
+              >
+                <img 
+                  src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
+                  alt="CrunchCarbon Logo" 
+                  className="h-10 md:h-12 drop-shadow-sm" 
+                />
+              </a>
+            </SafeMotionDiv>
           </div>
           
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
@@ -107,19 +114,23 @@ export function Header() {
           </nav>
           
           <div className="flex items-center gap-2 md:gap-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate("/login")}
-              className="hidden sm:inline-flex text-crunch-black hover:text-crunch-black hover:bg-crunch-yellow/10 rounded-full px-4 md:px-5 py-2 min-h-[44px] touch-manipulation"
-            >
-              Log in
-            </Button>
-            <Button 
-              onClick={() => navigate("/register")}
-              className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium rounded-full px-4 md:px-5 py-2 shadow-sm hover:shadow transition-all min-h-[44px] touch-manipulation"
-            >
-              Sign up
-            </Button>
+            <SafeMotionDiv whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate("/login")}
+                className="hidden sm:inline-flex text-crunch-black hover:text-crunch-black hover:bg-crunch-yellow/10 rounded-full px-4 md:px-5 py-2 min-h-[44px] touch-manipulation"
+              >
+                Log in
+              </Button>
+            </SafeMotionDiv>
+            <SafeMotionDiv whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button 
+                onClick={() => navigate("/register")}
+                className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium rounded-full px-4 md:px-5 py-2 shadow-sm hover:shadow transition-all min-h-[44px] touch-manipulation"
+              >
+                Sign up
+              </Button>
+            </SafeMotionDiv>
           </div>
         </div>
       </header>
@@ -127,18 +138,26 @@ export function Header() {
       {/* Mobile menu overlay */}
       {menuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm opacity-100 transition-opacity duration-200"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
           onClick={() => setMenuOpen(false)}
+          style={{
+            opacity: 1,
+            transition: 'opacity 0.2s ease-in-out'
+          }}
         />
       )}
       
       {/* Mobile menu */}
       {menuOpen && (
-        <div 
+        <SafeMotionDiv 
           className={cn(
             "lg:hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white z-50 shadow-2xl overflow-y-auto transition-transform duration-300",
             menuOpen ? "translate-x-0" : "translate-x-full"
           )}
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
           <div className="p-6 pt-20">
             <nav className="flex flex-col gap-2">
@@ -180,7 +199,7 @@ export function Header() {
               </div>
             </nav>
           </div>
-        </div>
+            </SafeMotionDiv>
       )}
     </>
   );
