@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     minify: 'terser',
-    target: 'es2020',
+    target: 'es2018',
     cssCodeSplit: true,
     sourcemap: 'hidden',
     chunkSizeWarningLimit: 1000,
