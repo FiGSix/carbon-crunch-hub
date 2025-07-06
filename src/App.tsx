@@ -27,6 +27,7 @@ const Calculator = lazy(() => import("./pages/Calculator"));
 const Agents = lazy(() => import("./pages/Agents"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const ForceLogout = lazy(() => import("./pages/ForceLogout"));
+const TestingSuite = lazy(() => import("./pages/TestingSuite"));
 
 // Lazy load protected pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -87,6 +88,7 @@ function App() {
                 {/* Public routes */}
                 <Route path="/" element={<SimplifiedIndex />} />
                 <Route path="/test" element={<TestPage />} />
+                <Route path="/testing" element={<Suspense fallback={<PageLoader />}><TestingSuite /></Suspense>} />
                 <Route path="/original" element={<Index />} />
                 <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
                 <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
