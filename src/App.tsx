@@ -14,6 +14,8 @@ import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics"
 
 // Immediate load for critical public pages
 import Index from "./pages/Index";
+import SimplifiedIndex from "./pages/SimplifiedIndex";
+import TestPage from "./pages/TestPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -83,7 +85,9 @@ function App() {
               <Sonner />
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<SimplifiedIndex />} />
+                <Route path="/test" element={<TestPage />} />
+                <Route path="/original" element={<Index />} />
                 <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
                 <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
                 <Route path="/calculator" element={<Suspense fallback={<PageLoader />}><Calculator /></Suspense>} />
