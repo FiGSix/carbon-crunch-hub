@@ -1,0 +1,160 @@
+/* Animation utilities and keyframes */
+@layer components {
+  /* Animation utilities and keyframes */
+  .floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+  
+  @keyframes floating {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  
+  /* Enhanced hover effects with mobile considerations */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .hover-lift:hover {
+    @apply translate-y-[-5px] shadow-lg;
+  }
+  
+  /* Mobile-safe hover effects */
+  @media (hover: hover) and (pointer: fine) {
+    .hover-scale {
+      @apply transition-all duration-300 ease-out;
+    }
+    
+    .hover-scale:hover {
+      @apply scale-105;
+    }
+    
+    .hover-glow {
+      @apply transition-all duration-300 ease-out;
+    }
+    
+    .hover-glow:hover {
+      @apply shadow-[0_0_15px_rgba(255,205,3,0.5)];
+    }
+  }
+  
+  /* Card hover effects with mobile optimization */
+  .hover-card {
+    @apply transition-all duration-300;
+  }
+  
+  @media (hover: hover) and (pointer: fine) {
+    .hover-card:hover {
+      @apply -translate-y-1 shadow-lg;
+    }
+  }
+  
+  /* Text highlight animation */
+  .text-highlight {
+    @apply relative;
+  }
+  
+  .text-highlight::after {
+    @apply content-[''] absolute bottom-0 left-0 w-0 h-1 bg-crunch-yellow opacity-70 transition-all duration-500;
+  }
+  
+  @media (hover: hover) and (pointer: fine) {
+    .text-highlight:hover::after {
+      @apply w-full;
+    }
+  }
+  
+  /* Button hover animation */
+  .btn-arrow {
+    @apply transition-transform duration-300;
+  }
+  
+  @media (hover: hover) and (pointer: fine) {
+    .group:hover .btn-arrow {
+      @apply translate-x-1;
+    }
+  }
+  
+  /* Underline animation for links */
+  .link-underline {
+    @apply relative;
+  }
+  
+  .link-underline::after {
+    @apply content-[''] absolute -bottom-1 left-0 w-0 h-0.5 bg-crunch-yellow transition-all duration-300 ease-in-out;
+  }
+  
+  @media (hover: hover) and (pointer: fine) {
+    .link-underline:hover::after {
+      @apply w-full;
+    }
+  }
+  
+  /* Counter animation */
+  .counter {
+    @apply transition-all duration-300;
+  }
+  
+  @media (hover: hover) and (pointer: fine) {
+    .counter:hover {
+      @apply scale-110;
+    }
+  }
+  
+  /* Mobile-optimized animated gradient background */
+  .animated-gradient {
+    background: linear-gradient(-45deg, #FFCD03, #FFF5CC, #FFCD03);
+    background-size: 200% 200%;
+    animation: gradient 15s ease infinite;
+  }
+  
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  /* Animated dots for loading */
+  .loading-dots::after {
+    content: '.';
+    animation: dots 1.5s steps(5, end) infinite;
+  }
+  
+  @keyframes dots {
+    0%, 20% {
+      content: '.';
+    }
+    40% {
+      content: '..';
+    }
+    60% {
+      content: '...';
+    }
+    80%, 100% {
+      content: '';
+    }
+  }
+  
+  /* Parallax scrolling effect - disabled on mobile for performance */
+  .parallax {
+    @apply relative overflow-hidden;
+  }
+  
+  .parallax-bg {
+    @apply absolute top-0 left-0 w-full h-full bg-center bg-cover -z-10;
+    background-attachment: scroll; /* Better mobile performance */
+  }
+  
+  @media (min-width: 768px) {
+    .parallax-bg {
+      background-attachment: fixed;
+    }
+  }
+}

@@ -1,0 +1,49 @@
+/* Base styles and typography */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    /* Improved mobile text rendering */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-bold;
+    /* Better mobile heading sizes */
+    line-height: 1.2;
+  }
+  
+  /* Mobile-first typography scaling */
+  h1 {
+    @apply text-2xl md:text-3xl lg:text-4xl xl:text-5xl;
+  }
+  
+  h2 {
+    @apply text-xl md:text-2xl lg:text-3xl xl:text-4xl;
+  }
+  
+  h3 {
+    @apply text-lg md:text-xl lg:text-2xl xl:text-3xl;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Enhanced mobile touch targets */
+  button, a, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mobile-friendly focus states */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-crunch-yellow ring-offset-2;
+    outline-offset: 2px;
+  }
+}
