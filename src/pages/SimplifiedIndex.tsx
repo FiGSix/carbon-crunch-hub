@@ -14,7 +14,10 @@ import { Header } from "@/components/layout/Header";
  * Simplified Index page without complex animations for debugging
  */
 const SimplifiedIndex = () => {
-  console.log("[SimplifiedIndex] Starting to render simplified index page");
+  // Development logging only
+  if (import.meta.env.DEV) {
+    console.log("[SimplifiedIndex] Starting to render simplified index page");
+  }
   
   try {
     return (
@@ -62,7 +65,9 @@ const SimplifiedIndex = () => {
       </>
     );
   } catch (error) {
-    console.error("[SimplifiedIndex] Critical error during render:", error);
+    if (import.meta.env.DEV) {
+      console.error("[SimplifiedIndex] Critical error during render:", error);
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="text-center max-w-md">

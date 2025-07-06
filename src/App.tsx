@@ -10,6 +10,7 @@ import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { Suspense, lazy } from "react";
+import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
 import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics";
 
 // Immediate load for critical public pages
@@ -20,30 +21,33 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
-// Lazy load non-critical public pages
-const About = lazy(() => import("./pages/About"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Calculator = lazy(() => import("./pages/Calculator"));
-const Agents = lazy(() => import("./pages/Agents"));
-const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-const ForceLogout = lazy(() => import("./pages/ForceLogout"));
-const TestingSuite = lazy(() => import("./pages/TestingSuite"));
+// Optimized lazy loading with error handling and performance tracking
+const About = createOptimizedLazyComponent(() => import("./pages/About"), "About");
+const Contact = createOptimizedLazyComponent(() => import("./pages/Contact"), "Contact");
+const Calculator = createOptimizedLazyComponent(() => import("./pages/Calculator"), "Calculator");
+const Agents = createOptimizedLazyComponent(() => import("./pages/Agents"), "Agents");
+const VerifyEmail = createOptimizedLazyComponent(() => import("./pages/VerifyEmail"), "VerifyEmail");
+const ForceLogout = createOptimizedLazyComponent(() => import("./pages/ForceLogout"), "ForceLogout");
+const TestingSuite = createOptimizedLazyComponent(() => import("./pages/TestingSuite"), "TestingSuite");
 
-// Lazy load protected pages
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const CreateProposal = lazy(() => import("./pages/CreateProposal"));
-const ProposalsOptimized = lazy(() => import("./pages/ProposalsOptimized"));
-const Profile = lazy(() => import("./pages/Profile"));
-const MyClients = lazy(() => import("./pages/MyClients"));
-const SystemSettings = lazy(() => import("./pages/SystemSettings"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const AdminAgentManagement = lazy(() => import("./pages/AdminAgentManagement"));
-const ViewProposalPage = lazy(() => import("./pages/ViewProposal/ViewProposalPage"));
+// Optimized lazy load protected pages
+const Dashboard = createOptimizedLazyComponent(() => import("./pages/Dashboard"), "Dashboard");
+const CreateProposal = createOptimizedLazyComponent(() => import("./pages/CreateProposal"), "CreateProposal");
+const ProposalsOptimized = createOptimizedLazyComponent(() => import("./pages/ProposalsOptimized"), "ProposalsOptimized");
+const Profile = createOptimizedLazyComponent(() => import("./pages/Profile"), "Profile");
+const MyClients = createOptimizedLazyComponent(() => import("./pages/MyClients"), "MyClients");
+const SystemSettings = createOptimizedLazyComponent(() => import("./pages/SystemSettings"), "SystemSettings");
+const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
+const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
+const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 
-// Loading component for suspense fallbacks
+// Enhanced loading component with better UX
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+      <p className="text-muted-foreground">Loading page...</p>
+    </div>
   </div>
 );
 
@@ -70,8 +74,10 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  // Diagnostic logging
-  console.log("[App] Initializing application");
+  // Diagnostic logging in development only
+  if (import.meta.env.DEV) {
+    console.log("[App] Initializing application");
+  }
   
   return (
     <ErrorBoundary showDetails={import.meta.env.DEV}>

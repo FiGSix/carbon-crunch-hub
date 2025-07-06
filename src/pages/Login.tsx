@@ -16,52 +16,26 @@ const Login = () => {
   const hasRedirectedRef = useRef(false);
   
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('🔄 Login redirect check:', {
-        isInitialized,
-        hasUser: !!user,
-        hasSession: !!session,
-        authLoading,
-        hasRedirected: hasRedirectedRef.current,
-        currentPath: location.pathname
-      });
-    }
+    // Only log in development for debugging
 
     // IMPROVED: Only redirect if we have valid session and auth is fully initialized
     if (isInitialized && !authLoading && user && session && !hasRedirectedRef.current) {
       // Validate session is not expired
       if (session.expires_at && new Date(session.expires_at * 1000) > new Date()) {
-        if (import.meta.env.DEV) {
-          console.log('✅ User authenticated with valid session, executing redirect');
-        }
         hasRedirectedRef.current = true;
-        
         const from = location.state?.from || '/dashboard';
-        if (import.meta.env.DEV) {
-          console.log('🚀 Redirecting to:', from);
-        }
         
         navigate(from, { replace: true });
-      } else {
-        if (import.meta.env.DEV) {
-          console.log('⚠️ Session expired, staying on login page');
-        }
       }
     }
   }, [user, session, navigate, isInitialized, authLoading, location.state]);
 
   const handleLoginAttempt = () => {
-    if (import.meta.env.DEV) {
-      console.log('📈 Login attempt incremented');
-    }
     setLoginAttempts(prev => prev + 1);
   };
 
   // Show loading while auth is initializing or if we're about to redirect
   if (!isInitialized || authLoading || (user && session && !hasRedirectedRef.current)) {
-    if (import.meta.env.DEV) {
-      console.log('⏳ Showing login loading state');
-    }
     return (
       <LoginLayout>
         <div className="flex items-center justify-center min-h-[200px]">
@@ -74,10 +48,6 @@ const Login = () => {
         </div>
       </LoginLayout>
     );
-  }
-  
-  if (import.meta.env.DEV) {
-    console.log('📋 Rendering login form');
   }
   
   return (
