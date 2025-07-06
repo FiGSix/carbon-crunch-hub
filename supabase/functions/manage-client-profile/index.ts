@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { supabaseAdmin } from "../_shared/supabase-admin.ts";
 import { corsHeaders, ErrorResponse } from "../_shared/types.ts";
 import { verifyUserAuth, createResponse } from "./auth.ts";
 import { processClientRequest } from "./client/client-processor.ts";
@@ -12,21 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    // Configuration
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return createResponse({
-        error: "Server configuration error. Missing required environment variables.",
-      }, 500);
-    }
-
     // Get auth header
     const authHeader = req.headers.get("Authorization");
     
     // Verify auth and get user details
-    const authResult = await verifyUserAuth(authHeader, supabaseUrl, supabaseServiceKey);
+    const authResult = await verifyUserAuth(authHeader, supabaseAdmin);
     
     if ('error' in authResult) {
       return createResponse(authResult, authResult.status);
@@ -44,9 +34,6 @@ serve(async (req) => {
         error: "Email is required"
       }, 400);
     }
-
-    // Connect to Supabase with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Process the client request using the processClientRequest function
     const result = await processClientRequest(
@@ -59,7 +46,7 @@ serve(async (req) => {
         existingClient: existingClient || false
       },
       userId,
-      supabase
+      supabaseAdmin
     );
     
     // Check if there was an error in processing

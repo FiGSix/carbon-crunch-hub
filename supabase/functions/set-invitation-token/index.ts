@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
+import { supabaseAdmin } from "../_shared/supabase-admin.ts";
 import { parseRequest } from "./request-parser.ts";
 import { validateTokenDirect, markInvitationAsViewed } from "./validation.ts";
 import { 
@@ -26,27 +26,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    
-    console.log(`[${timestamp}] [${requestId}] 🔧 Environment check:`, {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseAnonKey: !!supabaseAnonKey,
-      supabaseUrlPrefix: supabaseUrl?.substring(0, 30) + '...'
-    });
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      const error = 'Missing required environment variables';
-      console.error(`[${timestamp}] [${requestId}] ❌ ${error}`);
-      throw new Error(error);
-    }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { 
-        headers: { Authorization: req.headers.get('Authorization') ?? '' } 
-      }
-    });
+    // Use the imported admin client
+    console.log(`[${timestamp}] [${requestId}] 🔧 Using admin client for token validation`);
 
     // Parse and validate request
     let requestBody;
@@ -70,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`[${timestamp}] [${requestId}] 🔍 Processing token: ${token.substring(0, 8)}... ${email ? `for email: ${email.substring(0, 3)}***` : '(no email provided)'}`);
 
     // Validate token using direct validation
-    const validationResult = await validateTokenDirect(token, supabaseClient);
+    const validationResult = await validateTokenDirect(token, supabaseAdmin);
 
     if (!validationResult.is_valid) {
       console.log(`[${timestamp}] [${requestId}] ⚠️ Invalid token`);
@@ -83,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Mark invitation as viewed (non-blocking)
-    markInvitationAsViewed(token, supabaseClient);
+    markInvitationAsViewed(token, supabaseAdmin);
 
     console.log(`[${timestamp}] [${requestId}] 🎉 SUCCESS - proposal: ${validationResult.proposal_id}, client: ${validationResult.client_email}`);
     

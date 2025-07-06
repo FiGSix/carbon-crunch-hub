@@ -1,12 +1,11 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { supabaseAdmin } from "../_shared/supabase-admin.ts";
 import { ErrorResponse, corsHeaders } from "../_shared/types.ts";
 
 // Verify user authentication and roles
 export async function verifyUserAuth(
   authHeader: string | null,
-  supabaseUrl: string,
-  supabaseServiceKey: string
+  supabase: typeof supabaseAdmin
 ): Promise<{ userId: string; role: string } | ErrorResponse> {
   if (!authHeader) {
     console.error("No authorization header provided");
@@ -18,7 +17,6 @@ export async function verifyUserAuth(
   
   // Extract and verify the JWT
   const token = authHeader.replace('Bearer ', '');
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
   
   try {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);

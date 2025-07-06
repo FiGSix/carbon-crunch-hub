@@ -1,9 +1,9 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
+import { supabaseAdmin } from "../_shared/supabase-admin.ts";
 
 export async function validateTokenDirect(
   token: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: typeof supabaseAdmin
 ): Promise<{
   is_valid: boolean;
   proposal_id?: string;
@@ -50,7 +50,7 @@ export async function validateTokenDirect(
 
 export async function markInvitationAsViewed(
   token: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: typeof supabaseAdmin
 ): Promise<void> {
   try {
     console.log(`Marking invitation as viewed for token: ${token.substring(0, 8)}...`);
