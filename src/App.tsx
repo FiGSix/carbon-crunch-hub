@@ -10,6 +10,7 @@ import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { Suspense, lazy } from "react";
+import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics";
 
 // Immediate load for critical public pages
 import Index from "./pages/Index";
@@ -66,13 +67,17 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // Diagnostic logging
+  console.log("[App] Initializing application");
+  
   return (
-    <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
+    <ErrorBoundary showDetails={import.meta.env.DEV}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
             <AuthNavigationHandler />
             <TooltipProvider>
+              <DisplayDiagnostics />
               <AuthStatusMonitor />
               <Toaster />
               <Sonner />

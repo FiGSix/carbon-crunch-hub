@@ -62,10 +62,25 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-                'crunch': {
-                    black: '#231F20',
-                    yellow: '#FFCD03',
-                },
+				'crunch': {
+					black: 'hsl(var(--foreground))',
+					yellow: 'hsl(var(--primary))',
+				},
+				// Legacy support for existing components
+				'crunch-black': 'hsl(var(--foreground))',
+				'crunch-yellow': 'hsl(var(--primary))',
+				'carbon-gray': {
+					50: 'hsl(var(--muted))',
+					100: 'hsl(var(--muted))',
+					200: 'hsl(var(--muted))',
+					300: 'hsl(var(--muted))',
+					400: 'hsl(var(--muted-foreground))',
+					500: 'hsl(var(--muted-foreground))',
+					600: 'hsl(var(--foreground))',
+					700: 'hsl(var(--foreground))',
+					800: 'hsl(var(--foreground))',
+					900: 'hsl(var(--foreground))',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
