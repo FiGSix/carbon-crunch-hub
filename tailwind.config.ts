@@ -63,12 +63,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				'crunch': {
-					black: 'hsl(var(--foreground))',
-					yellow: 'hsl(var(--primary))',
+					black: 'hsl(var(--crunch-black))',
+					yellow: 'hsl(var(--crunch-yellow))',
 				},
 				// Legacy support for existing components
-				'crunch-black': 'hsl(var(--foreground))',
-				'crunch-yellow': 'hsl(var(--primary))',
+				'crunch-black': 'hsl(var(--crunch-black))',
+				'crunch-yellow': 'hsl(var(--crunch-yellow))',
 				'carbon-gray': {
 					50: 'hsl(var(--muted))',
 					100: 'hsl(var(--muted))',
