@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { createHtmlPlugin } from 'vite-plugin-html';
+import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 
 const componentTagger = () => {
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     createHtmlPlugin({ minify: true }),
+    visualizer({ open: true }),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
