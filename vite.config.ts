@@ -5,17 +5,6 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 
-const componentTagger = () => {
-  return {
-    name: 'component-tagger',
-    transform(code: string, id: string) {
-      if (id.endsWith('.tsx') && !id.includes('node_modules')) {
-        return code;
-      }
-    }
-  };
-};
-
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -25,9 +14,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     createHtmlPlugin({ minify: true }),
     visualizer({ open: true }),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
