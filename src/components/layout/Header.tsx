@@ -45,8 +45,31 @@ export function Header() {
   
   return (
     <>
-      <header className="backdrop-blur-md bg-white/90 border-b border-crunch-black/5 sticky top-0 z-50 shadow-sm">
-        <div className="grid-container py-3 md:py-4 flex items-center justify-between">
+      <header 
+        className="backdrop-blur-md bg-white/90 border-b border-crunch-black/5 sticky top-0 z-50 shadow-sm"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          borderBottom: '1px solid rgba(26, 26, 26, 0.05)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50
+        }}
+      >
+        <div 
+          className="grid-container py-3 md:py-4 flex items-center justify-content-between"
+          style={{
+            maxWidth: '80rem',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            paddingLeft: '1rem',
+            paddingRight: '1rem',
+            paddingTop: '0.75rem',
+            paddingBottom: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMenuOpen(!menuOpen)}

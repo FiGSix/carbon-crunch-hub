@@ -1,6 +1,7 @@
 import React from "react";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics";
+import { CSSFallbackDiagnostics } from "@/components/diagnostics/CSSFallbackDiagnostics";
 import { SimplifiedHeroSection } from "@/pages/home/SimplifiedHeroSection";
 import { HowItWorksSection } from "@/pages/home/HowItWorksSection";
 import { SimplifiedTestimonialsSection } from "@/pages/home/SimplifiedTestimonialsSection";
@@ -19,6 +20,7 @@ const SimplifiedIndex = () => {
     return (
       <>
         <DisplayDiagnostics />
+        <CSSFallbackDiagnostics />
         <Header />
         <main>
           <ErrorBoundary
