@@ -54,7 +54,7 @@ export function ProjectInfoStep({
     updateProjectInfo(e);
   };
 
-  // Add a direct setter for address field since GoogleAddressAutocomplete 
+  // Add a direct setter for address field since SecureGoogleAddressAutocomplete 
   // doesn't use standard onChange events
   const handleAddressChange = (address: string) => {
     const mockEvent = {
