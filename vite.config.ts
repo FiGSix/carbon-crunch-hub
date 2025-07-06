@@ -38,40 +38,9 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Simplified chunking to prevent initialization race conditions
+          // Ultra-simplified chunking to prevent all initialization issues
           if (id.includes('node_modules')) {
-            // Group critical React dependencies together
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-core';
-            }
-            
-            // Group UI libraries that work together
-            if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
-              return 'ui-core';
-            }
-            
-            // Backend & data fetching
-            if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
-              return 'data-core';
-            }
-            
-            // Charts and heavy libraries
-            if (id.includes('recharts') || id.includes('framer-motion')) {
-              return 'charts-animation';
-            }
-            
-            // All other vendor libraries in one chunk to prevent circular deps
             return 'vendor';
-          }
-          
-          // Reduce feature splitting to avoid circular dependencies
-          if (id.includes('/pages/')) {
-            return 'app-pages';
-          }
-          
-          // Keep components together
-          if (id.includes('/components/') || id.includes('/hooks/') || id.includes('/services/')) {
-            return 'app-core';
           }
         },
         chunkFileNames: (chunkInfo) => {
@@ -99,11 +68,10 @@ export default defineConfig(({ mode }) => ({
           'console.log', 
           'console.info', 
           'console.debug', 
-          'console.warn',
-          'console.error'
+          'console.warn'
         ] : [],
-        unsafe_arrows: true,
-        unsafe_methods: true,
+        unsafe_arrows: false,
+        unsafe_methods: false,
       },
       mangle: {
         safari10: true,
