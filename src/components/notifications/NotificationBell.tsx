@@ -32,26 +32,27 @@ export function NotificationBell() {
   useEffect(() => {
     fetchNotifications();
     
-    // Set up realtime subscription for new notifications
+    // Phase 5: Use optimized realtime subscription for new notifications
     if (user) {
-      const channel = supabase
-        .channel('notifications-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
+      let cleanupFn: (() => void) | null = null;
+      
+      import('@/services/optimizedRealtimeService').then(({ OptimizedRealtimeService }) => {
+        OptimizedRealtimeService.subscribeToNotificationChanges(
+          user.id,
           () => {
             fetchNotifications();
           }
-        )
-        .subscribe();
+        );
+        
+        cleanupFn = () => {
+          OptimizedRealtimeService.unsubscribe(`notifications-${user.id}`);
+        };
+      });
         
       return () => {
-        supabase.removeChannel(channel);
+        if (cleanupFn) {
+          cleanupFn();
+        }
       };
     }
   }, [user]);

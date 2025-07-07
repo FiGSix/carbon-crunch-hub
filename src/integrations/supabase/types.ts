@@ -607,6 +607,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_dashboard_stats_optimized: {
+        Args: { user_id_param: string; user_role_param: string }
+        Returns: {
+          total_proposals: number
+          active_proposals: number
+          signed_proposals: number
+          total_carbon_credits: number
+          total_revenue: number
+          portfolio_size_kwp: number
+        }[]
+      }
       get_proposal_by_token: {
         Args: { token_param: string }
         Returns: {
@@ -699,6 +710,29 @@ export type Database = {
           company: string
           is_registered: boolean
           relevance_score: number
+        }[]
+      }
+      search_proposals_optimized: {
+        Args: {
+          user_id_param: string
+          user_role_param: string
+          search_term?: string
+          status_filter?: string
+          limit_param?: number
+          offset_param?: number
+        }
+        Returns: {
+          id: string
+          title: string
+          status: string
+          created_at: string
+          agent_id: string
+          client_id: string
+          client_reference_id: string
+          carbon_credits: number
+          system_size_kwp: number
+          invitation_sent_at: string
+          invitation_viewed_at: string
         }[]
       }
       set_request_invitation_token: {

@@ -57,10 +57,24 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
 
       const startTime = performance.now();
       
-      // Use the fixed RLS policies - simple self-access only
+      // Phase 5: Use optimized profile query with specific field selection
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          id,
+          email,
+          first_name,
+          last_name,
+          role,
+          company_name,
+          phone,
+          avatar_url,
+          company_logo_url,
+          terms_accepted_at,
+          created_at,
+          intro_video_viewed,
+          intro_video_viewed_at
+        `)
         .eq('id', userId)
         .single();
 

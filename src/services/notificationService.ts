@@ -58,9 +58,19 @@ export const createNotification = async (data: NotificationData): Promise<{ succ
 export const getNotifications = async (limit: number = 10): Promise<{ notifications: Notification[]; error?: string }> => {
   try {
     console.log("Fetching notifications with limit:", limit);
+    // Phase 5: Use optimized notification query with specific fields
     const { data, error } = await supabase
       .from('notifications')
-      .select('*')
+      .select(`
+        id,
+        title,
+        message,
+        type,
+        read,
+        created_at,
+        related_type,
+        related_id
+      `)
       .order('created_at', { ascending: false })
       .limit(limit);
     

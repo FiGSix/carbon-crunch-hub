@@ -13,35 +13,28 @@ export function useRealtimeSubscription({ user, onDataChange }: UseRealtimeSubsc
   const setupRealtimeSubscription = useCallback(() => {
     if (!user) return;
 
-    console.log('Setting up real-time subscription for proposals');
-    
-    subscriptionRef.current = supabase
-      .channel('proposals-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'proposals'
-        },
-        (payload) => {
-          console.log('Real-time update received:', payload);
-          // Debounce the refresh to avoid too many updates
-          setTimeout(() => {
-            console.log('Triggering refresh from real-time update');
-            onDataChange();
-          }, 1000);
+    // Phase 5: Use optimized real-time service
+    import('@/services/optimizedRealtimeService').then(({ OptimizedRealtimeService }) => {
+      subscriptionRef.current = OptimizedRealtimeService.subscribeToProposalChanges(
+        user.id,
+        user.role || 'client',
+        () => {
+          console.log('Optimized real-time update - triggering refresh');
+          onDataChange();
         }
-      )
-      .subscribe();
+      );
+    });
   }, [user, onDataChange]);
 
   const cleanup = useCallback(() => {
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
+    if (subscriptionRef.current && user) {
+      // Phase 5: Use optimized cleanup
+      import('@/services/optimizedRealtimeService').then(({ OptimizedRealtimeService }) => {
+        OptimizedRealtimeService.unsubscribe(`proposals-${user.id}-${user.role || 'client'}`);
+      });
       subscriptionRef.current = null;
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     setupRealtimeSubscription();

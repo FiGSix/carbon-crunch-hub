@@ -28,9 +28,17 @@ class SystemSettingsService {
    */
   async getSystemSettings(): Promise<SystemSetting[]> {
     try {
+      // Phase 5: Use optimized system settings query with specific fields
       const { data, error } = await supabase
         .from('system_settings')
-        .select('*')
+        .select(`
+          id,
+          setting_key,
+          setting_value,
+          description,
+          created_at,
+          updated_at
+        `)
         .order('setting_key');
 
       if (error) throw error;
