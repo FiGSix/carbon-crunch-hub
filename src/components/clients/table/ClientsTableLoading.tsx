@@ -10,7 +10,7 @@ interface ClientsTableLoadingProps {
 }
 
 export function ClientsTableLoading({ onRefresh }: ClientsTableLoadingProps) {
-  console.log('Rendering loading state');
+  
   
   return (
     <Card>

@@ -30,17 +30,6 @@ export function ClientsTableContent({
   onRefresh,
   error = null
 }: ClientsTableContentProps) {
-  console.log('=== ClientsTableContent Component ===');
-  console.log('Props:', {
-    clientsCount: clients.length,
-    isAdmin,
-    isRefreshing,
-    autoRefreshEnabled,
-    hasOnRefresh: !!onRefresh,
-    error
-  });
-  console.log('Clients array:', clients);
-  console.log('First few clients:', clients.slice(0, 3));
   
   return (
     <Card>

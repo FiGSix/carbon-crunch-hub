@@ -17,7 +17,7 @@ export function ClientsTableEmpty({
   autoRefreshEnabled = false, 
   onRefresh 
 }: ClientsTableEmptyProps) {
-  console.log('Rendering empty state');
+  
   
   return (
     <Card>

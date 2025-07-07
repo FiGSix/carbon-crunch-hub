@@ -230,9 +230,6 @@ export class PerformanceCacheService {
 
     keysToDelete.forEach(key => this.delete(key));
     
-    if (import.meta.env.DEV && keysToDelete.length > 0) {
-      console.log(`🧹 Cleaned up ${keysToDelete.length} expired cache entries`);
-    }
   }
 
   private estimateSize(data: any): number {

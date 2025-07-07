@@ -19,13 +19,6 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
   const { debounce } = useDebounce(500);
   const { isLoading, error, getPlacePredictions, getPlaceDetails } = useSecureGoogleMaps({ onError });
 
-  console.log("🗺️ useAddressAutocomplete initialized:", {
-    value,
-    inputValue,
-    isLoading,
-    error: !!error,
-    predictionsCount: predictions.length
-  });
 
   // Sync input value with prop value
   useEffect(() => {
@@ -42,7 +35,7 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
       return;
     }
 
-    console.log("🔍 Fetching predictions for:", input);
+    
     const results = await getPlacePredictions(input);
     setPredictions(results);
     setIsOpen(results.length > 0);
@@ -57,7 +50,7 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    console.log("📝 Input changed:", newValue);
+    
     
     setInputValue(newValue);
     onChange(newValue);
@@ -73,7 +66,7 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
   }, [onChange, debounce, handleDebouncedSearch]);
 
   const handleSelectPrediction = useCallback(async (prediction: any) => {
-    console.log("📍 Prediction selected:", prediction);
+    
     
     setIsOpen(false);
     
@@ -81,12 +74,12 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     const details = await getPlaceDetails(prediction.place_id);
     
     if (details?.formatted_address) {
-      console.log("✅ Setting address:", details.formatted_address);
+      
       setInputValue(details.formatted_address);
       onChange(details.formatted_address);
     } else {
       // Fallback to prediction description
-      console.log("⚠️ Using fallback address:", prediction.description);
+      
       setInputValue(prediction.description);
       onChange(prediction.description);
     }

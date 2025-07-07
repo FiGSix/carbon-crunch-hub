@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
-import { authCache } from './authCache';
+import { authCache } from '@/lib/cache/UnifiedCache';
 
 interface UseProfileLoaderProps {
   user: User | null;
@@ -49,18 +49,12 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
   const loadUserProfileWithFallback = useCallback(async (userId: string) => {
     try {
       // Check cache first
-      const cached = authCache.get(userId);
+      const cached = authCache.get<UserProfile>(userId);
       if (cached) {
-        if (import.meta.env.DEV) {
-          console.log('📊 Using cached profile for:', userId);
-        }
         updateProfileState(cached);
         return;
       }
 
-      if (import.meta.env.DEV) {
-        console.log('📊 Loading user profile with fixed RLS for:', userId);
-      }
       const startTime = performance.now();
       
       // Use the fixed RLS policies - simple self-access only
@@ -74,9 +68,6 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
 
       if (error) {
         // Create a fallback profile if none exists
-        if (import.meta.env.DEV) {
-          console.log('🔧 Creating fallback profile for user:', userId);
-        }
         const fallbackProfile = await createFallbackProfile(userId);
         updateProfileState(fallbackProfile);
         return;
@@ -103,20 +94,9 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
         authCache.set(userId, userProfile);
         updateProfileState(userProfile);
         
-        if (import.meta.env.DEV) {
-          console.log(`✅ Profile loaded successfully in ${(endTime - startTime).toFixed(2)}ms`, {
-            userId,
-            role: userProfile.role,
-            hasFirstName: !!userProfile.first_name,
-            hasLastName: !!userProfile.last_name
-          });
-        }
       }
     } catch (error) {
       // Create fallback profile on any exception
-      if (import.meta.env.DEV) {
-        console.log('🔧 Creating fallback profile due to exception for user:', userId);
-      }
       const fallbackProfile = await createFallbackProfile(userId);
       updateProfileState(fallbackProfile);
     }
@@ -124,9 +104,6 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
 
   const refreshUser = useCallback(async () => {
     if (user?.id) {
-      if (import.meta.env.DEV) {
-        console.log('🔄 Refreshing user profile');
-      }
       // Clear cache to force fresh data
       authCache.delete(user.id);
       await loadUserProfileWithFallback(user.id);

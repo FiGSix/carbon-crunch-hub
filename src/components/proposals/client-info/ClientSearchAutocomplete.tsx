@@ -36,12 +36,6 @@ export function ClientSearchAutocomplete({
     setSelectedClient 
   } = useClientSearch();
   
-  console.log('=== ClientSearchAutocomplete Debug ===');
-  console.log('value:', value);
-  console.log('searchTerm:', searchTerm);
-  console.log('results:', results);
-  console.log('selectedClient:', selectedClient);
-  console.log('isLoading:', isLoading);
   
   // Ensure results is always an array to prevent iteration errors
   const safeResults = Array.isArray(results) ? results : [];
@@ -49,26 +43,24 @@ export function ClientSearchAutocomplete({
   // Sync internal search term with external value
   React.useEffect(() => {
     if (searchTerm !== value) {
-      console.log('Syncing searchTerm with value:', value);
+      
       setSearchTerm(value);
     }
   }, [value, setSearchTerm, searchTerm]);
   
   const handleInputChange = (newValue: string) => {
-    console.log('Input change:', newValue);
+    
     onChange(newValue);
     setSearchTerm(newValue);
     
     // Clear selection when user types
     if (selectedClient) {
-      console.log('Clearing selectedClient due to input change');
+      
       setSelectedClient(null);
     }
   };
   
   const handleSelect = (client: typeof safeResults[0]) => {
-    console.log('=== Client Selected in Autocomplete ===');
-    console.log('Selected client:', client);
     
     setSelectedClient(client);
     
@@ -81,17 +73,13 @@ export function ClientSearchAutocomplete({
       existingClient: true,
     };
     
-    console.log('Calling onClientSelect with:', clientInfo, client.id);
+    
     onClientSelect(clientInfo, client.id);
   };
 
   // Only show results if we're actively searching and haven't selected a client
   const showResults = searchTerm.length > 1 && !selectedClient;
 
-  console.log('=== Render Decision ===');
-  console.log('showResults:', showResults);
-  console.log('Conditions - searchTerm.length > 1:', searchTerm.length > 1);
-  console.log('Conditions - !selectedClient:', !selectedClient);
 
   return (
     <div className="relative">

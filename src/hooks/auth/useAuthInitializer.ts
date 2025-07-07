@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { authCache } from './authCache';
+import { authCache } from '@/lib/cache/UnifiedCache';
 
 interface UseAuthInitializerProps {
   isUnmountedRef: React.MutableRefObject<boolean>;
@@ -130,9 +130,6 @@ export function useAuthInitializer({
       }
 
       if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        if (import.meta.env.DEV) {
-          console.log('🧹 Clearing cache due to auth event:', event);
-        }
         if (!isValidSession) {
           updateProfileState(null);
           authCache.clear();

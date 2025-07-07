@@ -11,7 +11,7 @@ interface ClientsTableErrorProps {
 }
 
 export function ClientsTableError({ error, isRefreshing = false, onRefresh }: ClientsTableErrorProps) {
-  console.log('Rendering error state:', error);
+  
   
   // Determine error type and appropriate icon/message
   const getErrorInfo = (errorMsg: string) => {
