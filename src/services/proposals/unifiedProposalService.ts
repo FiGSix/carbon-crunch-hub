@@ -14,7 +14,7 @@ type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
 // Simple portfolio calculations
 function calculateClientSharePercentage(portfolioKWp: number): number {
-  if (portfolioKWp < 5000) return 60;     // 0-5MWp
+  if (portfolioKWp < 5000) return 60.20;  // 0-5MWp
   if (portfolioKWp < 10000) return 63;    // 5-10MWp
   if (portfolioKWp < 20000) return 66.5;  // 10-20MWp
   if (portfolioKWp < 30000) return 68.25; // 20-30MWp
