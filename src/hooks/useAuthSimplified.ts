@@ -5,7 +5,7 @@ import { useAuthState } from './auth/useAuthState';
 import { useProfileLoader } from './auth/useProfileLoader';
 import { useAuthInitializer } from './auth/useAuthInitializer';
 import { useAuthStateSync } from './auth/useAuthStateSync';
-import { useAuthReliability } from './auth/useAuthReliability';
+import { useOptimizedAuthReliability } from './auth/useOptimizedAuthReliability';
 import { authCache } from './auth/authCache';
 import { useToast } from './use-toast';
 
@@ -54,7 +54,7 @@ export function useAuthSimplified() {
   });
 
   // Add reliability features for connection monitoring and recovery
-  const { recoverSession } = useAuthReliability({
+  const { recoverSession } = useOptimizedAuthReliability({
     session,
     isInitialized,
     onAuthStateChange: updateAuthState,

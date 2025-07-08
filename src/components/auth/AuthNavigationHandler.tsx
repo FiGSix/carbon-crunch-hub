@@ -24,10 +24,13 @@ export function AuthNavigationHandler() {
           currentPath: location.pathname
         });
 
-        // Show user-friendly notification
+        // Show user-friendly notification with more context
+        const reason = event.detail?.reason || 'session_expired';
+        const message = event.detail?.message || "Your session has expired. Please sign in again to continue.";
+        
         toast({
           title: "Session Expired",
-          description: "Your session has expired. Please sign in again to continue.",
+          description: message,
           variant: "destructive",
         });
 
@@ -51,12 +54,48 @@ export function AuthNavigationHandler() {
       }
     };
 
-    // Add event listener for auth-required events
-    window.addEventListener('auth-required', handleAuthRequired as EventListener);
+    const handleAuthRecovery = async (event: CustomEvent) => {
+      try {
+        authLogger.info('Auth-recovery event received, attempting silent recovery', {
+          eventDetail: event.detail,
+          currentPath: location.pathname
+        });
 
-    // Cleanup listener on unmount
+        // Show subtle notification for recovery attempt
+        toast({
+          title: "Reconnecting...",
+          description: "Restoring your session, please wait.",
+        });
+
+      } catch (error) {
+        authLogger.error('Error handling auth-recovery event', { error });
+      }
+    };
+
+    const handleNetworkError = async (event: CustomEvent) => {
+      authLogger.info('Network error detected', {
+        eventDetail: event.detail,
+        currentPath: location.pathname
+      });
+
+      // Show network-specific message
+      toast({
+        title: "Connection Issue",
+        description: "Please check your internet connection.",
+        variant: "destructive",
+      });
+    };
+
+    // Add event listeners for enhanced auth events
+    window.addEventListener('auth-required', handleAuthRequired as EventListener);
+    window.addEventListener('auth-recovery', handleAuthRecovery as EventListener);
+    window.addEventListener('network-error', handleNetworkError as EventListener);
+
+    // Cleanup listeners on unmount
     return () => {
       window.removeEventListener('auth-required', handleAuthRequired as EventListener);
+      window.removeEventListener('auth-recovery', handleAuthRecovery as EventListener);
+      window.removeEventListener('network-error', handleNetworkError as EventListener);
     };
   }, [signOut, isAuthenticated, navigate, location.pathname, toast]);
 

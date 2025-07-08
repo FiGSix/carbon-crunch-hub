@@ -15,7 +15,7 @@ export function useAuthStateSync({ session, onAuthStateChange }: UseAuthStateSyn
   
   const validateAndSyncSession = useCallback(async (currentSession: Session | null) => {
     if (import.meta.env.DEV) {
-      console.log('🔄 Validating and syncing session state');
+      console.log('🔄 Passive session validation triggered');
     }
 
     if (!currentSession) {
@@ -26,55 +26,62 @@ export function useAuthStateSync({ session, onAuthStateChange }: UseAuthStateSyn
     }
 
     try {
-      // Test if database can see the current session
-      const { data: testResult, error: testError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', currentSession.user.id)
-        .limit(1);
+      // Only validate if session is close to expiry (within 10 minutes)
+      const expiresAt = currentSession.expires_at;
+      if (expiresAt) {
+        const timeUntilExpiry = (expiresAt * 1000) - Date.now();
+        if (timeUntilExpiry > 10 * 60 * 1000) { // More than 10 minutes
+          if (import.meta.env.DEV) {
+            console.log('✅ Session still valid, skipping validation');
+          }
+          return; // Skip unnecessary validation
+        }
+      }
 
-      if (testError) {
+      // Lightweight validation - just refresh the session if needed
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
         if (import.meta.env.DEV) {
-          console.warn('⚠️ Database cannot access session, attempting refresh:', testError.message);
+          console.warn('⚠️ Session refresh failed:', refreshError.message);
         }
         
-        // Try to refresh the session
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
+        // Only sign out if it's a critical auth error
+        if (refreshError.message.includes('Invalid Refresh Token') || 
+            refreshError.message.includes('refresh_token_not_found')) {
           if (import.meta.env.DEV) {
-            console.error('❌ Session refresh failed:', refreshError.message);
+            console.error('❌ Critical auth error, signing out');
           }
-          // Force sign out if refresh fails
           await supabase.auth.signOut();
           onAuthStateChange(null);
-        } else if (refreshData.session) {
-          if (import.meta.env.DEV) {
-            console.log('✅ Session refreshed successfully');
-          }
-          onAuthStateChange(refreshData.session);
         }
-      } else {
+      } else if (refreshData.session) {
         if (import.meta.env.DEV) {
-          console.log('✅ Database session sync verified');
+          console.log('✅ Session refreshed successfully');
         }
+        onAuthStateChange(refreshData.session);
       }
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.error('💥 Session validation error:', error);
+        console.error('💥 Session validation error (non-critical):', error);
       }
+      // Don't force logout on network errors or temporary issues
     }
   }, [onAuthStateChange]);
 
-  // Validate session every 5 minutes to ensure sync
+  // Passive session validation - only on network errors or specific triggers
   useEffect(() => {
     if (!session) return;
 
-    const interval = setInterval(() => {
-      validateAndSyncSession(session);
-    }, 5 * 60 * 1000); // 5 minutes
+    // Only validate on focus/visibility change instead of aggressive intervals
+    const handleVisibilityChange = () => {
+      if (!document.hidden && session) {
+        validateAndSyncSession(session);
+      }
+    };
 
-    return () => clearInterval(interval);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [session, validateAndSyncSession]);
 
   // Initial validation on session change

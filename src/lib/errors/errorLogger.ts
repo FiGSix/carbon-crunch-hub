@@ -2,7 +2,7 @@
 import { logger } from "@/lib/logger";
 import { ErrorSeverity } from "@/hooks/useErrorHandler";
 import { LogContext } from "@/lib/logger";
-import { AuthEventService } from '@/services/auth/AuthEventService';
+import { OptimizedAuthEventService } from '@/services/auth/OptimizedAuthEventService';
 
 /**
  * Log an error with the appropriate severity level
@@ -29,7 +29,7 @@ export function logError(
     details
   };
 
-  const isAuthError = AuthEventService.handlePotentialAuthError(errorInfo, {
+  const isAuthError = OptimizedAuthEventService.handlePotentialAuthError(errorInfo, {
     operation: context
   });
 
