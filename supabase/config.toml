@@ -21,3 +21,6 @@ verify_jwt = false
 
 [functions.google-place-details]
 verify_jwt = false
+
+[functions.google-maps-health-check]
+verify_jwt = false
