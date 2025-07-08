@@ -14,11 +14,13 @@ type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
 // Simple portfolio calculations
 function calculateClientSharePercentage(portfolioKWp: number): number {
-  if (portfolioKWp < 5000) return 63;
-  if (portfolioKWp < 10000) return 66.5;
-  if (portfolioKWp < 20000) return 67.9;
-  if (portfolioKWp < 30000) return 70;
-  return 73.5;
+  if (portfolioKWp < 1000) return 60;
+  if (portfolioKWp < 2000) return 62;
+  if (portfolioKWp < 5000) return 65;
+  if (portfolioKWp < 10000) return 68;
+  if (portfolioKWp < 20000) return 70;
+  if (portfolioKWp < 30000) return 72;
+  return 75;
 }
 
 function calculateAgentCommissionPercentage(portfolioKWp: number, commissionOverride?: number | null): number {
