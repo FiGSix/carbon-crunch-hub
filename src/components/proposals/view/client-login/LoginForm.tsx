@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -81,8 +82,8 @@ export function LoginForm({ clientEmail, onComplete, onError }: LoginFormProps) 
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
-        <Button variant="link" onClick={() => window.location.href = "/forgot-password"} disabled={loading}>
-          Forgot your password?
+        <Button variant="link" asChild disabled={loading}>
+          <Link to="/forgot-password">Forgot your password?</Link>
         </Button>
       </CardFooter>
     </Card>

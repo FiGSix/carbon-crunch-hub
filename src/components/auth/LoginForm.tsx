@@ -104,9 +104,9 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
           <div>
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <a href="#" className="text-sm text-crunch-yellow hover:underline">
+              <Link to="/forgot-password" className="text-sm text-crunch-yellow hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
             <div className="relative">
               <Input

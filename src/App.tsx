@@ -20,6 +20,8 @@ import SimplifiedIndex from "./pages/SimplifiedIndex";
 import TestPage from "./pages/TestPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 // Optimized lazy loading with error handling and performance tracking
@@ -101,6 +103,8 @@ function App() {
                 <Route path="/agents" element={<Suspense fallback={<PageLoader />}><Agents /></Suspense>} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-email" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
                 <Route path="/force-logout" element={<Suspense fallback={<PageLoader />}><ForceLogout /></Suspense>} />
                 
