@@ -17,7 +17,19 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { debounce } = useDebounce(500);
-  const { isLoading, error, getPlacePredictions, getPlaceDetails } = useSecureGoogleMaps({ onError });
+  const { 
+    isLoading, 
+    error, 
+    getPlacePredictions, 
+    getPlaceDetails, 
+    clearError 
+  } = useSecureGoogleMaps({ onError });
+
+  // Enhanced error recovery with retry mechanism
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const maxRetries = 2;
 
 
   // Sync input value with prop value
@@ -27,7 +39,7 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     }
   }, [value]);
 
-  // Function to fetch predictions
+  // Enhanced function to fetch predictions with retry mechanism
   const fetchPredictions = useCallback(async (input: string) => {
     if (input.trim().length < 3) {
       setPredictions([]);
@@ -35,11 +47,64 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
       return;
     }
 
+    try {
+      console.log(`🔍 Fetching predictions for: "${input}" (attempt ${retryCount + 1})`);
+      
+      // Clear previous error state
+      if (error && error !== lastError) {
+        clearError();
+        setRetryCount(0);
+      }
+      
+      const results = await getPlacePredictions(input);
+      
+      // Success - reset retry count and error state
+      setRetryCount(0);
+      setLastError(null);
+      setIsRetrying(false);
+      
+      setPredictions(results);
+      setIsOpen(results.length > 0);
+      
+      console.log(`✅ Successfully fetched ${results.length} predictions`);
+      
+    } catch (err) {
+      console.error('❌ Prediction fetch failed:', err);
+      
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setLastError(errorMessage);
+      
+      // Implement retry logic for transient errors
+      if (retryCount < maxRetries && shouldRetry(errorMessage)) {
+        console.log(`🔄 Retrying prediction fetch (${retryCount + 1}/${maxRetries})`);
+        setIsRetrying(true);
+        setRetryCount(prev => prev + 1);
+        
+        setTimeout(() => {
+          fetchPredictions(input);
+        }, 1000 * (retryCount + 1)); // Exponential backoff
+      } else {
+        setIsRetrying(false);
+        setPredictions([]);
+        setIsOpen(false);
+      }
+    }
+  }, [getPlacePredictions, error, lastError, retryCount, maxRetries, clearError]);
+
+  // Determine if an error should trigger a retry
+  const shouldRetry = useCallback((errorMessage: string) => {
+    const retryableErrors = [
+      'network error',
+      'timeout',
+      'service unavailable',
+      'internal server error',
+      'quota exceeded'
+    ];
     
-    const results = await getPlacePredictions(input);
-    setPredictions(results);
-    setIsOpen(results.length > 0);
-  }, [getPlacePredictions]);
+    return retryableErrors.some(retryError => 
+      errorMessage.toLowerCase().includes(retryError)
+    );
+  }, []);
 
   // Create a function that returns a Promise for debouncing
   const handleDebouncedSearch = useCallback(async (): Promise<void> => {
@@ -101,11 +166,13 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     inputValue,
     predictions,
     isOpen,
-    isLoading,
+    isLoading: isLoading || isRetrying,
     error,
     handleInputChange,
     handleSelectPrediction,
     handleBlur,
-    handleFocus
+    handleFocus,
+    isRetrying,
+    retryCount
   };
 }
