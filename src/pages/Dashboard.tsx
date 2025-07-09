@@ -1,31 +1,37 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
-import { StatsCardsSection } from "@/components/dashboard/sections/StatsCardsSection";
+import { OptimizedStatsCardsSection } from "@/components/dashboard/sections/OptimizedStatsCardsSection";
 import { ChartsSection } from "@/components/dashboard/sections/ChartsSection";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useUnifiedDashboardData } from "@/hooks/dashboard/useUnifiedDashboardData";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { useOptimizedAgentPortfolio } from "@/hooks/dashboard/useOptimizedAgentPortfolio";
+import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
+import { useAuth } from "@/contexts/auth";
 
-const Dashboard = () => {
+const Dashboard = memo(() => {
+  const { userRole } = useAuth();
+  
+  // Single unified data source - replaces multiple scattered hooks
   const {
-    userRole,
-    proposals,
-    loading,
-    portfolioSize,
-    totalProposals,
-    potentialRevenue,
-    co2Offset,
+    data: dashboardData,
+    isLoading: loading,
+    error,
+    refetch
+  } = useUnifiedDashboardData();
+
+  // Helper functions with stable references
+  const {
     getWelcomeMessage,
     getUserDisplayName,
     formatUserRole,
     handleRefreshProposals
-  } = useDashboardData();
+  } = useDashboardHelpers(() => refetch());
 
   const {
     isModalOpen,
@@ -35,11 +41,38 @@ const Dashboard = () => {
     closeModal
   } = useAgentIntroVideo();
 
-  // Load agent portfolio data at dashboard level for better performance
+  // Load agent portfolio data only for agents
   const { 
     portfolioData: agentPortfolioData, 
     loading: agentPortfolioLoading 
   } = useOptimizedAgentPortfolio();
+
+  // Handle loading and error states
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !dashboardData) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">Failed to load dashboard data</p>
+            <Button onClick={handleRefreshProposals} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
   
   return (
     <DashboardLayout>
@@ -61,26 +94,23 @@ const Dashboard = () => {
         }
       />
       
-      <StatsCardsSection 
+      <OptimizedStatsCardsSection 
         userRole={userRole}
-        portfolioSize={portfolioSize}
-        totalProposals={totalProposals}
-        potentialRevenue={potentialRevenue}
-        co2Offset={co2Offset}
-        proposals={proposals}
-        loading={loading}
-        agentPortfolioData={agentPortfolioData}
-        agentPortfolioLoading={agentPortfolioLoading}
+        portfolioSize={dashboardData.portfolioSize}
+        totalProposals={dashboardData.totalProposals}
+        potentialRevenue={dashboardData.potentialRevenue}
+        co2Offset={dashboardData.co2Offset}
+        loading={false}
       />
       
-      {userRole !== 'agent' && renderCharts(userRole) && (
+      {shouldRenderCharts(userRole) && (
         <ChartsSection userRole={userRole} />
       )}
       
       <div className="grid grid-cols-1 gap-6">
         <RecentProjectsNew 
-          proposals={proposals}
-          loading={loading}
+          proposals={dashboardData.proposals}
+          loading={false}
           onRefresh={handleRefreshProposals}
         />
       </div>
@@ -95,11 +125,11 @@ const Dashboard = () => {
       />
     </DashboardLayout>
   );
-};
+});
 
-// Helper function to determine if charts should be rendered
-function renderCharts(userRole: string | null): boolean {
+// Memoized helper function to determine if charts should be rendered
+const shouldRenderCharts = (userRole: string | null): boolean => {
   return userRole !== 'agent';
-}
+};
 
 export default Dashboard;
