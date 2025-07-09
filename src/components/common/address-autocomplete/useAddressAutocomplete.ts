@@ -31,6 +31,28 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
   const [isRetrying, setIsRetrying] = useState(false);
   const maxRetries = 2;
 
+  // Professional error handler for client-facing errors
+  const sanitizeErrorForClient = useCallback((error: string) => {
+    // Never expose technical details to non-admin users
+    const technicalErrors = [
+      'network error',
+      'api key',
+      'quota exceeded',
+      'invalid request',
+      'service unavailable'
+    ];
+    
+    const isTechnical = technicalErrors.some(tech => 
+      error.toLowerCase().includes(tech)
+    );
+    
+    if (isTechnical) {
+      return 'Address lookup is temporarily unavailable. Please try again or enter the address manually.';
+    }
+    
+    return error;
+  }, []);
+
 
   // Sync input value with prop value
   useEffect(() => {
@@ -71,11 +93,12 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     } catch (err) {
       console.error('❌ Prediction fetch failed:', err);
       
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setLastError(errorMessage);
+      const rawError = err instanceof Error ? err.message : 'Unknown error';
+      const clientError = sanitizeErrorForClient(rawError);
+      setLastError(clientError);
       
       // Implement retry logic for transient errors
-      if (retryCount < maxRetries && shouldRetry(errorMessage)) {
+      if (retryCount < maxRetries && shouldRetry(rawError)) {
         console.log(`🔄 Retrying prediction fetch (${retryCount + 1}/${maxRetries})`);
         setIsRetrying(true);
         setRetryCount(prev => prev + 1);

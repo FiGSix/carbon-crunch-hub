@@ -3,9 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
+import { useAuth } from "@/contexts/auth";
+import { RoleValidator } from "@/services/unified/utils/RoleValidator";
 
 interface HealthCheckResult {
   timestamp: string;
@@ -37,6 +39,19 @@ interface HealthCheckResult {
 }
 
 export function GoogleMapsIntegrationTest() {
+  const { profile } = useAuth();
+  
+  // Check admin access
+  if (!RoleValidator.isAdmin(profile?.role)) {
+    return (
+      <Alert>
+        <ShieldCheck className="h-4 w-4" />
+        <AlertDescription>
+          Integration testing is restricted to administrators.
+        </AlertDescription>
+      </Alert>
+    );
+  }
   const [healthCheck, setHealthCheck] = useState<HealthCheckResult | null>(null);
   const [isRunningHealthCheck, setIsRunningHealthCheck] = useState(false);
   const [testAddress, setTestAddress] = useState('');

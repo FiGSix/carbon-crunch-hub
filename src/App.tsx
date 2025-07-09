@@ -32,6 +32,7 @@ const Agents = createOptimizedLazyComponent(() => import("./pages/Agents"), "Age
 const VerifyEmail = createOptimizedLazyComponent(() => import("./pages/VerifyEmail"), "VerifyEmail");
 const ForceLogout = createOptimizedLazyComponent(() => import("./pages/ForceLogout"), "ForceLogout");
 const TestingSuite = createOptimizedLazyComponent(() => import("./pages/TestingSuite"), "TestingSuite");
+const SystemDiagnostics = createOptimizedLazyComponent(() => import("./pages/SystemDiagnostics"), "SystemDiagnostics");
 
 // Optimized lazy load protected pages
 const Dashboard = createOptimizedLazyComponent(() => import("./pages/Dashboard"), "Dashboard");
@@ -94,8 +95,24 @@ function App() {
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<SimplifiedIndex />} />
-                <Route path="/test" element={<TestPage />} />
-                <Route path="/testing" element={<Suspense fallback={<PageLoader />}><TestingSuite /></Suspense>} />
+                <Route 
+                  path="/test" 
+                  element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <TestPage />
+                    </PrivateRoute>
+                  } 
+                />
+                <Route 
+                  path="/testing" 
+                  element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <Suspense fallback={<PageLoader />}>
+                        <TestingSuite />
+                      </Suspense>
+                    </PrivateRoute>
+                  } 
+                />
                 <Route path="/original" element={<Index />} />
                 <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
                 <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
@@ -168,6 +185,16 @@ function App() {
                     <PrivateRoute allowedRoles={['admin']}>
                       <Suspense fallback={<PageLoader />}>
                         <SystemSettings />
+                      </Suspense>
+                    </PrivateRoute>
+                  } 
+                />
+                <Route 
+                  path="/system-diagnostics" 
+                  element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <Suspense fallback={<PageLoader />}>
+                        <SystemDiagnostics />
                       </Suspense>
                     </PrivateRoute>
                   } 

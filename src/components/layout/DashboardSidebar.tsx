@@ -83,6 +83,12 @@ export function DashboardSidebar() {
       href: "/system-settings",
       icon: Settings,
       roles: ["admin"]
+    },
+    {
+      name: "System Diagnostics",
+      href: "/system-diagnostics",
+      icon: Settings,
+      roles: ["admin"]
     }
   ];
 

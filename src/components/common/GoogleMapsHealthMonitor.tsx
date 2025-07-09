@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Activity } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Activity, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/auth";
+import { RoleValidator } from "@/services/unified/utils/RoleValidator";
 
 interface GoogleMapsHealthMonitorProps {
   autoRefresh?: boolean;
@@ -27,6 +30,19 @@ export function GoogleMapsHealthMonitor({
   showDetails = false,
   compact = false 
 }: GoogleMapsHealthMonitorProps) {
+  const { profile } = useAuth();
+  
+  // Check admin access
+  if (!RoleValidator.isAdmin(profile?.role)) {
+    return (
+      <Alert>
+        <ShieldCheck className="h-4 w-4" />
+        <AlertDescription>
+          System monitoring is restricted to administrators.
+        </AlertDescription>
+      </Alert>
+    );
+  }
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({
     healthy: false,
     lastCheck: '',
