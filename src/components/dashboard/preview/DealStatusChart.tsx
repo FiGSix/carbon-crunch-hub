@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProposalListItem } from "@/types/proposals";
@@ -13,7 +13,7 @@ interface DealStatusChartProps {
   loading: boolean;
 }
 
-export function DealStatusChart({ proposals, loading }: DealStatusChartProps) {
+function DealStatusChartComponent({ proposals, loading }: DealStatusChartProps) {
   // If loading, show loading state
   if (loading) {
     return <ChartLoadingState />;
@@ -24,28 +24,32 @@ export function DealStatusChart({ proposals, loading }: DealStatusChartProps) {
     return <ChartEmptyState />;
   }
 
-  // Generate chart data from proposals
-  const statusCounts = proposals.reduce((counts, proposal) => {
-    const status = proposal.status || 'unknown';
-    const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+  // Generate chart data from proposals - memoized to prevent recalculation
+  const chartData = useMemo(() => {
+    const statusCounts = proposals.reduce((counts, proposal) => {
+      const status = proposal.status || 'unknown';
+      const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+      
+      if (!counts[formattedStatus]) {
+        counts[formattedStatus] = 0;
+      }
+      counts[formattedStatus]++;
+      
+      return counts;
+    }, {} as Record<string, number>);
     
-    if (!counts[formattedStatus]) {
-      counts[formattedStatus] = 0;
-    }
-    counts[formattedStatus]++;
+    // Convert to array format for recharts
+    const data = Object.entries(statusCounts).map(([name, value]) => ({
+      name,
+      value,
+      color: STATUS_COLORS[name.toLowerCase()] || '#999'
+    }));
     
-    return counts;
-  }, {} as Record<string, number>);
-  
-  // Convert to array format for recharts
-  const data = Object.entries(statusCounts).map(([name, value]) => ({
-    name,
-    value,
-    color: STATUS_COLORS[name.toLowerCase()] || '#999'
-  }));
-  
-  // Calculate total value for percentage
-  const total = data.reduce((sum, entry) => sum + entry.value, 0);
+    // Calculate total value for percentage
+    const total = data.reduce((sum, entry) => sum + entry.value, 0);
+    
+    return { data, total };
+  }, [proposals]);
 
   return (
     <motion.div
@@ -63,9 +67,11 @@ export function DealStatusChart({ proposals, loading }: DealStatusChartProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="pb-4 flex-1 flex items-center justify-center">
-          <PieChartContent data={data} total={total} />
+          <PieChartContent data={chartData.data} total={chartData.total} />
         </CardContent>
       </Card>
     </motion.div>
   );
 }
+
+export const DealStatusChart = React.memo(DealStatusChartComponent);

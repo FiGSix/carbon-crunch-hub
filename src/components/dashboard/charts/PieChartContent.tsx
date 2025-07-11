@@ -16,7 +16,7 @@ interface PieChartContentProps {
   total: number;
 }
 
-export const PieChartContent: React.FC<PieChartContentProps> = ({ 
+const PieChartContentComponent: React.FC<PieChartContentProps> = ({ 
   data, 
   total 
 }) => {
@@ -61,3 +61,5 @@ export const PieChartContent: React.FC<PieChartContentProps> = ({
     </div>
   );
 };
+
+export const PieChartContent = React.memo(PieChartContentComponent);

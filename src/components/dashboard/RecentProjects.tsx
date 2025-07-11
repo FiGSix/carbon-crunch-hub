@@ -1,4 +1,5 @@
 
+import React, { useMemo, useCallback } from "react";
 import { 
   Card, 
   CardContent, 
@@ -17,7 +18,7 @@ interface RecentProjectsProps {
   onRefresh?: () => void;
 }
 
-export function RecentProjects({ proposals = [], loading = false, onRefresh }: RecentProjectsProps) {
+function RecentProjectsComponent({ proposals = [], loading = false, onRefresh }: RecentProjectsProps) {
   const navigate = useNavigate();
   
   // Show skeleton loading state
@@ -39,20 +40,20 @@ export function RecentProjects({ proposals = [], loading = false, onRefresh }: R
     );
   }
 
-  // Function to view a proposal
-  const handleViewProposal = (id: string) => {
+  // Function to view a proposal - memoized to prevent re-renders
+  const handleViewProposal = useCallback((id: string) => {
     navigate(`/proposals/${id}`);
-  };
+  }, [navigate]);
 
-  // Filter to display only recent proposals (at most 4)
-  const recentProjects = proposals.length > 0 
+  // Filter to display only recent proposals (at most 4) - memoized to prevent recalculation
+  const recentProjects = useMemo(() => proposals.length > 0 
     ? proposals.slice(0, 4) 
     : [
         { id: "1", name: "Sunnydale Solar Farm", size: 4.2, client: "Cape Town Energy", date: "2024-01-15", status: "pending", revenue: 120000 },
         { id: "2", name: "Greenfield Energy", size: 2.8, client: "Johannesburg Power", date: "2024-02-03", status: "pending", revenue: 85000 },
         { id: "3", name: "Eastside Power Plant", size: 3.5, client: "Durban Utilities", date: "2024-03-10", status: "approved", revenue: 110000 },
         { id: "4", name: "Clearwater Solar", size: 2.0, client: "Pretoria Solar", date: "2024-03-22", status: "draft", revenue: 67000 },
-      ];
+      ], [proposals]);
 
   return (
     <Card className="retro-card">
@@ -128,3 +129,5 @@ export function RecentProjects({ proposals = [], loading = false, onRefresh }: R
     </Card>
   );
 }
+
+export const RecentProjects = React.memo(RecentProjectsComponent);

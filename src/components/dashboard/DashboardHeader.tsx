@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { motion } from "framer-motion";
 
 interface DashboardHeaderProps {
@@ -10,13 +10,23 @@ interface DashboardHeaderProps {
   userRole?: string;
 }
 
-export function DashboardHeader({ 
+function DashboardHeaderComponent({ 
   title, 
   description, 
   actions,
   userName,
   userRole
 }: DashboardHeaderProps) {
+
+  const userInfoSection = useMemo(() => {
+    if (!userRole || !userName) return null;
+    
+    return (
+      <div className="text-sm text-crunch-black/50 mt-1">
+        Logged in as <span className="font-semibold text-crunch-black/80">{userName}</span> <span className="px-1.5 py-0.5 bg-crunch-yellow/20 text-crunch-black/70 rounded-full text-xs font-medium">{userRole}</span>
+      </div>
+    );
+  }, [userRole, userName]);
   return (
     <motion.div 
       className="mb-8"
@@ -27,11 +37,7 @@ export function DashboardHeader({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-crunch-black to-crunch-black/80 bg-clip-text text-transparent">{title}</h1>
-          {userRole && userName && (
-            <div className="text-sm text-crunch-black/50 mt-1">
-              Logged in as <span className="font-semibold text-crunch-black/80">{userName}</span> <span className="px-1.5 py-0.5 bg-crunch-yellow/20 text-crunch-black/70 rounded-full text-xs font-medium">{userRole}</span>
-            </div>
-          )}
+          {userInfoSection}
         </div>
         {actions}
       </div>
@@ -41,3 +47,5 @@ export function DashboardHeader({
     </motion.div>
   );
 }
+
+export const DashboardHeader = React.memo(DashboardHeaderComponent);

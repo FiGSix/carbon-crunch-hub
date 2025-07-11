@@ -1,4 +1,5 @@
 
+import React, { useCallback } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { 
@@ -15,11 +16,23 @@ interface ProposalFiltersProps {
   onSortChange?: (value: string) => void;
 }
 
-export function ProposalFilters({
+function ProposalFiltersComponent({
   onSearchChange,
   onStatusChange,
   onSortChange
 }: ProposalFiltersProps) {
+  
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onSearchChange?.(e.target.value);
+  }, [onSearchChange]);
+
+  const handleStatusChange = useCallback((value: string) => {
+    onStatusChange?.(value);
+  }, [onStatusChange]);
+
+  const handleSortChange = useCallback((value: string) => {
+    onSortChange?.(value);
+  }, [onSortChange]);
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div className="relative">
@@ -27,13 +40,13 @@ export function ProposalFilters({
         <Input 
           placeholder="Search proposals..." 
           className="pl-10 retro-input"
-          onChange={e => onSearchChange?.(e.target.value)}
+          onChange={handleSearchChange}
         />
       </div>
       
       <Select 
         defaultValue="all"
-        onValueChange={value => onStatusChange?.(value)}
+        onValueChange={handleStatusChange}
       >
         <SelectTrigger className="retro-input">
           <SelectValue placeholder="Filter by status" />
@@ -48,7 +61,7 @@ export function ProposalFilters({
       
       <Select 
         defaultValue="newest"
-        onValueChange={value => onSortChange?.(value)}
+        onValueChange={handleSortChange}
       >
         <SelectTrigger className="retro-input">
           <SelectValue placeholder="Sort by" />
@@ -65,3 +78,5 @@ export function ProposalFilters({
     </div>
   );
 }
+
+export const ProposalFilters = React.memo(ProposalFiltersComponent);
