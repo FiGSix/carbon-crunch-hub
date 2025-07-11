@@ -32,11 +32,22 @@ export function FormField({
   error,
   className = ''
 }: FormFieldProps) {
+  const descriptionId = description ? `${id}-description` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const ariaDescribedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+
   return (
     <div className={className}>
       <Label htmlFor={id}>
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && (
+          <span 
+            className="text-red-500 ml-1" 
+            aria-label="required"
+          >
+            *
+          </span>
+        )}
       </Label>
       <Input
         id={id}
@@ -47,13 +58,28 @@ export function FormField({
         placeholder={placeholder}
         required={required}
         disabled={disabled}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={error ? 'true' : 'false'}
         className={error ? 'border-red-500' : ''}
       />
       {description && (
-        <p className="text-sm text-gray-500 mt-1">{description}</p>
+        <p 
+          id={descriptionId}
+          className="text-sm text-muted-foreground mt-1"
+          role="description"
+        >
+          {description}
+        </p>
       )}
       {error && (
-        <p className="text-sm text-red-500 mt-1">{error}</p>
+        <p 
+          id={errorId}
+          className="text-sm text-destructive mt-1"
+          role="alert"
+          aria-live="polite"
+        >
+          {error}
+        </p>
       )}
     </div>
   );

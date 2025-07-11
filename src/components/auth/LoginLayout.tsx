@@ -12,11 +12,18 @@ export function LoginLayout({ children }: LoginLayoutProps) {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 flex items-center justify-center py-12">
+      <main 
+        className="flex-1 flex items-center justify-center py-12"
+        role="main"
+        aria-label="Login form"
+      >
         <div className="w-full max-w-md px-4">
-          <div className="bg-white p-8 rounded-xl shadow-lg border border-crunch-black/10">
+          <section 
+            className="bg-white p-8 rounded-xl shadow-lg border border-crunch-black/10"
+            aria-labelledby="login-title"
+          >
             {children}
-          </div>
+          </section>
         </div>
       </main>
       
