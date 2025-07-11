@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth';
 import { LoginLayout } from '@/components/auth/LoginLayout';
 import { LoginHeader } from '@/components/auth/LoginHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { PageErrorBoundary } from '@/lib/errors/errorBoundaryHelpers';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -51,13 +52,15 @@ const Login = () => {
   }
   
   return (
-    <LoginLayout>
-      <LoginHeader />
-      <LoginForm 
-        loginAttempts={loginAttempts}
-        onLoginAttempt={handleLoginAttempt}
-      />
-    </LoginLayout>
+    <PageErrorBoundary pageName="Login">
+      <LoginLayout>
+        <LoginHeader />
+        <LoginForm 
+          loginAttempts={loginAttempts}
+          onLoginAttempt={handleLoginAttempt}
+        />
+      </LoginLayout>
+    </PageErrorBoundary>
   );
 };
 
