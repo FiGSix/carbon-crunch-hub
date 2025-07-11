@@ -1,9 +1,12 @@
-/* CRITICAL: Optimized CSS Loading Order - Phase 3 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* CRITICAL: Optimized CSS Loading Order - Split for Performance */
+@import './styles/base.css';
 
 @tailwind base;
 @tailwind components; 
 @tailwind utilities;
+
+@import './styles/components.css';
+@import './styles/animations.css';
 
 /* CRITICAL: CSS Custom Properties with Fallbacks */
 :root {
