@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState, ReactNode, ChangeEvent } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -9,7 +9,7 @@ interface ImageUploadProps {
   onImageUpdate: (imageUrl: string | null) => void;
   disabled?: boolean;
   bucket: string;
-  placeholder?: React.ReactNode;
+  placeholder?: ReactNode;
   uploadButtonText?: string;
   changeButtonText?: string;
   description?: string;
@@ -39,7 +39,7 @@ export function ImageUpload({
     }
   });
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ClientInformation } from "../types";
@@ -7,7 +7,7 @@ import { searchClients } from "@/services/proposals/unifiedProposalService";
 
 interface ClientFormFieldsProps {
   clientInfo: ClientInformation;
-  updateClientInfo: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  updateClientInfo: (e: ChangeEvent<HTMLInputElement>) => void;
   setClientInfo?: (clientInfo: ClientInformation) => void;
 }
 
@@ -19,7 +19,7 @@ export function ClientFormFields({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = async (e: ChangeEvent<HTMLInputElement>) => {
     updateClientInfo(e);
     
     const value = e.target.value;

@@ -1,6 +1,4 @@
 
-import React from "react";
-
 interface ProposalLoadingStateProps {
   loading: boolean;
   hasProposals: boolean;

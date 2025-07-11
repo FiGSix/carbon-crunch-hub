@@ -1,4 +1,4 @@
-import React from 'react';
+import { ComponentType, useEffect, createElement } from 'react';
 
 /**
  * Phase 4: Performance Monitoring & Reliability Service
@@ -218,7 +218,7 @@ export function usePerformanceTracking(componentName: string) {
  * Higher-order component for automatic performance tracking
  */
 export function withPerformanceTracking<T extends object>(
-  WrappedComponent: React.ComponentType<T>,
+  WrappedComponent: ComponentType<T>,
   componentName?: string
 ) {
   const displayName = componentName || WrappedComponent.displayName || WrappedComponent.name;
@@ -226,10 +226,10 @@ export function withPerformanceTracking<T extends object>(
   return function PerformanceTrackedComponent(props: T) {
     const { trackRender } = usePerformanceTracking(displayName);
     
-    React.useEffect(() => {
+    useEffect(() => {
       trackRender();
     });
     
-    return React.createElement(WrappedComponent, props);
+    return createElement(WrappedComponent, props);
   };
 }

@@ -1,14 +1,14 @@
-import React from 'react';
+import { useState, useEffect, useMemo, FC, ReactNode, CSSProperties, MouseEvent } from 'react';
 import { motion } from 'framer-motion';
 
 interface SafeMotionDivProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
   id?: string;
-  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
-  onMouseEnter?: (event: React.MouseEvent<HTMLDivElement>) => void;
-  onMouseLeave?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  onClick?: (event: MouseEvent<HTMLDivElement>) => void;
+  onMouseEnter?: (event: MouseEvent<HTMLDivElement>) => void;
+  onMouseLeave?: (event: MouseEvent<HTMLDivElement>) => void;
   
   // Motion-specific props
   initial?: any;
@@ -20,7 +20,7 @@ interface SafeMotionDivProps {
   variants?: any;
   
   // Control props
-  fallback?: React.ReactNode;
+  fallback?: ReactNode;
   enableAnimation?: boolean;
 }
 
@@ -28,7 +28,7 @@ interface SafeMotionDivProps {
  * Phase 3: Safe Motion wrapper with graceful fallbacks
  * Provides animation with automatic fallback to regular div on errors
  */
-export const SafeMotionDiv: React.FC<SafeMotionDivProps> = ({ 
+export const SafeMotionDiv: FC<SafeMotionDivProps> = ({
   children, 
   className,
   style,
@@ -46,16 +46,16 @@ export const SafeMotionDiv: React.FC<SafeMotionDivProps> = ({
   fallback,
   enableAnimation = true
 }) => {
-  const [hasAnimationError, setHasAnimationError] = React.useState(false);
+  const [hasAnimationError, setHasAnimationError] = useState(false);
 
   // Disable animations in reduced motion preference
-  const prefersReducedMotion = React.useMemo(() => {
+  const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
 
   // Error boundary for motion components
-  React.useEffect(() => {
+  useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       if (event.error?.message?.includes('framer') || event.error?.message?.includes('motion')) {
         console.warn('[SafeMotionDiv] Animation error detected, falling back to static div');

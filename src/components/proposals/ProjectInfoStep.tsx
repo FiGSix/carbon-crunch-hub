@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { 
   Card, 
   CardContent, 
@@ -17,7 +17,7 @@ import { validateCommissionDate } from "@/utils/dateValidation";
 
 interface ProjectInfoStepProps {
   projectInfo: ProjectInformation;
-  updateProjectInfo: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  updateProjectInfo: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   nextStep: () => void;
   prevStep: () => void;
 }
@@ -34,7 +34,7 @@ export function ProjectInfoStep({
   const [dateValidationError, setDateValidationError] = useState<string | null>(null);
 
   // Enhanced project info handler with date validation
-  const handleProjectInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleProjectInfoChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
     // If it's the commission date, validate it
@@ -62,7 +62,7 @@ export function ProjectInfoStep({
         name: "address",
         value: address
       }
-    } as React.ChangeEvent<HTMLTextAreaElement>;
+    } as ChangeEvent<HTMLTextAreaElement>;
     
     updateProjectInfo(mockEvent);
   };

@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Image } from 'lucide-react';
 import { ImageUpload } from '@/components/common/ImageUpload';
 

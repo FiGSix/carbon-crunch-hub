@@ -1,10 +1,10 @@
 
-import React from 'react';
+import { ReactNode } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/footer';
 
 interface LoginLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function LoginLayout({ children }: LoginLayoutProps) {

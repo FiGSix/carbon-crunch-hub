@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { 
   Table, 
@@ -24,7 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState } from 'react';
 
 interface AgentsTableContentProps {
   data: AgentData[];
