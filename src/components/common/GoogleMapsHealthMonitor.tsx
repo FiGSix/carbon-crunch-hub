@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,6 +32,16 @@ export function GoogleMapsHealthMonitor({
 }: GoogleMapsHealthMonitorProps) {
   const { profile } = useAuth();
   
+  const [healthStatus, setHealthStatus] = useState<HealthStatus>({
+    healthy: false,
+    lastCheck: '',
+    apiKeyValid: false,
+    autocompleteWorking: false,
+    detailsWorking: false
+  });
+  const [isChecking, setIsChecking] = useState(false);
+  const [nextCheck, setNextCheck] = useState<number>(refreshInterval);
+  
   // Check admin access
   if (!RoleValidator.isAdmin(profile?.role)) {
     return (
@@ -43,17 +53,8 @@ export function GoogleMapsHealthMonitor({
       </Alert>
     );
   }
-  const [healthStatus, setHealthStatus] = useState<HealthStatus>({
-    healthy: false,
-    lastCheck: '',
-    apiKeyValid: false,
-    autocompleteWorking: false,
-    detailsWorking: false
-  });
-  const [isChecking, setIsChecking] = useState(false);
-  const [nextCheck, setNextCheck] = useState<number>(refreshInterval);
 
-  const checkHealth = async (silent = false) => {
+  const checkHealth = useCallback(async (silent = false) => {
     if (!silent) setIsChecking(true);
     
     try {
@@ -98,12 +99,12 @@ export function GoogleMapsHealthMonitor({
     } finally {
       if (!silent) setIsChecking(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Initial check
     checkHealth(true);
-  }, []);
+  }, [checkHealth]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -119,7 +120,7 @@ export function GoogleMapsHealthMonitor({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [autoRefresh, refreshInterval]);
+  }, [autoRefresh, refreshInterval, checkHealth]);
 
   const getStatusIcon = () => {
     if (isChecking) {

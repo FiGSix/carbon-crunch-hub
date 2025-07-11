@@ -143,24 +143,28 @@ export function useOptimizedAuthReliability({
     const timeUntilExpiry = expiryTime - now;
     const refreshBuffer = 10 * 60 * 1000; // 10 minutes
 
-    if (timeUntilExpiry <= refreshBuffer) {
+    if (timeUntilExpiry <= refreshBuffer && timeUntilExpiry > 0) {
       if (import.meta.env.DEV) {
         console.log('🔄 Session nearing expiry, refreshing in background');
       }
       
-      // Refresh in background without disrupting user
-      supabase.auth.refreshSession().then(({ data, error }) => {
-        if (error) {
-          if (import.meta.env.DEV) {
-            console.warn('⚠️ Background refresh failed:', error.message);
+      // Schedule refresh
+      const timeout = setTimeout(() => {
+        supabase.auth.refreshSession().then(({ data, error }) => {
+          if (error) {
+            if (import.meta.env.DEV) {
+              console.warn('⚠️ Background refresh failed:', error.message);
+            }
+          } else if (data.session) {
+            if (import.meta.env.DEV) {
+              console.log('✅ Background refresh successful');
+            }
+            onAuthStateChange(data.session);
           }
-        } else if (data.session) {
-          if (import.meta.env.DEV) {
-            console.log('✅ Background refresh successful');
-          }
-          onAuthStateChange(data.session);
-        }
-      });
+        });
+      }, Math.max(0, timeUntilExpiry - refreshBuffer));
+
+      return () => clearTimeout(timeout);
     }
   }, [session, isInitialized, onAuthStateChange]);
 

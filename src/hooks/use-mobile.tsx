@@ -12,8 +12,13 @@ export function useIsMobile() {
     const onChange = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
-    mql.addEventListener("change", onChange)
+    
+    // Set initial value
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    
+    // Add listener
+    mql.addEventListener("change", onChange)
+    
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
@@ -31,8 +36,12 @@ export function useIsTouch() {
       setIsTouch(hasTouch)
     }
     
+    // Initial check
     checkTouch()
+    
+    // Add resize listener
     window.addEventListener('resize', checkTouch)
+    
     return () => window.removeEventListener('resize', checkTouch)
   }, [])
 
