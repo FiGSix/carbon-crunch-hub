@@ -27,18 +27,13 @@ export function useAuthInitializer({
 
     const initializeAuth = async () => {
       try {
-        if (import.meta.env.DEV) {
-          console.log('🚀 Initializing auth...');
-        }
+        // Note: Console logging removed for performance optimization
         
         // Get initial session with better error handling
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          if (import.meta.env.DEV) {
-            console.warn('⚠️ Session fetch error:', error.message);
-          }
-          // Don't throw here, just log and continue
+          // Don't throw here, just continue with null session
         }
         
         if (isUnmountedRef.current) return;
@@ -46,42 +41,20 @@ export function useAuthInitializer({
         // Validate session before using it
         const isValidSession = session && session.expires_at && new Date(session.expires_at * 1000) > new Date();
         
-        if (import.meta.env.DEV) {
-          console.log('📋 Session validation:', {
-            hasSession: !!session,
-            isValid: isValidSession,
-            expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
-          });
-        }
-
         // Update auth state with validated session
         updateAuthState(isValidSession ? session : null);
         
         if (isValidSession && session.user) {
-          if (import.meta.env.DEV) {
-            console.log('✅ Valid session found, loading user profile');
-          }
           // Load profile but don't block initialization
-          loadUserProfileWithFallback(session.user.id).catch(error => {
-            if (import.meta.env.DEV) {
-              console.warn('⚠️ Profile loading failed during initialization:', error);
-            }
+          loadUserProfileWithFallback(session.user.id).catch(() => {
+            // Profile loading error handled by loadUserProfileWithFallback
           });
         } else {
-          if (import.meta.env.DEV) {
-            console.log('ℹ️ No valid session found');
-          }
           // Clear any stale profile data
           updateProfileState(null);
         }
-        
-        if (import.meta.env.DEV) {
-          console.log(`⚡ Auth initialization completed`);
-        }
       } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('💥 Auth initialization error:', error);
-        }
+        // Note: Console logging removed for performance optimization
         // Don't throw, just clear state and continue
         updateAuthState(null);
         updateProfileState(null);
@@ -97,13 +70,7 @@ export function useAuthInitializer({
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isUnmountedRef.current) return;
 
-      if (import.meta.env.DEV) {
-        console.log('🔔 Auth state changed:', event, {
-          hasSession: !!session,
-          sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
-          expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
-        });
-      }
+      // Note: Console logging removed for performance optimization
       
       // Validate session before using it
       const isValidSession = session && session.expires_at && new Date(session.expires_at * 1000) > new Date();
@@ -112,19 +79,11 @@ export function useAuthInitializer({
       updateAuthState(isValidSession ? session : null);
 
       if (isValidSession && session.user) {
-        if (import.meta.env.DEV) {
-          console.log('👤 Loading profile for authenticated user');
-        }
         // Load profile but don't block the auth state change
-        loadUserProfileWithFallback(session.user.id).catch(error => {
-          if (import.meta.env.DEV) {
-            console.warn('⚠️ Profile loading failed during auth state change:', error);
-          }
+        loadUserProfileWithFallback(session.user.id).catch(() => {
+          // Profile loading error handled by loadUserProfileWithFallback
         });
       } else {
-        if (import.meta.env.DEV) {
-          console.log('🚪 User signed out or session invalid/expired, clearing profile');
-        }
         updateProfileState(null);
         authCache.clear();
       }

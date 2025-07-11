@@ -46,12 +46,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
   );
 
   function handleAuthStateChange(newSession: Session | null) {
-    if (import.meta.env.DEV) {
-      console.log('🔄 Auth state change:', { 
-        hasSession: !!newSession,
-        userId: newSession?.user?.id 
-      });
-    }
+    // Note: Console logging removed for performance optimization
 
     setSession(newSession);
     setUser(newSession?.user ?? null);
@@ -218,9 +213,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
         // Set up auth state listener FIRST
         const { data } = supabase.auth.onAuthStateChange(
           (event, session) => {
-            if (import.meta.env.DEV) {
-              console.log('🔄 Auth event:', event, { hasSession: !!session });
-            }
+            // Note: Console logging removed for performance optimization
             handleAuthStateChange(session);
           }
         );
@@ -253,22 +246,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
     };
   }, []);
 
-  // Enhanced logging for development
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('🔄 Optimized Auth state:', {
-        hasUser: !!user,
-        hasSession: !!session,
-        hasProfile: !!profile,
-        userRole,
-        isAuthenticated,
-        isInitialized,
-        isLoading,
-        authError,
-        cacheMetrics: performanceCache.getMetrics()
-      });
-    }
-  }, [user, session, profile, userRole, isAuthenticated, isInitialized, isLoading, authError]);
+  // Note: Enhanced logging removed for performance optimization
 
   return {
     user,

@@ -19,13 +19,9 @@ export function logTokenValidationStart(token: string) {
   
   tokenLogger.info("🚀 Starting token validation", { 
     tokenPrefix: token.substring(0, 8),
+    tokenLength: token.length,
     timestamp: new Date().toISOString()
   });
-  
-  if (import.meta.env.DEV) {
-    console.log("🚀 === STARTING TOKEN VALIDATION ===");
-    console.log(`📋 Token: ${token.substring(0, 8)}... (length: ${token.length})`);
-  }
 }
 
 /**
@@ -35,14 +31,8 @@ export function logTokenValidationComplete(success: boolean, valid: boolean) {
   const tokenLogger = createTokenLogger();
   
   if (success) {
-    if (import.meta.env.DEV) {
-      console.log("✅ Token validation completed successfully");
-    }
     tokenLogger.info("✅ Token validation completed", { success, valid });
   } else {
-    if (import.meta.env.DEV) {
-      console.error("❌ Token validation failed");
-    }
     tokenLogger.error("❌ Token validation failed", { success, valid });
   }
 }
