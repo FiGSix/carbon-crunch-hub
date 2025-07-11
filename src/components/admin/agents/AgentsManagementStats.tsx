@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Users, UserCheck, UserX, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +15,7 @@ interface AgentStats {
 
 export function AgentsManagementStats() {
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['agent-management-stats'],
+    queryKey: queryKeys.agents.management.stats(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')

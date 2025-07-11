@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/auth';
 import { fetchDashboardStatsOptimized } from '@/hooks/proposals/utils/optimizedQueryBuilders';
 import { supabase } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * Phase 5 Optimization: Optimized dashboard stats with complete metrics
@@ -23,7 +24,7 @@ export function useOptimizedDashboardStats(): OptimizedDashboardMetrics {
   const { user, userRole } = useAuth();
   
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard-stats-optimized-v2', user?.id, userRole],
+    queryKey: queryKeys.dashboard.stats(user?.id || '', userRole || ''),
     queryFn: async () => {
       if (!user?.id || !userRole) {
         throw new Error('User not authenticated');

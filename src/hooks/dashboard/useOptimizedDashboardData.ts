@@ -3,6 +3,8 @@ import { useAuth } from '@/contexts/auth';
 import { fetchDashboardStatsOptimized } from '@/hooks/proposals/utils/optimizedQueryBuilders';
 import { supabase } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { queryKeys } from '@/lib/queryKeys';
+import { QueryErrorBoundary } from '@/components/common/QueryErrorBoundary';
 
 /**
  * Phase 5 Optimization: Optimized dashboard data hook using database functions
@@ -11,7 +13,7 @@ export function useOptimizedDashboardData() {
   const { user, userRole } = useAuth();
   
   return useQuery({
-    queryKey: ['dashboard-stats-optimized', user?.id, userRole],
+    queryKey: queryKeys.dashboard.stats(user?.id || '', userRole || ''),
     queryFn: async () => {
       if (!user?.id || !userRole) {
         throw new Error('User not authenticated');

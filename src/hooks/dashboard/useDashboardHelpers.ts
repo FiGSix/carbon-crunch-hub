@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 
 /**
  * Optimized dashboard helper functions with stable references
  */
 export function useDashboardHelpers(refreshFunction?: () => void) {
   const { userRole, profile } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateDashboard } = useCacheInvalidation();
 
   // Stable helper functions with useCallback
   const getWelcomeMessage = useCallback(() => {
@@ -31,9 +32,7 @@ export function useDashboardHelpers(refreshFunction?: () => void) {
 
   const handleRefreshProposals = useCallback(async () => {
     // Invalidate all dashboard-related queries for fresh data
-    queryClient.invalidateQueries({ queryKey: ['unified-dashboard-data'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard-stats-optimized'] });
-    queryClient.invalidateQueries({ queryKey: ['agent-portfolio-optimized'] });
+    await invalidateDashboard();
     
     // Call custom refresh function if provided
     if (refreshFunction) {
@@ -43,7 +42,7 @@ export function useDashboardHelpers(refreshFunction?: () => void) {
         console.error('Error refreshing data:', error);
       }
     }
-  }, [queryClient, refreshFunction]);
+  }, [invalidateDashboard, refreshFunction]);
 
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
