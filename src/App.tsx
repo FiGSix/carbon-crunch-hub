@@ -9,9 +9,12 @@ import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
-import { DisplayDiagnostics } from "@/components/diagnostics/DisplayDiagnostics";
+// Only import diagnostics in development
+const DisplayDiagnostics = import.meta.env.DEV 
+  ? lazy(() => import("@/components/diagnostics/DisplayDiagnostics").then(m => ({ default: m.DisplayDiagnostics })))
+  : null;
 import { logger } from '@/lib/logger';
 
 // Immediate load for critical public pages
@@ -71,31 +74,41 @@ function App() {
           <AuthProvider>
             <AuthNavigationHandler />
             <TooltipProvider>
-              <DisplayDiagnostics />
+              {import.meta.env.DEV && DisplayDiagnostics && (
+                <Suspense fallback={null}>
+                  <DisplayDiagnostics />
+                </Suspense>
+              )}
               <AuthStatusMonitor />
               <Toaster />
               <Sonner />
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<SimplifiedIndex />} />
-                <Route 
-                  path="/test" 
-                  element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                      <TestPage />
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/testing" 
-                  element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                      <Suspense fallback={<PageLoader />}>
-                        <TestingSuite />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
+                {/* Development-only test route */}
+                {import.meta.env.DEV && (
+                  <Route 
+                    path="/test" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <TestPage />
+                      </PrivateRoute>
+                    } 
+                  />
+                )}
+                {/* Development-only testing suite */}
+                {import.meta.env.DEV && (
+                  <Route 
+                    path="/testing" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <Suspense fallback={<PageLoader />}>
+                          <TestingSuite />
+                        </Suspense>
+                      </PrivateRoute>
+                    } 
+                  />
+                )}
                 <Route path="/original" element={<Index />} />
                 <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
                 <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
@@ -172,16 +185,19 @@ function App() {
                     </PrivateRoute>
                   } 
                 />
-                <Route 
-                  path="/system-diagnostics" 
-                  element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                      <Suspense fallback={<PageLoader />}>
-                        <SystemDiagnostics />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
+                {/* Development-only system diagnostics */}
+                {import.meta.env.DEV && (
+                  <Route 
+                    path="/system-diagnostics" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <Suspense fallback={<PageLoader />}>
+                          <SystemDiagnostics />
+                        </Suspense>
+                      </PrivateRoute>
+                    } 
+                  />
+                )}
                 <Route 
                   path="/admin/agents" 
                   element={
