@@ -57,7 +57,7 @@ export function Header() {
         }}
       >
         <div 
-          className="grid-container py-3 md:py-4 flex items-center justify-content-between"
+          className="container-responsive py-3 md:py-4 flex items-center justify-content-between"
           style={{
             maxWidth: '80rem',
             marginLeft: 'auto',

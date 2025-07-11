@@ -23,8 +23,8 @@ export const CSSFallbackDiagnostics = () => {
         const computedStyle = getComputedStyle(testElement);
         const hasBg = computedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)';
         
-        // Test grid-container
-        testElement.className = 'grid-container';
+        // Test container-responsive
+        testElement.className = 'container-responsive';
         const hasGridContainer = getComputedStyle(testElement).maxWidth !== 'none';
         
         // Test CSS variables

@@ -13,7 +13,7 @@ export function Footer({ className }: { className?: string }) {
   
   return (
     <footer className={cn("bg-white border-t border-crunch-black/5 pt-16 pb-10", className)}>
-      <div className="grid-container">
+      <div className="container-responsive">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
           <div className="md:col-span-4">
             <div className="mb-4">

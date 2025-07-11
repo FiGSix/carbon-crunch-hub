@@ -43,7 +43,7 @@ export const CSSFailureSimulator = () => {
           background-color: #ffffff !important;
           color: #1a1a1a !important;
         }
-        .container, .grid-container {
+        .container, .container-responsive {
           max-width: 1200px !important;
           margin: 0 auto !important;
           padding: 0 1rem !important;
@@ -131,7 +131,7 @@ export const CSSFailureSimulator = () => {
     });
     
     // Test 4: Layout structure maintained
-    const hasLayout = document.querySelectorAll('.container, .grid-container, [class*="container"]').length > 0;
+    const hasLayout = document.querySelectorAll('.container, .container-responsive, [class*="container"]').length > 0;
     tests.push({
       test: 'Layout Structure',
       status: hasLayout ? 'pass' : 'fail' as const,
