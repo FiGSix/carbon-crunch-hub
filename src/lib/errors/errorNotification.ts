@@ -1,6 +1,6 @@
 
 import { useToast } from "@/hooks/use-toast";
-import { ErrorSeverity } from "@/hooks/useErrorHandler";
+import { ErrorSeverity } from "@/types/errors";
 
 /**
  * Show toast notification for errors

@@ -1,33 +1,10 @@
 
-import { ErrorSeverity } from "@/hooks/useErrorHandler";
-
-export interface ErrorState {
-  message: string | null;
-  details?: string | null;
-  code?: string | null;
-  severity: ErrorSeverity;
-  timestamp: number;
-}
+// Re-export types and functions from the new error system
+export type { ErrorState, ErrorSeverity } from "@/types/errors";
+export { createErrorState, toErrorState } from "@/types/errors";
 
 /**
- * Create a standardized error state object
- */
-export function createErrorState(
-  message: string,
-  details: string | null = null,
-  code: string | null = null,
-  severity: ErrorSeverity = "error"
-): ErrorState {
-  return {
-    message,
-    details,
-    code,
-    severity,
-    timestamp: Date.now()
-  };
-}
-
-/**
+ * @deprecated Use toErrorState from @/types/errors instead
  * Extract useful information from an error object
  */
 export function extractErrorInfo(err: unknown): { 
@@ -38,7 +15,10 @@ export function extractErrorInfo(err: unknown): {
   const isErrorObject = err instanceof Error;
   const message = isErrorObject ? err.message : String(err);
   const details = isErrorObject && err.stack ? err.stack : null;
-  const errorCode = (err as any)?.code || (err as any)?.statusCode || null;
+  // Use type assertion with better type safety
+  const errorCode = (err as { code?: string | number; statusCode?: string | number })?.code || 
+                   (err as { code?: string | number; statusCode?: string | number })?.statusCode || 
+                   null;
   
-  return { message, details, code: errorCode };
+  return { message, details, code: String(errorCode) };
 }

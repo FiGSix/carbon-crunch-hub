@@ -1,6 +1,6 @@
 
 import { logger } from "@/lib/logger";
-import { ErrorSeverity } from "@/hooks/useErrorHandler";
+import { ErrorSeverity } from "@/types/errors";
 import { LogContext } from "@/lib/logger";
 import { OptimizedAuthEventService } from '@/services/auth/OptimizedAuthEventService';
 

@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { createErrorState, extractErrorInfo, ErrorState } from "@/lib/errors/errorState";
+import { ErrorState, ErrorSeverity, createErrorState, toErrorState } from "@/types/errors";
 import { logError } from "@/lib/errors/errorLogger";
 import { showErrorToast } from "@/lib/errors/errorNotification";
 import { LogContext } from "@/lib/logger";
+import { AsyncFunction, Result } from "@/types/utility";
 
-export type ErrorSeverity = "info" | "warning" | "error" | "fatal";
+// Re-export ErrorSeverity for backwards compatibility
+export type { ErrorSeverity };
 
 interface ErrorHandlerOptions {
   context: string;
@@ -36,18 +38,23 @@ export function useErrorHandler(options: ErrorHandlerOptions) {
     customMessage?: string,
     severity: ErrorSeverity = "error"
   ) => {
-    // Extract error information
-    const { message: extractedMessage, details, code } = extractErrorInfo(err);
-    const message = customMessage || extractedMessage;
+    // Convert unknown error to ErrorState
+    const baseErrorState = toErrorState(err);
+    const message = customMessage || baseErrorState.message;
     
     // Create standardized error state
-    const errorState = createErrorState(message, details, code, severity);
+    const errorState = createErrorState(message, {
+      code: baseErrorState.code,
+      details: baseErrorState.details,
+      severity,
+      context
+    });
     
     // Set the error state
     setError(errorState);
     
     // Log the error
-    logError(context, message, details, code, severity);
+    logError(context, message, errorState.details, errorState.code, severity);
     
     // Show toast notification if enabled
     if (toastOnError) {
@@ -59,7 +66,7 @@ export function useErrorHandler(options: ErrorHandlerOptions) {
       navigate(fallbackPath, { 
         state: { 
           errorMessage: message,
-          errorCode: code
+          errorCode: errorState.code
         } 
       });
     }
@@ -80,18 +87,18 @@ export function useErrorHandler(options: ErrorHandlerOptions) {
   /**
    * Wrap an async function with error handling
    */
-  const withErrorHandling = <T,>(
-    fn: (...args: any[]) => Promise<T>,
+  const withErrorHandling = <T, TArgs extends readonly unknown[] = []>(
+    fn: AsyncFunction<TArgs, T>,
     customMessage?: string,
     severity: ErrorSeverity = "error"
   ) => {
-    return async (...args: any[]): Promise<{ data: T | null; error: ErrorState | null }> => {
+    return async (...args: TArgs): Promise<Result<T, ErrorState>> => {
       try {
         const data = await fn(...args);
-        return { data, error: null };
+        return { success: true, data };
       } catch (err) {
         const errorState = handleError(err, customMessage, severity);
-        return { data: null, error: errorState };
+        return { success: false, error: errorState };
       }
     };
   };

@@ -1,6 +1,7 @@
 
 import { FieldValues, FieldErrors, UseFormReturn } from "react-hook-form";
-import { useErrorHandler, ErrorSeverity } from "./useErrorHandler";
+import { useErrorHandler } from "./useErrorHandler";
+import { ErrorSeverity } from "@/types/errors";
 import { logger } from "@/lib/logger";
 
 interface FormErrorOptions {
