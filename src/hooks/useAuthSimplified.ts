@@ -71,9 +71,7 @@ export function useAuthSimplified() {
   const signOut = async () => {
     try {
       if (import.meta.env.DEV) {
-        import('@/lib/performance/ConsoleReplacementUtility').then(({ devLogger }) => {
-          devLogger.auth.info('Starting sign out process');
-        });
+        console.log('🚪 Starting sign out process');
       }
       
       // Clear auth error state
@@ -86,9 +84,7 @@ export function useAuthSimplified() {
       
       if (error) {
         if (import.meta.env.DEV) {
-          import('@/lib/performance/ConsoleReplacementUtility').then(({ devLogger }) => {
-            devLogger.auth.error('Sign out error', error);
-          });
+          console.error('❌ Sign out error:', error);
         }
         throw error;
       }
@@ -98,15 +94,11 @@ export function useAuthSimplified() {
       authCache.clear();
       
       if (import.meta.env.DEV) {
-        import('@/lib/performance/ConsoleReplacementUtility').then(({ devLogger }) => {
-          devLogger.auth.info('Sign out completed successfully');
-        });
+        console.log('✅ Sign out completed successfully');
       }
     } catch (error) {
       if (import.meta.env.DEV) {
-        import('@/lib/performance/ConsoleReplacementUtility').then(({ devLogger }) => {
-          devLogger.auth.error('Exception during sign out', error);
-        });
+        console.error('💥 Exception during sign out:', error);
       }
       throw error;
     }

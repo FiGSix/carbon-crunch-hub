@@ -44,20 +44,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Enhanced logging with session validation details (development only)
   if (import.meta.env.DEV) {
-    import('@/lib/performance/ConsoleReplacementUtility').then(({ devLogger }) => {
-      devLogger.auth.debug('AuthContext state update', {
-        hasUser: !!auth.user,
-        hasSession: !!auth.session,
-        hasProfile: !!auth.profile,
-        userRole: auth.userRole,
-        isAuthenticated,
-        isInitialized: auth.isInitialized,
-        isLoading: auth.isLoading,
-        authError: auth.authError,
-        sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
-        sessionExpiresAt: auth.session?.expires_at ? new Date(auth.session.expires_at * 1000).toISOString() : 'none',
-        profileId: auth.profile?.id || 'none'
-      });
+    console.log('🔄 AuthContext state update:', {
+      hasUser: !!auth.user,
+      hasSession: !!auth.session,
+      hasProfile: !!auth.profile,
+      userRole: auth.userRole,
+      isAuthenticated,
+      isInitialized: auth.isInitialized,
+      isLoading: auth.isLoading,
+      authError: auth.authError,
+      sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
+      sessionExpiresAt: auth.session?.expires_at ? new Date(auth.session.expires_at * 1000).toISOString() : 'none',
+      profileId: auth.profile?.id || 'none'
     });
   }
 
