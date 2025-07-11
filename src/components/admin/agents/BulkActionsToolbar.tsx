@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -39,7 +40,7 @@ export function BulkActionsToolbar({
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateAgentManagement } = useCacheInvalidation();
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ action, agentIds }: { action: string; agentIds: string[] }) => {
@@ -77,9 +78,8 @@ export function BulkActionsToolbar({
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents-management'] });
-      queryClient.invalidateQueries({ queryKey: ['agent-management-stats'] });
+    onSuccess: async () => {
+      await invalidateAgentManagement();
       
       const actionLabels = {
         activate: 'activated',

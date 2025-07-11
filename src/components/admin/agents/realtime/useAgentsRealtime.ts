@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 
 export function useAgentsRealtime() {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { invalidateAgentManagement } = useCacheInvalidation();
 
   useEffect(() => {
     const channel = supabase
@@ -18,13 +18,11 @@ export function useAgentsRealtime() {
           table: 'profiles',
           filter: 'role=eq.agent'
         },
-        (payload) => {
+        async (payload) => {
           console.log('Agent profile change detected:', payload);
           
           // Invalidate and refetch agent management queries
-          queryClient.invalidateQueries({ queryKey: ['agents-management'] });
-          queryClient.invalidateQueries({ queryKey: ['agents-management-count'] });
-          queryClient.invalidateQueries({ queryKey: ['agent-management-stats'] });
+          await invalidateAgentManagement();
           
           // Show notification based on event type
           if (payload.eventType === 'INSERT') {
@@ -59,11 +57,11 @@ export function useAgentsRealtime() {
           schema: 'public',
           table: 'agent_activities'
         },
-        (payload) => {
+        async (payload) => {
           console.log('Agent activity change detected:', payload);
           
           // Invalidate agent management queries to reflect activity changes
-          queryClient.invalidateQueries({ queryKey: ['agents-management'] });
+          await invalidateAgentManagement();
         }
       )
       .on(
@@ -73,12 +71,11 @@ export function useAgentsRealtime() {
           schema: 'public',
           table: 'proposals',
         },
-        (payload) => {
+        async (payload) => {
           console.log('Proposal change detected:', payload);
           
           // Invalidate queries as proposal changes affect agent stats
-          queryClient.invalidateQueries({ queryKey: ['agents-management'] });
-          queryClient.invalidateQueries({ queryKey: ['agent-management-stats'] });
+          await invalidateAgentManagement();
         }
       )
       .subscribe();
@@ -100,5 +97,5 @@ export function useAgentsRealtime() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, toast]);
+  }, [toast, invalidateAgentManagement]);
 }

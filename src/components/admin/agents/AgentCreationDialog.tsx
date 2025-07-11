@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 import {
   Dialog,
   DialogContent,
@@ -53,7 +54,7 @@ export function AgentCreationDialog({ open, onOpenChange }: AgentCreationDialogP
   });
 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateAgentManagement } = useCacheInvalidation();
 
   const createAgentMutation = useMutation({
     mutationFn: async (data: AgentFormData) => {
@@ -73,9 +74,8 @@ export function AgentCreationDialog({ open, onOpenChange }: AgentCreationDialogP
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents-management'] });
-      queryClient.invalidateQueries({ queryKey: ['agent-management-stats'] });
+    onSuccess: async () => {
+      await invalidateAgentManagement();
       toast({
         title: "Agent Created",
         description: "New agent profile has been created. They can now sign up with their email.",

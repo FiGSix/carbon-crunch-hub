@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { AgentsManagementTable } from '@/components/admin/agents/AgentsManagementTable';
 import { AgentsManagementHeader } from '@/components/admin/agents/AgentsManagementHeader';
 import { AgentsManagementStats } from '@/components/admin/agents/AgentsManagementStats';
+import { QueryErrorBoundary } from '@/components/common/QueryErrorBoundary';
 
 export default function AdminAgentManagement() {
   // We need to pass filters to header for export functionality
@@ -19,8 +20,12 @@ export default function AdminAgentManagement() {
     <DashboardLayout>
       <div className="space-y-8">
         <AgentsManagementHeader currentFilters={currentFilters} />
-        <AgentsManagementStats />
-        <AgentsManagementTable />
+        <QueryErrorBoundary>
+          <AgentsManagementStats />
+        </QueryErrorBoundary>
+        <QueryErrorBoundary>
+          <AgentsManagementTable />
+        </QueryErrorBoundary>
       </div>
     </DashboardLayout>
   );

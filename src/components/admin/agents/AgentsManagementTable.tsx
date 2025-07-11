@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { queryKeys } from '@/lib/queryKeys';
+import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 import { AgentsTableFilters } from './AgentsTableFilters';
 import { AgentsTableContent } from './AgentsTableContent';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
@@ -41,13 +43,16 @@ export function AgentsManagementTable() {
   const [joinDateFilter, setJoinDateFilter] = useState<{ from?: Date; to?: Date } | null>(null);
   
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateAgentManagement } = useCacheInvalidation();
   
   // Enable real-time updates
   useAgentsRealtime();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['agents-management', statusFilter, searchTerm, accessLevelFilter, commissionFilter, onboardingFilter, joinDateFilter, currentPage, pageSize],
+    queryKey: queryKeys.agents.management.list(
+      { status: statusFilter, search: searchTerm, accessLevel: accessLevelFilter, commission: commissionFilter, onboarding: onboardingFilter, joinDate: joinDateFilter },
+      { page: currentPage, size: pageSize }
+    ),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_agents_management_data', {
         status_filter: statusFilter === 'all' ? null : statusFilter,
@@ -112,9 +117,8 @@ export function AgentsManagementTable() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents-management'] });
-      queryClient.invalidateQueries({ queryKey: ['agent-management-stats'] });
+    onSuccess: async () => {
+      await invalidateAgentManagement();
       toast({
         title: "Status Updated",
         description: "Agent status has been successfully updated.",
@@ -138,8 +142,8 @@ export function AgentsManagementTable() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents-management'] });
+    onSuccess: async () => {
+      await invalidateAgentManagement();
       toast({
         title: "Commission Updated",
         description: "Agent commission override has been updated.",

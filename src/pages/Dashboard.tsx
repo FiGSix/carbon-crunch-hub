@@ -13,6 +13,7 @@ import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { useOptimizedAgentPortfolio } from "@/hooks/dashboard/useOptimizedAgentPortfolio";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useAuth } from "@/contexts/auth";
+import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
 
 const Dashboard = memo(() => {
   const { userRole } = useAuth();
@@ -94,26 +95,32 @@ const Dashboard = memo(() => {
         }
       />
       
-      <OptimizedStatsCardsSection 
-        userRole={userRole}
-        portfolioSize={dashboardData.portfolioSize}
-        totalProposals={dashboardData.totalProposals}
-        potentialRevenue={dashboardData.potentialRevenue}
-        co2Offset={dashboardData.co2Offset}
-        loading={false}
-      />
+      <QueryErrorBoundary>
+        <OptimizedStatsCardsSection 
+          userRole={userRole}
+          portfolioSize={dashboardData.portfolioSize}
+          totalProposals={dashboardData.totalProposals}
+          potentialRevenue={dashboardData.potentialRevenue}
+          co2Offset={dashboardData.co2Offset}
+          loading={false}
+        />
+      </QueryErrorBoundary>
       
       {shouldRenderCharts(userRole) && (
-        <ChartsSection userRole={userRole} />
+        <QueryErrorBoundary>
+          <ChartsSection userRole={userRole} />
+        </QueryErrorBoundary>
       )}
       
-      <div className="grid grid-cols-1 gap-6">
-        <RecentProjectsNew 
-          proposals={dashboardData.proposals}
-          loading={false}
-          onRefresh={handleRefreshProposals}
-        />
-      </div>
+      <QueryErrorBoundary>
+        <div className="grid grid-cols-1 gap-6">
+          <RecentProjectsNew 
+            proposals={dashboardData.proposals}
+            loading={false}
+            onRefresh={handleRefreshProposals}
+          />
+        </div>
+      </QueryErrorBoundary>
 
       {/* Agent Introduction Video Modal */}
       <AgentIntroVideoModal
