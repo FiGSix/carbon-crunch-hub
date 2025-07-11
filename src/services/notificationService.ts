@@ -57,12 +57,17 @@ export const createNotification = async (data: NotificationData): Promise<{ succ
 
 export const getNotifications = async (limit: number = 10): Promise<{ notifications: Notification[]; error?: string }> => {
   try {
-    console.log("Fetching notifications with limit:", limit);
-    // Phase 5: Use optimized notification query with specific fields
+    // Add authentication check to prevent unnecessary API calls
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      return { notifications: [], error: "User not authenticated" };
+    }
+
     const { data, error } = await supabase
       .from('notifications')
       .select(`
         id,
+        user_id,
         title,
         message,
         type,
@@ -71,17 +76,27 @@ export const getNotifications = async (limit: number = 10): Promise<{ notificati
         related_type,
         related_id
       `)
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
     
     if (error) {
-      console.error("Error fetching notifications:", error);
+      // Enhanced error handling with specific error types
+      if (error.code === 'PGRST301') {
+        return { notifications: [], error: "Access denied" };
+      }
+      if (error.message.includes('Failed to fetch')) {
+        return { notifications: [], error: "Network connection issue" };
+      }
       return { notifications: [], error: error.message };
     }
     
     return { notifications: data as Notification[] };
   } catch (error) {
-    console.error("Unexpected error fetching notifications:", error);
+    // Enhanced error handling for network issues
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      return { notifications: [], error: "Network connection issue - please check your internet connection" };
+    }
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return { notifications: [], error: errorMessage };
   }

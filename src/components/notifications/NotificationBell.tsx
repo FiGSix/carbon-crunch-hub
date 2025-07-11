@@ -24,9 +24,21 @@ export function NotificationBell() {
     if (!user) return;
     
     setLoading(true);
-    const { notifications: fetchedNotifications } = await getNotifications(10);
-    setNotifications(fetchedNotifications);
-    setLoading(false);
+    try {
+      const { notifications: fetchedNotifications, error } = await getNotifications(10);
+      if (error) {
+        console.error("Error fetching notifications:", { message: error, details: error });
+        // Don't show error toasts for network issues - just silently fail
+        setNotifications([]);
+      } else {
+        setNotifications(fetchedNotifications);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", { message: "TypeError: Failed to fetch", details: error instanceof Error ? error.stack : error });
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
   };
   
   useEffect(() => {

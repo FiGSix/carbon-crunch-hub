@@ -8,7 +8,7 @@ import { AuthProvider } from "@/contexts/auth";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
-import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import React, { Suspense, lazy } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
 // Only import diagnostics in development
@@ -68,7 +68,7 @@ function App() {
   logger.info("Application initializing");
   
   return (
-    <ErrorBoundary showDetails={import.meta.env.DEV}>
+    <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>

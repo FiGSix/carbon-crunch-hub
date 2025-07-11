@@ -25,6 +25,9 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Static state tracker to reduce console spam
+let lastLoggedState: any = null;
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const auth = useAuthSimplified();
   
@@ -42,21 +45,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated
   };
 
-  // Enhanced logging with session validation details (development only)
-  if (import.meta.env.DEV) {
-    console.log('🔄 AuthContext state update:', {
+  // Reduced logging frequency to prevent console spam
+  if (import.meta.env.DEV && auth.isInitialized && !auth.isLoading) {
+    // Only log significant state changes, not every render
+    const currentState = {
       hasUser: !!auth.user,
       hasSession: !!auth.session,
       hasProfile: !!auth.profile,
       userRole: auth.userRole,
       isAuthenticated,
-      isInitialized: auth.isInitialized,
-      isLoading: auth.isLoading,
-      authError: auth.authError,
       sessionValid: auth.session ? (new Date(auth.session.expires_at * 1000) > new Date()) : false,
-      sessionExpiresAt: auth.session?.expires_at ? new Date(auth.session.expires_at * 1000).toISOString() : 'none',
-      profileId: auth.profile?.id || 'none'
-    });
+    };
+    
+    // Use a static reference to track previous state and only log changes
+    if (!lastLoggedState || JSON.stringify(lastLoggedState) !== JSON.stringify(currentState)) {
+      console.log('🔄 AuthContext state update:', {
+        ...currentState,
+        isInitialized: auth.isInitialized,
+        isLoading: auth.isLoading,
+        authError: auth.authError,
+        sessionExpiresAt: auth.session?.expires_at ? new Date(auth.session.expires_at * 1000).toISOString() : 'none',
+        profileId: auth.profile?.id || 'none'
+      });
+      lastLoggedState = currentState;
+    }
   }
 
   return (

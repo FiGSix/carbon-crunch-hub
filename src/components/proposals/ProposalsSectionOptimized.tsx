@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { clearProposalsCache } from "@/hooks/proposals/utils/proposalCache";
+import { devLogger } from "@/lib/performance/ConsoleReplacementUtility";
 
 export function ProposalsSectionOptimized() {
   const { 
@@ -26,15 +27,16 @@ export function ProposalsSectionOptimized() {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
   
-  // Log auth state on mount for debugging - STABLE DEPENDENCIES
+  // Optimized auth state logging - only on significant changes
   useEffect(() => {
-    console.log("ProposalsSection - Auth state:", { 
-      isAuthenticated: !!user,
-      userId: user?.id, 
-      userRole,
-      proposalsCount: proposals.length
-    });
-  }, [user?.id, userRole, proposals.length]); // Stable dependencies
+    if (import.meta.env.DEV && user && proposals.length > 0) {
+      devLogger.proposals.info("ProposalsSection initialized", { 
+        userId: user.id, 
+        userRole,
+        proposalsCount: proposals.length
+      });
+    }
+  }, [user?.id, userRole]); // Removed proposals.length to reduce noise
   
   // Memoize title based on user role to prevent re-renders
   const sectionTitle = useMemo(() => {
@@ -45,7 +47,7 @@ export function ProposalsSectionOptimized() {
   
   // Optimize proposal update handler with useCallback - STABLE DEPENDENCIES
   const handleProposalUpdate = useCallback(() => {
-    console.log("Proposal update triggered - refreshing proposals list");
+    devLogger.proposals.info("Proposal update triggered");
     clearProposalsCache(); // Clear cache to force refresh
     fetchProposals();
   }, [fetchProposals]); // fetchProposals is now stable from useProposals
@@ -54,7 +56,7 @@ export function ProposalsSectionOptimized() {
   useEffect(() => {
     const handleProposalStatusChange = (event: Event) => {
       const customEvent = event as CustomEvent<{id?: string, status?: string, type?: string, clientId?: string}>;
-      console.log("ProposalsSection detected status change event:", customEvent.detail);
+      devLogger.proposals.info("Status change event detected", customEvent.detail);
       
       // Show toast notification based on the event type
       if (customEvent.detail.type === 'portfolio-update') {
