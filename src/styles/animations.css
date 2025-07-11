@@ -212,6 +212,8 @@
   }
 }
 
+/* Global interactive styles */
+
 /* Enhanced focus states for accessibility */
 :focus-visible {
   outline: none;
@@ -230,11 +232,11 @@ a, button, input, select, textarea {
   }
 
   ::-webkit-scrollbar-track {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(26, 26, 26, 0.05);
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 205, 3, 0.5);
+    background-color: hsl(var(--crunch-yellow) / 0.5);
     border-radius: 4px;
   }
 
