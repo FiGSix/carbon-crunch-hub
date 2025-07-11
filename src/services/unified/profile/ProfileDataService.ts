@@ -84,19 +84,6 @@ export class ProfileDataService {
     }
   }
 
-  /**
-   * DEPRECATED: Use SecureProfileService.getProfileById instead
-   * Get profile by ID with proper authorization checks
-   */
-  static async getProfileById(
-    targetProfileId: string,
-    currentUserId: string,
-    currentUserRole: UserRole
-  ): Promise<{ profile: Partial<UserProfile> | null; error?: string }> {
-    console.warn('⚠️  ProfileDataService.getProfileById is deprecated. Use SecureProfileService.getProfileById instead.');
-    
-    return SecureProfileService.getProfileById(targetProfileId, currentUserId, currentUserRole);
-  }
 
   static async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
     try {

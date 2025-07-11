@@ -6,11 +6,11 @@ This directory contains the refactored service layer of the application, broken 
 ## Architecture Overview
 
 ### Core Services
+- **UnifiedDataService**: Main orchestrator that coordinates all data operations
 - **CacheService**: In-memory caching with TTL support
 - **ProfileService**: User profile management operations
 - **ProposalService**: Proposal CRUD operations and transformations
 - **DashboardService**: Dashboard data aggregation and calculations
-- **DataService**: Main orchestrator that coordinates other services
 
 ### Key Principles
 1. **Dependency Injection**: Services receive dependencies through constructors
@@ -47,11 +47,13 @@ services/
 │   └── __tests__/
 │       ├── DashboardService.test.ts
 │       └── DashboardCalculator.test.ts
-├── dataService.ts               # Main service orchestrator
-└── __tests__/
-    ├── dataService.test.ts
-    ├── setup.ts                 # Test configuration
-    └── runTests.ts              # Test runner utility
+└── unified/
+    ├── UnifiedDataService.ts    # Main service orchestrator
+    ├── cache/                   # Unified caching system
+    ├── profile/                 # Profile data management
+    ├── proposals/               # Proposal operations
+    ├── dashboard/               # Dashboard data service
+    └── clients/                 # Client management
 ```
 
 ## Usage Examples
@@ -59,17 +61,17 @@ services/
 ### Basic Service Usage
 
 ```typescript
-// Using DataService (recommended for most cases)
-import { DataService } from '@/services/dataService';
+// Using UnifiedDataService (recommended for all operations)
+import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 
 // Get user profile
-const profile = await DataService.getProfile(userId);
+const profile = await UnifiedDataService.getProfile(userId);
 
 // Get proposals
-const proposals = await DataService.getProposalsWithRelations(userId, userRole);
+const proposals = await UnifiedDataService.getProposals(userId, userRole);
 
 // Get dashboard data
-const dashboardData = await DataService.getDashboardData(userId, userRole);
+const dashboardData = await UnifiedDataService.getDashboardData(userId, userRole);
 ```
 
 ### Direct Service Usage (for advanced cases)
@@ -88,14 +90,14 @@ const profile = await profileService.getProfile(userId, true); // force refresh
 ### Cache Management
 
 ```typescript
-import { DataService } from '@/services/dataService';
+import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 
 // Clear specific cache patterns
-DataService.invalidateCache('profile_');
-DataService.invalidateCache('proposals_');
+UnifiedDataService.clearCachePattern('profile_');
+UnifiedDataService.clearCachePattern('proposals_');
 
 // Clear all cache
-DataService.clearCache();
+UnifiedDataService.clearCache();
 ```
 
 ## Testing
@@ -182,19 +184,21 @@ Services implement consistent error handling:
 
 ## Migration Guide
 
-### From Old DataService
+### From Legacy DataService (REMOVED)
+
+The deprecated DataService has been removed. Use UnifiedDataService directly:
 
 ```typescript
-// Old way
-import { DataService } from '@/services/dataService';
-const profile = await DataService.getProfile(userId);
+// Old way (REMOVED)
+// import { DataService } from '@/services/dataService';
+// const profile = await DataService.getProfile(userId);
 
-// New way (same interface, better implementation)
-import { DataService } from '@/services/dataService';
-const profile = await DataService.getProfile(userId);
+// New way
+import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
+const profile = await UnifiedDataService.getProfile(userId);
 ```
 
-The public API remains the same, but the internal implementation is now more modular and testable.
+The API is nearly identical, providing the same functionality with better performance and maintainability.
 
 ## Contributing
 
@@ -204,7 +208,7 @@ When adding new services:
 2. Implement the service interface and use dependency injection
 3. Add comprehensive unit tests
 4. Update this README with usage examples
-5. Export the service through the main `dataService.ts` if needed
+5. Export the service through the `UnifiedDataService.ts` if needed
 
 ## Performance Monitoring
 
@@ -217,6 +221,6 @@ const { trackApiCall } = usePerformanceOptimization();
 
 // Track service calls
 trackApiCall.start();
-const result = await DataService.getProfile(userId);
+const result = await UnifiedDataService.getProfile(userId);
 trackApiCall.end(result !== null); // true if cache hit
 ```

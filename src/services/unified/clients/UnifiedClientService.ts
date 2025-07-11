@@ -1,7 +1,7 @@
 
 import { UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../cache/CacheManager';
-import { ClientOperations } from './ClientOperations';
+import { ClientFetcher, ClientCreator } from './operations';
 import { ClientSearch } from './ClientSearch';
 
 // Re-export types for backward compatibility
@@ -27,7 +27,7 @@ export class UnifiedClientService {
     limit = 20,
     offset = 0
   ) {
-    return ClientOperations.getClients(userId, userRole, forceRefresh, limit, offset);
+    return ClientFetcher.getClients(userId, userRole, forceRefresh, limit, offset);
   }
 
   /**
@@ -49,7 +49,7 @@ export class UnifiedClientService {
     notes?: string;
     createdBy: string;
   }) {
-    return ClientOperations.createClient(clientData);
+    return ClientCreator.createClient(clientData);
   }
 
   /**

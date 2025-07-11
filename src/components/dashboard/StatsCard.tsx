@@ -115,28 +115,3 @@ export function StatsCard({
   );
 }
 
-/**
- * @deprecated Use StatsCard with isLegacy=true instead
- */
-export function StatsCardLegacy({ title, value, icon }: Omit<StatsCardProps, 'isLegacy' | 'trend' | 'trendDirection' | 'color'>) {
-  return (
-    <StatsCard 
-      title={title}
-      value={value}
-      icon={icon}
-      isLegacy={true}
-    />
-  );
-}
-
-/**
- * @deprecated Use StatsCard instead
- */
-export function StatsCardNew(props: Omit<StatsCardProps, 'isLegacy'>) {
-  return (
-    <StatsCard 
-      {...props}
-      isLegacy={false}
-    />
-  );
-}

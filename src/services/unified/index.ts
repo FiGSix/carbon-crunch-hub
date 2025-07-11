@@ -7,7 +7,7 @@ export { DashboardDataService } from './dashboard/DashboardDataService';
 export { ClientSearchService } from './clients/ClientSearchService';
 export { ClientDataService } from './clients/ClientDataService';
 export { UnifiedClientService } from './clients/UnifiedClientService';
-export { ClientOperations } from './clients/ClientOperations';
+
 export { ClientFetcher, ClientCreator } from './clients/operations';
 export { ClientSearch } from './clients/ClientSearch';
 
