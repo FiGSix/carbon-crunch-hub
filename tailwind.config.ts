@@ -3,10 +3,17 @@ import type { Config } from "tailwindcss";
 export default {
 	darkMode: ["class"],
 	content: [
-		"./pages/**/*.{ts,tsx}",
-		"./components/**/*.{ts,tsx}",
-		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
+		"./index.html",
+	],
+	safelist: [
+		// Keep essential animation classes
+		'hover-card',
+		// Keep brand colors
+		'text-crunch-yellow',
+		'bg-crunch-yellow',
+		'text-crunch-black',
+		'bg-crunch-black',
 	],
 	prefix: "",
 	theme: {
