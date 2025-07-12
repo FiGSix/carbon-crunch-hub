@@ -76,6 +76,8 @@ export function Header() {
               onClick={() => setMenuOpen(!menuOpen)}
               className="lg:hidden p-2 rounded-full hover:bg-crunch-black/5 focus:outline-none focus:ring-2 focus:ring-crunch-yellow transition-all duration-300 touch-manipulation"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-navigation"
               style={{ minHeight: '44px', minWidth: '44px' }}
             >
               {menuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -99,7 +101,11 @@ export function Header() {
             </SafeMotionDiv>
           </div>
           
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
+          <nav 
+            className="hidden lg:flex items-center gap-6 xl:gap-8"
+            role="navigation"
+            aria-label="Main navigation"
+          >
             {navItems.map((item) => (
               <a 
                 key={item.href}
@@ -149,18 +155,22 @@ export function Header() {
       
       {/* Mobile menu */}
       {menuOpen && (
-        <SafeMotionDiv 
+        <div
+          id="mobile-navigation"
           className={cn(
             "lg:hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white z-50 shadow-2xl overflow-y-auto transition-transform duration-300",
             menuOpen ? "translate-x-0" : "translate-x-full"
           )}
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-menu-title"
         >
           <div className="p-6 pt-20">
-            <nav className="flex flex-col gap-2">
+            <nav 
+              className="flex flex-col gap-2"
+              role="navigation"
+              aria-label="Mobile navigation"
+            >
               {navItems.map((item) => (
                 <a 
                   key={item.href}
@@ -199,7 +209,7 @@ export function Header() {
               </div>
             </nav>
           </div>
-            </SafeMotionDiv>
+        </div>
       )}
     </>
   );
