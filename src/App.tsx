@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
+import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
@@ -71,8 +72,9 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AuthProvider>
-            <AuthNavigationHandler />
+          <AuthErrorBoundary>
+            <AuthProvider>
+              <AuthNavigationHandler />
             <TooltipProvider>
               {import.meta.env.DEV && DisplayDiagnostics && (
                 <Suspense fallback={null}>
@@ -223,7 +225,8 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </TooltipProvider>
-          </AuthProvider>
+            </AuthProvider>
+          </AuthErrorBoundary>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -24,6 +24,10 @@ export function useOptimizedAuthReliability({
   const baseDelay = 1000; // 1 second
 
   const recoverSession = useCallback(async (): Promise<boolean> => {
+    // Exit early if we don't have a session to recover
+    if (!session) {
+      return false;
+    }
     try {
       if (import.meta.env.DEV) {
         console.log('🔄 Attempting session recovery');
@@ -98,7 +102,7 @@ export function useOptimizedAuthReliability({
       
       return false;
     }
-  }, [onAuthStateChange, onError]);
+  }, [session, onAuthStateChange, onError]);
 
   // Monitor for network connectivity and auth errors
   useEffect(() => {

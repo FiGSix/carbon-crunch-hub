@@ -1,8 +1,9 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useRedirectProtection } from '@/hooks/auth/useRedirectProtection';
 import { authLogger } from '@/lib/logger';
 
 /**
@@ -14,9 +15,28 @@ export function AuthNavigationHandler() {
   const location = useLocation();
   const { toast } = useToast();
   const { signOut, isAuthenticated } = useAuth();
+  const { canRedirect, setRedirectInProgress } = useRedirectProtection();
+  
+  // Track if we're currently handling an auth event to prevent loops
+  const handlingEventRef = useRef(false);
 
   useEffect(() => {
     const handleAuthRequired = async (event: CustomEvent) => {
+      // Prevent concurrent auth event handling
+      if (handlingEventRef.current) {
+        authLogger.warn('Auth event already being handled, ignoring');
+        return;
+      }
+      
+      // Prevent redirect loops using the redirect protection hook
+      if (!canRedirect()) {
+        authLogger.warn('Redirect protection blocked auth navigation');
+        return;
+      }
+      
+      handlingEventRef.current = true;
+      setRedirectInProgress(true);
+      
       try {
         authLogger.info('Auth-required event received, handling session expiration', {
           isAuthenticated,
@@ -34,23 +54,31 @@ export function AuthNavigationHandler() {
           variant: "destructive",
         });
 
-        // Sign out the user if they're currently authenticated
-        if (isAuthenticated) {
+        // Only sign out if on a protected route to avoid unnecessary operations
+        if (isAuthenticated && !location.pathname.startsWith('/login')) {
           await signOut();
         }
 
         // Redirect to login with current path for return navigation
         const currentPath = location.pathname;
-        navigate('/login', { 
-          state: { from: currentPath },
-          replace: true 
-        });
+        if (currentPath !== '/login') {
+          navigate('/login', { 
+            state: { from: currentPath },
+            replace: true 
+          });
+        }
 
       } catch (error) {
         authLogger.error('Error handling auth-required event', { error });
         
         // Fallback: still redirect to login even if signOut fails
-        navigate('/login', { replace: true });
+        if (location.pathname !== '/login') {
+          navigate('/login', { replace: true });
+        }
+      } finally {
+        handlingEventRef.current = false;
+        // Reset redirect protection after a short delay
+        setTimeout(() => setRedirectInProgress(false), 1000);
       }
     };
 
@@ -97,7 +125,7 @@ export function AuthNavigationHandler() {
       window.removeEventListener('auth-recovery', handleAuthRecovery as EventListener);
       window.removeEventListener('network-error', handleNetworkError as EventListener);
     };
-  }, [signOut, isAuthenticated, navigate, location.pathname, toast]);
+  }, [signOut, isAuthenticated, navigate, location.pathname, toast, canRedirect, setRedirectInProgress]);
 
   return null; // This component doesn't render anything
 }

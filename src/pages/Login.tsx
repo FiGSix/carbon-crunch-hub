@@ -13,20 +13,34 @@ const Login = () => {
   const { user, session, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
-  // Simplified redirect tracking
+  // Enhanced redirect tracking with loop prevention
   const hasRedirectedRef = useRef(false);
+  const lastRedirectAttemptRef = useRef<number>(0);
   
   useEffect(() => {
-    // Only log in development for debugging
-
-    // IMPROVED: Only redirect if we have valid session and auth is fully initialized
+    // Prevent rapid redirect attempts
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastRedirectAttemptRef.current;
+    
+    // Only redirect if we have valid session and auth is fully initialized
     if (isInitialized && !authLoading && user && session && !hasRedirectedRef.current) {
+      // Rate limit redirect attempts to prevent loops
+      if (timeSinceLastAttempt < 2000) {
+        return;
+      }
+      
       // Validate session is not expired
       if (session.expires_at && new Date(session.expires_at * 1000) > new Date()) {
         hasRedirectedRef.current = true;
+        lastRedirectAttemptRef.current = now;
         const from = location.state?.from || '/dashboard';
         
-        navigate(from, { replace: true });
+        // Avoid redirecting to login if that's where we came from
+        if (from !== '/login') {
+          navigate(from, { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       }
     }
   }, [user, session, navigate, isInitialized, authLoading, location.state]);
