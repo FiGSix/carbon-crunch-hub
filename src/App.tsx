@@ -13,7 +13,6 @@ import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
 import React, { Suspense, lazy } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
-import { bundleOptimizer } from "@/lib/performance/BundleOptimizer";
 // Only import diagnostics in development
 const DisplayDiagnostics = import.meta.env.DEV 
   ? lazy(() => import("@/components/diagnostics/DisplayDiagnostics").then(m => ({ default: m.DisplayDiagnostics })))
@@ -65,12 +64,6 @@ const queryClient = createQueryClient();
 function App() {
   // Diagnostic logging in development only
   logger.info("Application initializing");
-  
-  // Initialize bundle optimization
-  React.useEffect(() => {
-    bundleOptimizer.init();
-    return () => bundleOptimizer.destroy();
-  }, []);
   
   return (
     <ErrorBoundary>

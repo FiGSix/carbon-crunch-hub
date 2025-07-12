@@ -18,19 +18,7 @@ export {
   withOptimizedRouteLoading 
 } from './OptimizedLoader';
 
-export { 
-  bundleOptimizer, 
-  useRoutePreloader, 
-  withPreloading 
-} from './BundleOptimizer';
-
-export { 
-  useBundleOptimization, 
-  useComponentOptimization 
-} from '../../hooks/useBundleOptimization';
-
 import { performanceMonitor } from './PerformanceMonitor';
-import { bundleOptimizer } from './BundleOptimizer';
 
 // Global performance utilities
 export const performanceUtils = {
@@ -76,45 +64,10 @@ export const performanceUtils = {
   },
 
   /**
-   * Get overall app health score including bundle optimization
+   * Get overall app health score
    */
   getHealthScore(): number {
-    const baseScore = performanceMonitor.getPerformanceScore();
-    const bundleStats = bundleOptimizer.getStats();
-    
-    // Boost score based on optimization
-    const optimizationBonus = bundleStats.isOptimized ? 10 : 0;
-    return Math.min(100, baseScore + optimizationBonus);
-  },
-
-  /**
-   * Get comprehensive performance report including bundle optimization
-   */
-  getComprehensiveReport() {
-    return {
-      performance: performanceMonitor.generateReport(),
-      bundleOptimization: bundleOptimizer.getStats(),
-      healthScore: this.getHealthScore(),
-      recommendations: this.getOptimizationRecommendations()
-    };
-  },
-
-  /**
-   * Get optimization recommendations
-   */
-  getOptimizationRecommendations() {
-    const bundleStats = bundleOptimizer.getStats();
-    const recommendations = [];
-
-    if (!bundleStats.isOptimized) {
-      recommendations.push('Enable route preloading for better performance');
-    }
-    
-    if (bundleStats.preloadedRoutes.length < 3) {
-      recommendations.push('Consider preloading more frequently accessed routes');
-    }
-
-    return recommendations;
+    return performanceMonitor.getPerformanceScore();
   }
 };
 
