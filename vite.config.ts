@@ -10,6 +10,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Force development server to clear module cache
+    hmr: {
+      overlay: true
+    },
+    fs: {
+      strict: false
+    }
   },
   plugins: [
     react(),
@@ -181,5 +188,9 @@ export default defineConfig(({ mode }) => ({
   // Add cache-busting for better development experience
   esbuild: {
     keepNames: true
+  },
+  // Force cache invalidation
+  define: {
+    'process.env.CACHE_BUST': `"${Date.now()}"`
   },
 }));
