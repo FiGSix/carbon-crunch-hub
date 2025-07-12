@@ -1,5 +1,6 @@
 
 import { FormField } from "@/components/common/FormField";
+import { FormLoadingOverlay } from "@/components/ui/enterprise-loading";
 
 interface RegisterCredentialsProps {
   email: string;
@@ -26,7 +27,8 @@ export function RegisterCredentials({
   const passwordsMatch = password && confirmPassword && password === confirmPassword;
 
   return (
-    <div className="space-y-6" role="group" aria-labelledby="credentials-heading">
+    <FormLoadingOverlay isLoading={disabled} message="Validating credentials...">
+      <div className="space-y-6" role="group" aria-labelledby="credentials-heading">
       <div id="credentials-heading" className="sr-only">
         Account credentials section
       </div>
@@ -106,5 +108,6 @@ export function RegisterCredentials({
         )}
       </div>
     </div>
+    </FormLoadingOverlay>
   );
 }

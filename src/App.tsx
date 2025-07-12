@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
+import { LoadingProvider } from "@/contexts/LoadingContext";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
@@ -75,8 +76,9 @@ function App() {
   
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+      <LoadingProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
           <AuthErrorBoundary>
             <AuthProvider>
               <AuthNavigationHandler />
@@ -319,8 +321,9 @@ function App() {
             </TooltipProvider>
             </AuthProvider>
           </AuthErrorBoundary>
-        </BrowserRouter>
-      </QueryClientProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </LoadingProvider>
     </ErrorBoundary>
   );
 }
