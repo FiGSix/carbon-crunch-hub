@@ -131,7 +131,11 @@ export function UserTestingDashboard({ className }: UserTestingDashboardProps) {
             disabled={isRunning}
             className="flex items-center gap-2"
           >
-            <Play className="h-4 w-4" />
+            {isRunning ? (
+              <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
             {isRunning ? 'Running Tests...' : 'Run Tests'}
           </Button>
           {report && (
