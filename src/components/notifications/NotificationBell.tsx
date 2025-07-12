@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import { NotificationList } from "./NotificationList";
 import { getNotifications, Notification } from "@/services/notificationService";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { cacheStore } from "@/lib/supabase/cache";
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -18,42 +19,94 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   
+  // Request deduplication
+  const fetchRequestRef = useRef<Promise<void> | null>(null);
+  const lastFetchTimestampRef = useRef<number>(0);
+  const CACHE_TTL = 30000; // 30 seconds
+  const MIN_FETCH_INTERVAL = 1000; // 1 second minimum between requests
+  
   const unreadCount = notifications.filter(n => !n.read).length;
   
-  const fetchNotifications = async () => {
+  // Cached notification fetching with deduplication
+  const fetchNotifications = useCallback(async (force = false) => {
     if (!user) return;
     
-    setLoading(true);
-    try {
-      const { notifications: fetchedNotifications, error } = await getNotifications(10);
-      if (error) {
-        console.error("Error fetching notifications:", { message: error, details: error });
-        // Don't show error toasts for network issues - just silently fail
-        setNotifications([]);
-      } else {
-        setNotifications(fetchedNotifications);
+    const now = Date.now();
+    const cacheKey = `notifications_${user.id}`;
+    
+    // Check cache first (unless forced refresh)
+    if (!force) {
+      const cached = cacheStore.get(cacheKey);
+      if (cached && (now - cached.timestamp) < CACHE_TTL) {
+        setNotifications(cached.data);
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching notifications:", { message: "TypeError: Failed to fetch", details: error instanceof Error ? error.stack : error });
-      setNotifications([]);
-    } finally {
-      setLoading(false);
+      
+      // Rate limiting: prevent requests within minimum interval
+      if (now - lastFetchTimestampRef.current < MIN_FETCH_INTERVAL) {
+        return;
+      }
     }
-  };
+    
+    // Deduplication: if there's already a request in flight, wait for it
+    if (fetchRequestRef.current) {
+      await fetchRequestRef.current;
+      return;
+    }
+    
+    setLoading(true);
+    lastFetchTimestampRef.current = now;
+    
+    // Create and store the request promise
+    fetchRequestRef.current = (async () => {
+      try {
+        const { notifications: fetchedNotifications, error } = await getNotifications(10);
+        if (error) {
+          console.error("Error fetching notifications:", { message: error, details: error });
+          setNotifications([]);
+        } else {
+          setNotifications(fetchedNotifications);
+          // Cache the successful response
+          cacheStore.set(cacheKey, {
+            data: fetchedNotifications,
+            timestamp: now,
+            ttl: CACHE_TTL
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", { message: "TypeError: Failed to fetch", details: error instanceof Error ? error.stack : error });
+        setNotifications([]);
+      } finally {
+        setLoading(false);
+        fetchRequestRef.current = null;
+      }
+    })();
+    
+    await fetchRequestRef.current;
+  }, [user]);
+  
+  // Debounced refresh function for realtime updates
+  const debouncedRefresh = useCallback(() => {
+    // Invalidate cache for fresh data on realtime updates
+    if (user) {
+      const cacheKey = `notifications_${user.id}`;
+      cacheStore.delete(cacheKey);
+      fetchNotifications(true);
+    }
+  }, [user, fetchNotifications]);
   
   useEffect(() => {
     fetchNotifications();
     
-    // Phase 5: Use optimized realtime subscription for new notifications
+    // Optimized realtime subscription with debounced refresh
     if (user) {
       let cleanupFn: (() => void) | null = null;
       
       import('@/services/optimizedRealtimeService').then(({ OptimizedRealtimeService }) => {
         OptimizedRealtimeService.subscribeToNotificationChanges(
           user.id,
-          () => {
-            fetchNotifications();
-          }
+          debouncedRefresh
         );
         
         cleanupFn = () => {
@@ -67,7 +120,7 @@ export function NotificationBell() {
         }
       };
     }
-  }, [user]);
+  }, [user, fetchNotifications, debouncedRefresh]);
   
   if (!user) return null;
   

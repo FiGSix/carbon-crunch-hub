@@ -69,14 +69,19 @@ export class OptimizedRealtimeService {
   }
 
   /**
-   * Optimized notification subscriptions
+   * Optimized notification subscriptions with enhanced deduplication
    */
   static subscribeToNotificationChanges(userId: string, onUpdate: (payload: any) => void) {
     const channelKey = `notifications-${userId}`;
     
+    // Check if we already have an active subscription
     if (this.activeChannels.has(channelKey)) {
       const count = this.subscriptionCounts.get(channelKey) || 0;
       this.subscriptionCounts.set(channelKey, count + 1);
+      this.logger.info('Reusing existing notification subscription', { 
+        channelKey, 
+        count: count + 1 
+      });
       return this.activeChannels.get(channelKey);
     }
 
@@ -93,8 +98,15 @@ export class OptimizedRealtimeService {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          this.logger.info('New notification received', { userId });
-          onUpdate(payload);
+          this.logger.info('New notification received', { userId, event: payload.eventType });
+          
+          // Debounce notifications to prevent excessive updates
+          this.debounceUpdate(
+            `${channelKey}-notification`, 
+            onUpdate, 
+            payload, 
+            1500 // 1.5 second debounce for notifications
+          );
         }
       )
       .subscribe();
