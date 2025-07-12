@@ -10,6 +10,7 @@ import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
 import React, { Suspense, lazy } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
 // Only import diagnostics in development
@@ -75,151 +76,225 @@ function App() {
           <AuthErrorBoundary>
             <AuthProvider>
               <AuthNavigationHandler />
-            <TooltipProvider>
-              {import.meta.env.DEV && DisplayDiagnostics && (
-                <Suspense fallback={null}>
-                  <DisplayDiagnostics />
-                </Suspense>
-              )}
-              <AuthStatusMonitor />
-              <Toaster />
-              <Sonner />
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<SimplifiedIndex />} />
-                {/* Development-only test route */}
-                {import.meta.env.DEV && (
+              <TooltipProvider>
+                {import.meta.env.DEV && DisplayDiagnostics && (
+                  <Suspense fallback={null}>
+                    <DisplayDiagnostics />
+                  </Suspense>
+                )}
+                <AuthStatusMonitor />
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  {/* Public routes - wrapped with page error boundaries */}
+                  <Route path="/" element={
+                    <PageErrorBoundary pageName="Home">
+                      <SimplifiedIndex />
+                    </PageErrorBoundary>
+                  } />
+                  {/* Development-only test route */}
+                  {import.meta.env.DEV && (
                   <Route 
                     path="/test" 
-                    element={
-                      <PrivateRoute allowedRoles={['admin']}>
-                        <TestPage />
-                      </PrivateRoute>
-                    } 
+                      element={
+                        <PrivateRoute allowedRoles={['admin']}>
+                          <PageErrorBoundary pageName="Test">
+                            <TestPage />
+                          </PageErrorBoundary>
+                        </PrivateRoute>
+                      } 
                   />
                 )}
                 {/* Development-only testing suite */}
                 {import.meta.env.DEV && (
                   <Route 
                     path="/testing" 
-                    element={
-                      <PrivateRoute allowedRoles={['admin']}>
-                        <Suspense fallback={<PageLoader />}>
-                          <TestingSuite />
-                        </Suspense>
-                      </PrivateRoute>
-                    } 
+                      element={
+                        <PrivateRoute allowedRoles={['admin']}>
+                          <PageErrorBoundary pageName="Testing Suite">
+                            <Suspense fallback={<PageLoader />}>
+                              <TestingSuite />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </PrivateRoute>
+                      } 
                   />
                 )}
-                <Route path="/original" element={<Index />} />
-                <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
-                <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
-                <Route path="/calculator" element={<Suspense fallback={<PageLoader />}><Calculator /></Suspense>} />
-                <Route path="/agents" element={<Suspense fallback={<PageLoader />}><Agents /></Suspense>} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-email" element={<Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>} />
-                <Route path="/force-logout" element={<Suspense fallback={<PageLoader />}><ForceLogout /></Suspense>} />
-                
-                {/* Proposal viewing - accessible with token */}
-                <Route path="/proposals/:id" element={<Suspense fallback={<PageLoader />}><ViewProposalPage /></Suspense>} />
-                
-                {/* Protected routes */}
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <PrivateRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <Dashboard />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/create-proposal" 
-                  element={
-                    <PrivateRoute allowedRoles={['agent', 'admin']}>
-                      <Suspense fallback={<PageLoader />}>
-                        <CreateProposal />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/proposals" 
-                  element={
-                    <PrivateRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <ProposalsOptimized />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/profile" 
-                  element={
-                    <PrivateRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <Profile />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/my-clients" 
-                  element={
-                    <PrivateRoute allowedRoles={['agent', 'admin']}>
-                      <Suspense fallback={<PageLoader />}>
-                        <MyClients />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/system-settings" 
-                  element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                      <Suspense fallback={<PageLoader />}>
-                        <SystemSettings />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                {/* Development-only system diagnostics */}
-                {import.meta.env.DEV && (
+                  <Route path="/original" element={
+                    <PageErrorBoundary pageName="Original Index">
+                      <Index />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/about" element={
+                    <PageErrorBoundary pageName="About">
+                      <Suspense fallback={<PageLoader />}><About /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/contact" element={
+                    <PageErrorBoundary pageName="Contact">
+                      <Suspense fallback={<PageLoader />}><Contact /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/calculator" element={
+                    <PageErrorBoundary pageName="Calculator">
+                      <Suspense fallback={<PageLoader />}><Calculator /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/agents" element={
+                    <PageErrorBoundary pageName="Agents">
+                      <Suspense fallback={<PageLoader />}><Agents /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/login" element={
+                    <PageErrorBoundary pageName="Login">
+                      <Login />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/register" element={
+                    <PageErrorBoundary pageName="Register">
+                      <Register />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/forgot-password" element={
+                    <PageErrorBoundary pageName="Forgot Password">
+                      <ForgotPassword />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/reset-password" element={
+                    <PageErrorBoundary pageName="Reset Password">
+                      <ResetPassword />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/verify-email" element={
+                    <PageErrorBoundary pageName="Verify Email">
+                      <Suspense fallback={<PageLoader />}><VerifyEmail /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/force-logout" element={
+                    <PageErrorBoundary pageName="Force Logout">
+                      <Suspense fallback={<PageLoader />}><ForceLogout /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  
+                  {/* Proposal viewing - accessible with token */}
+                  <Route path="/proposals/:id" element={
+                    <PageErrorBoundary pageName="View Proposal">
+                      <Suspense fallback={<PageLoader />}><ViewProposalPage /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  
+                  {/* Protected routes - wrapped with page error boundaries */}
                   <Route 
-                    path="/system-diagnostics" 
+                    path="/dashboard" 
                     element={
-                      <PrivateRoute allowedRoles={['admin']}>
-                        <Suspense fallback={<PageLoader />}>
-                          <SystemDiagnostics />
-                        </Suspense>
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Dashboard">
+                          <Suspense fallback={<PageLoader />}>
+                            <Dashboard />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                />
+                  <Route 
+                    path="/create-proposal" 
+                    element={
+                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                        <PageErrorBoundary pageName="Create Proposal">
+                          <Suspense fallback={<PageLoader />}>
+                            <CreateProposal />
+                          </Suspense>
+                        </PageErrorBoundary>
                       </PrivateRoute>
                     } 
                   />
-                )}
-                <Route 
-                  path="/admin/agents" 
-                  element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                      <Suspense fallback={<PageLoader />}>
-                        <AdminAgentManagement />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
-                <Route 
-                  path="/notifications" 
-                  element={
-                    <PrivateRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <Notifications />
-                      </Suspense>
-                    </PrivateRoute>
-                  } 
-                />
+                  <Route 
+                    path="/proposals" 
+                    element={
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Proposals">
+                          <Suspense fallback={<PageLoader />}>
+                            <ProposalsOptimized />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Profile">
+                          <Suspense fallback={<PageLoader />}>
+                            <Profile />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/my-clients" 
+                    element={
+                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                        <PageErrorBoundary pageName="My Clients">
+                          <Suspense fallback={<PageLoader />}>
+                            <MyClients />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/system-settings" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="System Settings">
+                          <Suspense fallback={<PageLoader />}>
+                            <SystemSettings />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  {/* Development-only system diagnostics */}
+                  {import.meta.env.DEV && (
+                    <Route 
+                      path="/system-diagnostics" 
+                      element={
+                        <PrivateRoute allowedRoles={['admin']}>
+                          <PageErrorBoundary pageName="System Diagnostics">
+                            <Suspense fallback={<PageLoader />}>
+                              <SystemDiagnostics />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </PrivateRoute>
+                      } 
+                    />
+                  )}
+                  <Route 
+                    path="/admin/agents" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Agent Management">
+                          <Suspense fallback={<PageLoader />}>
+                            <AdminAgentManagement />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/notifications" 
+                    element={
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Notifications">
+                          <Suspense fallback={<PageLoader />}>
+                            <Notifications />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
                 
                 {/* Catch all route */}
                 <Route path="*" element={<NotFound />} />

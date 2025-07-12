@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { authLogger } from '@/lib/logger';
+import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 
 interface LoginFormProps {
   loginAttempts: number;
@@ -73,8 +74,9 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
   };
 
   return (
-    <>
-      {loginAttempts >= 2 && (
+    <FormErrorBoundary formName="Login Form">
+      <>
+        {loginAttempts >= 2 && (
         <Alert 
           variant="destructive" 
           className="mb-6"
@@ -204,6 +206,7 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
           </Link>
         </p>
       </div>
-    </>
+      </>
+    </FormErrorBoundary>
   );
 }

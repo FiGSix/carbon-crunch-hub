@@ -5,6 +5,7 @@ import { RegisterPersonalInfo } from "./RegisterPersonalInfo";
 import { RegisterCredentials } from "./RegisterCredentials";
 import { RegisterTerms } from "./RegisterTerms";
 import { RegisterSubmitButton } from "./RegisterSubmitButton";
+import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 
 interface RegisterFormProps {
   initialRole: "client" | "agent";
@@ -28,7 +29,8 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
   } = useRegisterForm(initialRole);
   
   return (
-    <form onSubmit={handleSubmit}>
+    <FormErrorBoundary formName="Registration Form">
+      <form onSubmit={handleSubmit}>
       <div className="space-y-4">
         <RegisterRoleSelect 
           role={formData.role} 
@@ -69,6 +71,7 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
         
         <RegisterSubmitButton isLoading={isLoading} />
       </div>
-    </form>
+      </form>
+    </FormErrorBoundary>
   );
 };

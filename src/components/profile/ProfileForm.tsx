@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { PersonalInformationCard } from './PersonalInformationCard';
 import { CompanyInformationCard } from './CompanyInformationCard';
 import { useOptimizedProfileForm } from '@/hooks/useOptimizedProfileForm';
+import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 import { useAuth } from '@/contexts/auth';
 
 interface ProfileFormProps {
@@ -41,7 +42,8 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <FormErrorBoundary formName="Profile Form">
+      <form onSubmit={onSubmit} className="space-y-6">
       {/* Personal Information */}
       <PersonalInformationCard
         firstName={formData.firstName}
@@ -74,6 +76,7 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
           {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
-    </form>
+      </form>
+    </FormErrorBoundary>
   );
 }
