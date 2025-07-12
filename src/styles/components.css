@@ -1,5 +1,27 @@
 /* Component styles - Essential utilities only */
 
+/* Fix CSS Grid container issues reported in diagnostics */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Enhanced card styling using design system */
+.retro-card {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px hsl(var(--border) / 0.1);
+  transition: all 0.2s ease;
+}
+
+.retro-card:hover {
+  box-shadow: 0 4px 16px hsl(var(--border) / 0.15);
+  transform: translateY(-1px);
+}
+
 /* Container utility with proper semantic spacing */
 .container-responsive {
   margin-left: auto;
@@ -81,4 +103,29 @@
   .text-responsive-base {
     font-size: 1.25rem;
   }
+}
+
+/* Enhanced mobile responsiveness for grid */
+@media (max-width: 640px) {
+  .grid-container {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .retro-card {
+    margin: 0.5rem;
+  }
+}
+
+/* Loading states using design system colors */
+.loading-spinner {
+  border: 3px solid hsl(var(--muted));
+  border-top: 3px solid hsl(var(--primary));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

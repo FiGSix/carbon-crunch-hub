@@ -166,7 +166,9 @@ export default defineConfig(({ mode }) => ({
       // Optimize utilities
       'date-fns/format',
       'date-fns/parseISO',
-      'zod'
+      'zod',
+      // Fix lodash imports
+      'lodash/debounce'
     ],
     exclude: [
       'fsevents',
@@ -175,5 +177,9 @@ export default defineConfig(({ mode }) => ({
       'recharts',
       'embla-carousel-react'
     ]
+  },
+  // Add cache-busting for better development experience
+  esbuild: {
+    keepNames: true
   },
 }));
