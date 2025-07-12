@@ -50,15 +50,11 @@ const Notifications = createOptimizedLazyComponent(() => import("./pages/Notific
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 
-// Enhanced loading component with better UX
-const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-      <p className="text-muted-foreground">Loading page...</p>
-    </div>
-  </div>
-);
+// Import the standardized loading component
+import { PageLoading } from '@/components/ui/loading-states';
+
+// Standardized page loader component
+const PageLoader = () => <PageLoading minimal />;
 
 import { createQueryClient } from "@/lib/queryClient";
 

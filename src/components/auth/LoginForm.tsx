@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { ButtonLoading } from '@/components/ui/loading-states';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -182,14 +183,12 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
             disabled={isSubmitting}
             aria-describedby={isSubmitting ? "login-status" : undefined}
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                <span id="login-status">Logging in...</span>
-              </>
-            ) : (
-              'Log in'
-            )}
+            <ButtonLoading 
+              loading={isSubmitting}
+              loadingText="Logging in..."
+            >
+              Log in
+            </ButtonLoading>
           </Button>
         </div>
       </form>

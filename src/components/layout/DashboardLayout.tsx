@@ -11,7 +11,7 @@ import { Footer } from "./footer";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth"; 
 import { Navigate, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { PageLoading } from '@/components/ui/loading-states';
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -63,12 +63,13 @@ export function DashboardLayout({
     hasAccess
   });
 
-  // Show loading state while auth is initializing
+  // Show loading state while authentication is initializing
   if (!isInitialized || isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
+      <PageLoading 
+        title="Loading dashboard..."
+        description="Setting up your workspace"
+      />
     );
   }
 

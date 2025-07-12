@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SectionLoading } from '@/components/ui/loading-states';
 import { format } from 'date-fns';
 import { 
   Table, 
@@ -76,10 +77,11 @@ export function AgentsTableContent({
   if (isLoading) {
     return (
       <div className="rounded-md border">
-        <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading agents data...</p>
-        </div>
+        <SectionLoading 
+          title="Loading agents data..."
+          rows={5}
+          className="p-8"
+        />
       </div>
     );
   }

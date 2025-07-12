@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, ChevronDown } from 'lucide-react';
+import { ButtonLoading } from '@/components/ui/loading-states';
+import { ChevronDown } from 'lucide-react';
 
 interface LoadMoreButtonProps {
   onLoadMore: () => void;
@@ -34,17 +35,15 @@ export function LoadMoreButton({
         disabled={isLoading}
         className="w-full max-w-xs"
       >
-        {isLoading ? (
-          <>
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            Loading...
-          </>
-        ) : (
+        <ButtonLoading 
+          loading={isLoading}
+          loadingText="Loading..."
+        >
           <>
             <ChevronDown className="h-4 w-4 mr-2" />
             Load More Clients
           </>
-        )}
+        </ButtonLoading>
       </Button>
       <p className="text-sm text-muted-foreground">
         Showing {currentCount} of {totalCount} clients

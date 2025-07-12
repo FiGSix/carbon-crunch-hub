@@ -2,23 +2,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Users, RefreshCw } from 'lucide-react';
+import { TableLoading } from '@/components/ui/loading-states';
 
 interface ClientsTableLoadingProps {
   onRefresh?: () => void;
 }
 
 export function ClientsTableLoading({ onRefresh }: ClientsTableLoadingProps) {
-  
-  
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Clients (Loading...)
+            Clients
           </CardTitle>
           {onRefresh && (
             <Button 
@@ -33,16 +31,12 @@ export function ClientsTableLoading({ onRefresh }: ClientsTableLoadingProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex space-x-4">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          ))}
-        </div>
+        <TableLoading 
+          title="Loading client data..."
+          columns={4}
+          rows={5}
+          className="border-0 p-0"
+        />
       </CardContent>
     </Card>
   );
