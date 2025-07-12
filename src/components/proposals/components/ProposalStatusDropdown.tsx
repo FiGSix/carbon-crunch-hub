@@ -11,6 +11,7 @@ import { ProposalStatusBadge } from "./ProposalStatusBadge";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { updateProposalStatus } from "@/services/proposals/statusUpdateService";
+import { EnhancedStatusUpdateService } from "@/services/proposals/enhancedStatusUpdateService";
 import { logger } from "@/lib/logger";
 
 interface ProposalStatusDropdownProps {
@@ -51,39 +52,52 @@ export function ProposalStatusDropdown({
     if (!user?.id || isUpdating) return;
 
     setIsUpdating(true);
-    statusLogger.info("Updating proposal status", { 
+    statusLogger.info("Updating proposal status with enhanced cache invalidation", { 
       oldStatus: currentStatus, 
       newStatus,
       userId: user.id 
     });
 
     try {
+      // Apply optimistic update first for immediate UI feedback
+      await EnhancedStatusUpdateService.updateStatusWithCacheInvalidation(
+        proposalId,
+        newStatus,
+        user.id,
+        userRole || 'client',
+        currentStatus
+      );
+
+      // Then perform the actual database update
       const result = await updateProposalStatus(proposalId, newStatus, user.id);
       
       if (result.success) {
+        statusLogger.info("Status updated successfully with cache invalidation");
+        
         toast({
           title: "Status Updated",
           description: `Proposal status changed to ${STATUS_OPTIONS.find(opt => opt.value === newStatus)?.label}`,
         });
 
-        // Trigger proposal list refresh
+        // Trigger callback for component updates
         if (onStatusUpdate) {
           onStatusUpdate();
         }
-
-        // Emit global event for other components
-        window.dispatchEvent(new CustomEvent('proposal-status-changed', {
-          detail: { id: proposalId, status: newStatus }
-        }));
-
-        statusLogger.info("Status update successful", { newStatus });
       } else {
-        throw new Error(result.error || 'Failed to update status');
+        throw new Error(result.error || "Failed to update status");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update status';
-      statusLogger.error("Status update failed", { error: errorMessage });
+      statusLogger.error("Status update failed", { error });
       
+      // Revert optimistic update by triggering cache invalidation with current status
+      await EnhancedStatusUpdateService.updateStatusWithCacheInvalidation(
+        proposalId,
+        currentStatus, // Revert to current status
+        user.id,
+        userRole || 'client'
+      );
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update status';
       toast({
         title: "Update Failed",
         description: errorMessage,
