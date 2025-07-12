@@ -5,44 +5,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { LoginLayout } from '@/components/auth/LoginLayout';
+import { SimpleFormWrapper } from '@/components/forms/UnifiedFormWrapper';
+import { useUnifiedFormHandler } from '@/hooks/useUnifiedFormHandler';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const { isSubmitting } = useUnifiedFormHandler({
+    formName: 'Forgot Password Form'
+  });
 
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      setIsSubmitted(true);
-      toast({
-        title: 'Reset link sent',
-        description: 'Check your email for a password reset link.',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to send reset email. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+  const handleSubmit = async () => {
+    if (!email) {
+      throw new Error('Please enter your email address');
     }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    setIsSubmitted(true);
+    return { success: true };
   };
 
   if (isSubmitted) {
@@ -91,36 +82,43 @@ const ForgotPassword = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 border-2 border-crunch-black/10 focus:border-crunch-yellow"
-                placeholder="you@example.com"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
+          <SimpleFormWrapper
+            formName="Forgot Password Form"
+            onSubmit={handleSubmit}
+            successMessage="Reset link sent successfully. Check your email."
+            onSuccess={() => setIsSubmitted(true)}
+          >
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 border-2 border-crunch-black/10 focus:border-crunch-yellow"
+                  placeholder="you@example.com"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
 
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending reset link...
-                </>
-              ) : (
-                'Send reset link'
-              )}
-            </Button>
-          </form>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending reset link...
+                  </>
+                ) : (
+                  'Send reset link'
+                )}
+              </Button>
+            </div>
+          </SimpleFormWrapper>
 
           <div className="mt-6 text-center">
             <Link 

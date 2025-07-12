@@ -1,5 +1,5 @@
 
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,8 @@ import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { ButtonLoading } from '@/components/ui/loading-states';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
-import { authLogger } from '@/lib/logger';
-import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
+import { SimpleFormWrapper } from '@/components/forms/UnifiedFormWrapper';
+import { useUnifiedFormHandler } from '@/hooks/useUnifiedFormHandler';
 
 interface LoginFormProps {
   loginAttempts: number;
@@ -18,66 +17,33 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
-  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      authLogger.debug('Attempting to sign in', { email });
-      
-      const { error } = await signIn(email, password);
-      
-      if (error) {
-        throw error;
-      }
+  const { isSubmitting } = useUnifiedFormHandler({
+    formName: 'Login Form'
+  });
 
-      authLogger.info('Sign in successful, auth state will trigger redirect');
-      
-      toast({
-        title: 'Success',
-        description: 'You have successfully logged in',
-      });
-      
-    } catch (error: any) {
-      onLoginAttempt();
-      
-      // Enhanced error handling with better user messages
-      let errorMessage = 'Please check your credentials and try again';
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please try again.';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = 'Login timed out. Please check your connection and try again.';
-      } else if (error.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      if (import.meta.env.DEV) {
-        console.error('❌ Login error:', error);
-      }
-      
-      toast({
-        title: 'Login failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+  const handleSubmit = async () => {
+    // Basic validation
+    if (!email || !password) {
+      throw new Error('Please enter both email and password');
     }
+
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      onLoginAttempt();
+      throw error;
+    }
+
+    return { success: true };
   };
 
   return (
-    <FormErrorBoundary formName="Login Form">
-      <>
-        {loginAttempts >= 2 && (
+    <>
+      {loginAttempts >= 2 && (
         <Alert 
           variant="destructive" 
           className="mb-6"
@@ -96,12 +62,12 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
           </AlertDescription>
         </Alert>
       )}
-      
-      <form 
+
+      <SimpleFormWrapper
+        formName="Login Form"
         onSubmit={handleSubmit}
-        role="form"
-        aria-labelledby="login-title"
-        noValidate
+        successMessage="You have successfully logged in"
+        retryAttempts={2}
       >
         <div className="space-y-4">
           <div>
@@ -191,7 +157,7 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
             </ButtonLoading>
           </Button>
         </div>
-      </form>
+      </SimpleFormWrapper>
       
       <div className="mt-6 text-center">
         <p className="text-crunch-black/70">
@@ -205,7 +171,6 @@ export function LoginForm({ loginAttempts, onLoginAttempt }: LoginFormProps) {
           </Link>
         </p>
       </div>
-      </>
-    </FormErrorBoundary>
+    </>
   );
 }
