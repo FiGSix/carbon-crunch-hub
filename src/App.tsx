@@ -50,6 +50,7 @@ const SystemSettings = createOptimizedLazyComponent(() => import("./pages/System
 const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
+const UserTestingPage = createOptimizedLazyComponent(() => import("./pages/UserTestingPage"), "UserTestingPage");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -123,7 +124,20 @@ function App() {
                       } 
                   />
                 )}
-                  <Route path="/original" element={
+                {/* User Testing Suite */}
+                {import.meta.env.DEV && (
+                  <Route 
+                    path="/user-testing" 
+                    element={
+                      <PageErrorBoundary pageName="User Testing">
+                        <Suspense fallback={<PageLoader />}>
+                          <UserTestingPage />
+                        </Suspense>
+                      </PageErrorBoundary>
+                    } 
+                  />
+                )}
+                   <Route path="/original" element={
                     <PageErrorBoundary pageName="Original Index">
                       <Index />
                     </PageErrorBoundary>
