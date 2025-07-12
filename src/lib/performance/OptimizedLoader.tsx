@@ -24,33 +24,16 @@ const DefaultLoadingFallback = () => (
 );
 
 const DefaultErrorFallback = () => (
-  <div className="flex items-center justify-center min-h-[200px] p-8">
-    <div className="text-center space-y-4">
-      <div className="w-16 h-16 mx-auto bg-destructive/10 rounded-full flex items-center justify-center">
-        <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Component Error</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Unable to load this component. This might be a temporary issue.
-        </p>
-      </div>
-      <div className="flex gap-2 justify-center">
-        <button 
-          onClick={() => window.location.reload()} 
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
-          Refresh Page
-        </button>
-        <button 
-          onClick={() => window.history.back()} 
-          className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors"
-        >
-          Go Back
-        </button>
-      </div>
+  <div className="flex items-center justify-center min-h-[200px]">
+    <div className="text-center">
+      <div className="text-destructive text-lg mb-2">⚠️</div>
+      <p className="text-sm text-muted-foreground">Failed to load component</p>
+      <button 
+        onClick={() => window.location.reload()} 
+        className="mt-2 text-xs text-primary hover:underline"
+      >
+        Refresh page
+      </button>
     </div>
   </div>
 );

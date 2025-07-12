@@ -10,16 +10,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    // Force development server to clear module cache
-    hmr: {
-      overlay: true
-    },
-    fs: {
-      strict: false
-    }
   },
-  // Force cache clearing
-  cacheDir: '.vite-' + Date.now(),
   plugins: [
     react(),
     mode === 'development' && componentTagger(),
@@ -29,9 +20,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Mock lodash to prevent import errors from dependencies
-      "lodash/get": path.resolve(__dirname, "./src/utils/lodash-mock.ts"),
-      "lodash": path.resolve(__dirname, "./src/utils/lodash-mock.ts"),
     },
   },
   build: {
@@ -185,20 +173,7 @@ export default defineConfig(({ mode }) => ({
       // Exclude heavy libraries from pre-bundling for better chunking
       'framer-motion',
       'recharts',
-      'embla-carousel-react',
-      // Exclude any lodash to prevent import issues
-      'lodash'
-    ],
-    // Force fresh dependencies
-    force: true
-  },
-  // Add cache-busting for better development experience
-  esbuild: {
-    keepNames: true
-  },
-  // Force cache invalidation
-  define: {
-    'process.env.CACHE_BUST': `"${Date.now()}"`,
-    'process.env.VITE_CLEAR_CACHE': `"${Date.now()}"`
+      'embla-carousel-react'
+    ]
   },
 }));
