@@ -54,4 +54,6 @@ export { NotificationSubscriptions } from './notificationSubscriptions';
 export { AgentSubscriptions } from './agentSubscriptions';
 export { BaseSubscriptionManager } from './baseSubscriptionManager';
 export { DebounceUtils } from './debounceUtils';
+export { EnhancedRealtimeService } from './enhancedRealtimeService';
+export { WebSocketManager } from './websocketManager';
 export * from './types';

@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useProposalFilters } from "./useProposalFilters";
 import { fetchProposalsCoreOptimized } from "./utils/optimizedFetchProposalsCore";
-import { OptimizedRealtimeService } from "@/services/optimizedRealtimeService";
+import { EnhancedRealtimeService } from "@/services/realtime/enhancedRealtimeService";
 import { logger } from "@/lib/logger";
 import { UseProposalsResult } from "./types";
 import { OptimizedProposalData } from "./utils/optimizedQueryBuilders";
@@ -79,17 +79,18 @@ export function useOptimizedProposals(): UseProposalsResult {
   useEffect(() => {
     if (!user?.id || !userRole) return;
 
-    const channel = OptimizedRealtimeService.subscribeToProposalChanges(
+    const unsubscribe = EnhancedRealtimeService.subscribeToProposalChanges(
       user.id,
       userRole,
       (payload) => {
-        proposalsLogger.info("Optimized real-time update received", { payload });
+        proposalsLogger.info("Enhanced real-time update received", { payload });
         fetchProposals(true);
-      }
+      },
+      { useWebSocket: true, batchUpdates: true }
     );
 
     return () => {
-      OptimizedRealtimeService.unsubscribe(`proposals-${user.id}-${userRole}`);
+      if (unsubscribe) unsubscribe();
     };
   }, [user?.id, userRole, fetchProposals, proposalsLogger]);
 
