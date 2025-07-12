@@ -1,4 +1,5 @@
 import { UserTestingDashboard } from '@/components/testing/UserTestingDashboard';
+import { PerformanceMonitor } from '@/components/performance/PerformanceMonitor';
 import { ArrowLeft, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -32,14 +33,17 @@ const UserTestingPage = () => {
         </nav>
       </header>
       <main className="container mx-auto py-8 px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
             <UserTestingDashboard />
           </div>
           <div className="space-y-4">
+            {/* Performance Monitor */}
+            <PerformanceMonitor />
+            
+            {/* Loading Indicators Demo */}
             <div className="loading-demo-container sticky top-4">
               <div className="space-y-4">
-                {/* Always visible loading indicators for testing */}
                 <div className="loading-state-demo p-4 border rounded-lg bg-card">
                   <h3 className="text-sm font-medium mb-3">Loading Indicators</h3>
                   <div className="space-y-3">
