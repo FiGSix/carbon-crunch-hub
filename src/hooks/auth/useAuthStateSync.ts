@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,74 +9,70 @@ interface UseAuthStateSyncProps {
 
 /**
  * Ensures database and frontend auth state are synchronized
- * Addresses the auth.uid() returning null issue
+ * Optimized to prevent excessive validation loops
  */
 export function useAuthStateSync({ session, onAuthStateChange }: UseAuthStateSyncProps) {
+  const lastValidationRef = useRef<number>(0);
+  const isValidatingRef = useRef<boolean>(false);
   
-  const validateAndSyncSession = useCallback(async (currentSession: Session | null) => {
-    if (import.meta.env.DEV) {
-      console.log('🔄 Passive session validation triggered');
-    }
-
-    if (!currentSession) {
-      if (import.meta.env.DEV) {
-        console.log('❌ No session to validate');
-      }
+  const validateAndSyncSession = useCallback(async (currentSession: Session | null, force = false) => {
+    // Prevent concurrent validations
+    if (isValidatingRef.current && !force) {
       return;
     }
 
-    try {
-      // Only validate if session is close to expiry (within 10 minutes)
-      const expiresAt = currentSession.expires_at;
-      if (expiresAt) {
-        const timeUntilExpiry = (expiresAt * 1000) - Date.now();
-        if (timeUntilExpiry > 10 * 60 * 1000) { // More than 10 minutes
-          if (import.meta.env.DEV) {
-            console.log('✅ Session still valid, skipping validation');
-          }
-          return; // Skip unnecessary validation
-        }
-      }
+    // Rate limiting: Don't validate more than once per minute unless forced
+    const now = Date.now();
+    const timeSinceLastValidation = now - lastValidationRef.current;
+    if (!force && timeSinceLastValidation < 60 * 1000) { // 1 minute
+      return;
+    }
 
+    if (!currentSession) {
+      return;
+    }
+
+    // Only validate if session is close to expiry (within 10 minutes) or forced
+    const expiresAt = currentSession.expires_at;
+    if (expiresAt && !force) {
+      const timeUntilExpiry = (expiresAt * 1000) - Date.now();
+      if (timeUntilExpiry > 10 * 60 * 1000) { // More than 10 minutes
+        return; // Skip unnecessary validation
+      }
+    }
+
+    isValidatingRef.current = true;
+    lastValidationRef.current = now;
+
+    try {
       // Lightweight validation - just refresh the session if needed
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
       if (refreshError) {
-        if (import.meta.env.DEV) {
-          console.warn('⚠️ Session refresh failed:', refreshError.message);
-        }
-        
         // Only sign out if it's a critical auth error
         if (refreshError.message.includes('Invalid Refresh Token') || 
             refreshError.message.includes('refresh_token_not_found')) {
-          if (import.meta.env.DEV) {
-            console.error('❌ Critical auth error, signing out');
-          }
           await supabase.auth.signOut();
           onAuthStateChange(null);
         }
       } else if (refreshData.session) {
-        if (import.meta.env.DEV) {
-          console.log('✅ Session refreshed successfully');
-        }
         onAuthStateChange(refreshData.session);
       }
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('💥 Session validation error (non-critical):', error);
-      }
       // Don't force logout on network errors or temporary issues
+      console.warn('Session validation failed:', error);
+    } finally {
+      isValidatingRef.current = false;
     }
   }, [onAuthStateChange]);
 
-  // Passive session validation - only on network errors or specific triggers
+  // Only validate on visibility change
   useEffect(() => {
     if (!session) return;
 
-    // Only validate on focus/visibility change instead of aggressive intervals
     const handleVisibilityChange = () => {
       if (!document.hidden && session) {
-        validateAndSyncSession(session);
+        validateAndSyncSession(session, false);
       }
     };
 
@@ -84,9 +80,16 @@ export function useAuthStateSync({ session, onAuthStateChange }: UseAuthStateSyn
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [session, validateAndSyncSession]);
 
-  // Initial validation on session change
+  // Initial validation only when session ID changes (not on every session update)
+  const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
-    validateAndSyncSession(session);
+    const currentSessionId = session?.access_token?.substring(0, 20) || null;
+    if (currentSessionId !== sessionIdRef.current) {
+      sessionIdRef.current = currentSessionId;
+      if (session) {
+        validateAndSyncSession(session, true); // Force initial validation
+      }
+    }
   }, [session, validateAndSyncSession]);
 
   return { validateAndSyncSession };
