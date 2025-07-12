@@ -173,9 +173,7 @@ export default defineConfig(({ mode }) => ({
       // Optimize utilities
       'date-fns/format',
       'date-fns/parseISO',
-      'zod',
-      // Fix lodash imports
-      'lodash/debounce'
+      'zod'
     ],
     exclude: [
       'fsevents',

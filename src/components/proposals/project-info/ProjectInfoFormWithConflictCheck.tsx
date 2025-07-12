@@ -4,7 +4,7 @@ import { useAddressConflictCheck } from '@/hooks/useAddressConflictCheck';
 import { AddressConflictWarning } from './AddressConflictWarning';
 import { ProjectInfoForm } from './ProjectInfoForm';
 import { ProjectInformation } from '@/types/proposals';
-import debounce from 'lodash/debounce';
+import { debounce } from '@/utils/debounce';
 
 interface ProjectInfoFormWithConflictCheckProps {
   proposalId?: string;
