@@ -1,0 +1,181 @@
+/* Screen Reader Only Content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only:focus,
+.sr-only:active {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Focus management */
+.focus-within\:not-sr-only:focus-within {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Enhanced focus indicators */
+.focus-enhanced:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.1);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .enhanced-contrast {
+    border-width: 2px;
+  }
+  
+  .enhanced-contrast:focus {
+    outline-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:animate-spin {
+    animation: none;
+  }
+  
+  .motion-safe\:animate-pulse {
+    animation: none;
+  }
+  
+  .motion-safe\:transition-all {
+    transition: none;
+  }
+}
+
+/* Skip link styles */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 8px 16px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+  transition: top 0.3s ease;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Form accessibility enhancements */
+.form-field-error {
+  border-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 1px hsl(var(--destructive));
+}
+
+.form-field-error:focus {
+  outline: 2px solid hsl(var(--destructive));
+  outline-offset: 2px;
+}
+
+/* Screen reader announcements */
+.announcement-region {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Keyboard navigation helpers */
+.keyboard-only:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Touch target size enhancement */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Color contrast helpers */
+.high-contrast-text {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+.high-contrast-border {
+  border: 1px solid hsl(var(--border));
+}
+
+/* Focus trap styling */
+.focus-trap {
+  position: relative;
+}
+
+.focus-trap::before,
+.focus-trap::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Loading state accessibility */
+.loading-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Error styling with accessibility */
+.error-state {
+  border: 2px solid hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.05);
+}
+
+.error-state:focus {
+  outline: 2px solid hsl(var(--destructive));
+  outline-offset: 2px;
+}
+
+/* Success styling with accessibility */
+.success-state {
+  border: 2px solid hsl(var(--success, 142 76% 36%));
+  background: hsl(var(--success, 142 76% 36%) / 0.05);
+}
+
+.success-state:focus {
+  outline: 2px solid hsl(var(--success, 142 76% 36%));
+  outline-offset: 2px;
+}
