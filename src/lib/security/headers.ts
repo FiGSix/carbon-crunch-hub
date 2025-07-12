@@ -128,13 +128,10 @@ export function validateSecurityConfig(): void {
       console.log('✅ HTTPS protocol detected');
     }
     
-    // Check CSP meta tag
+    // Check CSP header
     const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
     if (!csp) {
       console.warn('⚠️ No CSP meta tag found - ensure headers are set at server level');
-    } else {
-      console.log('✅ Content Security Policy meta tag found');
-      console.log('🔒 CSP Policy:', csp.getAttribute('content'));
     }
     
     console.log('📋 Security headers should be configured at deployment platform level');

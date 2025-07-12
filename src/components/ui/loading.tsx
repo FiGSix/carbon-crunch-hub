@@ -39,12 +39,7 @@ export function LoadingSpinner({
 }: BaseLoadingProps) {
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <Loader2 
-        className={cn('animate-spin text-primary spinner loading', sizeClasses[size])} 
-        data-testid="loading-spinner"
-        role="status"
-        aria-label="Loading"
-      />
+      <Loader2 className={cn('animate-spin text-primary', sizeClasses[size])} />
       {text && (
         <span className={cn('text-muted-foreground', textSizeClasses[size])}>
           {text}
@@ -65,13 +60,13 @@ export function LoadingDots({
   const dotSize = size === 'xs' ? 'w-1 h-1' : size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2';
   
   return (
-    <div className={cn('flex items-center gap-2 loading-dots', className)}>
-      <div className="flex space-x-1" data-testid="loading-dots">
-        <div className={cn('bg-primary rounded-full animate-pulse loading-dot', dotSize)} 
+    <div className={cn('flex items-center gap-2', className)}>
+      <div className="flex space-x-1">
+        <div className={cn('bg-primary rounded-full animate-pulse', dotSize)} 
              style={{ animationDelay: '0ms' }} />
-        <div className={cn('bg-primary rounded-full animate-pulse loading-dot', dotSize)} 
+        <div className={cn('bg-primary rounded-full animate-pulse', dotSize)} 
              style={{ animationDelay: '150ms' }} />
-        <div className={cn('bg-primary rounded-full animate-pulse loading-dot', dotSize)} 
+        <div className={cn('bg-primary rounded-full animate-pulse', dotSize)} 
              style={{ animationDelay: '300ms' }} />
       </div>
       {text && (

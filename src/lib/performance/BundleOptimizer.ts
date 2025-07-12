@@ -18,18 +18,12 @@ class BundleOptimizer {
   private intersectionObserver?: IntersectionObserver;
 
   /**
-   * Initialize route-based preloading and performance monitoring
+   * Initialize route-based preloading
    */
   init() {
     this.setupRoutePreloading();
     this.setupComponentPreloading();
     this.setupCriticalResourceHints();
-    this.monitorPerformance();
-    
-    // Start memory cleanup interval
-    if (typeof window !== 'undefined') {
-      setInterval(() => this.memoryCleanup(), 300000); // Every 5 minutes
-    }
   }
 
   /**
@@ -211,60 +205,6 @@ class BundleOptimizer {
       cachedComponents: Array.from(this.componentCache.keys()),
       isOptimized: this.preloadedRoutes.size > 0
     };
-  }
-
-  /**
-   * Enhanced performance monitoring
-   */
-  monitorPerformance() {
-    if (import.meta.env.DEV && 'PerformanceObserver' in window) {
-      const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry) => {
-          if (entry.entryType === 'navigation') {
-            const navEntry = entry as PerformanceNavigationTiming;
-            console.log('📊 Navigation Performance:', {
-              domContentLoaded: Math.round(navEntry.domContentLoadedEventEnd - navEntry.domContentLoadedEventStart),
-              loadComplete: Math.round(navEntry.loadEventEnd - navEntry.loadEventStart),
-              totalTime: Math.round(navEntry.loadEventEnd - navEntry.fetchStart)
-            });
-          }
-          
-          if (entry.entryType === 'resource') {
-            const resourceEntry = entry as PerformanceResourceTiming;
-            if (resourceEntry.transferSize > 100000) { // Log large resources (>100KB)
-              console.warn('⚠️ Large resource detected:', {
-                name: resourceEntry.name.split('/').pop(),
-                size: Math.round(resourceEntry.transferSize / 1024) + 'KB',
-                duration: Math.round(resourceEntry.duration) + 'ms'
-              });
-            }
-          }
-        });
-      });
-      
-      observer.observe({ entryTypes: ['navigation', 'resource'] });
-    }
-  }
-
-  /**
-   * Memory management utilities
-   */
-  memoryCleanup() {
-    // Clear caches periodically
-    if ('caches' in window) {
-      caches.keys().then(names => {
-        names.forEach(name => {
-          if (name.includes('old-') || Date.now() - parseInt(name.split('-')[1] || '0') > 86400000) {
-            caches.delete(name);
-          }
-        });
-      });
-    }
-    
-    // Force garbage collection if available (development only)
-    if (import.meta.env.DEV && 'gc' in window && typeof (window as any).gc === 'function') {
-      (window as any).gc();
-    }
   }
 }
 

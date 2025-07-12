@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
-import { LoadingProvider } from "@/contexts/LoadingContext";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
@@ -51,7 +50,6 @@ const SystemSettings = createOptimizedLazyComponent(() => import("./pages/System
 const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
-const UserTestingPage = createOptimizedLazyComponent(() => import("./pages/UserTestingPage"), "UserTestingPage");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -76,9 +74,8 @@ function App() {
   
   return (
     <ErrorBoundary>
-      <LoadingProvider>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
           <AuthErrorBoundary>
             <AuthProvider>
               <AuthNavigationHandler />
@@ -126,20 +123,7 @@ function App() {
                       } 
                   />
                 )}
-                {/* User Testing Suite */}
-                {import.meta.env.DEV && (
-                  <Route 
-                    path="/user-testing" 
-                    element={
-                      <PageErrorBoundary pageName="User Testing">
-                        <Suspense fallback={<PageLoader />}>
-                          <UserTestingPage />
-                        </Suspense>
-                      </PageErrorBoundary>
-                    } 
-                  />
-                )}
-                   <Route path="/original" element={
+                  <Route path="/original" element={
                     <PageErrorBoundary pageName="Original Index">
                       <Index />
                     </PageErrorBoundary>
@@ -321,9 +305,8 @@ function App() {
             </TooltipProvider>
             </AuthProvider>
           </AuthErrorBoundary>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </LoadingProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

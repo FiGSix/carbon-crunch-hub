@@ -2,7 +2,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CompanyLogoUpload } from "@/components/profile/CompanyLogoUpload";
-import { FormLoadingOverlay } from "@/components/ui/enterprise-loading";
 
 interface RegisterPersonalInfoProps {
   firstName: string;
@@ -26,8 +25,7 @@ export function RegisterPersonalInfo({
   disabled 
 }: RegisterPersonalInfoProps) {
   return (
-    <FormLoadingOverlay isLoading={disabled} message="Processing registration...">
-      <>
+    <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="firstName">First Name</Label>
@@ -85,6 +83,5 @@ export function RegisterPersonalInfo({
         </>
       )}
     </>
-    </FormLoadingOverlay>
   );
 }
