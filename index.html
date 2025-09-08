@@ -17,7 +17,17 @@
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
     
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <!-- Non-blocking font CSS loading -->
+    <script>
+      !function(e){
+        var t=document.createElement("link");
+        t.rel="stylesheet",
+        t.href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        t.media="print",
+        t.onload=function(){this.media="all"},
+        e.head.appendChild(t)
+      }(document)
+    </script>
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
     
     <!-- Preload LCP image for faster discovery -->
