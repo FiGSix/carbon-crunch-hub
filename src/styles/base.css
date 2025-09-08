@@ -1,5 +1,5 @@
 /* CRITICAL: Base CSS - Phase 1 (First Load) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Google Fonts now loaded via preload in index.html */
 
 /* CRITICAL: CSS Custom Properties with Fallbacks */
 :root {
