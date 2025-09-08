@@ -40,7 +40,12 @@ export function OptimizedImage({
       onError={onError}
       style={{
         maxWidth: '100%',
-        height: 'auto'
+        height: 'auto',
+        ...(width && height ? {
+          aspectRatio: `${width} / ${height}`,
+          maxHeight: height,
+          objectFit: 'contain'
+        } : {})
       }}
     />
   );
