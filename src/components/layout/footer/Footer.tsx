@@ -1,5 +1,6 @@
 
 import { cn } from '@/lib/utils';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,14 @@ export function Footer({ className }: { className?: string }) {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
           <div className="md:col-span-4">
             <div className="mb-4">
-              <img src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" alt="CrunchCarbon Logo" className="h-12" />
+              <OptimizedImage 
+                src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
+                alt="CrunchCarbon Logo" 
+                className="h-12"
+                width={141}
+                height={48}
+                priority={false}
+              />
             </div>
             <p className="text-crunch-black/70 mb-6 max-w-md">
               Turn your renewable energy into a powerful income stream with verified carbon credits. Simple, transparent, and effective.

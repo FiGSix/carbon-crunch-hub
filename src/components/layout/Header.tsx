@@ -5,6 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { SafeMotionDiv } from "@/components/common/SafeMotionDiv";
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function Header() {
@@ -90,10 +91,13 @@ export function Header() {
                 href="/" 
                 className="flex items-center touch-manipulation hover:opacity-90 transition-opacity duration-200"
               >
-                <img 
+                <OptimizedImage
                   src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
                   alt="CrunchCarbon Logo" 
-                  className="h-10 md:h-12 drop-shadow-sm" 
+                  className="h-10 md:h-12 drop-shadow-sm"
+                  width={141}
+                  height={48}
+                  priority={true}
                 />
               </a>
             </SafeMotionDiv>
