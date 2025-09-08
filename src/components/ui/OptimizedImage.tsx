@@ -7,6 +7,7 @@ interface OptimizedImageProps {
   width?: number;
   height?: number;
   priority?: boolean;
+  fetchPriority?: 'high' | 'low' | 'auto';
   onLoad?: () => void;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
@@ -21,6 +22,7 @@ export function OptimizedImage({
   width,
   height,
   priority = false,
+  fetchPriority = 'auto',
   onLoad,
   onError
 }: OptimizedImageProps) {
@@ -32,6 +34,7 @@ export function OptimizedImage({
       width={width}
       height={height}
       loading={priority ? "eager" : "lazy"}
+      fetchPriority={fetchPriority}
       decoding="async"
       onLoad={onLoad}
       onError={onError}

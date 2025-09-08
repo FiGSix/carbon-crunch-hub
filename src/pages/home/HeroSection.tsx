@@ -91,6 +91,7 @@ export const HeroSection = () => {
                   width={488}
                   height={275}
                   priority={true}
+                  fetchPriority="high"
                   onLoad={() => console.log("[HeroSection] Logo image loaded successfully")}
                   onError={(e) => {
                     console.error("[HeroSection] Logo image failed to load:", e);

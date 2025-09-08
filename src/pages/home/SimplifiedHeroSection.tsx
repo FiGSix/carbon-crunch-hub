@@ -65,7 +65,8 @@ export const SimplifiedHeroSection = () => {
                   className="w-full h-auto rounded-2xl transition-all hover:scale-105 duration-500"
                   width={488}
                   height={275}
-                  priority={false}
+                  priority={true}
+                  fetchPriority="high"
                   onLoad={() => console.log("[SimplifiedHeroSection] Logo loaded")}
                   onError={(e) => {
                     console.error("[SimplifiedHeroSection] Logo failed to load");
