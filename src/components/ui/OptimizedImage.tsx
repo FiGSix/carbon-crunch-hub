@@ -13,7 +13,7 @@ interface OptimizedImageProps {
 }
 
 /**
- * Optimized image component that prevents layout shifts and improves performance
+ * Optimized image component with modern format support (WebP/AVIF) and fallbacks
  */
 export function OptimizedImage({
   src,
@@ -26,27 +26,54 @@ export function OptimizedImage({
   onLoad,
   onError
 }: OptimizedImageProps) {
+  // Generate modern image format URLs by replacing the extension
+  const getModernFormatSrc = (originalSrc: string, format: 'webp' | 'avif') => {
+    const lastDotIndex = originalSrc.lastIndexOf('.');
+    if (lastDotIndex === -1) return originalSrc;
+    return originalSrc.substring(0, lastDotIndex) + '.' + format;
+  };
+
+  const avifSrc = getModernFormatSrc(src, 'avif');
+  const webpSrc = getModernFormatSrc(src, 'webp');
+
+  const commonStyle = {
+    maxWidth: '100%',
+    height: 'auto',
+    ...(width && height ? {
+      aspectRatio: `${width} / ${height}`,
+      maxHeight: height,
+      objectFit: 'contain' as const
+    } : {})
+  };
+
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-      width={width}
-      height={height}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={fetchPriority}
-      decoding="async"
-      onLoad={onLoad}
-      onError={onError}
-      style={{
-        maxWidth: '100%',
-        height: 'auto',
-        ...(width && height ? {
-          aspectRatio: `${width} / ${height}`,
-          maxHeight: height,
-          objectFit: 'contain'
-        } : {})
-      }}
-    />
+    <picture>
+      {/* AVIF format - most efficient */}
+      <source 
+        srcSet={avifSrc} 
+        type="image/avif"
+      />
+      
+      {/* WebP format - widely supported */}
+      <source 
+        srcSet={webpSrc} 
+        type="image/webp"
+      />
+      
+      {/* Fallback to original format */}
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        width={width}
+        height={height}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={fetchPriority}
+        decoding="async"
+        onLoad={onLoad}
+        onError={onError}
+        style={commonStyle}
+      />
+    </picture>
   );
 }
