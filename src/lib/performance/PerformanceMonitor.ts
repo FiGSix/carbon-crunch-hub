@@ -43,39 +43,68 @@ class PerformanceMonitorService {
 
   private initializeObservers() {
     try {
-      // Observe paint metrics
+      // Only observe in browser environment and throttle to prevent forced reflows
       if ('PerformanceObserver' in window) {
+        // Use passive paint observer
         const paintObserver = new PerformanceObserver((list) => {
-          const entries = list.getEntries();
-          entries.forEach((entry) => {
-            if (entry.name === 'first-contentful-paint') {
-              this.metrics.firstContentfulPaint = entry.startTime;
-            }
-          });
+          // Use requestIdleCallback to avoid blocking main thread
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => {
+              const entries = list.getEntries();
+              entries.forEach((entry) => {
+                if (entry.name === 'first-contentful-paint') {
+                  this.metrics.firstContentfulPaint = entry.startTime;
+                }
+              });
+            });
+          } else {
+            // Fallback with timeout to avoid forced reflow
+            setTimeout(() => {
+              const entries = list.getEntries();
+              entries.forEach((entry) => {
+                if (entry.name === 'first-contentful-paint') {
+                  this.metrics.firstContentfulPaint = entry.startTime;
+                }
+              });
+            }, 0);
+          }
         });
-        paintObserver.observe({ entryTypes: ['paint'] });
+        paintObserver.observe({ entryTypes: ['paint'], buffered: true });
         this.observers.push(paintObserver);
 
-        // Observe largest contentful paint
+        // Observe largest contentful paint with passive handling
         const lcpObserver = new PerformanceObserver((list) => {
-          const entries = list.getEntries();
-          const lastEntry = entries[entries.length - 1];
-          this.metrics.largestContentfulPaint = lastEntry.startTime;
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => {
+              const entries = list.getEntries();
+              if (entries.length > 0) {
+                const lastEntry = entries[entries.length - 1];
+                this.metrics.largestContentfulPaint = lastEntry.startTime;
+              }
+            });
+          }
         });
-        lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+        lcpObserver.observe({ entryTypes: ['largest-contentful-paint'], buffered: true });
         this.observers.push(lcpObserver);
 
-        // Observe layout shifts
-        const clsObserver = new PerformanceObserver((list) => {
-          const entries = list.getEntries();
-          entries.forEach((entry: any) => {
-            if (!entry.hadRecentInput) {
-              this.metrics.cumulativeLayoutShift += entry.value;
+        // Only observe layout shifts in development to prevent forced reflows in production
+        if (import.meta.env.DEV) {
+          const clsObserver = new PerformanceObserver((list) => {
+            // Throttle layout shift processing to prevent forced reflows
+            if ('requestIdleCallback' in window) {
+              requestIdleCallback(() => {
+                const entries = list.getEntries();
+                entries.forEach((entry: any) => {
+                  if (!entry.hadRecentInput) {
+                    this.metrics.cumulativeLayoutShift += entry.value;
+                  }
+                });
+              });
             }
           });
-        });
-        clsObserver.observe({ entryTypes: ['layout-shift'] });
-        this.observers.push(clsObserver);
+          clsObserver.observe({ entryTypes: ['layout-shift'], buffered: true });
+          this.observers.push(clsObserver);
+        }
       }
     } catch (error) {
       if (import.meta.env.DEV) {

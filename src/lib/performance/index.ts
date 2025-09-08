@@ -18,6 +18,13 @@ export {
   withOptimizedRouteLoading 
 } from './OptimizedLoader';
 
+export {
+  optimizedMotionConfig,
+  optimizedHover,
+  chartAnimation,
+  staggerConfig
+} from './motion-config';
+
 import { performanceMonitor } from './PerformanceMonitor';
 
 // Global performance utilities

@@ -77,7 +77,7 @@ export const SafeMotionDiv: FC<SafeMotionDivProps> = ({
     onMouseLeave
   };
 
-  // Motion props
+  // Motion props with performance optimizations
   const motionProps = {
     ...divProps,
     initial,
@@ -85,8 +85,21 @@ export const SafeMotionDiv: FC<SafeMotionDivProps> = ({
     exit,
     whileHover,
     whileTap,
-    transition,
-    variants
+    transition: {
+      // Optimize transitions to prevent forced reflows
+      ...transition,
+      type: transition?.type || "tween",
+      duration: transition?.duration || 0.2,
+      ease: transition?.ease || "easeOut"
+    },
+    variants,
+    // Performance optimization: avoid layout animations by default
+    layout: false,
+    // Use GPU acceleration
+    style: {
+      ...style,
+      willChange: animate ? "transform, opacity" : "auto"
+    }
   };
 
   // Fall back to regular div if:
