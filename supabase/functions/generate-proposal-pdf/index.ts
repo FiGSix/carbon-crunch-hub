@@ -155,6 +155,9 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   };
   const brandYellow = rgb(1, 0.8, 0.00784);
 
+  // Crunch Carbon logo URL - using the hero section logo
+  const CRUNCH_LOGO_URL = '/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png';
+
   // Safe accessors
   const anyProposal: any = proposal as any;
   const agent = anyProposal.agent || {};
@@ -271,7 +274,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     }
   };
 
-  const logoImage = await tryEmbedLogo(logoUrl);
+  const logoImage = await tryEmbedLogo(CRUNCH_LOGO_URL) || await tryEmbedLogo(logoUrl);
 
   // PAGE 1: Cover
   const cover = addPage();
@@ -309,7 +312,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   // Bottom-right revision label
   const revision = Math.max(0, (proposal.pdf_version || 1) - 1);
   const revisionWord = numberToWords(revision).toUpperCase();
-  const revisionText = `Revision [${revisionWord}]`;
+  const revisionText = `Revision ${revisionWord}`;
   const revisionSize = 48;
   const revisionTextWidth = bold.widthOfTextAtSize(revisionText, revisionSize);
   cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: bold, color: colors.white });
