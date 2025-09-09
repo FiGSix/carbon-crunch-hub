@@ -155,8 +155,8 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   };
   const brandYellow = rgb(1, 0.8, 0.00784);
 
-  // Crunch Carbon logo URL - using the hero section logo
-  const CRUNCH_LOGO_URL = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public/company-logos/branding/crunch-carbon-logo.png';
+  // Crunch Carbon logo URL - using the new logo
+  const CRUNCH_LOGO_URL = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public/crunch-carbon-logo-new.png';
 
   // Safe accessors
   const anyProposal: any = proposal as any;
