@@ -153,6 +153,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     charcoal: rgb(0.10, 0.12, 0.14),
     white: rgb(1, 1, 1),
   };
+  const brandYellow = rgb(1, 0.8, 0.00784);
 
   // Safe accessors
   const anyProposal: any = proposal as any;
@@ -165,6 +166,24 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
 
   // Helpers
   const mm = (n: number) => (n / 25.4) * 72; // convert mm to points
+
+  const numberToWords = (num: number): string => {
+    const ones = ['ZERO','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN','ELEVEN','TWELVE','THIRTEEN','FOURTEEN','FIFTEEN','SIXTEEN','SEVENTEEN','EIGHTEEN','NINETEEN'];
+    const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+    if (num < 0) return ones[0];
+    if (num < 20) return ones[num];
+    if (num < 100) {
+      const t = Math.floor(num / 10);
+      const r = num % 10;
+      return tens[t] + (r ? '-' + ones[r] : '');
+    }
+    if (num < 1000) {
+      const h = Math.floor(num / 100);
+      const r = num % 100;
+      return ones[h] + ' HUNDRED' + (r ? ' ' + numberToWords(r) : '');
+    }
+    return String(num);
+  };
 
   const addPage = () => {
     const page = pdfDoc.addPage(A4);
@@ -260,29 +279,40 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const coverWidth = cover.getSize().width;
   const coverHeight = cover.getSize().height;
 
-  // Background band
-  cover.drawRectangle({ x: 0, y: coverHeight - mm(70), width: coverWidth, height: mm(70), color: colors.yellow });
+  // Full-page background
+  cover.drawRectangle({ x: 0, y: 0, width: coverWidth, height: coverHeight, color: brandYellow });
 
-  // Logo (top right)
+  // Top heading block
+  const titleSize = 48;
+  const topMargin = mm(20);
+  const leftMargin = mm(20);
+  const firstLineY = coverHeight - topMargin - titleSize;
+  cover.drawText('Crunching Carbon', { x: leftMargin, y: firstLineY, size: titleSize, font: bold, color: rgb(0, 0, 0) });
+  const secondLineY = firstLineY - titleSize - mm(4);
+  cover.drawText(`for ${clientName}`, { x: leftMargin, y: secondLineY, size: titleSize, font: bold, color: colors.white });
+
+  // Bottom-centered Crunch Carbon logo
   if (logoImage) {
-    const lw = 96; // px in points approximation
+    const maxLogoWidth = mm(80);
+    const lw = Math.min(maxLogoWidth, logoImage.width);
     const lh = (logoImage.height / logoImage.width) * lw;
-    cover.drawImage(logoImage, { x: coverWidth - lw - coverPaddingX, y: coverHeight - lh - mm(10), width: lw, height: lh });
+    const logoX = (coverWidth - lw) / 2;
+    const logoY = mm(40);
+    cover.drawImage(logoImage, { x: logoX, y: logoY, width: lw, height: lh });
   } else {
-    cover.drawText(agent.company_name || 'Crunch Carbon', { x: coverWidth - mm(80), y: coverHeight - mm(15), size: 10, font: bold, color: colors.charcoal });
+    const placeholder = 'Crunch Carbon';
+    const placeholderSize = 24;
+    const textWidth = bold.widthOfTextAtSize(placeholder, placeholderSize);
+    cover.drawText(placeholder, { x: (coverWidth - textWidth) / 2, y: mm(40), size: placeholderSize, font: bold, color: rgb(0, 0, 0) });
   }
 
-  drawHeading(cover, 'Carbon Credit Proposal', coverPaddingX, coverHeight - mm(30));
-  cover.drawText(proposal.title || 'Project', { x: coverPaddingX, y: coverHeight - mm(40), size: 12, font, color: colors.charcoal });
-
-  // Cover details box
-  const boxY = coverHeight - mm(90);
-  cover.drawRectangle({ x: coverPaddingX, y: boxY, width: coverWidth - coverPaddingX * 2, height: mm(40), color: colors.white, borderColor: colors.border, borderWidth: 1 });
-  drawKeyValue(cover, 'Client', clientName, coverPaddingX + mm(6), boxY + mm(28));
-  drawKeyValue(cover, 'Agent', agentName, coverPaddingX + mm(6), boxY + mm(16));
-  drawKeyValue(cover, 'Date', new Date(proposal.created_at).toLocaleDateString(), coverPaddingX + mm(6), boxY + mm(4));
-
-  drawPageNumber(cover, 1, 5);
+  // Bottom-right revision label
+  const revision = Math.max(0, (proposal.pdf_version || 1) - 1);
+  const revisionWord = numberToWords(revision).toUpperCase();
+  const revisionText = `Revision [${revisionWord}]`;
+  const revisionSize = 48;
+  const revisionTextWidth = bold.widthOfTextAtSize(revisionText, revisionSize);
+  cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: bold, color: colors.white });
 
   // PAGE 2: About / Benefits / Process
   const page2 = addPage();
