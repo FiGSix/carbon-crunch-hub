@@ -43,7 +43,7 @@ serve(async (req) => {
         *,
         agent:profiles!proposals_agent_id_fkey(first_name, last_name, company_name, company_logo_url, email),
         client:clients!proposals_client_reference_id_fkey(first_name, last_name, email, company_name)
-      )
+      `)
       .eq('id', proposalId)
       .single()
 
@@ -427,6 +427,6 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   drawPageNumber(page5, 5, 5);
 
   const bytes = await pdfDoc.save();
-  console.log(`PDF generated in ${Date.now() - start}ms, pages: ${pdfDoc.getPageCount?.() ?? 5}`);
+  console.log(`PDF generated in ${Date.now() - start}ms, pages: ${pdfDoc.getPages().length}`);
   return bytes;
 }
