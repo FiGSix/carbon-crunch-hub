@@ -156,7 +156,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const brandYellow = rgb(1, 0.8, 0.00784);
 
   // Crunch Carbon logo URL - using the hero section logo
-  const CRUNCH_LOGO_URL = '/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png';
+  const CRUNCH_LOGO_URL = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public/company-logos/branding/crunch-carbon-logo.png';
 
   // Safe accessors
   const anyProposal: any = proposal as any;
@@ -257,19 +257,30 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const tryEmbedLogo = async (url?: string) => {
     if (!url) return null;
     try {
+      console.log('[PDF] Attempting to fetch logo', { url });
       const res = await fetch(url);
-      if (!res.ok) return null;
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok) {
+        console.warn('[PDF] Logo fetch failed', { url, status: res.status, statusText: res.statusText });
+        return null;
+      }
       const buf = new Uint8Array(await res.arrayBuffer());
       try {
-        return await pdfDoc.embedPng(buf);
-      } catch {
+        const img = await pdfDoc.embedPng(buf);
+        console.log('[PDF] Embedded PNG logo successfully', { url, contentType });
+        return img;
+      } catch (e1) {
         try {
-          return await pdfDoc.embedJpg(buf);
-        } catch {
+          const img = await pdfDoc.embedJpg(buf);
+          console.log('[PDF] Embedded JPG logo successfully', { url, contentType });
+          return img;
+        } catch (e2) {
+          console.warn('[PDF] Failed to embed logo as PNG or JPG', { url, contentType });
           return null;
         }
       }
-    } catch {
+    } catch (e) {
+      console.error('[PDF] Error fetching/embedding logo', { url, error: String(e) });
       return null;
     }
   };
@@ -296,11 +307,11 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
 
   // Bottom-centered Crunch Carbon logo
   if (logoImage) {
-    const maxLogoWidth = mm(80);
+    const maxLogoWidth = mm(90); // slightly larger for hero logo clarity
     const lw = Math.min(maxLogoWidth, logoImage.width);
     const lh = (logoImage.height / logoImage.width) * lw;
     const logoX = (coverWidth - lw) / 2;
-    const logoY = mm(40);
+    const logoY = mm(36); // nudge a bit closer to bottom center
     cover.drawImage(logoImage, { x: logoX, y: logoY, width: lw, height: lh });
   } else {
     const placeholder = 'Crunch Carbon';
