@@ -85,16 +85,39 @@ export function useProposalPdf() {
     const pdfUrl = await generatePdf(proposalId);
     
     if (pdfUrl) {
-      // Create a temporary anchor element to trigger download
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = filename || `proposal-${proposalId}.pdf`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      pdfLogger.info('PDF download initiated', { pdfUrl, filename });
+      try {
+        const downloadFilename = filename || `proposal-${proposalId}.pdf`;
+        const urlWithDownload = `${pdfUrl}?download=${encodeURIComponent(downloadFilename)}`;
+        
+        // Fetch the PDF as a blob to avoid browser blocking
+        const response = await fetch(urlWithDownload);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Create a temporary anchor element to trigger download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = downloadFilename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the blob URL
+        URL.revokeObjectURL(blobUrl);
+        
+        pdfLogger.info('PDF download completed', { pdfUrl, filename: downloadFilename });
+      } catch (error) {
+        pdfLogger.error('PDF download failed', { error, pdfUrl });
+        toast({
+          title: "Download Failed",
+          description: "Could not download the PDF. Please try again or check if your browser is blocking the download.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
