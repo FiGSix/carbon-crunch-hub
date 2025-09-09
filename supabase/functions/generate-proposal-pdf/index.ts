@@ -328,43 +328,79 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const revisionTextWidth = bold.widthOfTextAtSize(revisionText, revisionSize);
   cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: bold, color: colors.white });
 
-  // PAGE 2: About / Benefits / Process
+  // PAGE 2: About / Benefits / Process (Yellow Background)
   const page2 = addPage();
+  
+  // Draw full-page yellow background (#FFCC02)
+  page2.drawRectangle({
+    x: 0,
+    y: 0,
+    width: page2.getSize().width,
+    height: page2.getSize().height,
+    color: rgb(1, 0.8, 0.00784), // #FFCC02
+  });
+
   const p2x = mm(20);
   let y = page2.getSize().height - mm(25);
 
-  drawHeading(page2, 'About Crunch Carbon', p2x, y);
-  y -= mm(10);
-  y = drawParagraph(page2, (anyProposal.content?.about ?? 'Crunch Carbon partners with businesses to unlock carbon credit revenue from renewable energy projects, with a streamlined, transparent process.'), p2x, y, page2.getSize().width - p2x * 2);
+  // Helper function for section headings (Black, Helvetica Bold, size 16)
+  const drawSectionHeading = (page: any, text: string, x: number, y: number) => {
+    page.drawText(text, { x, y, size: 16, font: bold, color: rgb(0, 0, 0) });
+  };
+
+  // Helper function for section content (Black, Helvetica, size 12)
+  const drawSectionContent = (page: any, text: string, x: number, y: number, maxWidth: number) => {
+    const lines = wrapText(text, font, 12, maxWidth);
+    let currentY = y;
+    for (const line of lines) {
+      page.drawText(line, { x, y: currentY, size: 12, font, color: rgb(0, 0, 0) });
+      currentY -= mm(4.5);
+    }
+    return currentY;
+  };
+
+  // ABOUT Section
+  drawSectionHeading(page2, 'About', p2x, y);
+  y -= mm(8);
+  const aboutText = `Carbon credits are designed as a market-based mechanism to reduce greenhouse gas emissions. They allow companies to trade emission permits while giving businesses and individuals a unique opportunity to contribute to the global fight against climate change.
+
+At Crunch Carbon, we manage the entire carbon credit generation process for you—from sign-up through to data collection, auditing, and verification of your solar energy usage. Together with our partners, we then sell these credits on your behalf and ensure that you, as the solar system owner, are rewarded once the credits are sold.`;
+  y = drawSectionContent(page2, aboutText, p2x, y, page2.getSize().width - p2x * 2);
+
+  y -= mm(8);
+
+  // BENEFITS Section
+  drawSectionHeading(page2, 'Benefits', p2x, y);
+  y -= mm(8);
+
+  const benefitItems = [
+    { title: 'Reduce Your Carbon Footprint', text: 'by participating with Crunch Carbon, where your business contributes to significant carbon reduction efforts, promoting a greener planet and you get paid cash.' },
+    { title: 'Sustainable Future', text: 'Support the transition to renewable energy and sustainable practices.' },
+    { title: 'Get rewarded', text: 'After driving your carbon credit generation process for you, Crunch Carbon with our partners will then proceed to sell these carbon credits and reward the owners of these solar systems.' },
+    { title: 'No Costs', text: 'Joining Crunch Carbon is completely free, with no hidden fees or costs involved.' },
+    { title: 'Risk-Free', text: 'Users do not carry any financial risks; they only gain rewards.' }
+  ];
+
+  for (const benefit of benefitItems) {
+    y = drawSectionContent(page2, `${benefit.title}\n${benefit.text}`, p2x, y, page2.getSize().width - p2x * 2);
+    y -= mm(4);
+  }
 
   y -= mm(4);
-  drawSubheading(page2, 'Key Benefits', p2x, y);
-  y -= mm(8);
-  const benefits: string[] = anyProposal.content?.benefits ?? [
-    'Monetize your renewable generation through verified carbon credits.',
-    'Simple onboarding and clear commercial terms.',
-    'Ongoing support and transparent reporting.'
-  ];
-  for (const b of benefits) {
-    page2.drawText('•', { x: p2x, y, size: 10, font: bold, color: colors.text });
-    y = drawParagraph(page2, b, p2x + mm(5), y, page2.getSize().width - p2x * 2 - mm(5));
-    y -= mm(2);
-  }
 
-  y -= mm(2);
-  drawSubheading(page2, 'Our Process', p2x, y);
+  // THE PROCESS Section
+  drawSectionHeading(page2, 'The Process', p2x, y);
   y -= mm(8);
-  const process: string[] = anyProposal.content?.process ?? [
-    '1. Project qualification and data collection',
-    '2. Contracting and onboarding',
-    '3. Credit issuance and revenue distribution'
-  ];
-  for (const step of process) {
-    y = drawParagraph(page2, step, p2x, y, page2.getSize().width - p2x * 2);
-    y -= mm(2);
-  }
+  const processText = 'No gimmicks, tricks or funnies. We handle all the complex paperwork and data audits, ensuring a seamless experience for our clients.';
+  y = drawSectionContent(page2, processText, p2x, y, page2.getSize().width - p2x * 2);
 
-  drawPageNumber(page2, 2, 5);
+  y -= mm(8);
+
+  // THE T&C'S Section
+  drawSectionHeading(page2, "The T&C's", p2x, y);
+  y -= mm(8);
+  const tcText = `Our Cession Agreement protects your rights as a solar system owner while allowing you to benefit from carbon credits with minimal effort and no cost. You remain the lawful owner of your system and only environmental benefits are ceded for credit generation. Crunch Carbon, with our partner CDSA, manages the full Carbon Credit process. From registration, audits, verification to sales and disbursement of cash. Crunch Carbon covers all related costs. You receive the revenue share from credits sold, paid annually in June/July being the norm. Your data is treated as confidential, and you may request process details at any time. If you decide for whatever reason the Cession Agreement may be cancelled by either party with 30 days' notice. Disputes are resolved through mediation and arbitration, and if unforeseen events prevent performance, either party may terminate without penalty.`;
+  y = drawSectionContent(page2, tcText, p2x, y, page2.getSize().width - p2x * 2);
 
   // PAGE 3: Project Details & Schedule
   const page3 = addPage();
