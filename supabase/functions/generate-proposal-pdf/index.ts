@@ -206,12 +206,13 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   };
 
   const wrapText = (text: string, maxWidth: number, size: number, f = font) => {
+    const usedFont = (f && typeof (f as any).widthOfTextAtSize === 'function') ? f : font;
     const words = (text || '').split(/\s+/);
     const lines: string[] = [];
     let line = '';
     for (const w of words) {
       const test = line ? `${line} ${w}` : w;
-      const width = f.widthOfTextAtSize(test, size);
+      const width = usedFont.widthOfTextAtSize(test, size);
       if (width > maxWidth && line) {
         lines.push(line);
         line = w;
@@ -350,7 +351,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
 
   // Helper function for section content (Black, Helvetica, size 12)
   const drawSectionContent = (page: any, text: string, x: number, y: number, maxWidth: number) => {
-    const lines = wrapText(text, font, 12, maxWidth);
+    const lines = wrapText(text, maxWidth, 12, font);
     let currentY = y;
     for (const line of lines) {
       page.drawText(line, { x, y: currentY, size: 12, font, color: rgb(0, 0, 0) });
