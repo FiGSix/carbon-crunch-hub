@@ -26,10 +26,14 @@ export function OptimizedImage({
   onLoad,
   onError
 }: OptimizedImageProps) {
-  // Generate modern image format URLs by replacing the extension
+  // Check if this is an uploaded asset (skip modern format optimization for uploaded files)
+  const isUploadedAsset = src.includes('/lovable-uploads/') || src.includes('/uploads/');
+  
+  // Generate modern image format URLs by replacing the extension (only for non-uploaded assets)
   const getModernFormatSrc = (originalSrc: string, format: 'webp' | 'avif') => {
+    if (isUploadedAsset) return null; // Skip modern formats for uploaded assets
     const lastDotIndex = originalSrc.lastIndexOf('.');
-    if (lastDotIndex === -1) return originalSrc;
+    if (lastDotIndex === -1) return null;
     return originalSrc.substring(0, lastDotIndex) + '.' + format;
   };
 
@@ -48,17 +52,21 @@ export function OptimizedImage({
 
   return (
     <picture>
-      {/* AVIF format - most efficient */}
-      <source 
-        srcSet={avifSrc} 
-        type="image/avif"
-      />
+      {/* AVIF format - most efficient (only for non-uploaded assets) */}
+      {avifSrc && (
+        <source 
+          srcSet={avifSrc} 
+          type="image/avif"
+        />
+      )}
       
-      {/* WebP format - widely supported */}
-      <source 
-        srcSet={webpSrc} 
-        type="image/webp"
-      />
+      {/* WebP format - widely supported (only for non-uploaded assets) */}
+      {webpSrc && (
+        <source 
+          srcSet={webpSrc} 
+          type="image/webp"
+        />
+      )}
       
       {/* Fallback to original format */}
       <img
@@ -70,8 +78,14 @@ export function OptimizedImage({
         loading={priority ? "eager" : "lazy"}
         fetchPriority={fetchPriority}
         decoding="async"
-        onLoad={onLoad}
-        onError={onError}
+        onLoad={() => {
+          console.log(`[OptimizedImage] Successfully loaded image: ${src}`);
+          onLoad?.();
+        }}
+        onError={(e) => {
+          console.error(`[OptimizedImage] Failed to load image: ${src}`, e);
+          onError?.(e);
+        }}
         style={commonStyle}
       />
     </picture>
