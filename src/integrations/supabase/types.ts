@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -326,6 +326,9 @@ export type Database = {
           invitation_token: string | null
           invitation_viewed_at: string | null
           last_modified_by: string | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          pdf_version: number | null
           project_info: Json
           review_later_until: string | null
           signed_at: string | null
@@ -357,6 +360,9 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           last_modified_by?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          pdf_version?: number | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -388,6 +394,9 @@ export type Database = {
           invitation_token?: string | null
           invitation_viewed_at?: string | null
           last_modified_by?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          pdf_version?: number | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
@@ -480,26 +489,26 @@ export type Database = {
       }
       create_agent_user: {
         Args: {
+          access_level_param?: string
+          agent_status_param?: string
+          commission_override_param?: number
+          company_name_param?: string
           email_param: string
           first_name_param: string
           last_name_param: string
-          company_name_param?: string
-          phone_param?: string
           license_number_param?: string
+          phone_param?: string
           territory_param?: string
-          agent_status_param?: string
-          access_level_param?: string
-          commission_override_param?: number
         }
         Returns: string
       }
       create_test_user_profile: {
         Args: {
-          user_id_param: string
           email_param: string
-          role_param: string
           first_name_param?: string
           last_name_param?: string
+          role_param: string
+          user_id_param: string
         }
         Returns: string
       }
@@ -508,7 +517,7 @@ export type Database = {
         Returns: boolean
       }
       format_system_size_for_display: {
-        Args: { size_kwp: number; preferred_unit?: string }
+        Args: { preferred_unit?: string; size_kwp: number }
         Returns: string
       }
       generate_secure_token: {
@@ -518,16 +527,16 @@ export type Database = {
       get_agent_clients: {
         Args: { agent_id_param?: string }
         Returns: {
+          agent_id: string
+          agent_name: string
+          client_email: string
           client_id: string
           client_name: string
-          client_email: string
           company_name: string
+          created_at: string
           is_registered: boolean
           project_count: number
           total_mwp: number
-          agent_id: string
-          agent_name: string
-          created_at: string
         }[]
       }
       get_agent_clients_count: {
@@ -537,14 +546,14 @@ export type Database = {
       get_agent_clients_optimized: {
         Args: { agent_id_param?: string }
         Returns: {
+          client_email: string
           client_id: string
           client_name: string
-          client_email: string
           company_name: string
+          created_at: string
           is_registered: boolean
           project_count: number
           total_mwp: number
-          created_at: string
         }[]
       }
       get_agent_clients_paginated: {
@@ -554,49 +563,49 @@ export type Database = {
           offset_param?: number
         }
         Returns: {
+          client_email: string
           client_id: string
           client_name: string
-          client_email: string
           company_name: string
+          created_at: string
           is_registered: boolean
           project_count: number
           total_mwp: number
-          created_at: string
         }[]
       }
       get_agent_dashboard_stats: {
         Args: { agent_id_param: string }
         Returns: {
-          total_proposals: number
           active_proposals: number
           signed_proposals: number
-          total_clients: number
           total_carbon_credits: number
+          total_clients: number
+          total_proposals: number
           total_revenue: number
         }[]
       }
       get_agents_management_data: {
         Args: {
-          status_filter?: string
-          search_term?: string
           limit_param?: number
           offset_param?: number
+          search_term?: string
+          status_filter?: string
         }
         Returns: {
+          access_level: string
+          active_proposals: number
+          agent_email: string
           agent_id: string
           agent_name: string
-          agent_email: string
-          company_name: string
           agent_status: string
-          access_level: string
           commission_override: number
+          company_name: string
+          join_date: string
           last_active_at: string
-          total_proposals: number
-          active_proposals: number
+          onboarding_completed: boolean
           signed_proposals: number
           total_commission: number
-          join_date: string
-          onboarding_completed: boolean
+          total_proposals: number
         }[]
       }
       get_client_email: {
@@ -610,57 +619,57 @@ export type Database = {
       get_dashboard_stats_optimized: {
         Args: { user_id_param: string; user_role_param: string }
         Returns: {
-          total_proposals: number
           active_proposals: number
+          portfolio_size_kwp: number
           signed_proposals: number
           total_carbon_credits: number
+          total_proposals: number
           total_revenue: number
-          portfolio_size_kwp: number
         }[]
       }
       get_proposal_by_token: {
         Args: { token_param: string }
         Returns: {
-          id: string
-          title: string
-          status: string
-          content: Json
           agent_id: string
-          client_id: string
-          client_contact_id: string
-          signed_at: string
-          created_at: string
           archived_at: string
-          review_later_until: string
+          client_contact_id: string
+          client_email: string
+          client_id: string
+          content: Json
+          created_at: string
+          id: string
+          invitation_expires_at: string
+          invitation_token: string
           is_preview: boolean
           preview_of_id: string
-          client_email: string
-          invitation_token: string
-          invitation_expires_at: string
+          review_later_until: string
+          signed_at: string
+          status: string
+          title: string
         }[]
       }
       get_proposal_by_token_direct: {
         Args: { token_param: string }
         Returns: {
-          id: string
-          title: string
-          status: string
-          content: Json
           agent_id: string
+          annual_energy: number
+          archived_at: string
+          carbon_credits: number
+          client_email: string
           client_id: string
           client_reference_id: string
-          signed_at: string
+          client_share_percentage: number
+          content: Json
           created_at: string
-          archived_at: string
-          review_later_until: string
+          id: string
+          invitation_expires_at: string
+          invitation_token: string
           is_preview: boolean
           preview_of_id: string
-          client_email: string
-          invitation_token: string
-          invitation_expires_at: string
-          annual_energy: number
-          carbon_credits: number
-          client_share_percentage: number
+          review_later_until: string
+          signed_at: string
+          status: string
+          title: string
         }[]
       }
       get_user_role: {
@@ -690,49 +699,49 @@ export type Database = {
       search_clients: {
         Args: { search_term: string }
         Returns: {
-          id: string
-          name: string
-          email: string
           company: string
+          email: string
+          id: string
           is_registered: boolean
+          name: string
         }[]
       }
       search_clients_optimized: {
         Args: {
-          search_term: string
           agent_id_param?: string
           limit_param?: number
+          search_term: string
         }
         Returns: {
-          id: string
-          name: string
-          email: string
           company: string
+          email: string
+          id: string
           is_registered: boolean
+          name: string
           relevance_score: number
         }[]
       }
       search_proposals_optimized: {
         Args: {
-          user_id_param: string
-          user_role_param: string
-          search_term?: string
-          status_filter?: string
           limit_param?: number
           offset_param?: number
+          search_term?: string
+          status_filter?: string
+          user_id_param: string
+          user_role_param: string
         }
         Returns: {
-          id: string
-          title: string
-          status: string
-          created_at: string
           agent_id: string
+          carbon_credits: number
           client_id: string
           client_reference_id: string
-          carbon_credits: number
-          system_size_kwp: number
+          created_at: string
+          id: string
           invitation_sent_at: string
           invitation_viewed_at: string
+          status: string
+          system_size_kwp: number
+          title: string
         }[]
       }
       set_request_invitation_token: {
@@ -742,31 +751,31 @@ export type Database = {
       test_rls_policies: {
         Args: Record<PropertyKey, never>
         Returns: {
-          test_name: string
-          table_name: string
           operation: string
-          role: string
           result: string
+          role: string
           success: boolean
+          table_name: string
+          test_name: string
         }[]
       }
       validate_invitation_token: {
         Args: { token: string }
         Returns: {
-          proposal_id: string
           client_email: string
           client_id: string
           client_reference_id: string
+          proposal_id: string
         }[]
       }
       validate_token_direct: {
         Args: { token_param: string }
         Returns: {
-          proposal_id: string
           client_email: string
           client_id: string
           client_reference_id: string
           is_valid: boolean
+          proposal_id: string
         }[]
       }
     }

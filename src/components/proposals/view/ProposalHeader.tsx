@@ -4,6 +4,7 @@ import { CheckCircle2, Trash2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
+import { ProposalPdfButton } from "./ProposalPdfButton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 
@@ -18,6 +19,7 @@ interface ProposalHeaderProps {
   onDeleteClick?: () => void;
   onReviewLaterClick?: () => void;
   showBackButton?: boolean;
+  proposalId?: string; // Added for PDF generation
 }
 
 export function ProposalHeader({ 
@@ -30,7 +32,8 @@ export function ProposalHeader({
   isReviewLater,
   onDeleteClick,
   onReviewLaterClick,
-  showBackButton = true
+  showBackButton = true,
+  proposalId
 }: ProposalHeaderProps) {
   const navigate = useNavigate();
   const { userRole, profile } = useAuth();
@@ -93,6 +96,14 @@ export function ProposalHeader({
           <ProposalReviewLaterButton 
             onClick={onReviewLaterClick} 
             isReviewLater={isReviewLater}
+          />
+        )}
+        
+        {/* PDF Download button for agents and admins */}
+        {!isDeleted && (userRole === "agent" || userRole === "admin") && proposalId && (
+          <ProposalPdfButton 
+            proposalId={proposalId} 
+            proposalTitle={title}
           />
         )}
         

@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.google-maps-health-check]
 verify_jwt = false
+
+[functions.generate-proposal-pdf]
+verify_jwt = true

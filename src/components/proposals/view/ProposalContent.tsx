@@ -56,6 +56,7 @@ export function ProposalContent({
         isReviewLater={isReviewLater}
         onDeleteClick={() => setDeleteDialogOpen(true)}
         onReviewLaterClick={handleReviewLater}
+        proposalId={proposal.id}
       />
       
       <div className="space-y-8">
