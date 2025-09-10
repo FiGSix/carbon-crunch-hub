@@ -155,8 +155,12 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   };
   const brandYellow = rgb(1, 0.8, 0.00784);
 
-  // Crunch Carbon logo URL - using the new logo
-  const CRUNCH_LOGO_URL = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public/crunch-carbon-logo-new.png';
+  // Logo sources: try public Storage bucket paths first, then agent-provided URL
+  const STORAGE_PUBLIC_BASE = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public';
+  const LOGO_CANDIDATE_URLS = [
+    `${STORAGE_PUBLIC_BASE}/company-logos/branding/crunch-carbon-logo-new.png`,
+    `${STORAGE_PUBLIC_BASE}/company-logos/crunch-carbon-logo-new.png`,
+  ];
 
   // Safe accessors
   const anyProposal: any = proposal as any;
@@ -286,7 +290,15 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     }
   };
 
-  const logoImage = await tryEmbedLogo(CRUNCH_LOGO_URL) || await tryEmbedLogo(logoUrl);
+  let logoImage: any = null;
+  for (const candidate of [...LOGO_CANDIDATE_URLS, logoUrl]) {
+    const img = await tryEmbedLogo(candidate as string | undefined);
+    if (img) {
+      logoImage = img;
+      console.log('[PDF] Using logo from', candidate);
+      break;
+    }
+  }
 
   // PAGE 1: Cover
   const cover = addPage();
