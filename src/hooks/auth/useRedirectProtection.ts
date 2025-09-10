@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 
 /**
  * Hook to prevent multiple simultaneous redirects that can cause infinite loops

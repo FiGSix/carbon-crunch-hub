@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthSimplified } from '@/hooks/useAuthSimplified';
 import { RoleValidationService } from '@/services/auth/RoleValidationService';
 import { synchronizeUserRole } from '@/lib/supabase/profile';
