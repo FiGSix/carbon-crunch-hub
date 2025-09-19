@@ -306,7 +306,7 @@ export type Database = {
       proposals: {
         Row: {
           agent_commission_percentage: number | null
-          agent_id: string
+          agent_id: string | null
           agent_portfolio_kwp: number | null
           annual_energy: number | null
           archived_at: string | null
@@ -340,7 +340,7 @@ export type Database = {
         }
         Insert: {
           agent_commission_percentage?: number | null
-          agent_id: string
+          agent_id?: string | null
           agent_portfolio_kwp?: number | null
           annual_energy?: number | null
           archived_at?: string | null
@@ -374,7 +374,7 @@ export type Database = {
         }
         Update: {
           agent_commission_percentage?: number | null
-          agent_id?: string
+          agent_id?: string | null
           agent_portfolio_kwp?: number | null
           annual_energy?: number | null
           archived_at?: string | null
