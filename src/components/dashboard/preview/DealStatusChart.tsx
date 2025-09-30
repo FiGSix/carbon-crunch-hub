@@ -1,5 +1,5 @@
 
-import React, { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProposalListItem } from "@/types/proposals";
@@ -74,4 +74,4 @@ function DealStatusChartComponent({ proposals, loading }: DealStatusChartProps) 
   );
 }
 
-export const DealStatusChart = React.memo(DealStatusChartComponent);
+export const DealStatusChart = memo(DealStatusChartComponent);

@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 
 interface DashboardHeaderProps {
@@ -48,4 +48,4 @@ function DashboardHeaderComponent({
   );
 }
 
-export const DashboardHeader = React.memo(DashboardHeaderComponent);
+export const DashboardHeader = memo(DashboardHeaderComponent);

@@ -1,5 +1,5 @@
 
-import React, { useMemo, useCallback } from "react";
+import { useMemo, useCallback, memo } from "react";
 import { 
   Card, 
   CardContent, 
@@ -130,4 +130,4 @@ function RecentProjectsComponent({ proposals = [], loading = false, onRefresh }:
   );
 }
 
-export const RecentProjects = React.memo(RecentProjectsComponent);
+export const RecentProjects = memo(RecentProjectsComponent);

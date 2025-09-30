@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo, useMemo } from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { TrendingUp, Users, DollarSign, Leaf, LucideIcon } from "lucide-react";
 
@@ -21,7 +21,7 @@ export const OptimizedStatsCardsSection = memo(({
 }: OptimizedStatsCardsSectionProps) => {
   
   // Memoized stats configuration to prevent recalculation on every render
-  const statsConfig = React.useMemo(() => {
+  const statsConfig = useMemo(() => {
     const baseStats = [
       {
         title: "Portfolio Size",

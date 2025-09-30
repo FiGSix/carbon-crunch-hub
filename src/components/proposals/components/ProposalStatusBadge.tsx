@@ -1,5 +1,5 @@
 
-import React, { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Archive, Clock } from "lucide-react";
 
@@ -72,4 +72,4 @@ function ProposalStatusBadgeComponent({ status, isArchived, reviewLater }: Propo
   );
 }
 
-export const ProposalStatusBadge = React.memo(ProposalStatusBadgeComponent);
+export const ProposalStatusBadge = memo(ProposalStatusBadgeComponent);

@@ -1,5 +1,5 @@
 
-import React, { useCallback } from "react";
+import { useCallback, memo } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { 
@@ -79,4 +79,4 @@ function ProposalFiltersComponent({
   );
 }
 
-export const ProposalFilters = React.memo(ProposalFiltersComponent);
+export const ProposalFilters = memo(ProposalFiltersComponent);

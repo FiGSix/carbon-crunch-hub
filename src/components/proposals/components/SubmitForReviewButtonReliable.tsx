@@ -3,7 +3,7 @@
  * Provides invisible error handling and seamless user experience
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Send, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";

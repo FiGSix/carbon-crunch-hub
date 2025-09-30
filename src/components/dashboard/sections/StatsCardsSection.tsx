@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { OptimizedCommissionCard } from "@/components/dashboard/preview/OptimizedCommissionCard";
 import { CommissionProjectionCard } from "@/components/dashboard/preview/CommissionProjectionCard";

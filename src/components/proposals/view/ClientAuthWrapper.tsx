@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { RegistrationForm } from './client-registration/RegistrationForm';
 import { LoginForm } from './client-login/LoginForm';
 import { useAuth } from "@/contexts/auth";

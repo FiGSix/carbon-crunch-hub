@@ -1,4 +1,4 @@
-import React, { Component, ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { authLogger } from '@/lib/logger';
 

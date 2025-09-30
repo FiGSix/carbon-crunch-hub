@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, RefreshCw } from "lucide-react";
 import { ProposalList } from "@/components/proposals/ProposalList";

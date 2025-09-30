@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, memo } from "react";
 import { 
   Card, 
   CardContent, 
@@ -119,5 +119,5 @@ function StatsCardComponent({
   );
 }
 
-export const StatsCard = React.memo(StatsCardComponent);
+export const StatsCard = memo(StatsCardComponent);
 

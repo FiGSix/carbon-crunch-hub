@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect, memo, type FC, type ComponentType } from 'react';
 
 interface RenderTrackerProps {
   name: string;
@@ -20,7 +20,7 @@ interface RenderTrackerProps {
  *   );
  * }
  */
-export const RenderTracker: React.FC<RenderTrackerProps> = ({ 
+export const RenderTracker: FC<RenderTrackerProps> = ({ 
   name, 
   props, 
   enabled = process.env.NODE_ENV === 'development' 
@@ -63,9 +63,9 @@ export const RenderTracker: React.FC<RenderTrackerProps> = ({
  */
 export function withRenderTracking<P extends Record<string, any>>(
   componentName: string,
-  Component: React.ComponentType<P>
+  Component: ComponentType<P>
 ) {
-  const TrackedComponent = React.memo((props: P) => {
+  const TrackedComponent = memo((props: P) => {
     return (
       <>
         <RenderTracker name={componentName} props={props} />
@@ -75,5 +75,5 @@ export function withRenderTracking<P extends Record<string, any>>(
   });
 
   TrackedComponent.displayName = `RenderTracked(${componentName})`;
-  return TrackedComponent as React.ComponentType<P>;
+  return TrackedComponent as ComponentType<P>;
 }

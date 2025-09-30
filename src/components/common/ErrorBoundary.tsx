@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode, type ComponentType, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logError } from '@/lib/errors/errorLogger';
@@ -179,7 +179,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
  * Higher-order component to wrap components with error boundary
  */
 export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: ComponentType<P>,
   errorBoundaryProps?: Partial<ErrorBoundaryProps>
 ) {
   const WrappedComponent = (props: P) => (
@@ -197,9 +197,9 @@ export function withErrorBoundary<P extends object>(
  * Hook to manually trigger error boundary reset
  */
 export function useErrorBoundaryReset() {
-  const [resetKey, setResetKey] = React.useState(0);
+  const [resetKey, setResetKey] = useState(0);
   
-  const reset = React.useCallback(() => {
+  const reset = useCallback(() => {
     setResetKey(prev => prev + 1);
   }, []);
 
