@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { useAuthSimplified } from '@/hooks/useAuthSimplified';
+import { useAuth } from '@/contexts/auth';
 import { RoleValidationService } from '@/services/auth/RoleValidationService';
 import { synchronizeUserRole } from '@/lib/supabase/profile';
 import { UserRole } from '@/contexts/auth/types';
@@ -18,7 +18,7 @@ export interface RoleSyncStatus {
  * Hook to automatically validate and sync user roles on authentication
  */
 export function useRoleSync() {
-  const { user, profile } = useAuthSimplified();
+  const { user, profile } = useAuth();
   const [syncStatus, setSyncStatus] = useState<RoleSyncStatus>({
     isChecking: false,
     isValid: true
