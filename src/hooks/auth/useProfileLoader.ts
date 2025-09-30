@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { authCache } from '@/lib/cache/UnifiedCache';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseProfileLoaderProps {
   user: User | null;
@@ -26,7 +27,7 @@ export function useProfileLoader({ user, isUnmountedRef, updateProfileState }: U
         userRole = authUser.user_metadata.role as UserRole;
       }
     } catch (error) {
-      console.warn('Could not retrieve user metadata for role detection');
+      devLogger.auth.warn('Could not retrieve user metadata for role detection');
     }
 
     return {

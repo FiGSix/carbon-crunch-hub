@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { ClientData } from './types';
 import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseSimplifiedClientsResult {
   clients: ClientData[];
@@ -30,11 +31,9 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
 
   // Simplified fetch function with clear state transitions
   const fetchClients = useCallback(async (isManualRefresh = false) => {
-    console.log('=== fetchClients: Starting ===');
-    console.log('User:', user?.id, 'Role:', userRole, 'Manual:', isManualRefresh);
+    devLogger.clients.log('fetchClients: Starting', { userId: user?.id, userRole, isManualRefresh });
 
     if (!user?.id || !userRole) {
-      console.log('No user or role - setting loading to false');
       const errorMessage = 'User not authenticated or role not determined';
       setIsLoading(false);
       setError(errorMessage);
@@ -53,10 +52,8 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
     try {
       // Set loading state based on type of fetch
       if (isManualRefresh) {
-        console.log('Setting isRefreshing to true');
         setIsRefreshing(true);
       } else {
-        console.log('Setting isLoading to true');
         setIsLoading(true);
       }
       
@@ -64,7 +61,6 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
       setError(null);
 
       // Fetch the data using the optimized service
-      console.log('Calling UnifiedDataService.getClients...');
       const result = await UnifiedDataService.getClients(user.id, userRole, isManualRefresh);
       
       // Transform to match expected interface
@@ -78,12 +74,11 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
         created_at: client.createdAt
       }));
       
-      console.log('UnifiedDataService.getClients completed with', transformedClients.length, 'clients');
+      devLogger.clients.log('UnifiedDataService.getClients completed', { clientCount: transformedClients.length });
       
       // Only update state if component is still mounted
       if (mountedRef.current) {
         setClients(transformedClients);
-        console.log('State updated with clients data');
         
         if (isManualRefresh) {
           toast({
@@ -93,7 +88,7 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
         }
       }
     } catch (err) {
-      console.error('=== Client fetch error ===', err);
+      devLogger.clients.error('Client fetch error', err);
       
       if (mountedRef.current) {
         const errorMessage = handleFetchError(err, {
@@ -108,7 +103,6 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
     } finally {
       // Always clear loading states
       if (mountedRef.current) {
-        console.log('Clearing loading states');
         setIsLoading(false);
         setIsRefreshing(false);
       }
@@ -117,17 +111,15 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
 
   // Manual refresh function
   const refreshClients = useCallback(() => {
-    console.log('Manual refresh triggered');
+    devLogger.clients.log('Manual refresh triggered');
     fetchClients(true);
   }, [fetchClients]);
 
   // Initial fetch - simplified
   useEffect(() => {
-    console.log('Initial fetch effect triggered');
     if (user?.id && userRole) {
       fetchClients(false);
     } else {
-      console.log('No user or role - setting loading to false immediately');
       setIsLoading(false);
     }
   }, [user?.id, userRole, fetchClients]);
@@ -138,9 +130,6 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
       mountedRef.current = false;
     };
   }, []);
-
-  console.log('=== useSimplifiedClients: Current state ===');
-  console.log('Loading:', isLoading, 'Refreshing:', isRefreshing, 'Error:', error, 'Clients:', clients.length);
 
   return {
     clients,

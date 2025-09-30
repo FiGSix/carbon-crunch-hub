@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseAuthStateSyncProps {
   session: Session | null;
@@ -60,7 +61,7 @@ export function useAuthStateSync({ session, onAuthStateChange }: UseAuthStateSyn
       }
     } catch (error) {
       // Don't force logout on network errors or temporary issues
-      console.warn('Session validation failed:', error);
+      devLogger.auth.warn('Session validation failed:', error);
     } finally {
       isValidatingRef.current = false;
     }
