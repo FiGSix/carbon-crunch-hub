@@ -252,21 +252,19 @@ function App() {
                       </PrivateRoute>
                     } 
                   />
-                  {/* Development-only system diagnostics */}
-                  {import.meta.env.DEV && (
-                    <Route 
-                      path="/system-diagnostics" 
-                      element={
-                        <PrivateRoute allowedRoles={['admin']}>
-                          <PageErrorBoundary pageName="System Diagnostics">
-                            <Suspense fallback={<PageLoader />}>
-                              <SystemDiagnostics />
-                            </Suspense>
-                          </PageErrorBoundary>
-                        </PrivateRoute>
-                      } 
-                    />
-                  )}
+                  {/* Admin-only system diagnostics */}
+                  <Route 
+                    path="/system-diagnostics" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="System Diagnostics">
+                          <Suspense fallback={<PageLoader />}>
+                            <SystemDiagnostics />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
                   <Route 
                     path="/admin/agents" 
                     element={
