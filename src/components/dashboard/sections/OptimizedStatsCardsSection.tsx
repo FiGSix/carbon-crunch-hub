@@ -39,7 +39,7 @@ export const OptimizedStatsCardsSection = memo(({
       },
       {
         title: "Potential Revenue",
-        value: `£${potentialRevenue.toLocaleString()}`,
+        value: `R${potentialRevenue.toLocaleString()}`,
         icon: DollarSign,
         description: "Expected earnings"
       },
