@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ErrorHandler } from '../unified/utils/ErrorHandler';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface AuditLogEntry {
   type: 'access_denied' | 'unauthorized_access';
@@ -23,7 +24,7 @@ export class SecureProfileService {
     
     // Log to console in development for debugging
     if (import.meta.env.DEV) {
-      console.log('🔒 Profile Access Audit:', entry);
+      devLogger.api.info('🔒 Profile Access Audit:', entry);
     }
 
     // In production, this could be sent to a logging service

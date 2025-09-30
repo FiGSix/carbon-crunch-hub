@@ -1,3 +1,5 @@
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+
 /**
  * Phase 1: Error reporting service for production monitoring
  * Centralizes error handling and reporting
@@ -34,7 +36,7 @@ class ErrorReportingService {
 
     // In development, just log to console
     if (!this.isProduction) {
-      console.error('🚨 Error Report:', report);
+      devLogger.general.error('🚨 Error Report:', report);
       return;
     }
 
@@ -50,8 +52,8 @@ class ErrorReportingService {
       });
     } catch (reportingError) {
       // Fallback: log to console if error reporting fails
-      console.error('Failed to report error:', reportingError);
-      console.error('Original error:', report);
+      devLogger.general.error('Failed to report error:', reportingError);
+      devLogger.general.error('Original error:', report);
     }
   }
 

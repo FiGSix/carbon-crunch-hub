@@ -1,3 +1,5 @@
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+
 /**
  * Dashboard-specific caching service for performance optimization
  */
@@ -70,7 +72,7 @@ export class DashboardCacheService {
       const data = await dataLoader();
       this.set(key, data, this.DEFAULT_TTL);
     } catch (error) {
-      console.warn('Failed to preload dashboard data:', error);
+      devLogger.dashboard.warn('Failed to preload dashboard data:', error);
     }
   }
 

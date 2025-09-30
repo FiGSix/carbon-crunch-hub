@@ -1,8 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
 import { ProfileOperations, ProfileUpdateResult, ProfileServiceDependencies } from './types';
 import { cacheStore } from '@/lib/supabase/cache';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 // Helper function to safely cast role
 function castUserRole(role: string | null | undefined): UserRole | undefined {
@@ -69,7 +69,7 @@ export class ProfileService implements ProfileOperations {
 
       return null;
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      devLogger.api.error('Error fetching profile:', error);
       return null;
     }
   }
@@ -89,7 +89,7 @@ export class ProfileService implements ProfileOperations {
       
       return { success: true };
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      devLogger.api.error('Error updating profile:', error);
       return { success: false, error: error.message };
     }
   }

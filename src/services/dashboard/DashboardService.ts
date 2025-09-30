@@ -1,7 +1,7 @@
-
 import { DashboardOperations, DashboardData, DashboardServiceDependencies } from './types';
 import { DashboardCalculator } from './DashboardCalculator';
 import { CACHE_KEYS, CACHE_TTL } from '../cache/types';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export class DashboardService implements DashboardOperations {
   constructor(private dependencies: DashboardServiceDependencies) {}
@@ -26,7 +26,7 @@ export class DashboardService implements DashboardOperations {
 
       return result;
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      devLogger.dashboard.error('Error fetching dashboard data:', error);
       // Return proper structure with all required properties
       return {
         proposals: [],

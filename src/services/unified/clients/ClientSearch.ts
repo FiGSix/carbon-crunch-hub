@@ -1,7 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { ClientSearchResult } from './types';
 import type { Database } from '@/integrations/supabase/types';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 type ClientRow = Database['public']['Tables']['clients']['Row'];
 
@@ -16,7 +16,7 @@ export class ClientSearch {
       });
 
       if (error) {
-        console.error('Error searching clients:', error);
+        devLogger.clients.error('Error searching clients:', error);
         return [];
       }
 
@@ -28,7 +28,7 @@ export class ClientSearch {
         isRegistered: client.is_registered
       }));
     } catch (error) {
-      console.error('Error in client search:', error);
+      devLogger.clients.error('Error in client search:', error);
       return [];
     }
   }
@@ -45,7 +45,7 @@ export class ClientSearch {
         .limit(10);
 
       if (error) {
-        console.error('Error searching clients table:', error);
+        devLogger.clients.error('Error searching clients table:', error);
         return [];
       }
 
@@ -57,7 +57,7 @@ export class ClientSearch {
         isRegistered: client.user_id !== null
       }));
     } catch (error) {
-      console.error('Error in client search:', error);
+      devLogger.clients.error('Error in client search:', error);
       return [];
     }
   }

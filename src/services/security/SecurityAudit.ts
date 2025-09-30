@@ -1,5 +1,5 @@
-
 import { UserRole } from '@/contexts/auth/types';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface SecurityVulnerability {
   severity: 'high' | 'medium' | 'low';
@@ -37,7 +37,7 @@ export class SecurityAudit {
 
     // Log in development
     if (import.meta.env.DEV) {
-      console.warn('🚨 Security Vulnerability Detected:', vulnerability);
+      devLogger.general.warn('🚨 Security Vulnerability Detected:', vulnerability);
     }
   }
 
@@ -152,7 +152,7 @@ export class SecurityAudit {
 
     // You can add more automated checks here for other functions
     
-    console.log('🔍 Security audit completed. Run SecurityAudit.generateReport() to see results.');
+    devLogger.general.info('🔍 Security audit completed. Run SecurityAudit.generateReport() to see results.');
   }
 }
 

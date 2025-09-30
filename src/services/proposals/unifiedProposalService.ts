@@ -1,10 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/normalization";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/lib/calculations/carbon";
 import type { Database } from "@/integrations/supabase/types";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
@@ -195,7 +195,7 @@ export async function searchClients(searchTerm: string): Promise<Array<{
     .limit(10);
 
   if (error) {
-    console.error("Client search error:", error);
+    devLogger.clients.error("Client search error:", error);
     return [];
   }
 

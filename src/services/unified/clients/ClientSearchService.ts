@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 /**
  * Client search operations
@@ -29,7 +29,7 @@ export class ClientSearchService {
         isRegistered: client.user_id !== null
       })) || [];
     } catch (error) {
-      console.error('Client search error:', error);
+      devLogger.clients.error('Client search error:', error);
       return [];
     }
   }

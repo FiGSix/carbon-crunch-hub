@@ -1,10 +1,10 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ProposalListItem } from '@/types/proposals';
 import { ProposalOperations, ProposalServiceDependencies, ProposalUpdateBatch, BatchUpdateResult } from './types';
 import { ProposalTransformer } from './ProposalTransformer';
 import { CACHE_KEYS, CACHE_TTL } from '../cache/types';
 import type { Database } from '@/integrations/supabase/types';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 type ProposalRow = Database['public']['Tables']['proposals']['Row'];
 type ProposalUpdate = Database['public']['Tables']['proposals']['Update'];
@@ -53,7 +53,7 @@ export class ProposalService implements ProposalOperations {
 
       return proposals;
     } catch (error) {
-      console.error('Error fetching proposals:', error);
+      devLogger.proposals.error('Error fetching proposals:', error);
       return [];
     }
   }

@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CacheManager } from '../../cache/CacheManager';
 import type { CreateClientData } from '../types';
 import type { Database } from '@/integrations/supabase/types';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 type ClientRow = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
@@ -41,7 +42,7 @@ export class ClientCreator {
 
       return { success: true, client: data };
     } catch (error: any) {
-      console.error('Error creating unified client:', error);
+      devLogger.clients.error('Error creating unified client:', error);
       return { success: false, error: error.message };
     }
   }

@@ -1,5 +1,6 @@
 
 import { ClientSearch } from "@/services/unified/clients/ClientSearch";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export interface ClientSearchResult {
   id: string;
@@ -17,7 +18,7 @@ export async function searchClients(searchTerm: string): Promise<ClientSearchRes
   try {
     return await ClientSearch.searchClients(searchTerm.trim());
   } catch (error) {
-    console.error("Error searching clients:", error);
+    devLogger.api.error("Error searching clients:", error);
     return [];
   }
 }

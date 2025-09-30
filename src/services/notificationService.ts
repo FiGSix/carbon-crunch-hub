@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export interface NotificationData {
   userId: string;
@@ -23,11 +24,11 @@ export interface Notification {
 
 export const createNotification = async (data: NotificationData): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log("Creating notification:", data);
+    devLogger.notifications.debug("Creating notification:", data);
     
     // Check if user ID is provided and valid
     if (!data.userId) {
-      console.error("Error: userId is required for creating notifications");
+      devLogger.notifications.error("Error: userId is required for creating notifications");
       return { success: false, error: "userId is required" };
     }
     
@@ -43,13 +44,13 @@ export const createNotification = async (data: NotificationData): Promise<{ succ
       });
     
     if (error) {
-      console.error("Error creating notification:", error);
+      devLogger.notifications.error("Error creating notification:", error);
       return { success: false, error: error.message };
     }
     
     return { success: true };
   } catch (error) {
-    console.error("Unexpected error creating notification:", error);
+    devLogger.notifications.error("Unexpected error creating notification:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return { success: false, error: errorMessage };
   }
@@ -104,20 +105,20 @@ export const getNotifications = async (limit: number = 10): Promise<{ notificati
 
 export const markNotificationAsRead = async (id: string): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log("Marking notification as read:", id);
+    devLogger.notifications.debug("Marking notification as read:", id);
     const { error } = await supabase
       .from('notifications')
       .update({ read: true })
       .eq('id', id);
     
     if (error) {
-      console.error("Error marking notification as read:", error);
+      devLogger.notifications.error("Error marking notification as read:", error);
       return { success: false, error: error.message };
     }
     
     return { success: true };
   } catch (error) {
-    console.error("Unexpected error marking notification as read:", error);
+    devLogger.notifications.error("Unexpected error marking notification as read:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return { success: false, error: errorMessage };
   }
@@ -125,20 +126,20 @@ export const markNotificationAsRead = async (id: string): Promise<{ success: boo
 
 export const markAllNotificationsAsRead = async (): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log("Marking all notifications as read");
+    devLogger.notifications.debug("Marking all notifications as read");
     const { error } = await supabase
       .from('notifications')
       .update({ read: true })
       .eq('read', false);
     
     if (error) {
-      console.error("Error marking all notifications as read:", error);
+      devLogger.notifications.error("Error marking all notifications as read:", error);
       return { success: false, error: error.message };
     }
     
     return { success: true };
   } catch (error) {
-    console.error("Unexpected error marking all notifications as read:", error);
+    devLogger.notifications.error("Unexpected error marking all notifications as read:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return { success: false, error: errorMessage };
   }
@@ -146,20 +147,20 @@ export const markAllNotificationsAsRead = async (): Promise<{ success: boolean; 
 
 export const deleteNotification = async (id: string): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log("Deleting notification:", id);
+    devLogger.notifications.debug("Deleting notification:", id);
     const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', id);
     
     if (error) {
-      console.error("Error deleting notification:", error);
+      devLogger.notifications.error("Error deleting notification:", error);
       return { success: false, error: error.message };
     }
     
     return { success: true };
   } catch (error) {
-    console.error("Unexpected error deleting notification:", error);
+    devLogger.notifications.error("Unexpected error deleting notification:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return { success: false, error: errorMessage };
   }

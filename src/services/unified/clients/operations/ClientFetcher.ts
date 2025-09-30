@@ -4,6 +4,7 @@ import { CacheManager } from '../../cache/CacheManager';
 import { RoleValidator } from '../../utils/RoleValidator';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 import type { UnifiedClient, PaginatedClientsResult } from '../types';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 /**
  * Handles fetching clients with pagination and role-based access control
@@ -20,13 +21,13 @@ export class ClientFetcher {
     offset = 0
   ): Promise<PaginatedClientsResult> {
     if (import.meta.env.DEV) {
-      console.log('=== ClientFetcher.getClients ===');
-      console.log('Params:', { userId, userRole, forceRefresh, limit, offset });
+      devLogger.clients.debug('=== ClientFetcher.getClients ===');
+      devLogger.clients.debug('Params:', { userId, userRole, forceRefresh, limit, offset });
     }
     
     if (!RoleValidator.canManageClients(userRole)) {
       if (import.meta.env.DEV) {
-        console.log('Role validation failed - user cannot manage clients');
+        devLogger.clients.warn('Role validation failed - user cannot manage clients');
       }
       ErrorHandler.logSecurityEvent({
         type: 'unauthorized_access',
@@ -43,7 +44,7 @@ export class ClientFetcher {
     }
     
     if (import.meta.env.DEV) {
-      console.log('Role validation passed - user can manage clients');
+      devLogger.clients.debug('Role validation passed - user can manage clients');
     }
 
     const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
@@ -55,11 +56,11 @@ export class ClientFetcher {
 
     try {
       if (import.meta.env.DEV) {
-        console.log('=== Database Operations ===');
+        devLogger.clients.debug('=== Database Operations ===');
         
         // Debug current session state before making database calls
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        console.log('Current session state:', {
+        devLogger.clients.debug('Current session state:', {
           hasSession: !!session,
           sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
           sessionError: sessionError?.message,
@@ -68,10 +69,10 @@ export class ClientFetcher {
 
         // Test auth.uid() function directly
         const { data: authTest, error: authTestError } = await supabase.rpc('auth_user_id');
-        console.log('auth.uid() test result:', { authTest, authTestError });
+        devLogger.clients.debug('auth.uid() test result:', { authTest, authTestError });
 
         if (authTestError || !authTest) {
-          console.error('❌ auth.uid() is returning null - authentication not properly synchronized');
+          devLogger.clients.error('❌ auth.uid() is returning null - authentication not properly synchronized');
         }
       }
 
@@ -92,12 +93,12 @@ export class ClientFetcher {
       });
 
       if (import.meta.env.DEV) {
-        console.log('Count RPC result:', { countData, countError });
+        devLogger.clients.debug('Count RPC result:', { countData, countError });
       }
 
       if (countError) {
         if (import.meta.env.DEV) {
-          console.error('Count error:', countError);
+          devLogger.clients.error('Count error:', countError);
         }
         throw countError;
       }
@@ -105,7 +106,7 @@ export class ClientFetcher {
       const totalCount = countData || 0;
       
       if (import.meta.env.DEV) {
-        console.log('Total count:', totalCount);
+        devLogger.clients.debug('Total count:', totalCount);
       }
 
       // Get paginated data using the new optimized function
@@ -116,14 +117,14 @@ export class ClientFetcher {
       });
 
       if (import.meta.env.DEV) {
-        console.log('Paginated RPC result:', { data, error });
-        console.log('Data array length:', data?.length);
-        console.log('Sample data item:', data?.[0]);
+        devLogger.clients.debug('Paginated RPC result:', { data, error });
+        devLogger.clients.debug('Data array length:', data?.length);
+        devLogger.clients.debug('Sample data item:', data?.[0]);
       }
 
       if (error) {
         if (import.meta.env.DEV) {
-          console.error('Paginated data error:', error);
+          devLogger.clients.error('Paginated data error:', error);
         }
         const errorResult = ErrorHandler.handleRLSError(error, 'unified clients fetch');
         if (errorResult.requiresReauth) {
@@ -139,7 +140,7 @@ export class ClientFetcher {
 
       const clients: UnifiedClient[] = (data || []).map(client => {
         if (import.meta.env.DEV) {
-          console.log('Mapping client:', client);
+          devLogger.clients.debug('Mapping client:', client);
         }
         return {
           id: client.client_id,
@@ -154,9 +155,9 @@ export class ClientFetcher {
       });
 
       if (import.meta.env.DEV) {
-        console.log('=== Final mapped clients ===');
-        console.log('Mapped clients:', clients);
-        console.log('Mapped clients count:', clients.length);
+        devLogger.clients.debug('=== Final mapped clients ===');
+        devLogger.clients.debug('Mapped clients:', clients);
+        devLogger.clients.debug('Mapped clients count:', clients.length);
       }
 
       const hasMore = offset + limit < totalCount;
@@ -170,14 +171,14 @@ export class ClientFetcher {
       };
 
       if (import.meta.env.DEV) {
-        console.log('=== Final result ===');
-        console.log('Result:', result);
+        devLogger.clients.debug('=== Final result ===');
+        devLogger.clients.debug('Result:', result);
       }
 
       CacheManager.setCache(cacheKey, result);
       return result;
     } catch (error) {
-      console.error('Error fetching unified clients:', error);
+      devLogger.clients.error('Error fetching unified clients:', error);
       ErrorHandler.logSecurityEvent({
         type: 'access_denied',
         userId,
