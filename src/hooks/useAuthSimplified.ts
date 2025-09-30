@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthState } from './auth/useAuthState';
 import { useProfileLoader } from './auth/useProfileLoader';
