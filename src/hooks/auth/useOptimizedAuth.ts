@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
-import { performanceCache } from '@/services/cache/PerformanceCacheService';
+import { authCache } from '@/lib/cache/UnifiedCache';
 import { useAuthStateSync } from './useAuthStateSync';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface OptimizedAuthState {
   user: User | null;
@@ -58,8 +59,8 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
       setProfile(null);
       setUserRole(undefined);
       // Clear auth-related cache
-      performanceCache.deletePattern('auth_*');
-      performanceCache.deletePattern('profile_*');
+      authCache.deletePattern('auth_');
+      authCache.deletePattern('profile_');
       profileCache.current.clear();
     }
   }
@@ -84,7 +85,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
 
       // Check persistent cache
       const cacheKey = `profile_${userId}`;
-      const cachedProfile = performanceCache.get<UserProfile>(cacheKey);
+      const cachedProfile = authCache.get<UserProfile>(cacheKey);
       
       if (cachedProfile) {
         setProfile(cachedProfile);
@@ -104,7 +105,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
         .single();
 
       if (error) {
-        console.error('Error loading profile:', error);
+        devLogger.auth.error('Error loading profile:', error);
         setAuthError('Failed to load user profile');
         return;
       }
@@ -130,14 +131,14 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
         setUserRole(userProfile.role);
         
         // Cache with different TTLs based on data type
-        performanceCache.set(cacheKey, userProfile, 15 * 60 * 1000); // 15 minutes
+        authCache.set(cacheKey, userProfile, 15 * 60 * 1000); // 15 minutes
         profileCache.current.set(userId, { 
           profile: userProfile, 
           timestamp: Date.now() 
         });
       }
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      devLogger.auth.error('Error in loadUserProfile:', error);
       setAuthError('Profile loading failed');
     }
   }, []);
@@ -147,7 +148,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
     
     // Clear cache and reload
     const userId = session.user.id;
-    performanceCache.delete(`profile_${userId}`);
+    authCache.delete(`profile_${userId}`);
     profileCache.current.delete(userId);
     
     await loadUserProfile(userId);
@@ -180,7 +181,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
       setIsLoading(true);
       
       // Clear all cache
-      performanceCache.clear();
+      authCache.clear();
       profileCache.current.clear();
       
       const { error } = await supabase.auth.signOut();

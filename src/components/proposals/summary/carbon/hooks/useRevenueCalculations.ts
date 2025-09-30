@@ -2,7 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { UnifiedCarbonService } from '@/services/calculations/carbon';
 import { PortfolioData } from '@/services/proposals/portfolioService';
-import { optimizedCache } from '@/services/cache/OptimizedCacheService';
+import { dataCache } from '@/lib/cache/UnifiedCache';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseRevenueCalculationsProps {
   systemSize: string;
@@ -37,9 +38,9 @@ export function useRevenueCalculations({
         setLoading(true);
         
         // Check cache first
-        const cachedResult = optimizedCache.get<Record<string, number>>(cacheKey);
+        const cachedResult = dataCache.get<Record<string, number>>(cacheKey);
         if (cachedResult) {
-          console.log('📦 Using cached revenue calculation');
+          devLogger.components.log('Using cached revenue calculation');
           setClientSpecificRevenue(cachedResult);
           setLoading(false);
           return;
@@ -54,11 +55,11 @@ export function useRevenueCalculations({
         }, portfolioSize);
 
         // Cache the result for 5 minutes
-        optimizedCache.set(cacheKey, result.revenueByYear, 5 * 60 * 1000);
+        dataCache.set(cacheKey, result.revenueByYear, 5 * 60 * 1000);
         
         setClientSpecificRevenue(result.revenueByYear);
       } catch (error) {
-        console.error('Error calculating revenues:', error);
+        devLogger.components.error('Error calculating revenues:', error);
         setClientSpecificRevenue({});
       } finally {
         setLoading(false);
