@@ -7,6 +7,7 @@ import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Activity, ShieldCheck }
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/auth";
 import { RoleValidator } from "@/services/unified/utils/RoleValidator";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface GoogleMapsHealthMonitorProps {
   autoRefresh?: boolean;
@@ -63,7 +64,7 @@ export function GoogleMapsHealthMonitor({
       const { data, error } = await supabase.functions.invoke('google-maps-health-check');
       
       if (error) {
-        console.error('❌ Health monitor error:', error);
+        devLogger.maps.error('Health monitor error', error);
         setHealthStatus({
           healthy: false,
           lastCheck: new Date().toISOString(),
@@ -87,7 +88,7 @@ export function GoogleMapsHealthMonitor({
       setHealthStatus(newStatus);
       
     } catch (error) {
-      console.error('💥 Health monitor error:', error);
+      devLogger.maps.error('Health monitor error', error);
       setHealthStatus({
         healthy: false,
         lastCheck: new Date().toISOString(),

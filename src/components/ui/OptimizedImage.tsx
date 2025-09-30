@@ -1,4 +1,5 @@
 import React from 'react';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface OptimizedImageProps {
   src: string;
@@ -83,7 +84,7 @@ export function OptimizedImage({
           onLoad?.();
         }}
         onError={(e) => {
-          console.error(`[OptimizedImage] Failed to load image: ${src}`, e);
+          devLogger.components.error(`Failed to load image: ${src}`, e);
           onError?.(e);
         }}
         style={commonStyle}

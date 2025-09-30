@@ -12,6 +12,7 @@ import { getNotifications, Notification } from "@/services/notificationService";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { cacheStore } from "@/lib/supabase/cache";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -63,7 +64,7 @@ export function NotificationBell() {
       try {
         const { notifications: fetchedNotifications, error } = await getNotifications(10);
         if (error) {
-          console.error("Error fetching notifications:", { message: error, details: error });
+          devLogger.notifications.error("Error fetching notifications", { message: error, details: error });
           setNotifications([]);
         } else {
           setNotifications(fetchedNotifications);
@@ -75,7 +76,7 @@ export function NotificationBell() {
           });
         }
       } catch (error) {
-        console.error("Error fetching notifications:", { message: "TypeError: Failed to fetch", details: error instanceof Error ? error.stack : error });
+        devLogger.notifications.error("Error fetching notifications", { message: "TypeError: Failed to fetch", details: error instanceof Error ? error.stack : error });
         setNotifications([]);
       } finally {
         setLoading(false);

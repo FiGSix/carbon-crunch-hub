@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDebounce } from "@/hooks/proposals/utils/useDebounce";
 import { useSecureGoogleMaps } from "@/hooks/useSecureGoogleMaps";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseAddressAutocompleteProps {
   value: string;
@@ -91,7 +92,7 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
       console.log(`✅ Successfully fetched ${results.length} predictions`);
       
     } catch (err) {
-      console.error('❌ Prediction fetch failed:', err);
+      devLogger.maps.error('Prediction fetch failed', err);
       
       const rawError = err instanceof Error ? err.message : 'Unknown error';
       const clientError = sanitizeErrorForClient(rawError);

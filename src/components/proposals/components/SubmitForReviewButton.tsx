@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useProposalSubmission } from "./hooks/useProposalSubmission";
 import { SubmitForReviewDialog } from "./SubmitForReviewDialog";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface SubmitForReviewButtonProps {
   proposalId: string;
@@ -51,7 +52,7 @@ export function SubmitForReviewButton({
           onProposalUpdate();
         }
       } else {
-        console.error("Submission failed:", result.error || "Unknown error");
+        devLogger.proposals.error("Submission failed", result.error || "Unknown error");
         toast({
           title: "Submission Failed",
           description: result.error || "There was an error submitting the proposal. Please try again.",
@@ -59,7 +60,7 @@ export function SubmitForReviewButton({
         });
       }
     } catch (error) {
-      console.error("Unexpected error during submission:", error);
+      devLogger.proposals.error("Unexpected error during submission", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred during submission.",

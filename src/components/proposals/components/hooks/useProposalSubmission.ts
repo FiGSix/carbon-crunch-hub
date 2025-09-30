@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "@/services/notificationService";
 import { useAuth } from "@/contexts/auth";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseProposalSubmissionProps {
   proposalId: string;
@@ -34,7 +35,7 @@ export function useProposalSubmission({
       
       // Validate user and role prerequisites
       if (!user) {
-        console.error("No authenticated user found");
+        devLogger.proposals.error("No authenticated user found");
         toast({
           title: "Authentication Error",
           description: "Please log in again.",
@@ -44,7 +45,7 @@ export function useProposalSubmission({
       }
       
       if (userRole !== 'agent') {
-        console.error("User does not have agent role:", userRole);
+        devLogger.proposals.error("User does not have agent role", userRole);
         toast({
           title: "Permission Denied",
           description: `Current role (${userRole}) cannot submit proposals`,
@@ -61,7 +62,7 @@ export function useProposalSubmission({
         .single();
       
       if (checkError || !existingProposal) {
-        console.error("Proposal check error:", checkError);
+        devLogger.proposals.error("Proposal check error", checkError);
         toast({
           title: "Proposal Error",
           description: "Could not find the specified proposal.",
@@ -74,7 +75,7 @@ export function useProposalSubmission({
       console.log("Existing proposal:", existingProposal);
       
       if (existingProposal.status !== 'draft') {
-        console.error("Proposal is not in draft status:", existingProposal.status);
+        devLogger.proposals.error("Proposal is not in draft status", existingProposal.status);
         toast({
           title: "Invalid Status",
           description: "Only draft proposals can be submitted for review.",
@@ -85,7 +86,7 @@ export function useProposalSubmission({
       
       // Verify that the agent is assigned to this proposal
       if (existingProposal.agent_id !== user.id) {
-        console.error("Agent mismatch:", { proposalAgentId: existingProposal.agent_id, userId: user.id });
+        devLogger.proposals.error("Agent mismatch", { proposalAgentId: existingProposal.agent_id, userId: user.id });
         toast({
           title: "Permission Denied",
           description: "You are not assigned to this proposal.",
@@ -105,7 +106,7 @@ export function useProposalSubmission({
         .select();
       
       if (updateError) {
-        console.error("Proposal update error:", updateError);
+        devLogger.proposals.error("Proposal update error", updateError);
         toast({
           title: "Update Failed",
           description: updateError.message,
@@ -128,7 +129,7 @@ export function useProposalSubmission({
         });
         console.log("Notification created successfully");
       } catch (notificationError) {
-        console.error("Failed to create notification:", notificationError);
+        devLogger.proposals.error("Failed to create notification", notificationError);
         // Continue even if notification fails
       }
       
@@ -139,7 +140,7 @@ export function useProposalSubmission({
       
       return { success: true };
     } catch (error: any) {
-      console.error("Unexpected error in proposal submission:", error);
+      devLogger.proposals.error("Unexpected error in proposal submission", error);
       setErrorDetails(error.message || "An unexpected error occurred");
       return { success: false, error: error.message || "An unexpected error occurred" };
     } finally {

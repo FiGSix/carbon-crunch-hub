@@ -6,6 +6,7 @@ import { Proposal } from "../types";
 import { useProposalInvitations } from "../hooks/useProposalInvitations";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface ProposalInviteButtonProps {
   proposal: Proposal;
@@ -50,7 +51,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
           onProposalUpdate();
         }
       } else {
-        console.error("Invitation failed:", result.error);
+        devLogger.proposals.error("Invitation failed", result.error);
         toast({
           title: "Invitation Failed",
           description: result.error || "There was an error sending the invitation. Please try again.",
@@ -58,7 +59,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
         });
       }
     } catch (error: any) {
-      console.error("Error in invitation process:", error);
+      devLogger.proposals.error("Error in invitation process", error);
       toast({
         title: "Invitation Error",
         description: error.message || "An unexpected error occurred while sending the invitation.",
@@ -90,7 +91,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
           onProposalUpdate();
         }
       } else {
-        console.error("Resend failed:", result.error);
+        devLogger.proposals.error("Resend failed", result.error);
         toast({
           title: "Resend Failed",
           description: result.error || "There was an error resending the invitation. Please try again.",
@@ -98,7 +99,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
         });
       }
     } catch (error: any) {
-      console.error("Error in resend process:", error);
+      devLogger.proposals.error("Error in resend process", error);
       toast({
         title: "Resend Error",
         description: error.message || "An unexpected error occurred while resending the invitation.",

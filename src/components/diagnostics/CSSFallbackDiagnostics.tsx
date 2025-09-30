@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 /**
  * CSS System Diagnostics - Phase 2 Component
@@ -45,7 +46,7 @@ export const CSSFallbackDiagnostics = () => {
         });
 
       } catch (error) {
-        console.error('[CSS Diagnostics] Error:', error);
+        devLogger.testing.error('CSS Diagnostics error', error);
       } finally {
         document.body.removeChild(testElement);
       }

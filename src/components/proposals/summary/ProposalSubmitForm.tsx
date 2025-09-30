@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface ProposalSubmitFormProps {
   eligibility: EligibilityCriteria;
@@ -74,7 +75,7 @@ export function ProposalSubmitForm({
         });
       }
     } catch (error) {
-      console.error("Error in proposal submission:", error);
+      devLogger.proposals.error("Error in proposal submission", error);
       toast({
         title: "Unexpected Error",
         description: "Something went wrong while creating your proposal.",

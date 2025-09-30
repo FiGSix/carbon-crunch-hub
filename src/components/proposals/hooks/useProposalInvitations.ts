@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ClientInformation, ProjectInformation } from "../types";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface ProposalContent {
   clientInfo?: ClientInformation;
@@ -42,14 +43,14 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         .single();
       
       if (proposalError) {
-        console.error("❌ Error fetching proposal data:", proposalError);
+        devLogger.proposals.error("Error fetching proposal data", proposalError);
         return { success: false, error: proposalError.message };
       }
       
       // Verify proposal is in the pending status
       if (proposalData.status !== 'pending') {
         const errorMsg = `Proposal must be in 'pending' status to send invitations. Current status: ${proposalData.status}`;
-        console.error("❌", errorMsg);
+        devLogger.proposals.error(errorMsg);
         return { success: false, error: errorMsg };
       }
       
@@ -66,7 +67,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
         
         if (tokenError) {
-          console.error("❌ Token generation error:", tokenError);
+          devLogger.proposals.error("Token generation error", tokenError);
           return { success: false, error: tokenError.message };
         }
         
@@ -84,7 +85,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           .eq('id', id);
         
         if (updateError) {
-          console.error("❌ Error updating proposal with invitation details:", updateError);
+          devLogger.proposals.error("Error updating proposal with invitation details", updateError);
           return { success: false, error: updateError.message };
         }
         
@@ -103,7 +104,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           .eq('id', id);
         
         if (updateError) {
-          console.error("❌ Error updating invitation sent timestamp:", updateError);
+          devLogger.proposals.error("Error updating invitation sent timestamp", updateError);
           return { success: false, error: updateError.message };
         }
       }
@@ -148,7 +149,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       if (!emailResponse?.success) {
         const errorMessage = emailResponse?.details || emailResponse?.error || "Email service error";
-        console.error("❌ Email sending failed:", errorMessage);
+        devLogger.proposals.error("Email sending failed", errorMessage);
         
         // If email sending fails, we should revert the invitation token update if we just created it
         if (!proposalData.invitation_token) {
@@ -183,7 +184,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         debug: emailResponse.debug
       };
     } catch (error: any) {
-      console.error("❌ Error sending invitation:", error);
+      devLogger.proposals.error("Error sending invitation", error);
       
       const errorMessage = error instanceof Error ? error.message : "Failed to send invitation";
       setError(errorMessage);

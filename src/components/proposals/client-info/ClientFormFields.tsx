@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ClientInformation } from "../types";
 import { searchClients } from "@/services/proposals/unifiedProposalService";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface ClientFormFieldsProps {
   clientInfo: ClientInformation;
@@ -29,7 +30,7 @@ export function ClientFormFields({
         setSearchResults(results);
         setShowSuggestions(results.length > 0);
       } catch (error) {
-        console.error('Search error:', error);
+        devLogger.proposals.error('Client search error', error);
         setSearchResults([]);
         setShowSuggestions(false);
       }

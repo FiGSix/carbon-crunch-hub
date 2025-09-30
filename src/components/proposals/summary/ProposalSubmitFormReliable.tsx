@@ -13,6 +13,7 @@ import { CheckCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { ReliableProposalService, ProposalProgress } from "@/services/proposals/ReliableProposalService";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface ProposalSubmitFormReliableProps {
   eligibility: EligibilityCriteria;
@@ -133,7 +134,7 @@ export function ProposalSubmitFormReliable({
       }
       
     } catch (error) {
-      console.error("Error in proposal submission:", error);
+      devLogger.proposals.error("Error in proposal submission", error);
       setIsSubmitting(false);
       setProgress(null);
       

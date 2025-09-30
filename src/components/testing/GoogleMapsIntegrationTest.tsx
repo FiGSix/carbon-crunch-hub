@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
 import { useAuth } from "@/contexts/auth";
 import { RoleValidator } from "@/services/unified/utils/RoleValidator";
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface HealthCheckResult {
   timestamp: string;
@@ -66,7 +67,7 @@ export function GoogleMapsIntegrationTest() {
       const { data, error } = await supabase.functions.invoke('google-maps-health-check');
       
       if (error) {
-        console.error('❌ Health check failed:', error);
+        devLogger.maps.error('Health check failed', error);
         setHealthCheck({
           timestamp: new Date().toISOString(),
           apiKeyValidation: { present: false, format: 'missing', length: 0, firstChars: '' },
@@ -84,7 +85,7 @@ export function GoogleMapsIntegrationTest() {
       console.log('✅ Health check completed:', data);
       setHealthCheck(data);
     } catch (error) {
-      console.error('💥 Health check error:', error);
+      devLogger.maps.error('Health check error', error);
       setHealthCheck({
         timestamp: new Date().toISOString(),
         apiKeyValidation: { present: false, format: 'missing', length: 0, firstChars: '' },

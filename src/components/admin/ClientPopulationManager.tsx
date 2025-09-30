@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, RefreshCw, CheckCircle, AlertTriangle, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export function ClientPopulationManager() {
   const { userRole } = useAuth();
@@ -34,7 +35,7 @@ export function ClientPopulationManager() {
       });
       
     } catch (error) {
-      console.error("Error refreshing client data:", error);
+      devLogger.clients.error("Error refreshing client data", error);
       toast({
         title: "Refresh Failed",
         description: error instanceof Error ? error.message : "An unexpected error occurred",
