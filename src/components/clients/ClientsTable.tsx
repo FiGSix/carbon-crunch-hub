@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { ClientData } from '@/hooks/useMyClients';
 import { ClientsTableLoading } from './table/ClientsTableLoading';
 import { ClientsTableError } from './table/ClientsTableError';

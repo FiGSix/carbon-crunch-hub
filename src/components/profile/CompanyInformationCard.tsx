@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { Building2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';

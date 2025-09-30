@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { 
   getClientSharePercentage
 } from "@/lib/calculations/carbon";

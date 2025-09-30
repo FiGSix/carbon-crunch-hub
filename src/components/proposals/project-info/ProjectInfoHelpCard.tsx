@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { HelpCircle } from "lucide-react";
 
 export function ProjectInfoHelpCard() {

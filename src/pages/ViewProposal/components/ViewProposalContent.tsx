@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalContent } from "@/components/proposals/view/ProposalContent";

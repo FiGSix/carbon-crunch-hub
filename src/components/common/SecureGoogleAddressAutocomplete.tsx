@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { GoogleMapsStatusIndicator } from "./GoogleMapsStatusIndicator";
 import { GoogleMapsMessages } from "./GoogleMapsMessages";
 import { AddressAutocompleteInput } from "./address-autocomplete/AddressAutocompleteInput";

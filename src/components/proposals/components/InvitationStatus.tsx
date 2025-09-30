@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { CheckCircle2, Clock, Mail } from "lucide-react";
 import { Proposal } from "../types";
 

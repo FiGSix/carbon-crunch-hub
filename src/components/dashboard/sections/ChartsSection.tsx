@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { CO2OffsetChart } from "@/components/dashboard/CO2OffsetChart";
 

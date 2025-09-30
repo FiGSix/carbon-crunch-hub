@@ -1,5 +1,5 @@
 
-import React from "react";
+import { useEffect } from "react";
 import { useClientSearch } from "@/hooks/useClientSearch";
 import { ClientInformation } from "@/types/proposals";
 import {
@@ -41,7 +41,7 @@ export function ClientSearchAutocomplete({
   const safeResults = Array.isArray(results) ? results : [];
   
   // Sync internal search term with external value
-  React.useEffect(() => {
+  useEffect(() => {
     if (searchTerm !== value) {
       
       setSearchTerm(value);

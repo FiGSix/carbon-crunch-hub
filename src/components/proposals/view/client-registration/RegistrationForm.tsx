@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RegisterPersonalInfo } from "@/components/auth/RegisterPersonalInfo";

@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CarbonPriceManager } from "@/components/admin/CarbonPriceManager";

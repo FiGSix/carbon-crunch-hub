@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { CheckCircle2, User, Building2, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 

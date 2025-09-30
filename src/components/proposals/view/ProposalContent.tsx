@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { ProposalHeader } from './ProposalHeader';
 import { ProposalDetails } from './ProposalDetails';
 import { ProposalDeleteDialog } from './ProposalDeleteDialog';

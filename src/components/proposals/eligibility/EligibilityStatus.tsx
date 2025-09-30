@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { CheckCircle2, CircleX } from "lucide-react";
 
 interface EligibilityStatusProps {

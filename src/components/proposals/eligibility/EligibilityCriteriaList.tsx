@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { EligibilityCriteriaItem } from "./EligibilityCriteriaItem";
 import { EligibilityCriteria } from "@/types/proposals";
 

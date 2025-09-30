@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { useViewProposalLogic } from "./hooks/useViewProposalLogic";
 import { useViewProposalAuth } from "./hooks/useViewProposalAuth";
 import { ViewProposalContent } from "./components/ViewProposalContent";

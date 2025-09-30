@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
 import { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from "@/lib/calculations/carbon";

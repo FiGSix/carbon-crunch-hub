@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { ProjectInformation } from "@/types/proposals";
 import { formatSystemSizeForDisplay, normalizeToKWp } from "@/lib/calculations/carbon/core";
 

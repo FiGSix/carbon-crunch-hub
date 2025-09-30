@@ -1,4 +1,4 @@
-import React from 'react';
+import { type ComponentType, createElement } from 'react';
 import { PageErrorBoundary } from '@/components/error/PageErrorBoundary';
 import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 import { ComponentErrorBoundary } from '@/components/error/ComponentErrorBoundary';
@@ -7,13 +7,13 @@ import { ComponentErrorBoundary } from '@/components/error/ComponentErrorBoundar
  * Higher-order component to wrap pages with error boundaries
  */
 export function withPageErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: ComponentType<P>,
   pageName?: string
 ) {
   const WrappedComponent = (props: P) => {
-    return React.createElement(
+    return createElement(
       PageErrorBoundary,
-      { pageName, children: React.createElement(Component, props) }
+      { pageName, children: createElement(Component, props) }
     );
   };
 
@@ -25,13 +25,13 @@ export function withPageErrorBoundary<P extends object>(
  * Higher-order component to wrap forms with error boundaries
  */
 export function withFormErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: ComponentType<P>,
   formName?: string
 ) {
   const WrappedComponent = (props: P) => {
-    return React.createElement(
+    return createElement(
       FormErrorBoundary,
-      { formName, children: React.createElement(Component, props) }
+      { formName, children: createElement(Component, props) }
     );
   };
 
@@ -43,13 +43,13 @@ export function withFormErrorBoundary<P extends object>(
  * Higher-order component to wrap components with error boundaries
  */
 export function withComponentErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: ComponentType<P>,
   componentName?: string
 ) {
   const WrappedComponent = (props: P) => {
-    return React.createElement(
+    return createElement(
       ComponentErrorBoundary,
-      { componentName, children: React.createElement(Component, props) }
+      { componentName, children: createElement(Component, props) }
     );
   };
 

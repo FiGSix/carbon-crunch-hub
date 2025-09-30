@@ -1,5 +1,5 @@
 
-import React from "react";
+import { memo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { CustomPieLabel } from "./CustomPieLabel";
 import { STATUS_COLORS } from "./StatusColors";
@@ -62,4 +62,4 @@ const PieChartContentComponent: React.FC<PieChartContentProps> = ({
   );
 };
 
-export const PieChartContent = React.memo(PieChartContentComponent);
+export const PieChartContent = memo(PieChartContentComponent);

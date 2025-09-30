@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { STATUS_COLORS } from "./StatusColors";
 
 type CustomLabelProps = {

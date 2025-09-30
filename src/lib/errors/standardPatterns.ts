@@ -1,4 +1,4 @@
-import React from "react";
+
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { ErrorSeverity } from "@/types/errors";
 import { useToast } from "@/hooks/use-toast";

@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';

@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { CheckCircle2, User, FileText, Clipboard } from "lucide-react";
 
 type FormStep = "eligibility" | "client" | "project" | "summary";

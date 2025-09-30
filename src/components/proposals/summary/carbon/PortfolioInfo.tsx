@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { PortfolioData } from "@/services/proposals/portfolioService";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
 

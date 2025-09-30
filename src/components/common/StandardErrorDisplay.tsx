@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertTriangle, RefreshCw, Wifi, ShieldAlert, FileX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

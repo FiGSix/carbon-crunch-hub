@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { useAuth } from '@/contexts/auth';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";

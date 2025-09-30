@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface OptimizedImageProps {

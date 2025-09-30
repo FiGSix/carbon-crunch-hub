@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { CheckCircle2, X } from "lucide-react";
 import { CardFooter } from "@/components/ui/card";
 

@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { Loader2, AlertTriangle } from "lucide-react";
 
 interface GoogleMapsStatusIndicatorProps {

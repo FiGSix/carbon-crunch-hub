@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { ComprehensiveTestSuite } from '@/components/testing/ComprehensiveTestSuite';
 import { CSSFailureSimulator } from '@/components/testing/CSSFailureSimulator';
 import { DisplayDiagnostics } from '@/components/diagnostics/DisplayDiagnostics';

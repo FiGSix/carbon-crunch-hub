@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { Settings, RotateCcw, Zap, Info } from 'lucide-react';
 import {
   Dialog,

@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { HeroSection } from "@/pages/home/HeroSection";
 import { HowItWorksSection } from "@/pages/home/HowItWorksSection";
 import { TestimonialsSection } from "@/pages/home/TestimonialsSection";

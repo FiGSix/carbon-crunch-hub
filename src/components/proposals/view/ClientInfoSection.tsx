@@ -1,5 +1,5 @@
 
-import React from "react";
+
 import { ClientInformation } from "@/types/proposals";
 
 interface ClientInfoSectionProps {

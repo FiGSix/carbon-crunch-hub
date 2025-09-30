@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle, Loader2, UserPlus } from 'lucide-react';
 
