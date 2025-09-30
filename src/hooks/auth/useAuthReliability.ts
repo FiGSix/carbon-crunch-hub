@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseAuthReliabilityProps {
   session: Session | null;
@@ -35,23 +36,17 @@ export function useAuthReliability({
         .limit(1);
 
       if (error) {
-        if (import.meta.env.DEV) {
-          console.warn('🔌 Database connection issue detected:', error.message);
-        }
+        devLogger.auth.warn('🔌 Database connection issue detected:', error.message);
         
         if (retryAttempts.current < maxRetries) {
           retryAttempts.current++;
-          if (import.meta.env.DEV) {
-            console.log(`🔄 Attempting connection recovery (${retryAttempts.current}/${maxRetries})`);
-          }
+          devLogger.auth.info(`🔄 Attempting connection recovery (${retryAttempts.current}/${maxRetries})`);
           
           // Try to refresh session
           const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
           
           if (!refreshError && refreshData.session) {
-            if (import.meta.env.DEV) {
-              console.log('✅ Connection recovered via session refresh');
-            }
+            devLogger.auth.info('✅ Connection recovered via session refresh');
             retryAttempts.current = 0;
             onAuthStateChange(refreshData.session);
           }
@@ -64,25 +59,19 @@ export function useAuthReliability({
         retryAttempts.current = 0;
       }
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('💥 Connection check failed:', error);
-      }
+      devLogger.auth.error('💥 Connection check failed:', error);
     }
   }, [onAuthStateChange, onError]);
 
   const recoverSession = useCallback(async () => {
-    if (import.meta.env.DEV) {
-      console.log('🔄 Attempting session recovery');
-    }
+    devLogger.auth.info('🔄 Attempting session recovery');
 
     try {
       // First try to get existing session
       const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        if (import.meta.env.DEV) {
-          console.warn('⚠️ Error getting session during recovery:', sessionError.message);
-        }
+        devLogger.auth.warn('⚠️ Error getting session during recovery:', sessionError.message);
         return false;
       }
 
@@ -95,9 +84,7 @@ export function useAuthReliability({
           .limit(1);
 
         if (!testError) {
-          if (import.meta.env.DEV) {
-            console.log('✅ Session recovered successfully');
-          }
+          devLogger.auth.info('✅ Session recovered successfully');
           onAuthStateChange(currentSession);
           return true;
         }
@@ -107,18 +94,14 @@ export function useAuthReliability({
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
       if (!refreshError && refreshData.session) {
-        if (import.meta.env.DEV) {
-          console.log('✅ Session recovered via refresh');
-        }
+        devLogger.auth.info('✅ Session recovered via refresh');
         onAuthStateChange(refreshData.session);
         return true;
       }
 
       return false;
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('💥 Session recovery failed:', error);
-      }
+      devLogger.auth.error('💥 Session recovery failed:', error);
       return false;
     }
   }, [onAuthStateChange]);
@@ -133,9 +116,7 @@ export function useAuthReliability({
       return;
     }
 
-    if (import.meta.env.DEV) {
-      console.log('🔌 Starting connection monitoring');
-    }
+    devLogger.auth.info('🔌 Starting connection monitoring');
 
     connectionCheckInterval.current = setInterval(checkConnection, 30000); // Check every 30 seconds
 
@@ -150,16 +131,12 @@ export function useAuthReliability({
   // Listen for network events
   useEffect(() => {
     const handleOnline = () => {
-      if (import.meta.env.DEV) {
-        console.log('🌐 Network reconnected, attempting session recovery');
-      }
+      devLogger.auth.info('🌐 Network reconnected, attempting session recovery');
       recoverSession();
     };
 
     const handleOffline = () => {
-      if (import.meta.env.DEV) {
-        console.log('🌐 Network disconnected');
-      }
+      devLogger.auth.info('🌐 Network disconnected');
     };
 
     window.addEventListener('online', handleOnline);

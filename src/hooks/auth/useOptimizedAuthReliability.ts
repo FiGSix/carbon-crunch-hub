@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseOptimizedAuthReliabilityProps {
   session: Session | null;
@@ -29,18 +30,14 @@ export function useOptimizedAuthReliability({
       return false;
     }
     try {
-      if (import.meta.env.DEV) {
-        console.log('🔄 Attempting session recovery');
-      }
+      devLogger.auth.info('🔄 Attempting session recovery');
 
       // Check if we're hitting retry limits
       const now = Date.now();
       if (retryCountRef.current >= maxRetries) {
         const timeSinceLastRetry = now - lastRetryRef.current;
         if (timeSinceLastRetry < baseDelay * Math.pow(2, maxRetries)) {
-          if (import.meta.env.DEV) {
-            console.log('⏳ Too many retry attempts, backing off');
-          }
+          devLogger.auth.info('⏳ Too many retry attempts, backing off');
           return false;
         }
         // Reset retry count after sufficient backoff
@@ -60,9 +57,7 @@ export function useOptimizedAuthReliability({
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
-        if (import.meta.env.DEV) {
-          console.error('❌ Session recovery failed:', error.message);
-        }
+        devLogger.auth.error('❌ Session recovery failed:', error.message);
         
         // Handle specific error types
         if (error.message.includes('Invalid Refresh Token') || 
@@ -79,9 +74,7 @@ export function useOptimizedAuthReliability({
       }
 
       if (data.session) {
-        if (import.meta.env.DEV) {
-          console.log('✅ Session recovered successfully');
-        }
+        devLogger.auth.info('✅ Session recovered successfully');
         retryCountRef.current = 0; // Reset on success
         onAuthStateChange(data.session);
         return true;
@@ -89,9 +82,7 @@ export function useOptimizedAuthReliability({
 
       return false;
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('💥 Session recovery error:', error);
-      }
+      devLogger.auth.error('💥 Session recovery error:', error);
       
       if (retryCountRef.current >= maxRetries) {
         onError?.('Unable to restore your session. Please sign in again.');
@@ -109,9 +100,7 @@ export function useOptimizedAuthReliability({
     if (!isInitialized) return;
 
     const handleOnline = () => {
-      if (import.meta.env.DEV) {
-        console.log('🌐 Network restored, checking session');
-      }
+      devLogger.auth.info('🌐 Network restored, checking session');
       // Only attempt recovery if we have an existing session
       if (session) {
         recoverSession();
@@ -119,9 +108,7 @@ export function useOptimizedAuthReliability({
     };
 
     const handleAuthError = (event: CustomEvent) => {
-      if (import.meta.env.DEV) {
-        console.log('🔐 Auth error detected, attempting recovery');
-      }
+      devLogger.auth.info('🔐 Auth error detected, attempting recovery');
       recoverSession();
     };
 
@@ -148,21 +135,15 @@ export function useOptimizedAuthReliability({
     const refreshBuffer = 10 * 60 * 1000; // 10 minutes
 
     if (timeUntilExpiry <= refreshBuffer && timeUntilExpiry > 0) {
-      if (import.meta.env.DEV) {
-        console.log('🔄 Session nearing expiry, refreshing in background');
-      }
+      devLogger.auth.info('🔄 Session nearing expiry, refreshing in background');
       
       // Schedule refresh
       const timeout = setTimeout(() => {
         supabase.auth.refreshSession().then(({ data, error }) => {
           if (error) {
-            if (import.meta.env.DEV) {
-              console.warn('⚠️ Background refresh failed:', error.message);
-            }
+            devLogger.auth.warn('⚠️ Background refresh failed:', error.message);
           } else if (data.session) {
-            if (import.meta.env.DEV) {
-              console.log('✅ Background refresh successful');
-            }
+            devLogger.auth.info('✅ Background refresh successful');
             onAuthStateChange(data.session);
           }
         });

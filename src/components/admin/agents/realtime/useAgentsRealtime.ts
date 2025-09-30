@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export function useAgentsRealtime() {
   const { toast } = useToast();
@@ -19,7 +20,7 @@ export function useAgentsRealtime() {
           filter: 'role=eq.agent'
         },
         async (payload) => {
-          console.log('Agent profile change detected:', payload);
+          devLogger.realtime.info('Agent profile change detected:', payload);
           
           // Invalidate and refetch agent management queries
           await invalidateAgentManagement();
@@ -58,7 +59,7 @@ export function useAgentsRealtime() {
           table: 'agent_activities'
         },
         async (payload) => {
-          console.log('Agent activity change detected:', payload);
+          devLogger.realtime.info('Agent activity change detected:', payload);
           
           // Invalidate agent management queries to reflect activity changes
           await invalidateAgentManagement();
@@ -72,7 +73,7 @@ export function useAgentsRealtime() {
           table: 'proposals',
         },
         async (payload) => {
-          console.log('Proposal change detected:', payload);
+          devLogger.realtime.info('Proposal change detected:', payload);
           
           // Invalidate queries as proposal changes affect agent stats
           await invalidateAgentManagement();
@@ -86,9 +87,9 @@ export function useAgentsRealtime() {
         // Enable replica identity for real-time updates
         await supabase.rpc('test_rls_policies'); // This will ensure functions exist
         
-        console.log('Realtime subscriptions established for agent management');
+        devLogger.realtime.info('Realtime subscriptions established for agent management');
       } catch (error) {
-        console.error('Error setting up realtime:', error);
+        devLogger.realtime.error('Error setting up realtime:', error);
       }
     };
 
