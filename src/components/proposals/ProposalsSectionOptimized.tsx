@@ -6,7 +6,7 @@ import { ProposalList } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/components/proposals/ProposalFilters";
 import { ProposalActions } from "@/components/proposals/ProposalActions";
 import { ProposalLoadingState } from "@/components/proposals/ProposalLoadingState";
-import { PortfolioManagement } from "@/components/proposals/PortfolioManagement";
+
 import { useProposals } from "@/hooks/useProposals";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -92,10 +92,7 @@ export function ProposalsSectionOptimized() {
   }, [toast]); // Only toast as dependency - handleProposalUpdate removed as it's handled in useProposals
   
   return (
-    <>
-      <PortfolioManagement />
-      
-      <Card className="retro-card mb-8">
+    <Card className="retro-card mb-8">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center">
@@ -153,6 +150,5 @@ export function ProposalsSectionOptimized() {
           )}
         </CardContent>
       </Card>
-    </>
   );
 }
