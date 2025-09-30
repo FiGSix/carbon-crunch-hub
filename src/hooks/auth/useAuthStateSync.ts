@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';

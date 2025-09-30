@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import { useCallback, MutableRefObject } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/auth/types';
@@ -8,7 +8,7 @@ import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface UseProfileLoaderProps {
   user: User | null;
-  isUnmountedRef: React.MutableRefObject<boolean>;
+  isUnmountedRef: MutableRefObject<boolean>;
   updateProfileState: (profile: UserProfile | null) => void;
 }
 

@@ -1,11 +1,11 @@
 
-import React, { useEffect } from 'react';
+import { useEffect, MutableRefObject } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { authCache } from '@/lib/cache/UnifiedCache';
 
 interface UseAuthInitializerProps {
-  isUnmountedRef: React.MutableRefObject<boolean>;
+  isUnmountedRef: MutableRefObject<boolean>;
   setIsLoading: (loading: boolean) => void;
   setIsInitialized: (initialized: boolean) => void;
   updateAuthState: (session: Session | null) => void;
