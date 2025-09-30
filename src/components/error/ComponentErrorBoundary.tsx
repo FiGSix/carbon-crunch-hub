@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface Props {
   children: ReactNode;
@@ -31,13 +32,11 @@ export class ComponentErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    if (import.meta.env.DEV) {
-      console.error('Component Error Boundary caught an error:', {
-        componentName: this.props.componentName,
-        error: error.message,
-        componentStack: errorInfo.componentStack
-      });
-    }
+    devLogger.components.error('Component Error Boundary caught an error:', {
+      componentName: this.props.componentName,
+      error: error.message,
+      componentStack: errorInfo.componentStack
+    });
   }
 
   handleReset = () => {

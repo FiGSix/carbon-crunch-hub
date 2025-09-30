@@ -2,6 +2,7 @@ import React, { Component, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface Props {
   children: ReactNode;
@@ -38,16 +39,14 @@ export class FormErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log to console in development
-    if (import.meta.env.DEV) {
-      console.error('Form Error Boundary caught an error:', {
-        formName: this.props.formName,
-        error: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        retryCount: this.state.retryCount
-      });
-    }
+    // Log error
+    devLogger.general.error('Form Error Boundary caught an error:', {
+      formName: this.props.formName,
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      retryCount: this.state.retryCount
+    });
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);

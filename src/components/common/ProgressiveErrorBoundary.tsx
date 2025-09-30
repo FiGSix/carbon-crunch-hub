@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 interface Props {
   children: ReactNode;
@@ -38,7 +39,7 @@ export class ProgressiveErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const { level = 'component', name = 'Unknown' } = this.props;
     
-    console.error(`[${level}] Error in ${name}:`, {
+    devLogger.components.error(`[${level}] Error in ${name}:`, {
       error: error.message,
       componentStack: errorInfo.componentStack.split('\n').slice(0, 3).join('\n'),
       level,
