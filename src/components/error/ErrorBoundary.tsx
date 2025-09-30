@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ComponentType, type ErrorInfo, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, AlertTriangle } from "lucide-react";
@@ -105,7 +105,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
 // Functional component wrapper for easier usage
 export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: ComponentType<P>,
   fallback?: ReactNode
 ) {
   return function WithErrorBoundaryComponent(props: P) {

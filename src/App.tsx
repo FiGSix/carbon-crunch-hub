@@ -11,7 +11,7 @@ import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
-import React, { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
 // Only import diagnostics in development
 const DisplayDiagnostics = import.meta.env.DEV 
