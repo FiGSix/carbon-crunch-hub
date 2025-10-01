@@ -22,6 +22,8 @@ export interface PdfTemplateParams {
   agent_commission_percentage: number;
   pdf_version: number;
   created_at: string;
+  project_address?: string | null;
+  commission_date?: string | null;
 }
 
 export function generatePdfTemplate(data: PdfTemplateParams): string {
@@ -36,6 +38,9 @@ export function generatePdfTemplate(data: PdfTemplateParams): string {
   ) || (data.agent as any)?.company_name || 'Your Agent';
 
   const createdDate = new Date(data.created_at).toLocaleDateString();
+  const commissionDate = data.commission_date 
+    ? new Date(data.commission_date).toLocaleDateString() 
+    : 'To be confirmed';
 
   const estClientValue = safeRound(
     (data.carbon_credits || 0) * ((data.client_share_percentage || 0) / 100)
@@ -68,6 +73,13 @@ export function generatePdfTemplate(data: PdfTemplateParams): string {
     .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; }
     .table { width: 100%; border-collapse: collapse; }
     .table th, .table td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+    .yellow-page { background: #FCD34D; min-height: 100vh; padding: 40px; }
+    .yellow-page h2 { color: #0f172a; font-size: 28px; margin-bottom: 16px; }
+    .yellow-page p { color: #1f2937; font-size: 13px; line-height: 1.7; margin-bottom: 24px; }
+    .schedule-table { background: white; border-radius: 8px; padding: 20px; }
+    .schedule-table .table td { border-bottom: 1px solid #e5e7eb; padding: 12px; }
+    .schedule-table .table td:first-child { font-weight: 600; color: #374151; width: 45%; }
+    .schedule-table .table td:last-child { color: #0f172a; }
   </style>
 </head>
 <body>
@@ -144,6 +156,47 @@ export function generatePdfTemplate(data: PdfTemplateParams): string {
     </ul>
 
     <div class="footer">Questions? Contact ${escapeHtml(agentName)} for more details.</div>
+  </section>
+
+  <!-- Project Schedule (Yellow Page) -->
+  <section class="page yellow-page">
+    <h2>Project Schedule</h2>
+    <p>
+      The project schedule is based on information as provided by the Client or Client's Agent or Solar Installer. 
+      The proposal, based on the project schedule, can be amended as required and will be annexed to the Cession Agreement. 
+      Note that it may impact the eligibility and structure of the agreement.
+    </p>
+    
+    <div class="schedule-table">
+      <table class="table">
+        <tbody>
+          <tr>
+            <td>Project Address</td>
+            <td>${escapeHtml(data.project_address || 'To be confirmed')}</td>
+          </tr>
+          <tr>
+            <td>System Size</td>
+            <td>${formatNumber(data.system_size_kwp)} kWp</td>
+          </tr>
+          <tr>
+            <td>Solar System Size in kWp</td>
+            <td>${formatNumber(data.system_size_kwp)} kWp</td>
+          </tr>
+          <tr>
+            <td>Date of Commissioning</td>
+            <td>${escapeHtml(commissionDate)}</td>
+          </tr>
+          <tr>
+            <td>Client Share</td>
+            <td>${formatNumber(data.client_share_percentage)}%</td>
+          </tr>
+          <tr>
+            <td>Agent Commission</td>
+            <td>${formatNumber(data.agent_commission_percentage)}%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <!-- Terms and Acceptance -->
