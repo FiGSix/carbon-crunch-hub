@@ -432,11 +432,11 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   
   // Flow diagram settings
   const flowSteps = [
-    { label: 'Signing of\nProposal', icon: 'âœ“' },
-    { label: 'Signing of\nCession\nAgreement', icon: 'âœŽ' },
-    { label: 'Project/\nPortfolio\nOnboarding', icon: 'â†‘' },
-    { label: 'Audit', icon: 'â—‰' },
-    { label: 'Reward', icon: 'â˜…' }
+    'Signing of\nProposal',
+    'Signing of\nCession\nAgreement',
+    'Project/\nPortfolio\nOnboarding',
+    'Audit',
+    'Reward'
   ];
   
   const circleRadius = mm(10);
@@ -454,7 +454,7 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const diagramCenterY = mm(20) + availableBottomSpace / 2;
   const circleY = diagramCenterY + labelHeight / 2;
   
-  // Draw each step circle with icon and label
+  // Draw each step circle with simple geometric icons
   for (let i = 0; i < flowSteps.length; i++) {
     const circleX = diagramStartX + circleRadius + i * (circleDiameter + arrowLength + circleSpacing * 2);
     
@@ -486,19 +486,111 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
       color: rgb(1, 1, 1),
     });
     
-    // Draw icon in center of circle
-    const iconSize = 18;
-    const iconWidth = font.widthOfTextAtSize(flowSteps[i].icon, iconSize);
-    page2.drawText(flowSteps[i].icon, {
-      x: circleX - iconWidth / 2,
-      y: circleY - mm(2.5),
-      size: iconSize,
-      font: bold,
-      color: rgb(0, 0, 0),
-    });
+    // Draw simple geometric icon in center of circle based on step
+    const iconSize = mm(4);
+    if (i === 0) {
+      // Step 1: Checkmark using lines
+      page2.drawLine({
+        start: { x: circleX - iconSize, y: circleY - iconSize * 0.3 },
+        end: { x: circleX - iconSize * 0.3, y: circleY - iconSize },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.3, y: circleY - iconSize },
+        end: { x: circleX + iconSize, y: circleY + iconSize * 0.5 },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+    } else if (i === 1) {
+      // Step 2: Document/pen symbol - rectangle with line
+      page2.drawRectangle({
+        x: circleX - iconSize * 0.6,
+        y: circleY - iconSize * 0.8,
+        width: iconSize * 1.2,
+        height: iconSize * 1.6,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1.5,
+      });
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.3, y: circleY },
+        end: { x: circleX + iconSize * 0.3, y: circleY },
+        thickness: 1.5,
+        color: rgb(0, 0, 0),
+      });
+    } else if (i === 2) {
+      // Step 3: Upload arrow
+      page2.drawLine({
+        start: { x: circleX, y: circleY - iconSize },
+        end: { x: circleX, y: circleY + iconSize },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+      page2.drawLine({
+        start: { x: circleX, y: circleY + iconSize },
+        end: { x: circleX - iconSize * 0.5, y: circleY + iconSize * 0.3 },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+      page2.drawLine({
+        start: { x: circleX, y: circleY + iconSize },
+        end: { x: circleX + iconSize * 0.5, y: circleY + iconSize * 0.3 },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+    } else if (i === 3) {
+      // Step 4: Magnifying glass (circle with handle)
+      page2.drawCircle({
+        x: circleX - iconSize * 0.2,
+        y: circleY + iconSize * 0.2,
+        size: iconSize * 0.6,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1.5,
+      });
+      page2.drawLine({
+        start: { x: circleX + iconSize * 0.2, y: circleY - iconSize * 0.2 },
+        end: { x: circleX + iconSize * 0.7, y: circleY - iconSize * 0.7 },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+    } else if (i === 4) {
+      // Step 5: Star using lines
+      const starPoints = 5;
+      const outerRadius = iconSize;
+      const innerRadius = iconSize * 0.4;
+      for (let p = 0; p < starPoints; p++) {
+        const angle1 = (Math.PI * 2 * p) / starPoints - Math.PI / 2;
+        const angle2 = (Math.PI * 2 * (p + 0.5)) / starPoints - Math.PI / 2;
+        const angle3 = (Math.PI * 2 * (p + 1)) / starPoints - Math.PI / 2;
+        page2.drawLine({
+          start: { 
+            x: circleX + Math.cos(angle1) * outerRadius, 
+            y: circleY + Math.sin(angle1) * outerRadius 
+          },
+          end: { 
+            x: circleX + Math.cos(angle2) * innerRadius, 
+            y: circleY + Math.sin(angle2) * innerRadius 
+          },
+          thickness: 1.5,
+          color: rgb(0, 0, 0),
+        });
+        page2.drawLine({
+          start: { 
+            x: circleX + Math.cos(angle2) * innerRadius, 
+            y: circleY + Math.sin(angle2) * innerRadius 
+          },
+          end: { 
+            x: circleX + Math.cos(angle3) * outerRadius, 
+            y: circleY + Math.sin(angle3) * outerRadius 
+          },
+          thickness: 1.5,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
     
     // Draw label below circle (centered, multi-line)
-    const labelLines = flowSteps[i].label.split('\n');
+    const labelLines = flowSteps[i].split('\n');
     const labelLineHeight = mm(3.5);
     let labelY = circleY - circleRadius - mm(4);
     
