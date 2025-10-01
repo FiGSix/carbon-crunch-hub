@@ -426,104 +426,119 @@ At Crunch Carbon, we manage the entire carbon credit generation process for you�
   const tcText = `Our Cession Agreement protects your rights as a solar system owner while allowing you to benefit from carbon credits with minimal effort and no cost. You remain the lawful owner of your system and only environmental benefits are ceded for credit generation. Crunch Carbon, with our partner CDSA, manages the full Carbon Credit process. From registration, audits, verification to sales and disbursement of cash. Crunch Carbon covers all related costs. You receive the revenue share from credits sold, paid annually in June/July being the norm. Your data is treated as confidential, and you may request process details at any time. If you decide for whatever reason the Cession Agreement may be cancelled by either party with 30 days' notice. Disputes are resolved through mediation and arbitration, and if unforeseen events prevent performance, either party may terminate without penalty.`;
   y = drawSectionContent(page2, tcText, p2x, y, page2.getSize().width - p2x * 2);
 
-  // Add 5-step flow diagram at bottom of page 2
-  y -= mm(15); // Add space before diagram
+  // Add 5-step circular flow diagram at bottom of page 2
+  const contentWidth = page2.getSize().width - p2x * 2;
+  const availableBottomSpace = y - mm(20); // Space from current y to page bottom margin
   
   // Flow diagram settings
   const flowSteps = [
-    'Signing of\nProposal',
-    'Signing of\nCession Agreement',
-    'Project/Portfolio\nOnboarding',
-    'Audit',
-    'Reward'
+    { label: 'Signing of\nProposal', icon: '✓' },
+    { label: 'Signing of\nCession\nAgreement', icon: '✎' },
+    { label: 'Project/\nPortfolio\nOnboarding', icon: '↑' },
+    { label: 'Audit', icon: '◉' },
+    { label: 'Reward', icon: '★' }
   ];
   
-  const boxWidth = mm(30);
-  const boxHeight = mm(15);
-  const boxSpacing = mm(8);
-  const arrowWidth = mm(5);
-  const totalDiagramWidth = (boxWidth * flowSteps.length) + (arrowWidth * (flowSteps.length - 1)) + (boxSpacing * (flowSteps.length - 1));
-  const startX = (page2.getSize().width - totalDiagramWidth) / 2;
-  const boxY = y - boxHeight;
+  const circleRadius = mm(10);
+  const circleDiameter = circleRadius * 2;
+  const circleSpacing = mm(6);
+  const arrowLength = mm(8);
+  const labelHeight = mm(12);
+  const totalDiagramHeight = circleDiameter + labelHeight;
   
-  // Draw each step box with arrow
+  // Calculate total width and ensure it fits within content width
+  const totalDiagramWidth = (circleDiameter * flowSteps.length) + (arrowLength * (flowSteps.length - 1)) + (circleSpacing * (flowSteps.length - 1) * 2);
+  const diagramStartX = p2x + (contentWidth - totalDiagramWidth) / 2;
+  
+  // Center vertically in available bottom space
+  const diagramCenterY = mm(20) + availableBottomSpace / 2;
+  const circleY = diagramCenterY + labelHeight / 2;
+  
+  // Draw each step circle with icon and label
   for (let i = 0; i < flowSteps.length; i++) {
-    const boxX = startX + i * (boxWidth + boxSpacing + arrowWidth);
+    const circleX = diagramStartX + circleRadius + i * (circleDiameter + arrowLength + circleSpacing * 2);
     
-    // Draw rounded box with black border
-    page2.drawRectangle({
-      x: boxX,
-      y: boxY,
-      width: boxWidth,
-      height: boxHeight,
-      color: rgb(1, 1, 1), // white background
-      borderColor: rgb(0, 0, 0), // black border
-      borderWidth: 1.5,
-    });
-    
-    // Draw step number circle
-    const circleRadius = mm(3);
-    const circleX = boxX + mm(4);
-    const circleY = boxY + boxHeight - mm(4);
+    // Draw white circle with black border
     page2.drawCircle({
       x: circleX,
       y: circleY,
       size: circleRadius,
+      color: rgb(1, 1, 1), // white fill
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 2,
+    });
+    
+    // Draw step number in small circle at top-right
+    const numberCircleSize = mm(3);
+    const numberX = circleX + circleRadius * 0.5;
+    const numberY = circleY + circleRadius * 0.5;
+    page2.drawCircle({
+      x: numberX,
+      y: numberY,
+      size: numberCircleSize,
       color: rgb(0, 0, 0),
     });
     page2.drawText(String(i + 1), {
-      x: circleX - mm(1.2),
-      y: circleY - mm(1.5),
-      size: 8,
+      x: numberX - mm(1),
+      y: numberY - mm(1.3),
+      size: 7,
       font: bold,
       color: rgb(1, 1, 1),
     });
     
-    // Draw step text (centered, supports multi-line)
-    const stepLines = flowSteps[i].split('\n');
-    const lineHeight = mm(3.5);
-    const totalTextHeight = stepLines.length * lineHeight;
-    let textY = boxY + (boxHeight + totalTextHeight) / 2 - mm(1.5);
+    // Draw icon in center of circle
+    const iconSize = 18;
+    const iconWidth = font.widthOfTextAtSize(flowSteps[i].icon, iconSize);
+    page2.drawText(flowSteps[i].icon, {
+      x: circleX - iconWidth / 2,
+      y: circleY - mm(2.5),
+      size: iconSize,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
     
-    for (const line of stepLines) {
-      const textWidth = font.widthOfTextAtSize(line, 8);
-      const textX = boxX + (boxWidth - textWidth) / 2;
+    // Draw label below circle (centered, multi-line)
+    const labelLines = flowSteps[i].label.split('\n');
+    const labelLineHeight = mm(3.5);
+    let labelY = circleY - circleRadius - mm(4);
+    
+    for (const line of labelLines) {
+      const lineWidth = font.widthOfTextAtSize(line, 8);
       page2.drawText(line, {
-        x: textX,
-        y: textY,
+        x: circleX - lineWidth / 2,
+        y: labelY,
         size: 8,
         font,
         color: rgb(0, 0, 0),
       });
-      textY -= lineHeight;
+      labelY -= labelLineHeight;
     }
     
     // Draw arrow to next step (except for last step)
     if (i < flowSteps.length - 1) {
-      const arrowStartX = boxX + boxWidth + mm(2);
-      const arrowEndX = arrowStartX + arrowWidth + boxSpacing - mm(4);
-      const arrowY = boxY + boxHeight / 2;
+      const arrowStartX = circleX + circleRadius + mm(2);
+      const arrowEndX = arrowStartX + arrowLength + circleSpacing * 2 - mm(4);
       
       // Arrow line
       page2.drawLine({
-        start: { x: arrowStartX, y: arrowY },
-        end: { x: arrowEndX, y: arrowY },
-        thickness: 1.5,
+        start: { x: arrowStartX, y: circleY },
+        end: { x: arrowEndX, y: circleY },
+        thickness: 2,
         color: rgb(0, 0, 0),
       });
       
       // Arrow head
-      const arrowHeadSize = mm(1.5);
+      const arrowHeadSize = mm(2);
       page2.drawLine({
-        start: { x: arrowEndX, y: arrowY },
-        end: { x: arrowEndX - arrowHeadSize, y: arrowY + arrowHeadSize },
-        thickness: 1.5,
+        start: { x: arrowEndX, y: circleY },
+        end: { x: arrowEndX - arrowHeadSize, y: circleY + arrowHeadSize },
+        thickness: 2,
         color: rgb(0, 0, 0),
       });
       page2.drawLine({
-        start: { x: arrowEndX, y: arrowY },
-        end: { x: arrowEndX - arrowHeadSize, y: arrowY - arrowHeadSize },
-        thickness: 1.5,
+        start: { x: arrowEndX, y: circleY },
+        end: { x: arrowEndX - arrowHeadSize, y: circleY - arrowHeadSize },
+        thickness: 2,
         color: rgb(0, 0, 0),
       });
     }
