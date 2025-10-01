@@ -426,6 +426,111 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const tcText = `Our Cession Agreement protects your rights as a solar system owner while allowing you to benefit from carbon credits with minimal effort and no cost. You remain the lawful owner of your system and only environmental benefits are ceded for credit generation. Crunch Carbon, with our partner CDSA, manages the full Carbon Credit process. From registration, audits, verification to sales and disbursement of cash. Crunch Carbon covers all related costs. You receive the revenue share from credits sold, paid annually in June/July being the norm. Your data is treated as confidential, and you may request process details at any time. If you decide for whatever reason the Cession Agreement may be cancelled by either party with 30 days' notice. Disputes are resolved through mediation and arbitration, and if unforeseen events prevent performance, either party may terminate without penalty.`;
   y = drawSectionContent(page2, tcText, p2x, y, page2.getSize().width - p2x * 2);
 
+  // Add 5-step flow diagram at bottom of page 2
+  y -= mm(15); // Add space before diagram
+  
+  // Flow diagram settings
+  const flowSteps = [
+    'Signing of\nProposal',
+    'Signing of\nCession Agreement',
+    'Project/Portfolio\nOnboarding',
+    'Audit',
+    'Reward'
+  ];
+  
+  const boxWidth = mm(30);
+  const boxHeight = mm(15);
+  const boxSpacing = mm(8);
+  const arrowWidth = mm(5);
+  const totalDiagramWidth = (boxWidth * flowSteps.length) + (arrowWidth * (flowSteps.length - 1)) + (boxSpacing * (flowSteps.length - 1));
+  const startX = (page2.getSize().width - totalDiagramWidth) / 2;
+  const boxY = y - boxHeight;
+  
+  // Draw each step box with arrow
+  for (let i = 0; i < flowSteps.length; i++) {
+    const boxX = startX + i * (boxWidth + boxSpacing + arrowWidth);
+    
+    // Draw rounded box with black border
+    page2.drawRectangle({
+      x: boxX,
+      y: boxY,
+      width: boxWidth,
+      height: boxHeight,
+      color: rgb(1, 1, 1), // white background
+      borderColor: rgb(0, 0, 0), // black border
+      borderWidth: 1.5,
+    });
+    
+    // Draw step number circle
+    const circleRadius = mm(3);
+    const circleX = boxX + mm(4);
+    const circleY = boxY + boxHeight - mm(4);
+    page2.drawCircle({
+      x: circleX,
+      y: circleY,
+      size: circleRadius,
+      color: rgb(0, 0, 0),
+    });
+    page2.drawText(String(i + 1), {
+      x: circleX - mm(1.2),
+      y: circleY - mm(1.5),
+      size: 8,
+      font: bold,
+      color: rgb(1, 1, 1),
+    });
+    
+    // Draw step text (centered, supports multi-line)
+    const stepLines = flowSteps[i].split('\n');
+    const lineHeight = mm(3.5);
+    const totalTextHeight = stepLines.length * lineHeight;
+    let textY = boxY + (boxHeight + totalTextHeight) / 2 - mm(1.5);
+    
+    for (const line of stepLines) {
+      const textWidth = font.widthOfTextAtSize(line, 8);
+      const textX = boxX + (boxWidth - textWidth) / 2;
+      page2.drawText(line, {
+        x: textX,
+        y: textY,
+        size: 8,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      textY -= lineHeight;
+    }
+    
+    // Draw arrow to next step (except for last step)
+    if (i < flowSteps.length - 1) {
+      const arrowStartX = boxX + boxWidth + mm(2);
+      const arrowEndX = arrowStartX + arrowWidth + boxSpacing - mm(4);
+      const arrowY = boxY + boxHeight / 2;
+      
+      // Arrow line
+      page2.drawLine({
+        start: { x: arrowStartX, y: arrowY },
+        end: { x: arrowEndX, y: arrowY },
+        thickness: 1.5,
+        color: rgb(0, 0, 0),
+      });
+      
+      // Arrow head
+      const arrowHeadSize = mm(1.5);
+      page2.drawLine({
+        start: { x: arrowEndX, y: arrowY },
+        end: { x: arrowEndX - arrowHeadSize, y: arrowY + arrowHeadSize },
+        thickness: 1.5,
+        color: rgb(0, 0, 0),
+      });
+      page2.drawLine({
+        start: { x: arrowEndX, y: arrowY },
+        end: { x: arrowEndX - arrowHeadSize, y: arrowY - arrowHeadSize },
+        thickness: 1.5,
+        color: rgb(0, 0, 0),
+      });
+    }
+  }
+
+  drawPageNumber(page2, 2, 5);
+
   // PAGE 3: Project Schedule (Yellow Background)
   const page3 = addPage();
   
