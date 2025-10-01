@@ -455,20 +455,21 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
 
   y -= mm(8);
 
-  // Draw white background table
+  // Draw table with yellow background and black borders
   const tableX = p3x;
   const tableY = y - mm(5);
   const tableWidth = page3.getSize().width - p3x * 2;
   const tableHeight = mm(60);
   
+  // Draw outer black border
   page3.drawRectangle({
     x: tableX,
     y: tableY - tableHeight,
     width: tableWidth,
     height: tableHeight,
-    color: rgb(1, 1, 1), // white background
-    borderColor: rgb(0.9, 0.9, 0.9),
-    borderWidth: 1,
+    color: rgb(0.988, 0.827, 0.302), // yellow background matching page
+    borderColor: rgb(0, 0, 0), // black border
+    borderWidth: 1.5,
   });
 
   // Extract project data
@@ -485,31 +486,52 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
     ['Agent Commission', fmtNum(anyProposal.agent_commission_percentage, '%')],
   ];
 
-  // Draw table rows
+  // Draw table rows with vertical centering
   const rowHeight = mm(9);
-  let tableRowY = tableY - mm(8);
   const labelX = tableX + mm(8);
   const valueX = tableX + mm(80);
+  const verticalCenterOffset = mm(2.5); // offset for vertical centering of text
 
-  for (const [label, value] of tableData) {
-    // Draw label (bold, dark gray)
-    page3.drawText(label, { x: labelX, y: tableRowY, size: 10, font: bold, color: rgb(0.22, 0.25, 0.32) });
-    // Draw value (regular, black)
-    page3.drawText(String(value), { x: valueX, y: tableRowY, size: 10, font, color: rgb(0, 0, 0) });
+  for (let i = 0; i < tableData.length; i++) {
+    const [label, value] = tableData[i];
+    const rowY = tableY - (i + 1) * rowHeight;
     
-    tableRowY -= rowHeight;
+    // Draw cell text with vertical centering
+    page3.drawText(label, { 
+      x: labelX, 
+      y: rowY + verticalCenterOffset, 
+      size: 10, 
+      font: bold, 
+      color: rgb(0, 0, 0) 
+    });
+    page3.drawText(String(value), { 
+      x: valueX, 
+      y: rowY + verticalCenterOffset, 
+      size: 10, 
+      font, 
+      color: rgb(0, 0, 0) 
+    });
     
-    // Draw divider line between rows (except last row)
-    if (tableRowY > tableY - tableHeight + mm(4)) {
+    // Draw horizontal black border between rows (except last row)
+    if (i < tableData.length - 1) {
       page3.drawRectangle({
-        x: labelX,
-        y: tableRowY + mm(3),
-        width: tableWidth - mm(16),
-        height: 0.5,
-        color: rgb(0.9, 0.91, 0.92),
+        x: tableX,
+        y: rowY,
+        width: tableWidth,
+        height: 1,
+        color: rgb(0, 0, 0),
       });
     }
   }
+  
+  // Draw vertical black border to separate label and value columns
+  page3.drawRectangle({
+    x: valueX - mm(4),
+    y: tableY - tableHeight,
+    width: 1,
+    height: tableHeight,
+    color: rgb(0, 0, 0),
+  });
 
   drawPageNumber(page3, 3, 5);
 
