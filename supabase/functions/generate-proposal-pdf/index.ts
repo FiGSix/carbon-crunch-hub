@@ -426,39 +426,89 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const tcText = `Our Cession Agreement protects your rights as a solar system owner while allowing you to benefit from carbon credits with minimal effort and no cost. You remain the lawful owner of your system and only environmental benefits are ceded for credit generation. Crunch Carbon, with our partner CDSA, manages the full Carbon Credit process. From registration, audits, verification to sales and disbursement of cash. Crunch Carbon covers all related costs. You receive the revenue share from credits sold, paid annually in June/July being the norm. Your data is treated as confidential, and you may request process details at any time. If you decide for whatever reason the Cession Agreement may be cancelled by either party with 30 days' notice. Disputes are resolved through mediation and arbitration, and if unforeseen events prevent performance, either party may terminate without penalty.`;
   y = drawSectionContent(page2, tcText, p2x, y, page2.getSize().width - p2x * 2);
 
-  // PAGE 3: Project Details & Schedule
+  // PAGE 3: Project Schedule (Yellow Background)
   const page3 = addPage();
+  
+  // Draw full-page yellow background (#FCD34D)
+  page3.drawRectangle({
+    x: 0,
+    y: 0,
+    width: page3.getSize().width,
+    height: page3.getSize().height,
+    color: rgb(0.988, 0.827, 0.302), // #FCD34D
+  });
+
   const p3x = mm(20);
   y = page3.getSize().height - mm(25);
 
-  drawHeading(page3, 'Project Details', p3x, y);
-  y -= mm(10);
-  drawKeyValue(page3, 'System Size', fmtNum(anyProposal.system_size_kwp, ' kWp'), p3x, y); y -= mm(7);
-  drawKeyValue(page3, 'Carbon Credits', fmtNum(anyProposal.carbon_credits), p3x, y); y -= mm(7);
-  drawKeyValue(page3, 'Client Share', fmtNum(anyProposal.client_share_percentage, '%'), p3x, y); y -= mm(7);
-  drawKeyValue(page3, 'Agent Commission', fmtNum(anyProposal.agent_commission_percentage, '%'), p3x, y); y -= mm(10);
-  drawDivider(page3, p3x, y, page3.getSize().width - p3x * 2); y -= mm(6);
+  // Heading: "Project Schedule" in black
+  page3.drawText('Project Schedule', { x: p3x, y, size: 18, font: bold, color: rgb(0, 0, 0) });
+  y -= mm(12);
 
-  drawSubheading(page3, 'Indicative Schedule', p3x, y);
+  // Description paragraph in black
+  const descriptionText = 'The project schedule is based on information as provided by the Client or Client\'s Agent or Solar Installer. The proposal, based on the project schedule, can be amended as required and will be annexed to the Cession Agreement. Note that it may impact the eligibility and structure of the agreement.';
+  const descriptionLines = wrapText(descriptionText, page3.getSize().width - p3x * 2, 11, font);
+  for (const line of descriptionLines) {
+    page3.drawText(line, { x: p3x, y, size: 11, font, color: rgb(0, 0, 0) });
+    y -= mm(5);
+  }
+
   y -= mm(8);
-  const schedule: Array<{ milestone: string; timeline: string }> = anyProposal.content?.schedule ?? [
-    { milestone: 'Qualification', timeline: 'Week 1' },
-    { milestone: 'Contracting', timeline: 'Weeks 2-3' },
-    { milestone: 'Onboarding', timeline: 'Weeks 3-4' },
-    { milestone: 'Credit Issuance', timeline: 'Monthly/Quarterly' },
+
+  // Draw white background table
+  const tableX = p3x;
+  const tableY = y - mm(5);
+  const tableWidth = page3.getSize().width - p3x * 2;
+  const tableHeight = mm(60);
+  
+  page3.drawRectangle({
+    x: tableX,
+    y: tableY - tableHeight,
+    width: tableWidth,
+    height: tableHeight,
+    color: rgb(1, 1, 1), // white background
+    borderColor: rgb(0.9, 0.9, 0.9),
+    borderWidth: 1,
+  });
+
+  // Extract project data
+  const projectAddress = anyProposal.project_info?.address || anyProposal.content?.projectInfo?.address || 'To be confirmed';
+  const commissionDate = anyProposal.project_info?.commission_date || anyProposal.content?.projectInfo?.commissionDate || 'To be confirmed';
+
+  // Table data
+  const tableData = [
+    ['Project Address', projectAddress],
+    ['System Size', fmtNum(anyProposal.system_size_kwp, ' kWp')],
+    ['Solar System Size in kWp', fmtNum(anyProposal.system_size_kwp, ' kWp')],
+    ['Date of Commissioning', commissionDate],
+    ['Client Share', fmtNum(anyProposal.client_share_percentage, '%')],
+    ['Agent Commission', fmtNum(anyProposal.agent_commission_percentage, '%')],
   ];
-  // simple two-column table
-  const col1 = p3x;
-  const col2 = p3x + mm(100);
-  const rowH = mm(8);
-  page3.drawText('Milestone', { x: col1, y, size: 10, font: bold, color: colors.muted });
-  page3.drawText('Timeline', { x: col2, y, size: 10, font: bold, color: colors.muted });
-  y -= mm(5);
-  for (const row of schedule) {
-    page3.drawText(row.milestone, { x: col1, y, size: 10, font, color: colors.text });
-    page3.drawText(row.timeline, { x: col2, y, size: 10, font, color: colors.text });
-    y -= rowH;
-    drawDivider(page3, p3x, y + mm(2), page3.getSize().width - p3x * 2);
+
+  // Draw table rows
+  const rowHeight = mm(9);
+  let tableRowY = tableY - mm(8);
+  const labelX = tableX + mm(8);
+  const valueX = tableX + mm(80);
+
+  for (const [label, value] of tableData) {
+    // Draw label (bold, dark gray)
+    page3.drawText(label, { x: labelX, y: tableRowY, size: 10, font: bold, color: rgb(0.22, 0.25, 0.32) });
+    // Draw value (regular, black)
+    page3.drawText(String(value), { x: valueX, y: tableRowY, size: 10, font, color: rgb(0, 0, 0) });
+    
+    tableRowY -= rowHeight;
+    
+    // Draw divider line between rows (except last row)
+    if (tableRowY > tableY - tableHeight + mm(4)) {
+      page3.drawRectangle({
+        x: labelX,
+        y: tableRowY + mm(3),
+        width: tableWidth - mm(16),
+        height: 0.5,
+        color: rgb(0.9, 0.91, 0.92),
+      });
+    }
   }
 
   drawPageNumber(page3, 3, 5);
