@@ -1067,7 +1067,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     const yearlyClientRevenue = yearlyCarbonCredits * clientPrice;
     
     revenueData.push({
-      year,
+      year: actualYear,
       mwhGenerated: yearlyEnergyMWh,
       tco2Offset: yearlyCarbonCredits,
       clientPrice,
