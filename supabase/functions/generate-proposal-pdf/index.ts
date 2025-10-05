@@ -397,18 +397,17 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   drawSectionHeading(page2, 'Benefits', p2x, y);
   y -= mm(8);
 
-  const benefitItems = [
-    { title: 'Reduce Your Carbon Footprint', text: 'by participating with Crunch Carbon, where your business contributes to significant carbon reduction efforts, promoting a greener planet and you get paid cash.' },
-    { title: 'Sustainable Future', text: 'Support the transition to renewable energy and sustainable practices.' },
-    { title: 'Get rewarded', text: 'After driving your carbon credit generation process for you, Crunch Carbon with our partners will then proceed to sell these carbon credits and reward the owners of these solar systems.' },
-    { title: 'No Costs', text: 'Joining Crunch Carbon is completely free, with no hidden fees or costs involved.' },
-    { title: 'Risk-Free', text: 'Users do not carry any financial risks; they only gain rewards.' }
-  ];
+  const benefitsText = `Join Crunch Carbon and transform your solar energy into verified carbon credits earning real rewards while helping build a cleaner planet.
 
-  for (const benefit of benefitItems) {
-    y = drawSectionContent(page2, `${benefit.title}\n${benefit.text}`, p2x, y, page2.getSize().width - p2x * 2);
-    y -= mm(4);
-  }
+Get Paid for Impact: We handle the entire carbon credit process, from verification to sale and you earn from every ton reduced.
+
+Zero Cost, Zero Risk: Joining is completely free, with no hidden fees or financial exposure.
+
+Support a Sustainable Future: Your participation directly drives renewable energy growth and carbon reduction across Africa.
+
+Do good. Get rewarded. Join Crunch Carbon.`;
+  
+  y = drawSectionContent(page2, benefitsText, p2x, y, page2.getSize().width - p2x * 2);
 
   y -= mm(4);
 
