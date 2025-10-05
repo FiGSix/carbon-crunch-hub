@@ -1224,6 +1224,15 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchYellow,
   });
   
+  // Draw top border of header row
+  page4.drawLine({
+    start: { x: revenueTableX, y: revenueTableY },
+    end: { x: revenueTableX + revenueTableWidth, y: revenueTableY },
+    thickness: 1,
+    color: crunchCharcoal,
+  });
+  
+  // Draw bottom border of header row
   page4.drawLine({
     start: { x: revenueTableX, y: currentRowY },
     end: { x: revenueTableX + revenueTableWidth, y: currentRowY },
