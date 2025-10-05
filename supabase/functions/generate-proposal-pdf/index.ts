@@ -732,7 +732,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     }
   }
 
-  drawPageNumber(page2, 2, 5);
+  drawPageNumber(page2, 2, 4);
 
   // PAGE 3: Project Schedule (Yellow Background)
   const page3 = addPage();
@@ -1032,7 +1032,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal,
   });
 
-  drawPageNumber(page3, 3, 5);
+  drawPageNumber(page3, 3, 4);
 
   // PAGE 4: Revenue Share
   const page4 = addPage();
@@ -1408,46 +1408,24 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y -= mm(3.5);
   }
 
-  drawPageNumber(page4, 4, 5);
-
-  // PAGE 5: Acceptance & Contact
-  const page5 = addPage();
-  // Add yellow background
-  page5.drawRectangle({
-    x: 0,
-    y: 0,
-    width: page5.getSize().width,
-    height: page5.getSize().height,
-    color: crunchYellow,
-  });
-  const p5x = mm(20);
-  y = page5.getSize().height - mm(25);
-
-  drawHeading(page5, 'Acceptance', p5x, y);
+  // Acceptance section on page 4
+  y -= mm(15);
+  drawHeading(page4, 'Acceptance', p4x, y);
   y -= mm(12);
-  y = drawParagraph(page5, 'By signing below, the Client acknowledges the indicative terms herein and agrees to proceed to contracting subject to final due diligence and mutually agreed terms.', p5x, y, page5.getSize().width - p5x * 2);
+  y = drawParagraph(page4, 'By signing below, the Client acknowledges the indicative terms herein and agrees to proceed to contracting subject to final due diligence and mutually agreed terms.', p4x, y, page4.getSize().width - p4x * 2);
 
   y -= mm(12);
   // Signature lines
-  page5.drawText('Client Signature:', { x: p5x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page5, p5x + mm(35), y + mm(2), mm(90));
+  page4.drawText('Client Signature:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
+  drawDivider(page4, p4x + mm(35), y + mm(2), mm(90));
   y -= mm(10);
-  page5.drawText('Name:', { x: p5x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page5, p5x + mm(18), y + mm(2), mm(70));
+  page4.drawText('Name:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
+  drawDivider(page4, p4x + mm(18), y + mm(2), mm(70));
   y -= mm(10);
-  page5.drawText('Date:', { x: p5x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page5, p5x + mm(15), y + mm(2), mm(40));
+  page4.drawText('Date:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
+  drawDivider(page4, p4x + mm(15), y + mm(2), mm(40));
 
-  // Contact block
-  const contactX = page5.getSize().width - mm(90);
-  const contactY = mm(60);
-  page5.drawRectangle({ x: contactX - mm(5), y: contactY - mm(5), width: mm(80), height: mm(40), color: colors.white, borderColor: colors.border, borderWidth: 1 });
-  page5.drawText('Contact', { x: contactX, y: contactY + mm(30), size: 12, font: bold, color: colors.charcoal });
-  page5.drawText(agentName, { x: contactX, y: contactY + mm(22), size: 10, font, color: colors.text });
-  if (agentEmail) page5.drawText(agentEmail, { x: contactX, y: contactY + mm(14), size: 10, font, color: colors.text });
-  page5.drawText(agent.company_name || 'Crunch Carbon', { x: contactX, y: contactY + mm(6), size: 10, font, color: colors.text });
-
-  drawPageNumber(page5, 5, 5);
+  drawPageNumber(page4, 4, 4);
 
   const bytes = await pdfDoc.save();
   console.log(`PDF generated in ${Date.now() - start}ms, pages: ${pdfDoc.getPages().length}`);
