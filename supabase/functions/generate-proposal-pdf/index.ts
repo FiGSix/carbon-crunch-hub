@@ -943,7 +943,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   drawPageNumber(page3, 3, 5);
 
-  // PAGE 4: Revenue Share Summary
+  // PAGE 4: Revenue Share
   const page4 = addPage();
   // Add yellow background
   page4.drawRectangle({
@@ -956,33 +956,292 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const p4x = mm(20);
   y = page4.getSize().height - mm(25);
 
-  drawHeading(page4, 'Revenue Share Summary', p4x, y);
-  y -= mm(10);
+  drawHeading(page4, 'Revenue Share', p4x, y);
+  y -= mm(12);
 
-  const metrics = [
-    ['Carbon Credits', fmtNum(anyProposal.carbon_credits)],
-    ['Client Share %', fmtNum(anyProposal.client_share_percentage, '%')],
-    ['Agent Commission %', fmtNum(anyProposal.agent_commission_percentage, '%')],
-    ['System Size', fmtNum(anyProposal.system_size_kwp, ' kWp')],
-  ];
+  // Introductory paragraph
+  const introText = 'As can be seen in the table below there are material benefits that will be realised through working together. The benefits accumulate over time in line with our values of being a long term partner with yourselves.';
+  const introLines = wrapText(introText, page4.getSize().width - p4x * 2, 11, font);
+  for (const line of introLines) {
+    page4.drawText(line, { x: p4x, y, size: 11, font, color: crunchCharcoal });
+    y -= mm(5.5);
+  }
+  y -= mm(4);
 
-  for (const [label, val] of metrics) {
-    drawKeyValue(page4, label, val, p4x, y);
-    y -= mm(7);
+  // Calculate revenue table data
+  const systemSizeKWp = anyProposal.system_size_kwp || 500;
+  const portfolioKWp = anyProposal.agent_portfolio_kwp || systemSizeKWp;
+  const clientSharePercentage = anyProposal.client_share_percentage || 60;
+  const degradationRate = 0.005; // 0.5% per year
+  const emissionFactor = 0.93; // tCO₂e per MWh
+  const annualHours = 1550; // Average generation hours per year
+  
+  // Carbon pricing tiers based on portfolio size (simplified)
+  const getClientCarbonPrice = (year: number, portfolioKWp: number): number => {
+    const tier1Price = 25; // R25/tCO₂e for years 1-2, larger portfolios
+    const tier2Price = 22; // R22/tCO₂e for years 3-5
+    const tier3Price = 20; // R20/tCO₂e for years 6-7
+    
+    if (year <= 2) return tier1Price;
+    if (year <= 5) return tier2Price;
+    return tier3Price;
+  };
+
+  // Build table data for 7 years
+  interface RevenueRow {
+    year: number;
+    mwhGenerated: number;
+    tco2Offset: number;
+    clientPrice: number;
+    clientRevenue: number;
+  }
+  
+  const revenueData: RevenueRow[] = [];
+  let totalMWh = 0;
+  let totalTCO2 = 0;
+  let totalRevenue = 0;
+  
+  for (let year = 1; year <= 7; year++) {
+    const degradationFactor = Math.pow(1 - degradationRate, year - 1);
+    const yearlyEnergyKWh = systemSizeKWp * annualHours * degradationFactor;
+    const yearlyEnergyMWh = yearlyEnergyKWh / 1000;
+    const yearlyCarbonCredits = yearlyEnergyMWh * emissionFactor;
+    const clientPrice = getClientCarbonPrice(year, portfolioKWp);
+    const yearlyClientRevenue = yearlyCarbonCredits * clientPrice * (clientSharePercentage / 100);
+    
+    revenueData.push({
+      year,
+      mwhGenerated: yearlyEnergyMWh,
+      tco2Offset: yearlyCarbonCredits,
+      clientPrice,
+      clientRevenue: yearlyClientRevenue
+    });
+    
+    totalMWh += yearlyEnergyMWh;
+    totalTCO2 += yearlyCarbonCredits;
+    totalRevenue += yearlyClientRevenue;
   }
 
-  y -= mm(4);
-  drawSubheading(page4, 'Terms (Summary)', p4x, y);
-  y -= mm(8);
-  const terms: string[] = anyProposal.content?.terms ?? [
-    'Client receives the stated share of carbon credit revenue.',
-    'Crunch Carbon manages verification and monetization.',
-    'Settlement frequency to be agreed in the final contract.'
+  // Draw revenue table
+  const tableX = p4x;
+  const tableY = y;
+  const tableWidth = page4.getSize().width - p4x * 2;
+  const rowHeight = mm(8);
+  const tableHeight = rowHeight * 9; // Header + 7 data rows + totals row
+  
+  // Draw outer border
+  page4.drawRectangle({
+    x: tableX,
+    y: tableY - tableHeight,
+    width: tableWidth,
+    height: tableHeight,
+    color: crunchYellow,
+    borderColor: crunchCharcoal,
+    borderWidth: 1.5,
+  });
+
+  // Column widths
+  const colYearWidth = tableWidth * 0.10;
+  const colMWhWidth = tableWidth * 0.20;
+  const colTCO2Width = tableWidth * 0.20;
+  const colPriceWidth = tableWidth * 0.25;
+  const colRevenueWidth = tableWidth * 0.25;
+  
+  const colYearX = tableX;
+  const colMWhX = colYearX + colYearWidth;
+  const colTCO2X = colMWhX + colMWhWidth;
+  const colPriceX = colTCO2X + colTCO2Width;
+  const colRevenueX = colPriceX + colPriceWidth;
+  
+  // Draw vertical column dividers
+  const dividerX = [colMWhX, colTCO2X, colPriceX, colRevenueX];
+  for (const dx of dividerX) {
+    page4.drawLine({
+      start: { x: dx, y: tableY },
+      end: { x: dx, y: tableY - tableHeight },
+      thickness: 1,
+      color: crunchCharcoal,
+    });
+  }
+  
+  const verticalOffset = mm(2);
+  
+  // Helper to center text in column
+  const centerTextInColumn = (text: string, colX: number, colWidth: number, yPos: number, textFont: any, fontSize: number) => {
+    const textWidth = textFont.widthOfTextAtSize(text, fontSize);
+    return colX + (colWidth / 2) - (textWidth / 2);
+  };
+  
+  // Helper to left-align text in column with padding
+  const leftTextInColumn = (colX: number) => {
+    return colX + mm(2);
+  };
+
+  // Draw header row
+  let currentRowY = tableY - rowHeight;
+  page4.drawLine({
+    start: { x: tableX, y: currentRowY },
+    end: { x: tableX + tableWidth, y: currentRowY },
+    thickness: 1,
+    color: crunchCharcoal,
+  });
+  
+  const headers = ['Year', 'MWh Generated\nper Year', 'tCO₂e Offset\nper Year', 'Client Carbon Price\n(R/tCO₂e)', 'Client Revenue (R)\nper Year'];
+  const headerCols = [
+    { x: leftTextInColumn(colYearX), text: headers[0] },
+    { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 9), text: headers[1] },
+    { x: centerTextInColumn(headers[2].split('\n')[0], colTCO2X, colTCO2Width, 0, bold, 9), text: headers[2] },
+    { x: centerTextInColumn(headers[3].split('\n')[0], colPriceX, colPriceWidth, 0, bold, 8), text: headers[3] },
+    { x: centerTextInColumn(headers[4].split('\n')[0], colRevenueX, colRevenueWidth, 0, bold, 8), text: headers[4] },
   ];
-  for (const t of terms) {
-    page4.drawText('•', { x: p4x, y, size: 10, font: bold, color: colors.text });
-    y = drawParagraph(page4, t, p4x + mm(5), y, page4.getSize().width - p4x * 2 - mm(5));
-    y -= mm(2);
+  
+  headerCols.forEach((col, idx) => {
+    const lines = col.text.split('\n');
+    let lineY = currentRowY + verticalOffset + mm(2);
+    lines.forEach((line, lineIdx) => {
+      const fontSize = idx === 0 ? 9 : (idx >= 3 ? 8 : 9);
+      const xPos = idx === 0 ? col.x : centerTextInColumn(line, 
+        idx === 1 ? colMWhX : idx === 2 ? colTCO2X : idx === 3 ? colPriceX : colRevenueX,
+        idx === 1 ? colMWhWidth : idx === 2 ? colTCO2Width : idx === 3 ? colPriceWidth : colRevenueWidth,
+        0, bold, fontSize
+      );
+      page4.drawText(line, { 
+        x: xPos, 
+        y: lineY - (lineIdx * mm(3.5)), 
+        size: fontSize, 
+        font: bold, 
+        color: crunchCharcoal 
+      });
+    });
+  });
+  
+  currentRowY -= rowHeight;
+
+  // Draw data rows
+  for (const row of revenueData) {
+    page4.drawLine({
+      start: { x: tableX, y: currentRowY },
+      end: { x: tableX + tableWidth, y: currentRowY },
+      thickness: 1,
+      color: crunchCharcoal,
+    });
+    
+    // Year (left-aligned)
+    page4.drawText(row.year.toString(), { 
+      x: leftTextInColumn(colYearX), 
+      y: currentRowY + verticalOffset, 
+      size: 9, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    // MWh Generated (center-aligned, 2 decimals)
+    const mwhText = row.mwhGenerated.toFixed(2);
+    page4.drawText(mwhText, { 
+      x: centerTextInColumn(mwhText, colMWhX, colMWhWidth, 0, font, 9), 
+      y: currentRowY + verticalOffset, 
+      size: 9, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    // tCO₂e Offset (center-aligned, 2 decimals)
+    const tco2Text = row.tco2Offset.toFixed(2);
+    page4.drawText(tco2Text, { 
+      x: centerTextInColumn(tco2Text, colTCO2X, colTCO2Width, 0, font, 9), 
+      y: currentRowY + verticalOffset, 
+      size: 9, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    // Client Price (center-aligned)
+    const priceText = `R ${row.clientPrice.toFixed(2)}`;
+    page4.drawText(priceText, { 
+      x: centerTextInColumn(priceText, colPriceX, colPriceWidth, 0, font, 9), 
+      y: currentRowY + verticalOffset, 
+      size: 9, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    // Client Revenue (center-aligned, with commas)
+    const revenueText = `R ${row.clientRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    page4.drawText(revenueText, { 
+      x: centerTextInColumn(revenueText, colRevenueX, colRevenueWidth, 0, font, 9), 
+      y: currentRowY + verticalOffset, 
+      size: 9, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    currentRowY -= rowHeight;
+  }
+
+  // Draw totals row
+  page4.drawLine({
+    start: { x: tableX, y: currentRowY },
+    end: { x: tableX + tableWidth, y: currentRowY },
+    thickness: 1.5,
+    color: crunchCharcoal,
+  });
+  
+  // "TOTAL" text (left-aligned, bold)
+  page4.drawText('TOTAL', { 
+    x: leftTextInColumn(colYearX), 
+    y: currentRowY + verticalOffset, 
+    size: 9, 
+    font: bold, 
+    color: crunchCharcoal 
+  });
+  
+  // Total MWh
+  const totalMWhText = totalMWh.toFixed(2);
+  page4.drawText(totalMWhText, { 
+    x: centerTextInColumn(totalMWhText, colMWhX, colMWhWidth, 0, bold, 9), 
+    y: currentRowY + verticalOffset, 
+    size: 9, 
+    font: bold, 
+    color: crunchCharcoal 
+  });
+  
+  // Total tCO₂e
+  const totalTCO2Text = totalTCO2.toFixed(2);
+  page4.drawText(totalTCO2Text, { 
+    x: centerTextInColumn(totalTCO2Text, colTCO2X, colTCO2Width, 0, bold, 9), 
+    y: currentRowY + verticalOffset, 
+    size: 9, 
+    font: bold, 
+    color: crunchCharcoal 
+  });
+  
+  // Price column shows "-" for totals
+  const dashText = '-';
+  page4.drawText(dashText, { 
+    x: centerTextInColumn(dashText, colPriceX, colPriceWidth, 0, bold, 9), 
+    y: currentRowY + verticalOffset, 
+    size: 9, 
+    font: bold, 
+    color: crunchCharcoal 
+  });
+  
+  // Total Revenue
+  const totalRevenueText = `R ${totalRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  page4.drawText(totalRevenueText, { 
+    x: centerTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, 0, bold, 9), 
+    y: currentRowY + verticalOffset, 
+    size: 9, 
+    font: bold, 
+    color: crunchCharcoal 
+  });
+
+  // Disclaimer text below table
+  y = currentRowY - mm(8);
+  const disclaimerText = '*Note that the above numbers are assumptions & indicative. Final costs will based on data as provided from the various systems as installed and validated via our auditing partners. While we aim to maintain the R/tCO₂e rates as per the schedule we can not be held liable for any changes due to regulatory shifts, or legal requirements beyond our control which may necessitate adjustments. This document is strictly confidential and intended solely for the recipient. The validity of the information contained herein expires seven (7) working days from the date of submission. Unauthorised sharing, distribution, or reproduction of this document constitutes a breach of confidentiality and may render the document null and void.';
+  const disclaimerLines = wrapText(disclaimerText, page4.getSize().width - p4x * 2, 8, font);
+  for (const line of disclaimerLines) {
+    page4.drawText(line, { x: p4x, y, size: 8, font, color: crunchCharcoal });
+    y -= mm(3.5);
   }
 
   drawPageNumber(page4, 4, 5);
