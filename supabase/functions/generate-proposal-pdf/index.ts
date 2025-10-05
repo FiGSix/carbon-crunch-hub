@@ -355,7 +355,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
 
   // Logo - centered in the middle of the bottom third
   if (logoImage) {
-    const maxLogoWidth = mm(150); // 150mm width for horizontal logo
+    const maxLogoWidth = mm(127.5); // 127.5mm width (15% smaller than 150mm)
     const lw = Math.min(maxLogoWidth, logoImage.width);
     const lh = (logoImage.height / logoImage.width) * lw;
     
