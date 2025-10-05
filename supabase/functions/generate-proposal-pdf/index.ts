@@ -989,26 +989,53 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   }
   y -= mm(4);
 
-  // Calculate revenue table data
-  const systemSizeKWp = anyProposal.system_size_kwp || 500;
-  const portfolioKWp = anyProposal.agent_portfolio_kwp || systemSizeKWp;
-  const clientSharePercentage = anyProposal.client_share_percentage || 60;
-  const degradationRate = 0.005; // 0.5% per year
-  const emissionFactor = 0.93; // tCO₂e per MWh
-  const annualHours = 1550; // Average generation hours per year
-  
-  // Carbon pricing tiers based on portfolio size (simplified)
-  const getClientCarbonPrice = (year: number, portfolioKWp: number): number => {
-    const tier1Price = 25; // R25/tCO₂e for years 1-2, larger portfolios
-    const tier2Price = 22; // R22/tCO₂e for years 3-5
-    const tier3Price = 20; // R20/tCO₂e for years 6-7
-    
-    if (year <= 2) return tier1Price;
-    if (year <= 5) return tier2Price;
-    return tier3Price;
+  // Fetch dynamic carbon prices from system_settings
+  const { data: carbonPricesData } = await supabaseAdmin
+    .from('system_settings')
+    .select('setting_value')
+    .eq('setting_key', 'carbon_prices')
+    .maybeSingle();
+
+  const carbonPrices: Record<string, number> = carbonPricesData?.setting_value || {
+    '2025': 30, '2026': 32, '2027': 35, '2028': 38, '2029': 40, '2030': 42, '2031': 45
   };
 
-  // Build table data for 7 years
+  // Calculate revenue table data using real Crunch Carbon constants
+  const systemSizeKWp = anyProposal.system_size_kwp || 500;
+  const clientSharePercentage = anyProposal.client_share_percentage || 60;
+  
+  // Official Crunch Carbon calculation constants (matching frontend exactly)
+  const ANNUAL_GENERATION_FACTOR = 1642.50; // kWh per kWp per year
+  const EMISSION_FACTOR = 1.0334; // tCO₂e per MWh
+  
+  // Extract commission date for pro-rating
+  const commissionDateStr = anyProposal.project_info?.commission_date || 
+                            anyProposal.content?.projectInfo?.commissionDate || null;
+  const commissionDate = commissionDateStr ? new Date(commissionDateStr) : null;
+  const commissionYear = commissionDate ? commissionDate.getFullYear() : new Date().getFullYear();
+  
+  // Calculate yearly energy with pro-rating for commission year
+  const calculateYearlyEnergy = (systemKWp: number, actualYear: number): number => {
+    const annualEnergy = systemKWp * ANNUAL_GENERATION_FACTOR;
+    
+    // Pro-rate for commission year
+    if (commissionDate && actualYear === commissionYear) {
+      const yearStart = new Date(actualYear, 0, 1);
+      const yearEnd = new Date(actualYear, 11, 31);
+      const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const totalDaysInYear = Math.floor((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return annualEnergy * (remainingDays / totalDaysInYear);
+    }
+    
+    return annualEnergy;
+  };
+  
+  // Calculate yearly carbon credits
+  const calculateYearlyCarbonCredits = (yearlyEnergyKWh: number): number => {
+    return (yearlyEnergyKWh / 1000) * EMISSION_FACTOR;
+  };
+
+  // Build table data for 7 years using real calculations
   interface RevenueRow {
     year: number;
     mwhGenerated: number;
@@ -1023,12 +1050,21 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   let totalRevenue = 0;
   
   for (let year = 1; year <= 7; year++) {
-    const degradationFactor = Math.pow(1 - degradationRate, year - 1);
-    const yearlyEnergyKWh = systemSizeKWp * annualHours * degradationFactor;
+    const actualYear = commissionYear + year - 1;
+    
+    // Use real calculation functions
+    const yearlyEnergyKWh = calculateYearlyEnergy(systemSizeKWp, actualYear);
     const yearlyEnergyMWh = yearlyEnergyKWh / 1000;
-    const yearlyCarbonCredits = yearlyEnergyMWh * emissionFactor;
-    const clientPrice = getClientCarbonPrice(year, portfolioKWp);
-    const yearlyClientRevenue = yearlyCarbonCredits * clientPrice * (clientSharePercentage / 100);
+    const yearlyCarbonCredits = calculateYearlyCarbonCredits(yearlyEnergyKWh);
+    
+    // Get dynamic market price for this year
+    const marketPrice = carbonPrices[actualYear.toString()] || 0;
+    
+    // Calculate client-specific price (market price × client share)
+    const clientPrice = marketPrice * (clientSharePercentage / 100);
+    
+    // Calculate client revenue (carbon credits × client price)
+    const yearlyClientRevenue = yearlyCarbonCredits * clientPrice;
     
     revenueData.push({
       year,
@@ -1108,7 +1144,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal,
   });
   
-  const headers = ['Year', 'MWh Generated\nper Year', 'tCO2e Offset\nper Year', 'Client Carbon Price\n(R/tCO2e)', 'Client Revenue (R)\nper Year'];
+  const headers = ['Year', 'MWh Generated\nper Year', 'tCO2e Offset\nper Year', 'Client Price\n(R/tCO2e)', 'Client Revenue (R)\nper Year'];
   const headerCols = [
     { x: leftTextInColumn(colYearX), text: headers[0] },
     { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 9), text: headers[1] },
@@ -1259,7 +1295,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // Disclaimer text below table
   y = currentRowY - mm(8);
-  const disclaimerText = '*Note that the above numbers are assumptions & indicative. Final costs will based on data as provided from the various systems as installed and validated via our auditing partners. While we aim to maintain the R/tCO2e rates as per the schedule we can not be held liable for any changes due to regulatory shifts, or legal requirements beyond our control which may necessitate adjustments. This document is strictly confidential and intended solely for the recipient. The validity of the information contained herein expires seven (7) working days from the date of submission. Unauthorised sharing, distribution, or reproduction of this document constitutes a breach of confidentiality and may render the document null and void.';
+  const disclaimerText = '*Note that the above numbers are assumptions & indicative. The Client Price shown is the market carbon price multiplied by your client share percentage. Final costs will be based on data as provided from the various systems as installed and validated via our auditing partners. While we aim to maintain the carbon pricing rates as per the schedule we cannot be held liable for any changes due to regulatory shifts, or legal requirements beyond our control which may necessitate adjustments. This document is strictly confidential and intended solely for the recipient. The validity of the information contained herein expires seven (7) working days from the date of submission. Unauthorised sharing, distribution, or reproduction of this document constitutes a breach of confidentiality and may render the document null and void.';
   const disclaimerLines = wrapText(disclaimerText, page4.getSize().width - p4x * 2, 8, font);
   for (const line of disclaimerLines) {
     page4.drawText(line, { x: p4x, y, size: 8, font, color: crunchCharcoal });
