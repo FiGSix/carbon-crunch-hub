@@ -809,7 +809,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Header 1: Project Address
   const header1Text = 'Project Address';
   const header1Width = col1Width - mm(4);
-  const header1Lines = wrapText(header1Text, header1Width, 12, bold);
+  const header1Lines = wrapText(header1Text, header1Width, 11, bold);
   const maxHeaderLines = Math.max(1, header1Lines.length);
   const headerLineHeight = mm(4.5);
   const header1StartY = headerY + (headerRowHeight / 2) + ((maxHeaderLines - 1) * headerLineHeight / 2);
@@ -818,7 +818,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     page3.drawText(line, { 
       x: col1X + mm(2), 
       y: header1StartY - (idx * headerLineHeight), 
-      size: 12, 
+      size: 11, 
       font: bold, 
       color: rgb(1, 1, 1)
     });
@@ -827,15 +827,15 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Header 2: Commissioning Date
   const header2Text = 'Commissioning Date';
   const header2Width = col2Width - mm(4);
-  const header2Lines = wrapText(header2Text, header2Width, 12, bold);
+  const header2Lines = wrapText(header2Text, header2Width, 11, bold);
   const header2StartY = headerY + (headerRowHeight / 2) + ((header2Lines.length - 1) * headerLineHeight / 2);
   
   header2Lines.forEach((line, idx) => {
-    const lineWidth = bold.widthOfTextAtSize(line, 12);
+    const lineWidth = bold.widthOfTextAtSize(line, 11);
     page3.drawText(line, { 
       x: col2Center - (lineWidth / 2), 
       y: header2StartY - (idx * headerLineHeight), 
-      size: 12, 
+      size: 11, 
       font: bold, 
       color: rgb(1, 1, 1)
     });
@@ -844,15 +844,15 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Header 3: Project Size (kWp)
   const header3Text = 'Project Size (kWp)';
   const header3Width = col3Width - mm(4);
-  const header3Lines = wrapText(header3Text, header3Width, 12, bold);
+  const header3Lines = wrapText(header3Text, header3Width, 11, bold);
   const header3StartY = headerY + (headerRowHeight / 2) + ((header3Lines.length - 1) * headerLineHeight / 2);
   
   header3Lines.forEach((line, idx) => {
-    const lineWidth = bold.widthOfTextAtSize(line, 12);
+    const lineWidth = bold.widthOfTextAtSize(line, 11);
     page3.drawText(line, { 
       x: col3Center - (lineWidth / 2), 
       y: header3StartY - (idx * headerLineHeight), 
-      size: 12, 
+      size: 11, 
       font: bold, 
       color: rgb(1, 1, 1)
     });
@@ -1226,17 +1226,17 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const headers = ['Year', 'MWh Generated\nper Year', 'tCO2e Offset\nper Year', 'Client Price\n(R/tCO2e)', 'Client Revenue (R)\nper Year'];
   const headerCols = [
     { x: leftTextInColumn(colYearX), text: headers[0] },
-    { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 12), text: headers[1] },
-    { x: centerTextInColumn(headers[2].split('\n')[0], colTCO2X, colTCO2Width, 0, bold, 12), text: headers[2] },
-    { x: centerTextInColumn(headers[3].split('\n')[0], colPriceX, colPriceWidth, 0, bold, 12), text: headers[3] },
-    { x: centerTextInColumn(headers[4].split('\n')[0], colRevenueX, colRevenueWidth, 0, bold, 12), text: headers[4] },
+    { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 11), text: headers[1] },
+    { x: centerTextInColumn(headers[2].split('\n')[0], colTCO2X, colTCO2Width, 0, bold, 11), text: headers[2] },
+    { x: centerTextInColumn(headers[3].split('\n')[0], colPriceX, colPriceWidth, 0, bold, 11), text: headers[3] },
+    { x: centerTextInColumn(headers[4].split('\n')[0], colRevenueX, colRevenueWidth, 0, bold, 11), text: headers[4] },
   ];
   
   headerCols.forEach((col, idx) => {
     const lines = col.text.split('\n');
     let lineY = currentRowY + verticalOffset + mm(3.5);
     lines.forEach((line, lineIdx) => {
-      const fontSize = 12;
+      const fontSize = 11;
       const xPos = idx === 0 ? col.x : centerTextInColumn(line, 
         idx === 1 ? colMWhX : idx === 2 ? colTCO2X : idx === 3 ? colPriceX : colRevenueX,
         idx === 1 ? colMWhWidth : idx === 2 ? colTCO2Width : idx === 3 ? colPriceWidth : colRevenueWidth,
