@@ -735,22 +735,22 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y -= mm(2);
 
   // Draw table with yellow background and black borders - 3 columns design
-  const tableX = p3x;
-  const tableY = y - mm(2.5);
-  const tableWidth = page3.getSize().width - p3x * 2;
+  const scheduleTableX = p3x;
+  const scheduleTableY = y - mm(2.5);
+  const scheduleTableWidth = page3.getSize().width - p3x * 2;
   
   // Calculate available height for table (to bottom margin)
-  const availableHeight = tableY - mm(30);
-  const rowHeight = mm(9);
-  const maxRows = Math.floor(availableHeight / rowHeight) - 1; // -1 for header and totals
-  const tableHeight = maxRows * rowHeight + rowHeight; // +1 for header row
+  const availableHeight = scheduleTableY - mm(30);
+  const scheduleRowHeight = mm(9);
+  const maxRows = Math.floor(availableHeight / scheduleRowHeight) - 1; // -1 for header and totals
+  const scheduleTableHeight = maxRows * scheduleRowHeight + scheduleRowHeight; // +1 for header row
   
   // Draw outer black border
   page3.drawRectangle({
-    x: tableX,
-    y: tableY - tableHeight,
-    width: tableWidth,
-    height: tableHeight,
+    x: scheduleTableX,
+    y: scheduleTableY - scheduleTableHeight,
+    width: scheduleTableWidth,
+    height: scheduleTableHeight,
     color: crunchYellow, // yellow background matching page
     borderColor: crunchCharcoal, // charcoal border
     borderWidth: 1.5,
@@ -764,11 +764,11 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   }];
 
   // Calculate column widths and positions
-  const col1Width = tableWidth * 0.50; // Project Address
-  const col2Width = tableWidth * 0.25; // Commissioning Date
-  const col3Width = tableWidth * 0.25; // Project Size kWp
+  const col1Width = scheduleTableWidth * 0.50; // Project Address
+  const col2Width = scheduleTableWidth * 0.25; // Commissioning Date
+  const col3Width = scheduleTableWidth * 0.25; // Project Size kWp
   
-  const tableLeftMargin = tableX + mm(4);
+  const tableLeftMargin = scheduleTableX + mm(4);
   const col1X = tableLeftMargin;
   const col2X = col1X + col1Width;
   const col3X = col2X + col2Width;
@@ -781,7 +781,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const verticalCenterOffset = mm(2.5);
 
   // Draw header row
-  const headerY = tableY - rowHeight;
+  const headerY = scheduleTableY - scheduleRowHeight;
   const header1Text = 'Project Address';
   const header1Width = bold.widthOfTextAtSize(header1Text, 10);
   page3.drawText(header1Text, { 
@@ -814,9 +814,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   
   // Draw horizontal line after header
   page3.drawRectangle({
-    x: tableX,
+    x: scheduleTableX,
     y: headerY,
-    width: tableWidth,
+    width: scheduleTableWidth,
     height: 1,
     color: crunchCharcoal,
   });
@@ -824,7 +824,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Draw project data rows
   let currentRow = 1;
   for (const project of projects) {
-    const rowY = tableY - (currentRow + 1) * rowHeight;
+    const rowY = scheduleTableY - (currentRow + 1) * scheduleRowHeight;
     
     // Check if address needs wrapping
     const addressWidth = col1Width - mm(8);
@@ -881,12 +881,12 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // Draw empty rows to fill the table
   for (let i = currentRow; i < maxRows - 1; i++) {
-    const rowY = tableY - (i + 1) * rowHeight;
+    const rowY = scheduleTableY - (i + 1) * scheduleRowHeight;
     // Draw horizontal line
     page3.drawRectangle({
-      x: tableX,
+      x: scheduleTableX,
       y: rowY,
-    width: tableWidth,
+    width: scheduleTableWidth,
     height: 1,
     color: crunchCharcoal,
     });
@@ -894,13 +894,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // Draw totals row at the bottom
   const totalKwp = projects.reduce((sum, p) => sum + (p.sizeKwp || 0), 0);
-  const totalsY = tableY - tableHeight + rowHeight;
+  const totalsY = scheduleTableY - scheduleTableHeight + scheduleRowHeight;
   
   // Draw thicker line above totals
   page3.drawRectangle({
-    x: tableX,
-    y: totalsY + rowHeight,
-    width: tableWidth,
+    x: scheduleTableX,
+    y: totalsY + scheduleRowHeight,
+    width: scheduleTableWidth,
     height: 1.5,
     color: crunchCharcoal,
   });
@@ -928,16 +928,16 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Draw vertical dividers between columns
   page3.drawRectangle({
     x: col2X,
-    y: tableY - tableHeight,
+    y: scheduleTableY - scheduleTableHeight,
     width: 1,
-    height: tableHeight,
+    height: scheduleTableHeight,
     color: crunchCharcoal,
   });
   page3.drawRectangle({
     x: col3X,
-    y: tableY - tableHeight,
+    y: scheduleTableY - scheduleTableHeight,
     width: 1,
-    height: tableHeight,
+    height: scheduleTableHeight,
     color: crunchCharcoal,
   });
 
@@ -1023,31 +1023,31 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   }
 
   // Draw revenue table
-  const tableX = p4x;
-  const tableY = y;
-  const tableWidth = page4.getSize().width - p4x * 2;
-  const rowHeight = mm(8);
-  const tableHeight = rowHeight * 9; // Header + 7 data rows + totals row
+  const revenueTableX = p4x;
+  const revenueTableY = y;
+  const revenueTableWidth = page4.getSize().width - p4x * 2;
+  const revenueRowHeight = mm(8);
+  const revenueTableHeight = revenueRowHeight * 9; // Header + 7 data rows + totals row
   
   // Draw outer border
   page4.drawRectangle({
-    x: tableX,
-    y: tableY - tableHeight,
-    width: tableWidth,
-    height: tableHeight,
+    x: revenueTableX,
+    y: revenueTableY - revenueTableHeight,
+    width: revenueTableWidth,
+    height: revenueTableHeight,
     color: crunchYellow,
     borderColor: crunchCharcoal,
     borderWidth: 1.5,
   });
 
   // Column widths
-  const colYearWidth = tableWidth * 0.10;
-  const colMWhWidth = tableWidth * 0.20;
-  const colTCO2Width = tableWidth * 0.20;
-  const colPriceWidth = tableWidth * 0.25;
-  const colRevenueWidth = tableWidth * 0.25;
+  const colYearWidth = revenueTableWidth * 0.10;
+  const colMWhWidth = revenueTableWidth * 0.20;
+  const colTCO2Width = revenueTableWidth * 0.20;
+  const colPriceWidth = revenueTableWidth * 0.25;
+  const colRevenueWidth = revenueTableWidth * 0.25;
   
-  const colYearX = tableX;
+  const colYearX = revenueTableX;
   const colMWhX = colYearX + colYearWidth;
   const colTCO2X = colMWhX + colMWhWidth;
   const colPriceX = colTCO2X + colTCO2Width;
@@ -1057,8 +1057,8 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const dividerX = [colMWhX, colTCO2X, colPriceX, colRevenueX];
   for (const dx of dividerX) {
     page4.drawLine({
-      start: { x: dx, y: tableY },
-      end: { x: dx, y: tableY - tableHeight },
+      start: { x: dx, y: revenueTableY },
+      end: { x: dx, y: revenueTableY - revenueTableHeight },
       thickness: 1,
       color: crunchCharcoal,
     });
@@ -1078,10 +1078,10 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   };
 
   // Draw header row
-  let currentRowY = tableY - rowHeight;
+  let currentRowY = revenueTableY - revenueRowHeight;
   page4.drawLine({
-    start: { x: tableX, y: currentRowY },
-    end: { x: tableX + tableWidth, y: currentRowY },
+    start: { x: revenueTableX, y: currentRowY },
+    end: { x: revenueTableX + revenueTableWidth, y: currentRowY },
     thickness: 1,
     color: crunchCharcoal,
   });
@@ -1115,13 +1115,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     });
   });
   
-  currentRowY -= rowHeight;
+  currentRowY -= revenueRowHeight;
 
   // Draw data rows
   for (const row of revenueData) {
     page4.drawLine({
-      start: { x: tableX, y: currentRowY },
-      end: { x: tableX + tableWidth, y: currentRowY },
+      start: { x: revenueTableX, y: currentRowY },
+      end: { x: revenueTableX + revenueTableWidth, y: currentRowY },
       thickness: 1,
       color: crunchCharcoal,
     });
@@ -1175,13 +1175,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       color: crunchCharcoal 
     });
     
-    currentRowY -= rowHeight;
+    currentRowY -= revenueRowHeight;
   }
 
   // Draw totals row
   page4.drawLine({
-    start: { x: tableX, y: currentRowY },
-    end: { x: tableX + tableWidth, y: currentRowY },
+    start: { x: revenueTableX, y: currentRowY },
+    end: { x: revenueTableX + revenueTableWidth, y: currentRowY },
     thickness: 1.5,
     color: crunchCharcoal,
   });
