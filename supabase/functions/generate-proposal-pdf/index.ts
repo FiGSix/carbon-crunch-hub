@@ -430,20 +430,23 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const contentWidth = page2.getSize().width - p2x * 2;
   const availableBottomSpace = y - mm(20); // Space from current y to page bottom margin
   
-  // Flow diagram settings
+  // Flow diagram settings - matching reference image
   const flowSteps = [
-    'Signing of\nProposal',
-    'Signing of\nCession\nAgreement',
-    'Project/\nPortfolio\nOnboarding',
-    'Audit',
+    'Review Proposal\n(if happy proceed\nto step 2)',
+    'Agree to\nCession\nAgreement',
+    'Project\nOnboarding',
+    'Crunch Carbon\nprepares for\nannual Audit',
     'Reward'
   ];
+  
+  // Gold/yellow color for icons and arrows
+  const goldColor = rgb(0.831, 0.686, 0.216); // #D4AF37
   
   const circleRadius = mm(10);
   const circleDiameter = circleRadius * 2;
   const circleSpacing = mm(6);
   const arrowLength = mm(8);
-  const labelHeight = mm(12);
+  const labelHeight = mm(16); // Increased for multi-line labels
   const totalDiagramHeight = circleDiameter + labelHeight;
   
   // Calculate total width and ensure it fits within content width
@@ -454,145 +457,208 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const diagramCenterY = mm(20) + availableBottomSpace / 2;
   const circleY = diagramCenterY + labelHeight / 2;
   
-  // Draw each step circle with simple geometric icons
+  // Draw each step circle with gold/yellow geometric icons
   for (let i = 0; i < flowSteps.length; i++) {
     const circleX = diagramStartX + circleRadius + i * (circleDiameter + arrowLength + circleSpacing * 2);
     
-    // Draw white circle with black border
+    // Draw white circle with subtle border
     page2.drawCircle({
       x: circleX,
       y: circleY,
       size: circleRadius,
       color: rgb(1, 1, 1), // white fill
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 2,
+      borderColor: rgb(0.9, 0.9, 0.9),
+      borderWidth: 1.5,
     });
     
-    // Draw step number in small circle at top-right
-    const numberCircleSize = mm(3);
-    const numberX = circleX + circleRadius * 0.5;
-    const numberY = circleY + circleRadius * 0.5;
-    page2.drawCircle({
-      x: numberX,
-      y: numberY,
-      size: numberCircleSize,
-      color: rgb(0, 0, 0),
-    });
-    page2.drawText(String(i + 1), {
-      x: numberX - mm(1),
-      y: numberY - mm(1.3),
-      size: 7,
-      font: bold,
-      color: rgb(1, 1, 1),
-    });
-    
-    // Draw simple geometric icon in center of circle based on step
-    const iconSize = mm(4);
+    // Draw gold/yellow geometric icon in center of circle based on step
+    const iconSize = mm(4.5);
     if (i === 0) {
-      // Step 1: Checkmark using lines
+      // Step 1: Document with magnifying glass
+      // Document (rectangle)
+      page2.drawRectangle({
+        x: circleX - iconSize * 0.5,
+        y: circleY - iconSize * 0.6,
+        width: iconSize * 0.8,
+        height: iconSize * 1.1,
+        borderColor: goldColor,
+        borderWidth: 1.8,
+      });
+      // Lines inside document
       page2.drawLine({
-        start: { x: circleX - iconSize, y: circleY - iconSize * 0.3 },
-        end: { x: circleX - iconSize * 0.3, y: circleY - iconSize },
-        thickness: 2,
-        color: rgb(0, 0, 0),
+        start: { x: circleX - iconSize * 0.3, y: circleY + iconSize * 0.2 },
+        end: { x: circleX + iconSize * 0.1, y: circleY + iconSize * 0.2 },
+        thickness: 1.2,
+        color: goldColor,
       });
       page2.drawLine({
-        start: { x: circleX - iconSize * 0.3, y: circleY - iconSize },
-        end: { x: circleX + iconSize, y: circleY + iconSize * 0.5 },
-        thickness: 2,
-        color: rgb(0, 0, 0),
+        start: { x: circleX - iconSize * 0.3, y: circleY - iconSize * 0.1 },
+        end: { x: circleX + iconSize * 0.1, y: circleY - iconSize * 0.1 },
+        thickness: 1.2,
+        color: goldColor,
+      });
+      // Magnifying glass (small circle)
+      page2.drawCircle({
+        x: circleX + iconSize * 0.4,
+        y: circleY - iconSize * 0.4,
+        size: iconSize * 0.35,
+        borderColor: goldColor,
+        borderWidth: 1.5,
       });
     } else if (i === 1) {
-      // Step 2: Document/pen symbol - rectangle with line
+      // Step 2: Handshake (geometric representation)
+      // Two rectangles meeting at angle
       page2.drawRectangle({
-        x: circleX - iconSize * 0.6,
-        y: circleY - iconSize * 0.8,
-        width: iconSize * 1.2,
-        height: iconSize * 1.6,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1.5,
+        x: circleX - iconSize * 0.7,
+        y: circleY - iconSize * 0.3,
+        width: iconSize * 0.6,
+        height: iconSize * 0.8,
+        borderColor: goldColor,
+        borderWidth: 1.8,
       });
+      page2.drawRectangle({
+        x: circleX + iconSize * 0.1,
+        y: circleY - iconSize * 0.3,
+        width: iconSize * 0.6,
+        height: iconSize * 0.8,
+        borderColor: goldColor,
+        borderWidth: 1.8,
+      });
+      // Connection line
       page2.drawLine({
-        start: { x: circleX - iconSize * 0.3, y: circleY },
-        end: { x: circleX + iconSize * 0.3, y: circleY },
-        thickness: 1.5,
-        color: rgb(0, 0, 0),
+        start: { x: circleX - iconSize * 0.4, y: circleY },
+        end: { x: circleX + iconSize * 0.4, y: circleY },
+        thickness: 2,
+        color: goldColor,
       });
     } else if (i === 2) {
-      // Step 3: Upload arrow
+      // Step 3: Rocket
+      // Triangle pointing up
       page2.drawLine({
-        start: { x: circleX, y: circleY - iconSize },
-        end: { x: circleX, y: circleY + iconSize },
+        start: { x: circleX, y: circleY + iconSize },
+        end: { x: circleX - iconSize * 0.5, y: circleY - iconSize * 0.3 },
         thickness: 2,
-        color: rgb(0, 0, 0),
+        color: goldColor,
       });
       page2.drawLine({
         start: { x: circleX, y: circleY + iconSize },
-        end: { x: circleX - iconSize * 0.5, y: circleY + iconSize * 0.3 },
+        end: { x: circleX + iconSize * 0.5, y: circleY - iconSize * 0.3 },
         thickness: 2,
-        color: rgb(0, 0, 0),
+        color: goldColor,
       });
       page2.drawLine({
-        start: { x: circleX, y: circleY + iconSize },
-        end: { x: circleX + iconSize * 0.5, y: circleY + iconSize * 0.3 },
+        start: { x: circleX - iconSize * 0.5, y: circleY - iconSize * 0.3 },
+        end: { x: circleX + iconSize * 0.5, y: circleY - iconSize * 0.3 },
         thickness: 2,
-        color: rgb(0, 0, 0),
+        color: goldColor,
+      });
+      // Flames (small lines at bottom)
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.3, y: circleY - iconSize * 0.3 },
+        end: { x: circleX - iconSize * 0.5, y: circleY - iconSize * 0.8 },
+        thickness: 1.5,
+        color: goldColor,
+      });
+      page2.drawLine({
+        start: { x: circleX, y: circleY - iconSize * 0.3 },
+        end: { x: circleX, y: circleY - iconSize * 0.9 },
+        thickness: 1.5,
+        color: goldColor,
+      });
+      page2.drawLine({
+        start: { x: circleX + iconSize * 0.3, y: circleY - iconSize * 0.3 },
+        end: { x: circleX + iconSize * 0.5, y: circleY - iconSize * 0.8 },
+        thickness: 1.5,
+        color: goldColor,
       });
     } else if (i === 3) {
-      // Step 4: Magnifying glass (circle with handle)
-      page2.drawCircle({
-        x: circleX - iconSize * 0.2,
-        y: circleY + iconSize * 0.2,
-        size: iconSize * 0.6,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1.5,
+      // Step 4: Calendar grid with magnifying glass
+      // Calendar grid
+      page2.drawRectangle({
+        x: circleX - iconSize * 0.6,
+        y: circleY - iconSize * 0.6,
+        width: iconSize * 0.9,
+        height: iconSize * 1.0,
+        borderColor: goldColor,
+        borderWidth: 1.8,
+      });
+      // Grid lines
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.6, y: circleY + iconSize * 0.1 },
+        end: { x: circleX + iconSize * 0.3, y: circleY + iconSize * 0.1 },
+        thickness: 1.2,
+        color: goldColor,
       });
       page2.drawLine({
-        start: { x: circleX + iconSize * 0.2, y: circleY - iconSize * 0.2 },
-        end: { x: circleX + iconSize * 0.7, y: circleY - iconSize * 0.7 },
-        thickness: 2,
-        color: rgb(0, 0, 0),
+        start: { x: circleX - iconSize * 0.3, y: circleY + iconSize * 0.4 },
+        end: { x: circleX - iconSize * 0.3, y: circleY - iconSize * 0.6 },
+        thickness: 1.2,
+        color: goldColor,
+      });
+      // Magnifying glass
+      page2.drawCircle({
+        x: circleX + iconSize * 0.4,
+        y: circleY - iconSize * 0.4,
+        size: iconSize * 0.35,
+        borderColor: goldColor,
+        borderWidth: 1.5,
       });
     } else if (i === 4) {
-      // Step 5: Star using lines
-      const starPoints = 5;
-      const outerRadius = iconSize;
-      const innerRadius = iconSize * 0.4;
-      for (let p = 0; p < starPoints; p++) {
-        const angle1 = (Math.PI * 2 * p) / starPoints - Math.PI / 2;
-        const angle2 = (Math.PI * 2 * (p + 0.5)) / starPoints - Math.PI / 2;
-        const angle3 = (Math.PI * 2 * (p + 1)) / starPoints - Math.PI / 2;
-        page2.drawLine({
-          start: { 
-            x: circleX + Math.cos(angle1) * outerRadius, 
-            y: circleY + Math.sin(angle1) * outerRadius 
-          },
-          end: { 
-            x: circleX + Math.cos(angle2) * innerRadius, 
-            y: circleY + Math.sin(angle2) * innerRadius 
-          },
-          thickness: 1.5,
-          color: rgb(0, 0, 0),
-        });
-        page2.drawLine({
-          start: { 
-            x: circleX + Math.cos(angle2) * innerRadius, 
-            y: circleY + Math.sin(angle2) * innerRadius 
-          },
-          end: { 
-            x: circleX + Math.cos(angle3) * outerRadius, 
-            y: circleY + Math.sin(angle3) * outerRadius 
-          },
-          thickness: 1.5,
-          color: rgb(0, 0, 0),
-        });
-      }
+      // Step 5: Treasure chest
+      // Chest body (rectangle)
+      page2.drawRectangle({
+        x: circleX - iconSize * 0.6,
+        y: circleY - iconSize * 0.7,
+        width: iconSize * 1.2,
+        height: iconSize * 0.8,
+        borderColor: goldColor,
+        borderWidth: 1.8,
+      });
+      // Chest lid (arc approximation using lines)
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.6, y: circleY + iconSize * 0.1 },
+        end: { x: circleX - iconSize * 0.3, y: circleY + iconSize * 0.4 },
+        thickness: 1.8,
+        color: goldColor,
+      });
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.3, y: circleY + iconSize * 0.4 },
+        end: { x: circleX, y: circleY + iconSize * 0.5 },
+        thickness: 1.8,
+        color: goldColor,
+      });
+      page2.drawLine({
+        start: { x: circleX, y: circleY + iconSize * 0.5 },
+        end: { x: circleX + iconSize * 0.3, y: circleY + iconSize * 0.4 },
+        thickness: 1.8,
+        color: goldColor,
+      });
+      page2.drawLine({
+        start: { x: circleX + iconSize * 0.3, y: circleY + iconSize * 0.4 },
+        end: { x: circleX + iconSize * 0.6, y: circleY + iconSize * 0.1 },
+        thickness: 1.8,
+        color: goldColor,
+      });
+      // Sparkles (small stars around chest)
+      const sparkleSize = mm(1);
+      page2.drawLine({
+        start: { x: circleX - iconSize * 0.9, y: circleY + iconSize * 0.3 },
+        end: { x: circleX - iconSize * 0.9, y: circleY + iconSize * 0.5 },
+        thickness: 1,
+        color: goldColor,
+      });
+      page2.drawLine({
+        start: { x: circleX - iconSize, y: circleY + iconSize * 0.4 },
+        end: { x: circleX - iconSize * 0.8, y: circleY + iconSize * 0.4 },
+        thickness: 1,
+        color: goldColor,
+      });
     }
     
     // Draw label below circle (centered, multi-line)
     const labelLines = flowSteps[i].split('\n');
     const labelLineHeight = mm(3.5);
-    let labelY = circleY - circleRadius - mm(4);
+    let labelY = circleY - circleRadius - mm(5);
     
     for (const line of labelLines) {
       const lineWidth = font.widthOfTextAtSize(line, 8);
@@ -606,7 +672,7 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
       labelY -= labelLineHeight;
     }
     
-    // Draw arrow to next step (except for last step)
+    // Draw gold/yellow arrow to next step (except for last step)
     if (i < flowSteps.length - 1) {
       const arrowStartX = circleX + circleRadius + mm(2);
       const arrowEndX = arrowStartX + arrowLength + circleSpacing * 2 - mm(4);
@@ -615,23 +681,23 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
       page2.drawLine({
         start: { x: arrowStartX, y: circleY },
         end: { x: arrowEndX, y: circleY },
-        thickness: 2,
-        color: rgb(0, 0, 0),
+        thickness: 2.5,
+        color: goldColor,
       });
       
       // Arrow head
-      const arrowHeadSize = mm(2);
+      const arrowHeadSize = mm(2.5);
       page2.drawLine({
         start: { x: arrowEndX, y: circleY },
         end: { x: arrowEndX - arrowHeadSize, y: circleY + arrowHeadSize },
-        thickness: 2,
-        color: rgb(0, 0, 0),
+        thickness: 2.5,
+        color: goldColor,
       });
       page2.drawLine({
         start: { x: arrowEndX, y: circleY },
         end: { x: arrowEndX - arrowHeadSize, y: circleY - arrowHeadSize },
-        thickness: 2,
-        color: rgb(0, 0, 0),
+        thickness: 2.5,
+        color: goldColor,
       });
     }
   }
