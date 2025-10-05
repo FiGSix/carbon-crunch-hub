@@ -1153,7 +1153,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const revenueTableX = p4x;
   const revenueTableY = y;
   const revenueTableWidth = page4.getSize().width - p4x * 2;
-  const revenueRowHeight = mm(10);
+  const revenueRowHeight = mm(12);
   const revenueTableHeight = revenueRowHeight * 9; // Header + 7 data rows + totals row
   
   // Draw outer border
