@@ -154,17 +154,19 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Brand colors (approximate)
+  // Official Crunch Carbon corporate colors
+  const crunchYellow = rgb(1, 0.804, 0.012); // #FFCD03
+  const crunchCharcoal = rgb(0.137, 0.122, 0.125); // #231F20
+  
   const colors = {
-    text: rgb(0.12, 0.12, 0.12),
+    text: crunchCharcoal,
     muted: rgb(0.40, 0.40, 0.40),
     light: rgb(0.70, 0.70, 0.70),
     border: rgb(0.85, 0.85, 0.85),
-    yellow: rgb(1.0, 0.85, 0.20),
-    charcoal: rgb(0.10, 0.12, 0.14),
+    yellow: crunchYellow,
+    charcoal: crunchCharcoal,
     white: rgb(1, 1, 1),
   };
-  const brandYellow = rgb(1, 0.8, 0.00784);
 
   // Logo sources: try public Storage bucket paths first, then agent-provided URL
   const STORAGE_PUBLIC_BASE = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public';
@@ -318,16 +320,16 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const coverHeight = cover.getSize().height;
 
   // Full-page background
-  cover.drawRectangle({ x: 0, y: 0, width: coverWidth, height: coverHeight, color: brandYellow });
+  cover.drawRectangle({ x: 0, y: 0, width: coverWidth, height: coverHeight, color: crunchYellow });
 
   // Top heading block
   const titleSize = 48;
   const topMargin = mm(20);
   const leftMargin = mm(20);
   const firstLineY = coverHeight - topMargin - titleSize;
-  cover.drawText('Crunching Carbon', { x: leftMargin, y: firstLineY, size: titleSize, font: bold, color: rgb(0, 0, 0) });
+  cover.drawText('Crunching Carbon', { x: leftMargin, y: firstLineY, size: titleSize, font: bold, color: crunchCharcoal });
   const secondLineY = firstLineY - titleSize - mm(4);
-  cover.drawText(`for ${clientName}`, { x: leftMargin, y: secondLineY, size: titleSize, font: bold, color: colors.white });
+  cover.drawText(`for ${clientName}`, { x: leftMargin, y: secondLineY, size: titleSize, font: bold, color: crunchCharcoal });
 
   // Bottom-centered Crunch Carbon logo
   if (logoImage) {
@@ -341,7 +343,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     const placeholder = 'Crunch Carbon';
     const placeholderSize = 24;
     const textWidth = bold.widthOfTextAtSize(placeholder, placeholderSize);
-    cover.drawText(placeholder, { x: (coverWidth - textWidth) / 2, y: mm(40), size: placeholderSize, font: bold, color: rgb(0, 0, 0) });
+    cover.drawText(placeholder, { x: (coverWidth - textWidth) / 2, y: mm(40), size: placeholderSize, font: bold, color: crunchCharcoal });
   }
 
   // Bottom-right revision label
@@ -350,34 +352,34 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const revisionText = `Revision ${revisionWord}`;
   const revisionSize = 48;
   const revisionTextWidth = bold.widthOfTextAtSize(revisionText, revisionSize);
-  cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: bold, color: colors.white });
+  cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: bold, color: crunchCharcoal });
 
   // PAGE 2: About / Benefits / Process (Yellow Background)
   const page2 = addPage();
   
-  // Draw full-page yellow background (#FFCC02)
+  // Draw full-page yellow background (#FFCD03)
   page2.drawRectangle({
     x: 0,
     y: 0,
     width: page2.getSize().width,
     height: page2.getSize().height,
-    color: rgb(1, 0.8, 0.00784), // #FFCC02
+    color: crunchYellow,
   });
 
   const p2x = mm(20);
   let y = page2.getSize().height - mm(25);
 
-  // Helper function for section headings (Black, Helvetica Bold, size 16)
+  // Helper function for section headings (Charcoal, Helvetica Bold, size 16)
   const drawSectionHeading = (page: any, text: string, x: number, y: number) => {
-    page.drawText(text, { x, y, size: 16, font: bold, color: rgb(0, 0, 0) });
+    page.drawText(text, { x, y, size: 16, font: bold, color: crunchCharcoal });
   };
 
-  // Helper function for section content (Black, Helvetica, size 12)
+  // Helper function for section content (Charcoal, Helvetica, size 12)
   const drawSectionContent = (page: any, text: string, x: number, y: number, maxWidth: number) => {
     const lines = wrapText(text, maxWidth, 12, font);
     let currentY = y;
     for (const line of lines) {
-      page.drawText(line, { x, y: currentY, size: 12, font, color: rgb(0, 0, 0) });
+      page.drawText(line, { x, y: currentY, size: 12, font, color: crunchCharcoal });
       currentY -= mm(5.5);
     }
     return currentY;
@@ -666,7 +668,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
         y: labelY,
         size: 8,
         font,
-        color: rgb(0, 0, 0),
+        color: crunchCharcoal,
       });
       labelY -= labelLineHeight;
     }
@@ -706,27 +708,27 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // PAGE 3: Project Schedule (Yellow Background)
   const page3 = addPage();
   
-  // Draw full-page yellow background (#FCD34D)
+  // Draw full-page yellow background (#FFCD03)
   page3.drawRectangle({
     x: 0,
     y: 0,
     width: page3.getSize().width,
     height: page3.getSize().height,
-    color: rgb(0.988, 0.827, 0.302), // #FCD34D
+    color: crunchYellow,
   });
 
   const p3x = mm(20);
   y = page3.getSize().height - mm(25);
 
-  // Heading: "Project Schedule" in black
-  page3.drawText('Project Schedule', { x: p3x, y, size: 18, font: bold, color: rgb(0, 0, 0) });
+  // Heading: "Project Schedule" in charcoal
+  page3.drawText('Project Schedule', { x: p3x, y, size: 18, font: bold, color: crunchCharcoal });
   y -= mm(12);
 
   // Description paragraph in black
   const descriptionText = 'The project schedule is based on information as provided by the Client or Client\'s Agent or Solar Installer. The proposal, based on the project schedule, can be amended as required and will be annexed to the Cession Agreement. Note that it may impact the eligibility and structure of the agreement.';
   const descriptionLines = wrapText(descriptionText, page3.getSize().width - p3x * 2, 11, font);
   for (const line of descriptionLines) {
-    page3.drawText(line, { x: p3x, y, size: 11, font, color: rgb(0, 0, 0) });
+    page3.drawText(line, { x: p3x, y, size: 11, font, color: crunchCharcoal });
     y -= mm(5.5);
   }
 
@@ -749,8 +751,8 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: tableY - tableHeight,
     width: tableWidth,
     height: tableHeight,
-    color: rgb(0.988, 0.827, 0.302), // yellow background matching page
-    borderColor: rgb(0, 0, 0), // black border
+    color: crunchYellow, // yellow background matching page
+    borderColor: crunchCharcoal, // charcoal border
     borderWidth: 1.5,
   });
 
@@ -787,7 +789,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
-    color: rgb(0, 0, 0) 
+    color: crunchCharcoal
   });
   
   const header2Text = 'Commissioning Date';
@@ -797,7 +799,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
-    color: rgb(0, 0, 0) 
+    color: crunchCharcoal
   });
   
   const header3Text = 'Project Size (kWp)';
@@ -807,7 +809,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
-    color: rgb(0, 0, 0) 
+    color: crunchCharcoal
   });
   
   // Draw horizontal line after header
@@ -816,7 +818,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: headerY,
     width: tableWidth,
     height: 1,
-    color: rgb(0, 0, 0),
+    color: crunchCharcoal,
   });
 
   // Draw project data rows
@@ -839,7 +841,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
           y: addressY, 
           size: 10, 
           font, 
-          color: rgb(0, 0, 0) 
+          color: crunchCharcoal
         });
         addressY -= mm(4.5);
       }
@@ -850,7 +852,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
         y: rowY + verticalCenterOffset, 
         size: 10, 
         font, 
-        color: rgb(0, 0, 0) 
+        color: crunchCharcoal
       });
     }
     
@@ -861,7 +863,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       y: rowY + verticalCenterOffset, 
       size: 10, 
       font, 
-      color: rgb(0, 0, 0) 
+      color: crunchCharcoal
     });
     
     const kwpText = fmtNum(project.sizeKwp, ' kWp');
@@ -871,7 +873,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       y: rowY + verticalCenterOffset, 
       size: 10, 
       font, 
-      color: rgb(0, 0, 0) 
+      color: crunchCharcoal
     });
     
     currentRow++;
@@ -884,9 +886,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     page3.drawRectangle({
       x: tableX,
       y: rowY,
-      width: tableWidth,
-      height: 1,
-      color: rgb(0, 0, 0),
+    width: tableWidth,
+    height: 1,
+    color: crunchCharcoal,
     });
   }
 
@@ -900,7 +902,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: totalsY + rowHeight,
     width: tableWidth,
     height: 1.5,
-    color: rgb(0, 0, 0),
+    color: crunchCharcoal,
   });
   
   const totalText = 'TOTAL';
@@ -910,7 +912,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: totalsY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
-    color: rgb(0, 0, 0) 
+    color: crunchCharcoal
   });
   
   const totalKwpText = fmtNum(totalKwp, ' kWp');
@@ -920,7 +922,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: totalsY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
-    color: rgb(0, 0, 0) 
+    color: crunchCharcoal
   });
 
   // Draw vertical dividers between columns
@@ -929,20 +931,28 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y: tableY - tableHeight,
     width: 1,
     height: tableHeight,
-    color: rgb(0, 0, 0),
+    color: crunchCharcoal,
   });
   page3.drawRectangle({
     x: col3X,
     y: tableY - tableHeight,
     width: 1,
     height: tableHeight,
-    color: rgb(0, 0, 0),
+    color: crunchCharcoal,
   });
 
   drawPageNumber(page3, 3, 5);
 
   // PAGE 4: Revenue Share Summary
   const page4 = addPage();
+  // Add yellow background
+  page4.drawRectangle({
+    x: 0,
+    y: 0,
+    width: page4.getSize().width,
+    height: page4.getSize().height,
+    color: crunchYellow,
+  });
   const p4x = mm(20);
   y = page4.getSize().height - mm(25);
 
@@ -979,6 +989,14 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // PAGE 5: Acceptance & Contact
   const page5 = addPage();
+  // Add yellow background
+  page5.drawRectangle({
+    x: 0,
+    y: 0,
+    width: page5.getSize().width,
+    height: page5.getSize().height,
+    color: crunchYellow,
+  });
   const p5x = mm(20);
   y = page5.getSize().height - mm(25);
 
@@ -988,13 +1006,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   y -= mm(12);
   // Signature lines
-  page5.drawText('Client Signature:', { x: p5x, y, size: 10, font: bold, color: colors.muted });
+  page5.drawText('Client Signature:', { x: p5x, y, size: 10, font: bold, color: crunchCharcoal });
   drawDivider(page5, p5x + mm(35), y + mm(2), mm(90));
   y -= mm(10);
-  page5.drawText('Name:', { x: p5x, y, size: 10, font: bold, color: colors.muted });
+  page5.drawText('Name:', { x: p5x, y, size: 10, font: bold, color: crunchCharcoal });
   drawDivider(page5, p5x + mm(18), y + mm(2), mm(70));
   y -= mm(10);
-  page5.drawText('Date:', { x: p5x, y, size: 10, font: bold, color: colors.muted });
+  page5.drawText('Date:', { x: p5x, y, size: 10, font: bold, color: crunchCharcoal });
   drawDivider(page5, p5x + mm(15), y + mm(2), mm(40));
 
   // Contact block
