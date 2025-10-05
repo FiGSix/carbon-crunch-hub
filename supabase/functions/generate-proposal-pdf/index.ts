@@ -763,8 +763,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Calculate available height for table (to bottom margin)
   const availableHeight = scheduleTableY - mm(30);
   const scheduleRowHeight = mm(9.5);
+  const headerRowHeight = mm(12); // Taller header row
   const maxRows = Math.floor(availableHeight / scheduleRowHeight) - 1; // -1 for header and totals
-  const scheduleTableHeight = maxRows * scheduleRowHeight + scheduleRowHeight; // +1 for header row
+  const scheduleTableHeight = maxRows * scheduleRowHeight + headerRowHeight; // Use headerRowHeight for header
   
   // Draw outer black border
   page3.drawRectangle({
@@ -800,52 +801,53 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const col3Center = col3X + (col3Width / 2);
   
   const verticalCenterOffset = mm(1);
+  const headerVerticalCenter = mm(3); // Vertical centering for taller header row
 
   // Draw header row
-  const headerY = scheduleTableY - scheduleRowHeight;
+  const headerY = scheduleTableY - headerRowHeight;
   const header1Text = 'Project Address';
-  const header1Width = bold.widthOfTextAtSize(header1Text, 10);
+  const header1Width = bold.widthOfTextAtSize(header1Text, 12);
   page3.drawText(header1Text, { 
     x: col1X + mm(2), 
-    y: headerY + verticalCenterOffset, 
-    size: 10, 
+    y: headerY + headerVerticalCenter, 
+    size: 12, 
     font: bold, 
-    color: crunchCharcoal
+    color: rgb(1, 1, 1) // White text
   });
   
   const header2Text = 'Commissioning Date';
-  const header2Width = bold.widthOfTextAtSize(header2Text, 10);
+  const header2Width = bold.widthOfTextAtSize(header2Text, 12);
   page3.drawText(header2Text, { 
     x: col2Center - (header2Width / 2), 
-    y: headerY + verticalCenterOffset, 
-    size: 10, 
+    y: headerY + headerVerticalCenter, 
+    size: 12, 
     font: bold, 
-    color: crunchCharcoal
+    color: rgb(1, 1, 1) // White text
   });
   
   const header3Text = 'Project Size (kWp)';
-  const header3Width = bold.widthOfTextAtSize(header3Text, 10);
+  const header3Width = bold.widthOfTextAtSize(header3Text, 12);
   page3.drawText(header3Text, { 
     x: col3Center - (header3Width / 2), 
-    y: headerY + verticalCenterOffset, 
-    size: 10, 
+    y: headerY + headerVerticalCenter, 
+    size: 12, 
     font: bold, 
-    color: crunchCharcoal
+    color: rgb(1, 1, 1) // White text
   });
   
   // Draw horizontal line after header
   page3.drawRectangle({
     x: scheduleTableX,
-    y: headerY,
+    y: scheduleTableY - headerRowHeight,
     width: scheduleTableWidth,
     height: 1,
     color: crunchCharcoal,
   });
 
   // Draw project data rows
-  let currentRow = 1;
+  let currentRow = 0;
   for (const project of projects) {
-    const rowY = scheduleTableY - (currentRow + 1) * scheduleRowHeight;
+    const rowY = scheduleTableY - headerRowHeight - (currentRow * scheduleRowHeight) - scheduleRowHeight;
     
     // Check if address needs wrapping
     const addressWidth = col1Width - mm(8);
