@@ -267,7 +267,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   };
 
   const drawHeading = (page: any, text: string, x: number, y: number) => {
-    page.drawText(text, { x, y, size: 18, font: bold, color: colors.charcoal });
+    page.drawText(text, { x, y, size: 18, font: bold, color: colors.white });
   };
 
   const drawSubheading = (page: any, text: string, x: number, y: number) => {
@@ -398,9 +398,9 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const p2x = mm(20);
   let y = page2.getSize().height - mm(25);
 
-  // Helper function for section headings (Charcoal, Helvetica Bold, size 16)
+  // Helper function for section headings (White, Helvetica Bold, size 18)
   const drawSectionHeading = (page: any, text: string, x: number, y: number) => {
-    page.drawText(text, { x, y, size: 16, font: bold, color: crunchCharcoal });
+    page.drawText(text, { x, y, size: 18, font: bold, color: colors.white });
   };
 
   // Helper function for section content (Charcoal, Helvetica, size 12)
