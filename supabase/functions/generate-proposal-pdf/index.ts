@@ -799,7 +799,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const col2Center = col2X + (col2Width / 2);
   const col3Center = col3X + (col3Width / 2);
   
-  const verticalCenterOffset = mm(3.5);
+  const verticalCenterOffset = mm(4.5);
 
   // Draw header row
   const headerY = scheduleTableY - scheduleRowHeight;
