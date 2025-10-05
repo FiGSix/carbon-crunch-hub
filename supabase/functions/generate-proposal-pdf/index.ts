@@ -767,8 +767,8 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const col2Width = tableWidth * 0.25; // Commissioning Date
   const col3Width = tableWidth * 0.25; // Project Size kWp
   
-  const leftMargin = tableX + mm(4);
-  const col1X = leftMargin;
+  const tableLeftMargin = tableX + mm(4);
+  const col1X = tableLeftMargin;
   const col2X = col1X + col1Width;
   const col3X = col2X + col2Width;
   
