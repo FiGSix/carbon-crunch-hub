@@ -1206,6 +1206,16 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // Draw header row
   let currentRowY = revenueTableY - revenueRowHeight;
+  
+  // Draw yellow header background
+  page4.drawRectangle({
+    x: revenueTableX,
+    y: currentRowY,
+    width: revenueTableWidth,
+    height: revenueRowHeight,
+    color: crunchYellow,
+  });
+  
   page4.drawLine({
     start: { x: revenueTableX, y: currentRowY },
     end: { x: revenueTableX + revenueTableWidth, y: currentRowY },
@@ -1216,17 +1226,17 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const headers = ['Year', 'MWh Generated\nper Year', 'tCO2e Offset\nper Year', 'Client Price\n(R/tCO2e)', 'Client Revenue (R)\nper Year'];
   const headerCols = [
     { x: leftTextInColumn(colYearX), text: headers[0] },
-    { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 9), text: headers[1] },
-    { x: centerTextInColumn(headers[2].split('\n')[0], colTCO2X, colTCO2Width, 0, bold, 9), text: headers[2] },
-    { x: centerTextInColumn(headers[3].split('\n')[0], colPriceX, colPriceWidth, 0, bold, 8), text: headers[3] },
-    { x: centerTextInColumn(headers[4].split('\n')[0], colRevenueX, colRevenueWidth, 0, bold, 8), text: headers[4] },
+    { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 12), text: headers[1] },
+    { x: centerTextInColumn(headers[2].split('\n')[0], colTCO2X, colTCO2Width, 0, bold, 12), text: headers[2] },
+    { x: centerTextInColumn(headers[3].split('\n')[0], colPriceX, colPriceWidth, 0, bold, 12), text: headers[3] },
+    { x: centerTextInColumn(headers[4].split('\n')[0], colRevenueX, colRevenueWidth, 0, bold, 12), text: headers[4] },
   ];
   
   headerCols.forEach((col, idx) => {
     const lines = col.text.split('\n');
     let lineY = currentRowY + verticalOffset + mm(3.5);
     lines.forEach((line, lineIdx) => {
-      const fontSize = idx === 0 ? 9 : (idx >= 3 ? 8 : 9);
+      const fontSize = 12;
       const xPos = idx === 0 ? col.x : centerTextInColumn(line, 
         idx === 1 ? colMWhX : idx === 2 ? colTCO2X : idx === 3 ? colPriceX : colRevenueX,
         idx === 1 ? colMWhWidth : idx === 2 ? colTCO2Width : idx === 3 ? colPriceWidth : colRevenueWidth,
@@ -1237,7 +1247,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
         y: lineY - (lineIdx * mm(3.5)), 
         size: fontSize, 
         font: bold, 
-        color: crunchCharcoal 
+        color: rgb(1, 1, 1)
       });
     });
   });
