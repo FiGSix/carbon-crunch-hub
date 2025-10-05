@@ -730,7 +730,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y -= mm(5.5);
   }
 
-  y -= mm(8);
+  y -= mm(4);
 
   // Draw table with yellow background and black borders - 3 columns design
   const tableX = p3x;
@@ -771,26 +771,39 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const col2X = col1X + col1Width;
   const col3X = col2X + col2Width;
   
+  // Calculate column centers for text alignment
+  const col1Center = col1X + (col1Width / 2);
+  const col2Center = col2X + (col2Width / 2);
+  const col3Center = col3X + (col3Width / 2);
+  
   const verticalCenterOffset = mm(2.5);
 
   // Draw header row
   const headerY = tableY - rowHeight;
-  page3.drawText('Project Address', { 
-    x: col1X, 
+  const header1Text = 'Project Address';
+  const header1Width = bold.widthOfTextAtSize(header1Text, 10);
+  page3.drawText(header1Text, { 
+    x: col1Center - (header1Width / 2), 
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
     color: rgb(0, 0, 0) 
   });
-  page3.drawText('Commissioning Date', { 
-    x: col2X + mm(2), 
+  
+  const header2Text = 'Commissioning Date';
+  const header2Width = bold.widthOfTextAtSize(header2Text, 10);
+  page3.drawText(header2Text, { 
+    x: col2Center - (header2Width / 2), 
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
     color: rgb(0, 0, 0) 
   });
-  page3.drawText('Project Size (kWp)', { 
-    x: col3X + mm(2), 
+  
+  const header3Text = 'Project Size (kWp)';
+  const header3Width = bold.widthOfTextAtSize(header3Text, 10);
+  page3.drawText(header3Text, { 
+    x: col3Center - (header3Width / 2), 
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
@@ -817,11 +830,12 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     const needsDoubleHeight = addressLines.length > 1;
     
     if (needsDoubleHeight) {
-      // Draw address on multiple lines
+      // Draw address on multiple lines - centered
       let addressY = rowY + verticalCenterOffset + mm(4);
       for (const line of addressLines) {
+        const lineWidth = font.widthOfTextAtSize(line, 10);
         page3.drawText(line, { 
-          x: col1X, 
+          x: col1Center - (lineWidth / 2), 
           y: addressY, 
           size: 10, 
           font, 
@@ -830,8 +844,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
         addressY -= mm(4.5);
       }
     } else {
+      const addressWidth = font.widthOfTextAtSize(project.address, 10);
       page3.drawText(project.address, { 
-        x: col1X, 
+        x: col1Center - (addressWidth / 2), 
         y: rowY + verticalCenterOffset, 
         size: 10, 
         font, 
@@ -839,15 +854,20 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       });
     }
     
-    page3.drawText(String(project.commissionDate), { 
-      x: col2X + mm(2), 
+    const dateText = String(project.commissionDate);
+    const dateWidth = font.widthOfTextAtSize(dateText, 10);
+    page3.drawText(dateText, { 
+      x: col2Center - (dateWidth / 2), 
       y: rowY + verticalCenterOffset, 
       size: 10, 
       font, 
       color: rgb(0, 0, 0) 
     });
-    page3.drawText(fmtNum(project.sizeKwp, ' kWp'), { 
-      x: col3X + mm(2), 
+    
+    const kwpText = fmtNum(project.sizeKwp, ' kWp');
+    const kwpWidth = font.widthOfTextAtSize(kwpText, 10);
+    page3.drawText(kwpText, { 
+      x: col3Center - (kwpWidth / 2), 
       y: rowY + verticalCenterOffset, 
       size: 10, 
       font, 
@@ -883,15 +903,20 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: rgb(0, 0, 0),
   });
   
-  page3.drawText('TOTAL', { 
-    x: col1X, 
+  const totalText = 'TOTAL';
+  const totalTextWidth = bold.widthOfTextAtSize(totalText, 10);
+  page3.drawText(totalText, { 
+    x: col1Center - (totalTextWidth / 2), 
     y: totalsY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
     color: rgb(0, 0, 0) 
   });
-  page3.drawText(fmtNum(totalKwp, ' kWp'), { 
-    x: col3X + mm(2), 
+  
+  const totalKwpText = fmtNum(totalKwp, ' kWp');
+  const totalKwpWidth = bold.widthOfTextAtSize(totalKwpText, 10);
+  page3.drawText(totalKwpText, { 
+    x: col3Center - (totalKwpWidth / 2), 
     y: totalsY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
