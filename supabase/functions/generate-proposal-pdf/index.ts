@@ -728,7 +728,7 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   const descriptionLines = wrapText(descriptionText, page3.getSize().width - p3x * 2, 11, font);
   for (const line of descriptionLines) {
     page3.drawText(line, { x: p3x, y, size: 11, font, color: rgb(0, 0, 0) });
-    y -= mm(5);
+    y -= mm(5.5);
   }
 
   y -= mm(8);
