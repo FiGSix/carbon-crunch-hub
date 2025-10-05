@@ -210,6 +210,21 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     return page;
   };
 
+  // Sanitize text to remove Unicode characters unsupported by WinAnsi
+  const sanitizeText = (text: string): string => {
+    return text
+      // Replace subscript digits with normal digits
+      .replace(/₀/g, '0').replace(/₁/g, '1').replace(/₂/g, '2').replace(/₃/g, '3')
+      .replace(/₄/g, '4').replace(/₅/g, '5').replace(/₆/g, '6').replace(/₇/g, '7')
+      .replace(/₈/g, '8').replace(/₉/g, '9')
+      // Normalize quotes
+      .replace(/[""]/g, '"').replace(/['']/g, "'")
+      // Replace em/en dashes with hyphen
+      .replace(/[—–]/g, '-')
+      // Replace multiplication sign
+      .replace(/×/g, 'x');
+  };
+
   const drawPageNumber = (page: any, idx: number, total: number) => {
     const { width } = page.getSize();
     const text = `Page ${idx} of ${total}`;
@@ -222,9 +237,15 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     });
   };
 
+  // Safe wrapper for drawText that sanitizes text first
+  const drawTextSafe = (page: any, text: string, options: any) => {
+    page.drawText(sanitizeText(text), options);
+  };
+
   const wrapText = (text: string, maxWidth: number, size: number, f = font) => {
     const usedFont = (f && typeof (f as any).widthOfTextAtSize === 'function') ? f : font;
-    const words = (text || '').split(/\s+/);
+    const sanitized = sanitizeText(text || '');
+    const words = sanitized.split(/\s+/);
     const lines: string[] = [];
     let line = '';
     for (const w of words) {
@@ -1068,7 +1089,8 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   
   // Helper to center text in column
   const centerTextInColumn = (text: string, colX: number, colWidth: number, yPos: number, textFont: any, fontSize: number) => {
-    const textWidth = textFont.widthOfTextAtSize(text, fontSize);
+    const sanitized = sanitizeText(text);
+    const textWidth = textFont.widthOfTextAtSize(sanitized, fontSize);
     return colX + (colWidth / 2) - (textWidth / 2);
   };
   
@@ -1086,7 +1108,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal,
   });
   
-  const headers = ['Year', 'MWh Generated\nper Year', 'tCO₂e Offset\nper Year', 'Client Carbon Price\n(R/tCO₂e)', 'Client Revenue (R)\nper Year'];
+  const headers = ['Year', 'MWh Generated\nper Year', 'tCO2e Offset\nper Year', 'Client Carbon Price\n(R/tCO2e)', 'Client Revenue (R)\nper Year'];
   const headerCols = [
     { x: leftTextInColumn(colYearX), text: headers[0] },
     { x: centerTextInColumn(headers[1].split('\n')[0], colMWhX, colMWhWidth, 0, bold, 9), text: headers[1] },
@@ -1237,7 +1259,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // Disclaimer text below table
   y = currentRowY - mm(8);
-  const disclaimerText = '*Note that the above numbers are assumptions & indicative. Final costs will based on data as provided from the various systems as installed and validated via our auditing partners. While we aim to maintain the R/tCO₂e rates as per the schedule we can not be held liable for any changes due to regulatory shifts, or legal requirements beyond our control which may necessitate adjustments. This document is strictly confidential and intended solely for the recipient. The validity of the information contained herein expires seven (7) working days from the date of submission. Unauthorised sharing, distribution, or reproduction of this document constitutes a breach of confidentiality and may render the document null and void.';
+  const disclaimerText = '*Note that the above numbers are assumptions & indicative. Final costs will based on data as provided from the various systems as installed and validated via our auditing partners. While we aim to maintain the R/tCO2e rates as per the schedule we can not be held liable for any changes due to regulatory shifts, or legal requirements beyond our control which may necessitate adjustments. This document is strictly confidential and intended solely for the recipient. The validity of the information contained herein expires seven (7) working days from the date of submission. Unauthorised sharing, distribution, or reproduction of this document constitutes a breach of confidentiality and may render the document null and void.';
   const disclaimerLines = wrapText(disclaimerText, page4.getSize().width - p4x * 2, 8, font);
   for (const line of disclaimerLines) {
     page4.drawText(line, { x: p4x, y, size: 8, font, color: crunchCharcoal });
