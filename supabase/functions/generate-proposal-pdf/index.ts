@@ -1134,6 +1134,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const leftTextInColumn = (colX: number) => {
     return colX + mm(2);
   };
+  
+  // Helper to right-align text in column with padding
+  const rightTextInColumn = (text: string, colX: number, colWidth: number, textFont: any, fontSize: number) => {
+    const sanitized = sanitizeText(text);
+    const textWidth = textFont.widthOfTextAtSize(sanitized, fontSize);
+    return colX + colWidth - textWidth - mm(2); // Right edge minus text width minus padding
+  };
 
   // Draw header row
   let currentRowY = revenueTableY - revenueRowHeight;
@@ -1223,10 +1230,10 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       color: crunchCharcoal 
     });
     
-    // Client Revenue (center-aligned, with commas)
+    // Client Revenue (right-aligned, with commas)
     const revenueText = `R ${row.clientRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     page4.drawText(revenueText, { 
-      x: centerTextInColumn(revenueText, colRevenueX, colRevenueWidth, 0, font, 9), 
+      x: rightTextInColumn(revenueText, colRevenueX, colRevenueWidth, font, 9), 
       y: currentRowY + verticalOffset, 
       size: 9, 
       font, 
@@ -1286,7 +1293,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total Revenue
   const totalRevenueText = `R ${totalRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   page4.drawText(totalRevenueText, { 
-    x: centerTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, 0, bold, 9), 
+    x: rightTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, bold, 9), 
     y: currentRowY + verticalOffset, 
     size: 9, 
     font: bold, 
