@@ -803,36 +803,59 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const verticalCenterOffset = mm(1);
   const headerVerticalCenter = mm(3); // Vertical centering for taller header row
 
-  // Draw header row
+  // Draw header row with text wrapping
   const headerY = scheduleTableY - headerRowHeight;
+  
+  // Header 1: Project Address
   const header1Text = 'Project Address';
-  const header1Width = bold.widthOfTextAtSize(header1Text, 12);
-  page3.drawText(header1Text, { 
-    x: col1X + mm(2), 
-    y: headerY + headerVerticalCenter, 
-    size: 12, 
-    font: bold, 
-    color: rgb(1, 1, 1) // White text
+  const header1Width = col1Width - mm(4);
+  const header1Lines = wrapText(header1Text, header1Width, 12, bold);
+  const maxHeaderLines = Math.max(1, header1Lines.length);
+  const headerLineHeight = mm(4.5);
+  const header1StartY = headerY + (headerRowHeight / 2) + ((maxHeaderLines - 1) * headerLineHeight / 2);
+  
+  header1Lines.forEach((line, idx) => {
+    page3.drawText(line, { 
+      x: col1X + mm(2), 
+      y: header1StartY - (idx * headerLineHeight), 
+      size: 12, 
+      font: bold, 
+      color: rgb(1, 1, 1)
+    });
   });
   
+  // Header 2: Commissioning Date
   const header2Text = 'Commissioning Date';
-  const header2Width = bold.widthOfTextAtSize(header2Text, 12);
-  page3.drawText(header2Text, { 
-    x: col2Center - (header2Width / 2), 
-    y: headerY + headerVerticalCenter, 
-    size: 12, 
-    font: bold, 
-    color: rgb(1, 1, 1) // White text
+  const header2Width = col2Width - mm(4);
+  const header2Lines = wrapText(header2Text, header2Width, 12, bold);
+  const header2StartY = headerY + (headerRowHeight / 2) + ((header2Lines.length - 1) * headerLineHeight / 2);
+  
+  header2Lines.forEach((line, idx) => {
+    const lineWidth = bold.widthOfTextAtSize(line, 12);
+    page3.drawText(line, { 
+      x: col2Center - (lineWidth / 2), 
+      y: header2StartY - (idx * headerLineHeight), 
+      size: 12, 
+      font: bold, 
+      color: rgb(1, 1, 1)
+    });
   });
   
+  // Header 3: Project Size (kWp)
   const header3Text = 'Project Size (kWp)';
-  const header3Width = bold.widthOfTextAtSize(header3Text, 12);
-  page3.drawText(header3Text, { 
-    x: col3Center - (header3Width / 2), 
-    y: headerY + headerVerticalCenter, 
-    size: 12, 
-    font: bold, 
-    color: rgb(1, 1, 1) // White text
+  const header3Width = col3Width - mm(4);
+  const header3Lines = wrapText(header3Text, header3Width, 12, bold);
+  const header3StartY = headerY + (headerRowHeight / 2) + ((header3Lines.length - 1) * headerLineHeight / 2);
+  
+  header3Lines.forEach((line, idx) => {
+    const lineWidth = bold.widthOfTextAtSize(line, 12);
+    page3.drawText(line, { 
+      x: col3Center - (lineWidth / 2), 
+      y: header3StartY - (idx * headerLineHeight), 
+      size: 12, 
+      font: bold, 
+      color: rgb(1, 1, 1)
+    });
   });
   
   // Draw horizontal line after header
@@ -844,74 +867,111 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal,
   });
 
-  // Draw project data rows
+  // Draw project data rows with comprehensive text wrapping
   let currentRow = 0;
+  let cumulativeRowHeight = 0;
+  const dataLineHeight = mm(4.5);
+  const maxLinesPerCell = 3; // Safety limit
+  
   for (const project of projects) {
-    const rowY = scheduleTableY - headerRowHeight - (currentRow * scheduleRowHeight) - scheduleRowHeight;
+    // Wrap text for all three columns
+    const col1AvailWidth = col1Width - mm(4);
+    const col2AvailWidth = col2Width - mm(4);
+    const col3AvailWidth = col3Width - mm(4);
     
-    // Check if address needs wrapping
-    const addressWidth = col1Width - mm(8);
-    const addressLines = wrapText(project.address, addressWidth, 10, font);
-    const needsDoubleHeight = addressLines.length > 1;
+    // Column 1: Address (with line limit)
+    let addressLines = wrapText(project.address, col1AvailWidth, 10, font);
+    if (addressLines.length > maxLinesPerCell) {
+      addressLines = addressLines.slice(0, maxLinesPerCell);
+      addressLines[maxLinesPerCell - 1] = addressLines[maxLinesPerCell - 1].substring(0, addressLines[maxLinesPerCell - 1].length - 3) + '...';
+    }
     
-    if (needsDoubleHeight) {
-      // Draw address on multiple lines - centered
-      let addressY = rowY + verticalCenterOffset + mm(5);
-      for (const line of addressLines) {
-        const lineWidth = font.widthOfTextAtSize(line, 10);
-        page3.drawText(line, { 
-          x: col1X + mm(2), 
-          y: addressY, 
-          size: 10, 
-          font, 
-          color: crunchCharcoal
-        });
-        addressY -= mm(4.5);
-      }
-    } else {
-      const addressWidth = font.widthOfTextAtSize(project.address, 10);
-      page3.drawText(project.address, { 
+    // Column 2: Commissioning Date (with line limit)
+    const dateText = String(project.commissionDate);
+    let dateLines = wrapText(dateText, col2AvailWidth, 10, font);
+    if (dateLines.length > maxLinesPerCell) {
+      dateLines = dateLines.slice(0, maxLinesPerCell);
+      dateLines[maxLinesPerCell - 1] = dateLines[maxLinesPerCell - 1].substring(0, dateLines[maxLinesPerCell - 1].length - 3) + '...';
+    }
+    
+    // Column 3: Project Size (with line limit)
+    const kwpText = fmtNum(project.sizeKwp, ' kWp');
+    let kwpLines = wrapText(kwpText, col3AvailWidth, 10, font);
+    if (kwpLines.length > maxLinesPerCell) {
+      kwpLines = kwpLines.slice(0, maxLinesPerCell);
+      kwpLines[maxLinesPerCell - 1] = kwpLines[maxLinesPerCell - 1].substring(0, kwpLines[maxLinesPerCell - 1].length - 3) + '...';
+    }
+    
+    // Calculate dynamic row height based on tallest column
+    const maxLines = Math.max(addressLines.length, dateLines.length, kwpLines.length);
+    const dynamicRowHeight = Math.max(scheduleRowHeight, mm(5) + (maxLines * dataLineHeight));
+    
+    // Calculate row Y position
+    const rowY = scheduleTableY - headerRowHeight - cumulativeRowHeight - dynamicRowHeight;
+    
+    // Calculate vertical centering for this row
+    const rowCenterY = rowY + (dynamicRowHeight / 2) + ((maxLines - 1) * dataLineHeight / 2);
+    
+    // Draw Column 1: Address (left-aligned)
+    addressLines.forEach((line, idx) => {
+      page3.drawText(line, { 
         x: col1X + mm(2), 
-        y: rowY + verticalCenterOffset, 
+        y: rowCenterY - (idx * dataLineHeight), 
         size: 10, 
         font, 
         color: crunchCharcoal
       });
-    }
-    
-    const dateText = String(project.commissionDate);
-    const dateWidth = font.widthOfTextAtSize(dateText, 10);
-    page3.drawText(dateText, { 
-      x: col2Center - (dateWidth / 2), 
-      y: rowY + verticalCenterOffset, 
-      size: 10, 
-      font, 
-      color: crunchCharcoal
     });
     
-    const kwpText = fmtNum(project.sizeKwp, ' kWp');
-    const kwpWidth = font.widthOfTextAtSize(kwpText, 10);
-    page3.drawText(kwpText, { 
-      x: col3Center - (kwpWidth / 2), 
-      y: rowY + verticalCenterOffset, 
-      size: 10, 
-      font, 
-      color: crunchCharcoal
+    // Draw Column 2: Commissioning Date (center-aligned)
+    dateLines.forEach((line, idx) => {
+      const lineWidth = font.widthOfTextAtSize(line, 10);
+      page3.drawText(line, { 
+        x: col2Center - (lineWidth / 2), 
+        y: rowCenterY - (idx * dataLineHeight), 
+        size: 10, 
+        font, 
+        color: crunchCharcoal
+      });
     });
     
-    currentRow++;
-  }
-
-  // Draw empty rows to fill the table
-  for (let i = currentRow; i < maxRows - 1; i++) {
-    const rowY = scheduleTableY - (i + 1) * scheduleRowHeight;
-    // Draw horizontal line
+    // Draw Column 3: Project Size (center-aligned)
+    kwpLines.forEach((line, idx) => {
+      const lineWidth = font.widthOfTextAtSize(line, 10);
+      page3.drawText(line, { 
+        x: col3Center - (lineWidth / 2), 
+        y: rowCenterY - (idx * dataLineHeight), 
+        size: 10, 
+        font, 
+        color: crunchCharcoal
+      });
+    });
+    
+    // Draw horizontal line after this row
     page3.drawRectangle({
       x: scheduleTableX,
       y: rowY,
-    width: scheduleTableWidth,
-    height: 1,
-    color: crunchCharcoal,
+      width: scheduleTableWidth,
+      height: 1,
+      color: crunchCharcoal,
+    });
+    
+    cumulativeRowHeight += dynamicRowHeight;
+    currentRow++;
+  }
+
+  // Draw remaining empty rows to fill the table
+  const remainingHeight = scheduleTableHeight - headerRowHeight - cumulativeRowHeight - scheduleRowHeight;
+  const remainingRows = Math.floor(remainingHeight / scheduleRowHeight);
+  
+  for (let i = 0; i < remainingRows; i++) {
+    const emptyRowY = scheduleTableY - headerRowHeight - cumulativeRowHeight - ((i + 1) * scheduleRowHeight);
+    page3.drawRectangle({
+      x: scheduleTableX,
+      y: emptyRowY,
+      width: scheduleTableWidth,
+      height: 1,
+      color: crunchCharcoal,
     });
   }
 
