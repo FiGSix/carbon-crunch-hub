@@ -733,11 +733,16 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
 
   y -= mm(8);
 
-  // Draw table with yellow background and black borders
+  // Draw table with yellow background and black borders - 3 columns design
   const tableX = p3x;
   const tableY = y - mm(5);
   const tableWidth = page3.getSize().width - p3x * 2;
-  const tableHeight = mm(60);
+  
+  // Calculate available height for table (to bottom margin)
+  const availableHeight = tableY - mm(30);
+  const rowHeight = mm(9);
+  const maxRows = Math.floor(availableHeight / rowHeight) - 1; // -1 for header and totals
+  const tableHeight = maxRows * rowHeight + rowHeight; // +1 for header row
   
   // Draw outer black border
   page3.drawRectangle({
@@ -751,60 +756,159 @@ At Crunch Carbon, we manage the entire carbon credit generation process for youâ
   });
 
   // Extract project data
-  const projectAddress = anyProposal.project_info?.address || anyProposal.content?.projectInfo?.address || 'To be confirmed';
-  const commissionDate = anyProposal.project_info?.commission_date || anyProposal.content?.projectInfo?.commissionDate || 'To be confirmed';
+  const projects = [{
+    address: anyProposal.project_info?.address || anyProposal.content?.projectInfo?.address || 'To be confirmed',
+    commissionDate: anyProposal.project_info?.commission_date || anyProposal.content?.projectInfo?.commissionDate || 'To be confirmed',
+    sizeKwp: anyProposal.system_size_kwp || 0
+  }];
 
-  // Table data
-  const tableData = [
-    ['Project Address', projectAddress],
-    ['System Size', fmtNum(anyProposal.system_size_kwp, ' kWp')],
-    ['Solar System Size in kWp', fmtNum(anyProposal.system_size_kwp, ' kWp')],
-    ['Date of Commissioning', commissionDate],
-    ['Client Share', fmtNum(anyProposal.client_share_percentage, '%')],
-    ['Agent Commission', fmtNum(anyProposal.agent_commission_percentage, '%')],
-  ];
+  // Calculate column widths and positions
+  const col1Width = tableWidth * 0.50; // Project Address
+  const col2Width = tableWidth * 0.25; // Commissioning Date
+  const col3Width = tableWidth * 0.25; // Project Size kWp
+  
+  const leftMargin = tableX + mm(4);
+  const col1X = leftMargin;
+  const col2X = col1X + col1Width;
+  const col3X = col2X + col2Width;
+  
+  const verticalCenterOffset = mm(2.5);
 
-  // Draw table rows with vertical centering
-  const rowHeight = mm(9);
-  const labelX = tableX + mm(8);
-  const valueX = tableX + mm(80);
-  const verticalCenterOffset = mm(2.5); // offset for vertical centering of text
+  // Draw header row
+  const headerY = tableY - rowHeight;
+  page3.drawText('Project Address', { 
+    x: col1X, 
+    y: headerY + verticalCenterOffset, 
+    size: 10, 
+    font: bold, 
+    color: rgb(0, 0, 0) 
+  });
+  page3.drawText('Commissioning Date', { 
+    x: col2X + mm(2), 
+    y: headerY + verticalCenterOffset, 
+    size: 10, 
+    font: bold, 
+    color: rgb(0, 0, 0) 
+  });
+  page3.drawText('Project Size (kWp)', { 
+    x: col3X + mm(2), 
+    y: headerY + verticalCenterOffset, 
+    size: 10, 
+    font: bold, 
+    color: rgb(0, 0, 0) 
+  });
+  
+  // Draw horizontal line after header
+  page3.drawRectangle({
+    x: tableX,
+    y: headerY,
+    width: tableWidth,
+    height: 1,
+    color: rgb(0, 0, 0),
+  });
 
-  for (let i = 0; i < tableData.length; i++) {
-    const [label, value] = tableData[i];
-    const rowY = tableY - (i + 1) * rowHeight;
+  // Draw project data rows
+  let currentRow = 1;
+  for (const project of projects) {
+    const rowY = tableY - (currentRow + 1) * rowHeight;
     
-    // Draw cell text with vertical centering
-    page3.drawText(label, { 
-      x: labelX, 
+    // Check if address needs wrapping
+    const addressWidth = col1Width - mm(8);
+    const addressLines = wrapText(project.address, addressWidth, 10, font);
+    const needsDoubleHeight = addressLines.length > 1;
+    
+    if (needsDoubleHeight) {
+      // Draw address on multiple lines
+      let addressY = rowY + verticalCenterOffset + mm(4);
+      for (const line of addressLines) {
+        page3.drawText(line, { 
+          x: col1X, 
+          y: addressY, 
+          size: 10, 
+          font, 
+          color: rgb(0, 0, 0) 
+        });
+        addressY -= mm(4.5);
+      }
+    } else {
+      page3.drawText(project.address, { 
+        x: col1X, 
+        y: rowY + verticalCenterOffset, 
+        size: 10, 
+        font, 
+        color: rgb(0, 0, 0) 
+      });
+    }
+    
+    page3.drawText(String(project.commissionDate), { 
+      x: col2X + mm(2), 
       y: rowY + verticalCenterOffset, 
       size: 10, 
-      font: bold, 
+      font, 
       color: rgb(0, 0, 0) 
     });
-    page3.drawText(String(value), { 
-      x: valueX, 
+    page3.drawText(fmtNum(project.sizeKwp, ' kWp'), { 
+      x: col3X + mm(2), 
       y: rowY + verticalCenterOffset, 
       size: 10, 
       font, 
       color: rgb(0, 0, 0) 
     });
     
-    // Draw horizontal black border between rows (except last row)
-    if (i < tableData.length - 1) {
-      page3.drawRectangle({
-        x: tableX,
-        y: rowY,
-        width: tableWidth,
-        height: 1,
-        color: rgb(0, 0, 0),
-      });
-    }
+    currentRow++;
   }
+
+  // Draw empty rows to fill the table
+  for (let i = currentRow; i < maxRows - 1; i++) {
+    const rowY = tableY - (i + 1) * rowHeight;
+    // Draw horizontal line
+    page3.drawRectangle({
+      x: tableX,
+      y: rowY,
+      width: tableWidth,
+      height: 1,
+      color: rgb(0, 0, 0),
+    });
+  }
+
+  // Draw totals row at the bottom
+  const totalKwp = projects.reduce((sum, p) => sum + (p.sizeKwp || 0), 0);
+  const totalsY = tableY - tableHeight + rowHeight;
   
-  // Draw vertical black border to separate label and value columns
+  // Draw thicker line above totals
   page3.drawRectangle({
-    x: valueX - mm(4),
+    x: tableX,
+    y: totalsY + rowHeight,
+    width: tableWidth,
+    height: 1.5,
+    color: rgb(0, 0, 0),
+  });
+  
+  page3.drawText('TOTAL', { 
+    x: col1X, 
+    y: totalsY + verticalCenterOffset, 
+    size: 10, 
+    font: bold, 
+    color: rgb(0, 0, 0) 
+  });
+  page3.drawText(fmtNum(totalKwp, ' kWp'), { 
+    x: col3X + mm(2), 
+    y: totalsY + verticalCenterOffset, 
+    size: 10, 
+    font: bold, 
+    color: rgb(0, 0, 0) 
+  });
+
+  // Draw vertical dividers between columns
+  page3.drawRectangle({
+    x: col2X,
+    y: tableY - tableHeight,
+    width: 1,
+    height: tableHeight,
+    color: rgb(0, 0, 0),
+  });
+  page3.drawRectangle({
+    x: col3X,
     y: tableY - tableHeight,
     width: 1,
     height: tableHeight,
