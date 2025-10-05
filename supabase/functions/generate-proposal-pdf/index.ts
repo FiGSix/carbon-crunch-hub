@@ -378,7 +378,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     let currentY = y;
     for (const line of lines) {
       page.drawText(line, { x, y: currentY, size: 12, font, color: rgb(0, 0, 0) });
-      currentY -= mm(4.5);
+      currentY -= mm(5.5);
     }
     return currentY;
   };
