@@ -153,6 +153,8 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   // Fonts
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const italic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+  const boldItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
 
   // Official Crunch Carbon corporate colors
   const crunchYellow = rgb(1, 0.804, 0.012); // #FFCD03
@@ -163,6 +165,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     muted: rgb(0.40, 0.40, 0.40),
     light: rgb(0.70, 0.70, 0.70),
     border: rgb(0.85, 0.85, 0.85),
+    white: rgb(1, 1, 1),
     yellow: crunchYellow,
     charcoal: crunchCharcoal,
     white: rgb(1, 1, 1),
@@ -351,7 +354,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const firstLineY = coverHeight - topMargin - titleSize;
   cover.drawText('Crunching Carbon', { x: leftMargin, y: firstLineY, size: titleSize, font: bold, color: crunchCharcoal });
   const secondLineY = firstLineY - titleSize - mm(4);
-  cover.drawText(`for ${clientName}`, { x: leftMargin, y: secondLineY, size: titleSize, font: bold, color: crunchCharcoal });
+  cover.drawText(`for ${clientName}`, { x: leftMargin, y: secondLineY, size: titleSize, font: boldItalic, color: colors.white });
 
   // Logo - centered in the middle of the bottom third
   if (logoImage) {
@@ -378,7 +381,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const revisionText = `Revision ${revisionWord}`;
   const revisionSize = 48;
   const revisionTextWidth = bold.widthOfTextAtSize(revisionText, revisionSize);
-  cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: bold, color: crunchCharcoal });
+  cover.drawText(revisionText, { x: coverWidth - mm(20) - revisionTextWidth, y: mm(20), size: revisionSize, font: boldItalic, color: colors.white });
 
   // PAGE 2: About / Benefits / Process (Yellow Background)
   const page2 = addPage();
