@@ -750,7 +750,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   y = page3.getSize().height - mm(25);
 
   // Heading: "Project Schedule" in charcoal
-  page3.drawText('Project Schedule', { x: p3x, y, size: 18, font: bold, color: crunchCharcoal });
+  page3.drawText('Project Schedule', { x: p3x, y, size: 18, font: bold, color: colors.white });
   y -= mm(12);
 
   // Description paragraph in black
