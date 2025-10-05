@@ -762,7 +762,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   
   // Calculate available height for table (to bottom margin)
   const availableHeight = scheduleTableY - mm(30);
-  const scheduleRowHeight = mm(9);
+  const scheduleRowHeight = mm(11);
   const maxRows = Math.floor(availableHeight / scheduleRowHeight) - 1; // -1 for header and totals
   const scheduleTableHeight = maxRows * scheduleRowHeight + scheduleRowHeight; // +1 for header row
   
@@ -799,7 +799,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const col2Center = col2X + (col2Width / 2);
   const col3Center = col3X + (col3Width / 2);
   
-  const verticalCenterOffset = mm(2.5);
+  const verticalCenterOffset = mm(3.5);
 
   // Draw header row
   const headerY = scheduleTableY - scheduleRowHeight;
@@ -854,7 +854,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     
     if (needsDoubleHeight) {
       // Draw address on multiple lines - centered
-      let addressY = rowY + verticalCenterOffset + mm(4);
+      let addressY = rowY + verticalCenterOffset + mm(5);
       for (const line of addressLines) {
         const lineWidth = font.widthOfTextAtSize(line, 10);
         page3.drawText(line, { 
