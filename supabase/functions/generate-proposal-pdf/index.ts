@@ -171,6 +171,7 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   // Logo sources: try public Storage bucket paths first, then agent-provided URL
   const STORAGE_PUBLIC_BASE = 'https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public';
   const LOGO_CANDIDATE_URLS = [
+    `${STORAGE_PUBLIC_BASE}/company-logos/branding/crunch-logo-horizontal.png`,
     `${STORAGE_PUBLIC_BASE}/company-logos/branding/crunch-carbon-logo-new.png`,
     `${STORAGE_PUBLIC_BASE}/company-logos/crunch-carbon-logo-new.png`,
   ];
@@ -352,13 +353,17 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const secondLineY = firstLineY - titleSize - mm(4);
   cover.drawText(`for ${clientName}`, { x: leftMargin, y: secondLineY, size: titleSize, font: bold, color: crunchCharcoal });
 
-  // Bottom-centered Crunch Carbon logo
+  // Logo - centered in the middle of the bottom third
   if (logoImage) {
-    const maxLogoWidth = mm(90); // slightly larger for hero logo clarity
+    const maxLogoWidth = mm(150); // 150mm width for horizontal logo
     const lw = Math.min(maxLogoWidth, logoImage.width);
     const lh = (logoImage.height / logoImage.width) * lw;
-    const logoX = (coverWidth - lw) / 2;
-    const logoY = mm(36); // nudge a bit closer to bottom center
+    
+    // Position in the middle of the bottom third
+    const bottomThirdY = coverHeight / 3; // Bottom third starts at 1/3 of page height
+    const logoX = (coverWidth - lw) / 2; // Center horizontally
+    const logoY = bottomThirdY - (lh / 2); // Center vertically in bottom third
+    
     cover.drawImage(logoImage, { x: logoX, y: logoY, width: lw, height: lh });
   } else {
     const placeholder = 'Crunch Carbon';
