@@ -785,7 +785,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const header1Text = 'Project Address';
   const header1Width = bold.widthOfTextAtSize(header1Text, 10);
   page3.drawText(header1Text, { 
-    x: col1Center - (header1Width / 2), 
+    x: col1X + mm(2), 
     y: headerY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
@@ -837,7 +837,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       for (const line of addressLines) {
         const lineWidth = font.widthOfTextAtSize(line, 10);
         page3.drawText(line, { 
-          x: col1Center - (lineWidth / 2), 
+          x: col1X + mm(2), 
           y: addressY, 
           size: 10, 
           font, 
@@ -848,7 +848,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     } else {
       const addressWidth = font.widthOfTextAtSize(project.address, 10);
       page3.drawText(project.address, { 
-        x: col1Center - (addressWidth / 2), 
+        x: col1X + mm(2), 
         y: rowY + verticalCenterOffset, 
         size: 10, 
         font, 
@@ -908,7 +908,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const totalText = 'TOTAL';
   const totalTextWidth = bold.widthOfTextAtSize(totalText, 10);
   page3.drawText(totalText, { 
-    x: col1Center - (totalTextWidth / 2), 
+    x: col1X + mm(2), 
     y: totalsY + verticalCenterOffset, 
     size: 10, 
     font: bold, 
