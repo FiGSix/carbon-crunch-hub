@@ -1083,7 +1083,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const revenueTableX = p4x;
   const revenueTableY = y;
   const revenueTableWidth = page4.getSize().width - p4x * 2;
-  const revenueRowHeight = mm(8);
+  const revenueRowHeight = mm(10);
   const revenueTableHeight = revenueRowHeight * 9; // Header + 7 data rows + totals row
   
   // Draw outer border
@@ -1155,7 +1155,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   
   headerCols.forEach((col, idx) => {
     const lines = col.text.split('\n');
-    let lineY = currentRowY + verticalOffset + mm(2);
+    let lineY = currentRowY + verticalOffset + mm(3.5);
     lines.forEach((line, lineIdx) => {
       const fontSize = idx === 0 ? 9 : (idx >= 3 ? 8 : 9);
       const xPos = idx === 0 ? col.x : centerTextInColumn(line, 
