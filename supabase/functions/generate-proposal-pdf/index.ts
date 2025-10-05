@@ -762,7 +762,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   
   // Calculate available height for table (to bottom margin)
   const availableHeight = scheduleTableY - mm(30);
-  const scheduleRowHeight = mm(11);
+  const scheduleRowHeight = mm(9.5);
   const maxRows = Math.floor(availableHeight / scheduleRowHeight) - 1; // -1 for header and totals
   const scheduleTableHeight = maxRows * scheduleRowHeight + scheduleRowHeight; // +1 for header row
   
