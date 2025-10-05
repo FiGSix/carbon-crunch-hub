@@ -1232,6 +1232,16 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal,
   });
   
+  // Redraw vertical dividers for header row (after yellow background)
+  for (const dx of dividerX) {
+    page4.drawLine({
+      start: { x: dx, y: revenueTableY },
+      end: { x: dx, y: currentRowY },
+      thickness: 1,
+      color: crunchCharcoal,
+    });
+  }
+  
   // Draw bottom border of header row
   page4.drawLine({
     start: { x: revenueTableX, y: currentRowY },
