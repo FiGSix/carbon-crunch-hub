@@ -732,11 +732,11 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y -= mm(5.5);
   }
 
-  y -= mm(4);
+    y -= mm(2);
 
   // Draw table with yellow background and black borders - 3 columns design
   const tableX = p3x;
-  const tableY = y - mm(5);
+  const tableY = y - mm(2.5);
   const tableWidth = page3.getSize().width - p3x * 2;
   
   // Calculate available height for table (to bottom margin)
