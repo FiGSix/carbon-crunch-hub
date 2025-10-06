@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -303,6 +303,56 @@ export type Database = {
           },
         ]
       }
+      proposal_agreements: {
+        Row: {
+          accepted_terms_version: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          proposal_id: string
+          signature_type: Database["public"]["Enums"]["signature_type"]
+          signed_at: string
+          signed_by: string
+          typed_name: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_terms_version?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          proposal_id: string
+          signature_type?: Database["public"]["Enums"]["signature_type"]
+          signed_at?: string
+          signed_by: string
+          typed_name?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_terms_version?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          proposal_id?: string
+          signature_type?: Database["public"]["Enums"]["signature_type"]
+          signed_at?: string
+          signed_by?: string
+          typed_name?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_agreements_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           agent_commission_percentage: number | null
@@ -470,6 +520,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -627,6 +701,10 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_primary_role: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       get_proposal_by_token: {
         Args: { token_param: string }
         Returns: {
@@ -675,6 +753,19 @@ export type Database = {
       get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
@@ -746,7 +837,7 @@ export type Database = {
       }
       set_request_invitation_token: {
         Args: { email_input: string; token_input: string } | { token: string }
-        Returns: boolean
+        Returns: undefined
       }
       test_rls_policies: {
         Args: Record<PropertyKey, never>
@@ -780,7 +871,8 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "agent" | "client"
+      signature_type: "typed_name" | "electronic_signature" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -907,6 +999,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "agent", "client"],
+      signature_type: ["typed_name", "electronic_signature", "manual"],
+    },
   },
 } as const
