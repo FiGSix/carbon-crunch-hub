@@ -50,6 +50,7 @@ const Notifications = createOptimizedLazyComponent(() => import("./pages/Notific
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
+const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -288,6 +289,18 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="/admin/signatures" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Digital Signatures">
+                          <Suspense fallback={<PageLoader />}>
+                            <AdminSignatures />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route
                     path="/notifications" 
                     element={
                       <PrivateRoute>
