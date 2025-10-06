@@ -147,7 +147,7 @@ serve(async (req) => {
 async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const start = Date.now();
   // Dynamically import pdf-lib to avoid top-level imports
-  const { PDFDocument, StandardFonts, rgb } = await import('https://esm.sh/pdf-lib@1.17.1');
+  const { PDFDocument, StandardFonts, rgb, PDFString, PDFArray, PDFName } = await import('https://esm.sh/pdf-lib@1.17.1');
 
   const pdfDoc = await PDFDocument.create();
   const A4: [number, number] = [595.28, 841.89];
@@ -1420,9 +1420,16 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
     const acceptanceUrl = `${siteUrl}/proposals/${proposal.id}/accept?token=${proposal.invitation_token}`;
     
+    console.log('[PDF] Creating digital signature link:', {
+      proposalId: proposal.id,
+      siteUrl,
+      fullUrl: acceptanceUrl,
+      tokenLength: proposal.invitation_token.length
+    });
+    
     // Draw highlighted box for digital signature
     const boxY = y;
-    const boxHeight = mm(32);
+    const boxHeight = mm(40);
     const boxWidth = page4.getSize().width - p4x * 2;
     
     // Background box (light blue)
@@ -1456,16 +1463,25 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     });
     
     y -= mm(8);
-    // Create clickable link annotation
+    // Create clickable link with underline
     const linkText = 'CLICK HERE TO SIGN DIGITALLY';
     const linkWidth = bold.widthOfTextAtSize(linkText, 10);
+    const linkX = p4x + mm(5);
     
     page4.drawText(linkText, { 
-      x: p4x + mm(5), 
+      x: linkX, 
       y, 
       size: 10, 
       font: bold, 
       color: rgb(0.05, 0.65, 0.91) // Blue color for link
+    });
+    
+    // Draw underline to make it obviously clickable
+    page4.drawLine({
+      start: { x: linkX, y: y - mm(1) },
+      end: { x: linkX + linkWidth, y: y - mm(1) },
+      thickness: 1,
+      color: rgb(0.05, 0.65, 0.91),
     });
     
     // Add link annotation to make it clickable
@@ -1473,23 +1489,54 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       pdfDoc.context.obj({
         Type: 'Annot',
         Subtype: 'Link',
-        Rect: [p4x + mm(5), y - mm(2), p4x + mm(5) + linkWidth, y + mm(5)],
+        Rect: [linkX, y - mm(2), linkX + linkWidth, y + mm(5)],
         Border: [0, 0, 0],
         C: [0.05, 0.65, 0.91],
         A: {
           Type: 'Action',
           S: 'URI',
-          URI: pdfDoc.context.obj(acceptanceUrl),
+          URI: PDFString.of(acceptanceUrl),
         },
       })
     );
     
-    page4.node.set(
-      pdfDoc.context.obj('Annots'),
-      pdfDoc.context.obj([linkAnnotation])
-    );
+    // Get existing annotations and append the new one
+    const existingAnnots = page4.node.get(PDFName.of('Annots'));
+    const annotsArray = existingAnnots ? existingAnnots : pdfDoc.context.obj([]);
+    
+    if (annotsArray instanceof PDFArray) {
+      annotsArray.push(linkAnnotation);
+      page4.node.set(PDFName.of('Annots'), annotsArray);
+    } else {
+      page4.node.set(PDFName.of('Annots'), pdfDoc.context.obj([linkAnnotation]));
+    }
+    
+    console.log('[PDF] Link annotation created successfully');
     
     y -= mm(6);
+    // Display the full URL as fallback
+    page4.drawText('Or copy this link:', { 
+      x: p4x + mm(5), 
+      y, 
+      size: 8, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    y -= mm(4);
+    const urlLines = wrapText(acceptanceUrl, boxWidth - mm(10), 8, font);
+    for (const line of urlLines) {
+      page4.drawText(line, { 
+        x: p4x + mm(5), 
+        y, 
+        size: 8, 
+        font, 
+        color: rgb(0.05, 0.65, 0.91) 
+      });
+      y -= mm(3.5);
+    }
+    
+    y -= mm(4);
     const validityText = `This link is valid for 30 days. You'll review full terms and type your name to complete the signature.`;
     const validityLines = wrapText(validityText, boxWidth - mm(10), 8, font);
     for (const line of validityLines) {
