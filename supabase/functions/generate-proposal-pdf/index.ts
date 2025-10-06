@@ -1598,7 +1598,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       day: 'numeric' 
     });
     
-    const signedText = `✓ This proposal was digitally signed on ${signedDate}`;
+    const signedText = `[SIGNED] This proposal was digitally signed on ${signedDate}`;
     page4.drawText(signedText, {
       x: p4x,
       y,
