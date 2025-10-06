@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -746,7 +746,7 @@ export type Database = {
       }
       set_request_invitation_token: {
         Args: { email_input: string; token_input: string } | { token: string }
-        Returns: boolean
+        Returns: undefined
       }
       test_rls_policies: {
         Args: Record<PropertyKey, never>
