@@ -47,7 +47,7 @@ serve(async (req) => {
   try {
     const { proposalId, forceRegenerate = false }: ProposalPdfRequest = await req.json()
 
-    console.log(`Generating PDF for proposal: ${proposalId}, force regenerate: ${forceRegenerate}`)
+    console.log(`[PDF] Generating PDF for proposal: ${proposalId}, force regenerate: ${forceRegenerate}`)
 
     // Fetch proposal data with client information
     const { data: proposal, error: proposalError } = await supabaseAdmin
@@ -61,20 +61,54 @@ serve(async (req) => {
       .single()
 
     if (proposalError || !proposal) {
-      console.error('Error fetching proposal:', proposalError)
+      console.error('[PDF] Error fetching proposal:', proposalError)
       return new Response(
         JSON.stringify({ error: 'Proposal not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Check if PDF exists and is current (unless force regenerating)
-    if (!forceRegenerate && proposal.pdf_url && proposal.pdf_generated_at) {
+    console.log(`[PDF] Proposal fetched: ${proposal.title}, status: ${proposal.status}`)
+
+    // CRITICAL: Ensure invitation token exists for pending proposals
+    let tokenUpdated = false
+    if (proposal.status === 'pending') {
+      const now = new Date()
+      const tokenExpired = !proposal.invitation_expires_at || new Date(proposal.invitation_expires_at) <= now
+      
+      if (!proposal.invitation_token || tokenExpired) {
+        console.log('[PDF] Generating new invitation token for pending proposal')
+        
+        const newToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
+        const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000) // 48 hours
+        
+        const { error: updateError } = await supabaseAdmin
+          .from('proposals')
+          .update({
+            invitation_token: newToken,
+            invitation_expires_at: expiresAt.toISOString()
+          })
+          .eq('id', proposalId)
+        
+        if (updateError) {
+          console.error('[PDF] Failed to update invitation token:', updateError)
+        } else {
+          proposal.invitation_token = newToken
+          proposal.invitation_expires_at = expiresAt.toISOString()
+          tokenUpdated = true
+          console.log(`[PDF] Token updated, expires at: ${expiresAt.toISOString()}`)
+        }
+      }
+    }
+
+    // Check if PDF exists and is current (unless force regenerating or token was just updated)
+    if (!forceRegenerate && !tokenUpdated && proposal.pdf_url && proposal.pdf_generated_at) {
       const pdfAge = new Date().getTime() - new Date(proposal.pdf_generated_at).getTime()
       const proposalAge = new Date().getTime() - new Date(proposal.updated_at || proposal.created_at).getTime()
       
       // If PDF is newer than proposal updates, return existing URL
       if (pdfAge < proposalAge) {
+        console.log('[PDF] Valid PDF already exists, returning cached version')
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -1415,16 +1449,26 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   drawHeading(page4, 'Acceptance', p4x, y);
   y -= mm(12);
   
-  // Digital signature section (new)
-  if (proposal.invitation_token && proposal.invitation_expires_at) {
+  // Digital Signature Section - only for pending proposals
+  if (proposal.status === 'pending' && proposal.invitation_token && proposal.invitation_expires_at) {
+    y -= mm(8);
+    
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
     const acceptanceUrl = `${siteUrl}/proposals/${proposal.id}/accept?token=${proposal.invitation_token}`;
     
+    // Calculate days until expiry
+    const expiryDate = new Date(proposal.invitation_expires_at);
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
     console.log('[PDF] Creating digital signature link:', {
       proposalId: proposal.id,
+      status: proposal.status,
       siteUrl,
       fullUrl: acceptanceUrl,
-      tokenLength: proposal.invitation_token.length
+      tokenLength: proposal.invitation_token.length,
+      expiresAt: proposal.invitation_expires_at,
+      daysUntilExpiry
     });
     
     // Draw highlighted box for digital signature
@@ -1537,14 +1581,34 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     }
     
     y -= mm(4);
-    const validityText = `This link is valid for 30 days. You'll review full terms and type your name to complete the signature.`;
+    const validityText = `This link is valid for ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. You'll review full terms and type your name to complete the signature.`;
     const validityLines = wrapText(validityText, boxWidth - mm(10), 8, font);
     for (const line of validityLines) {
       page4.drawText(line, { x: p4x + mm(5), y, size: 8, font, color: crunchCharcoal });
       y -= mm(3.5);
     }
     
+    y -= mm(4);
+  } else if (proposal.status === 'signed' && proposal.signed_at) {
+    // Show signed status for approved proposals
     y -= mm(8);
+    const signedDate = new Date(proposal.signed_at).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const signedText = `✓ This proposal was digitally signed on ${signedDate}`;
+    page4.drawText(signedText, {
+      x: p4x,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.13, 0.55, 0.13) // Green color
+    });
+    
+    y -= mm(8);
+    console.log('[PDF] Showing signed status for approved proposal');
   }
   
   // Manual signature option

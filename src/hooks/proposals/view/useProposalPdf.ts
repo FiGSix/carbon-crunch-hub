@@ -81,8 +81,8 @@ export function useProposalPdf() {
     }
   };
 
-  const downloadPdf = async (proposalId: string, filename?: string) => {
-    const pdfUrl = await generatePdf(proposalId);
+  const downloadPdf = async (proposalId: string, filename?: string, forceRegenerate = false) => {
+    const pdfUrl = await generatePdf(proposalId, forceRegenerate);
     
     if (pdfUrl) {
       try {
