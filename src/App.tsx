@@ -49,6 +49,7 @@ const SystemSettings = createOptimizedLazyComponent(() => import("./pages/System
 const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
+const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance"), "ProposalAcceptance");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -176,6 +177,13 @@ function App() {
                   <Route path="/proposals/:id" element={
                     <PageErrorBoundary pageName="View Proposal">
                       <Suspense fallback={<PageLoader />}><ViewProposalPage /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  
+                  {/* Proposal acceptance - digital signature flow */}
+                  <Route path="/proposals/:id/accept" element={
+                    <PageErrorBoundary pageName="Proposal Acceptance">
+                      <Suspense fallback={<PageLoader />}><ProposalAcceptance /></Suspense>
                     </PageErrorBoundary>
                   } />
                   

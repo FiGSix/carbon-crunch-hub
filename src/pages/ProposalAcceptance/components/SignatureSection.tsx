@@ -1,0 +1,160 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { CheckCircle2, AlertCircle, Loader2, PenTool } from "lucide-react";
+
+interface SignatureSectionProps {
+  hasScrolledToBottom: boolean;
+  hasAgreed: boolean;
+  onAgreeChange: (checked: boolean) => void;
+  typedName: string;
+  onTypedNameChange: (name: string) => void;
+  clientName: string;
+  isValid: boolean;
+  canSubmit: boolean;
+  isSubmitting: boolean;
+  onSubmit: () => void;
+}
+
+export function SignatureSection({
+  hasScrolledToBottom,
+  hasAgreed,
+  onAgreeChange,
+  typedName,
+  onTypedNameChange,
+  clientName,
+  isValid,
+  canSubmit,
+  isSubmitting,
+  onSubmit,
+}: SignatureSectionProps) {
+  return (
+    <Card className="border-2 border-primary/20">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <PenTool className="h-5 w-5" />
+          Digital Signature
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Complete the steps below to accept this proposal
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Step 1: Scroll to bottom */}
+        <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+          {hasScrolledToBottom ? (
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+          ) : (
+            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground mt-0.5 flex-shrink-0" />
+          )}
+          <div className="flex-1">
+            <p className="font-medium">Step 1: Read Terms & Conditions</p>
+            <p className="text-sm text-muted-foreground">
+              {hasScrolledToBottom ? "Completed" : "Scroll to the bottom of the terms"}
+            </p>
+          </div>
+        </div>
+
+        {/* Step 2: Agreement checkbox */}
+        <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+          {hasAgreed ? (
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+          ) : (
+            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground mt-0.5 flex-shrink-0" />
+          )}
+          <div className="flex-1 space-y-3">
+            <div>
+              <p className="font-medium">Step 2: Confirm Agreement</p>
+              <p className="text-sm text-muted-foreground">Check the box to confirm you agree</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="terms"
+                checked={hasAgreed}
+                onCheckedChange={(checked) => onAgreeChange(checked === true)}
+                disabled={!hasScrolledToBottom}
+              />
+              <Label
+                htmlFor="terms"
+                className={`text-sm cursor-pointer ${!hasScrolledToBottom ? 'opacity-50' : ''}`}
+              >
+                I have read and agree to the terms and conditions
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3: Type name */}
+        <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+          {isValid && typedName.trim().length > 0 ? (
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+          ) : (
+            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground mt-0.5 flex-shrink-0" />
+          )}
+          <div className="flex-1 space-y-3">
+            <div>
+              <p className="font-medium">Step 3: Sign with Your Name</p>
+              <p className="text-sm text-muted-foreground">
+                Type your full name to sign this agreement
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Input
+                type="text"
+                placeholder="Type your full name"
+                value={typedName}
+                onChange={(e) => onTypedNameChange(e.target.value)}
+                disabled={!hasAgreed}
+                className={`${
+                  typedName.trim().length > 0 && !isValid
+                    ? 'border-destructive'
+                    : ''
+                }`}
+              />
+              {typedName.trim().length > 0 && !isValid && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Name doesn't match the client name ({clientName})</span>
+                </div>
+              )}
+              {isValid && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Name verified</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Submit button */}
+        <div className="pt-4 border-t">
+          <Button
+            onClick={onSubmit}
+            disabled={!canSubmit || isSubmitting}
+            className="w-full"
+            size="lg"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting Agreement...
+              </>
+            ) : (
+              <>
+                <PenTool className="mr-2 h-4 w-4" />
+                Sign and Accept Proposal
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            By clicking this button, you acknowledge that your electronic signature is legally binding
+            and that you accept all terms and conditions outlined in this proposal.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
