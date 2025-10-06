@@ -8,7 +8,8 @@ import {
   Settings,
   LogOut,
   User,
-  UserCog
+  UserCog,
+  FileSignature
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -68,6 +69,12 @@ export function DashboardSidebar() {
       name: "Agent Management",
       href: "/admin/agents",
       icon: UserCog,
+      roles: ["admin"]
+    },
+    {
+      name: "Digital Signatures",
+      href: "/admin/signatures",
+      icon: FileSignature,
       roles: ["admin"]
     },
     {
