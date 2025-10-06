@@ -14,7 +14,7 @@ interface ProposalContentProps {
   isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
-  handleApprove: () => Promise<void>;
+  handleApprove: (typedName: string) => Promise<void>;
   handleReject: () => Promise<void>;
   handleDelete: () => Promise<void>;
   handleReviewLater: () => Promise<void>;

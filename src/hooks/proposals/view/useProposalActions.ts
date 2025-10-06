@@ -16,16 +16,16 @@ export function useProposalActions(refreshData: () => Promise<void>, onDeleteSuc
     feature: 'proposals' 
   });
 
-  const handleApprove = async (proposalId: string) => {
+  const handleApprove = async (proposalId: string, typedName?: string) => {
     if (!proposalId) {
       actionsLogger.error({ message: "Cannot approve proposal", action: 'approve', reason: 'missing proposal ID' });
       return false;
     }
     
-    actionsLogger.info({ message: "Approving proposal", proposalId });
+    actionsLogger.info({ message: "Approving proposal", proposalId, hasSignature: !!typedName });
     
     try {
-      const result = await approveProposal(proposalId);
+      const result = await approveProposal(proposalId, typedName);
       if (result.success) {
         actionsLogger.info({ message: "Proposal approved successfully, refreshing data", proposalId });
         // Refresh data from the server

@@ -18,7 +18,7 @@ import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalizat
 interface ProposalDetailsProps {
   proposal: ProposalData;
   token?: string | null;
-  onApprove: () => Promise<void>;
+  onApprove: (typedName: string) => Promise<void>;
   onReject: () => Promise<void>;
   isReviewLater?: boolean;
   showActions?: boolean;
@@ -125,6 +125,8 @@ export function ProposalDetails({
           onApprove={onApprove}
           onReject={onReject}
           showActions={showActions}
+          clientName={proposal.content?.clientInfo?.name || 'Client'}
+          proposalTitle={proposal.title}
         />
       )}
     </Card>

@@ -13,22 +13,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ApprovalSignatureDialog } from "./ApprovalSignatureDialog";
 import { logger } from "@/lib/logger";
 
 interface ProposalActionFooterProps {
-  onApprove: () => Promise<void>;
+  onApprove: (typedName: string) => Promise<void>;
   onReject: () => Promise<void>;
   showActions: boolean;
+  clientName: string;
+  proposalTitle: string;
 }
 
 export function ProposalActionFooter({ 
   onApprove, 
   onReject,
-  showActions 
+  showActions,
+  clientName,
+  proposalTitle
 }: ProposalActionFooterProps) {
-  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
@@ -36,19 +40,17 @@ export function ProposalActionFooter({
     return null;
   }
   
-  const handleApprove = async () => {
+  const handleApprove = async (typedName: string) => {
     try {
       setErrorMessage(null);
-      setIsApproving(true);
-      logger.info("Starting proposal approval process");
-      await onApprove();
+      logger.info("Starting proposal approval with signature", { typedName });
+      await onApprove(typedName);
       logger.info("Proposal approval completed successfully");
+      setShowSignatureDialog(false);
     } catch (error) {
       logger.error("Error during proposal approval:", error);
       setErrorMessage("Failed to approve the proposal. Please try again.");
-    } finally {
-      setIsApproving(false);
-      setShowApproveDialog(false);
+      throw error;
     }
   };
   
@@ -82,48 +84,28 @@ export function ProposalActionFooter({
           variant="destructive" 
           className="w-full sm:w-auto order-2 sm:order-1"
           onClick={() => setShowRejectDialog(true)}
-          disabled={isRejecting || isApproving}
+          disabled={isRejecting}
         >
           <X className="mr-2 h-4 w-4" /> Reject Proposal
         </Button>
         <Button 
           variant="default" 
           className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2"
-          onClick={() => setShowApproveDialog(true)}
-          disabled={isRejecting || isApproving}
+          onClick={() => setShowSignatureDialog(true)}
+          disabled={isRejecting}
         >
           <CheckCircle2 className="mr-2 h-4 w-4" /> Approve Proposal
         </Button>
       </CardFooter>
       
-      {/* Approve Confirmation Dialog */}
-      <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Approve Proposal</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to approve this proposal? This action indicates your acceptance of the terms and conditions outlined in the proposal.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
-            <AlertDialogCancel disabled={isApproving}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={isApproving}
-            >
-              {isApproving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-                  Processing...
-                </>
-              ) : (
-                "Yes, Approve"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Signature Dialog for Approval */}
+      <ApprovalSignatureDialog
+        open={showSignatureDialog}
+        onOpenChange={setShowSignatureDialog}
+        onConfirm={handleApprove}
+        clientName={clientName}
+        proposalTitle={proposalTitle}
+      />
       
       {/* Reject Confirmation Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>

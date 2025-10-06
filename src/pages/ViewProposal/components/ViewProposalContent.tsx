@@ -25,7 +25,7 @@ interface ViewProposalContentProps {
   isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
-  handleApprove: () => Promise<void>;
+  handleApprove: (typedName: string) => Promise<void>;
   handleReject: () => Promise<void>;
   handleDelete: () => Promise<void>;
   handleReviewLater: () => Promise<void>;
@@ -110,12 +110,12 @@ export function ViewProposalContent({
   console.log("=== Showing Proposal Content ===", { id: proposal.id, title: proposal.title });
   
   // Action wrapper functions that handle authentication state
-  const handleApproveWrapper = async () => {
+  const handleApproveWrapper = async (typedName: string) => {
     if (!user) {
       handleSignInClick();
       return;
     }
-    await handleApprove();
+    await handleApprove(typedName);
   };
   
   const handleRejectWrapper = async () => {

@@ -45,10 +45,10 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
   // Get proposal status data
   const { canDelete, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
 
-  // Create wrapper functions that convert boolean returns to void
-  const handleApproveWrapper = async (): Promise<void> => {
+  // Create wrapper functions that convert boolean returns to void and pass typed name
+  const handleApproveWrapper = async (typedName: string): Promise<void> => {
     if (proposal?.id) {
-      await handleApprove(proposal.id);
+      await handleApprove(proposal.id, typedName);
     }
   };
 
