@@ -35,6 +35,8 @@ interface ProposalData {
   agent_commission_percentage: number
   pdf_version: number
   created_at: string
+  invitation_token?: string
+  invitation_expires_at?: string
 }
 
 serve(async (req) => {
@@ -1412,9 +1414,96 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   y -= mm(15);
   drawHeading(page4, 'Acceptance', p4x, y);
   y -= mm(12);
-  y = drawParagraph(page4, 'By signing below, the Client acknowledges the indicative terms herein and agrees to proceed to contracting subject to final due diligence and mutually agreed terms.', p4x, y, page4.getSize().width - p4x * 2);
-
-  y -= mm(12);
+  
+  // Digital signature section (new)
+  if (proposal.invitation_token && proposal.invitation_expires_at) {
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
+    const acceptanceUrl = `${siteUrl}/proposals/${proposal.id}/accept?token=${proposal.invitation_token}`;
+    
+    // Draw highlighted box for digital signature
+    const boxY = y;
+    const boxHeight = mm(32);
+    const boxWidth = page4.getSize().width - p4x * 2;
+    
+    // Background box (light blue)
+    page4.drawRectangle({
+      x: p4x,
+      y: boxY - boxHeight,
+      width: boxWidth,
+      height: boxHeight,
+      color: rgb(0.94, 0.97, 1), // Light blue background
+      borderColor: rgb(0.05, 0.65, 0.91), // Primary blue border
+      borderWidth: 2,
+    });
+    
+    y -= mm(6);
+    page4.drawText('📝 Digital Signature Option (Recommended)', { 
+      x: p4x + mm(5), 
+      y, 
+      size: 11, 
+      font: bold, 
+      color: rgb(0.02, 0.42, 0.57) 
+    });
+    
+    y -= mm(6);
+    const instructionText = 'To accept this proposal digitally with a legally binding electronic signature:';
+    page4.drawText(instructionText, { 
+      x: p4x + mm(5), 
+      y, 
+      size: 9, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    y -= mm(8);
+    // Create clickable link annotation
+    const linkText = 'CLICK HERE TO SIGN DIGITALLY';
+    const linkWidth = bold.widthOfTextAtSize(linkText, 10);
+    
+    page4.drawText(linkText, { 
+      x: p4x + mm(5), 
+      y, 
+      size: 10, 
+      font: bold, 
+      color: rgb(0.05, 0.65, 0.91) // Blue color for link
+    });
+    
+    // Add link annotation to make it clickable
+    const linkAnnotation = pdfDoc.context.register(
+      pdfDoc.context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: [p4x + mm(5), y - mm(2), p4x + mm(5) + linkWidth, y + mm(5)],
+        Border: [0, 0, 0],
+        C: [0.05, 0.65, 0.91],
+        A: {
+          Type: 'Action',
+          S: 'URI',
+          URI: pdfDoc.context.obj(acceptanceUrl),
+        },
+      })
+    );
+    
+    page4.node.set(
+      pdfDoc.context.obj('Annots'),
+      pdfDoc.context.obj([linkAnnotation])
+    );
+    
+    y -= mm(6);
+    const validityText = `This link is valid for 30 days. You'll review full terms and type your name to complete the signature.`;
+    const validityLines = wrapText(validityText, boxWidth - mm(10), 8, font);
+    for (const line of validityLines) {
+      page4.drawText(line, { x: p4x + mm(5), y, size: 8, font, color: crunchCharcoal });
+      y -= mm(3.5);
+    }
+    
+    y -= mm(8);
+  }
+  
+  // Manual signature option
+  y = drawParagraph(page4, 'Alternatively, if you prefer to print and sign manually, you may do so below:', p4x, y, page4.getSize().width - p4x * 2);
+  
+  y -= mm(10);
   // Signature lines
   page4.drawText('Client Signature:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
   drawDivider(page4, p4x + mm(35), y + mm(2), mm(90));
