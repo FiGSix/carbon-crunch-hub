@@ -1488,11 +1488,11 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     });
     
     y -= mm(6);
-    page4.drawText('📝 Digital Signature Option (Recommended)', { 
+    page4.drawText('Digital Signature Option (Recommended)', { 
       x: p4x + mm(5), 
       y, 
       size: 11, 
-      font: bold, 
+      font: bold,
       color: rgb(0.02, 0.42, 0.57) 
     });
     
