@@ -1622,9 +1622,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     
     y -= mm(4);
     const validityText = `This link is valid for ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. You'll review full terms and type your name to complete the signature.`;
-    const validityLines = wrapText(validityText, boxWidth - mm(10), 8, font);
+    const validityLines = wrapText(validityText, boxWidth - mm(10), 9, font);
     for (const line of validityLines) {
-      page4.drawText(line, { x: p4x + mm(5), y, size: 8, font, color: crunchCharcoal });
+      page4.drawText(line, { x: p4x + mm(5), y, size: 9, font, color: crunchCharcoal });
       y -= mm(3.5);
     }
     
