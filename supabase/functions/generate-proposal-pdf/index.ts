@@ -1527,19 +1527,19 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     page4.drawText('Digital Signature', { 
       x: p4x + mm(5), 
       y, 
-      size: 11, 
+      size: 12, 
       font: bold,
       color: crunchCharcoal 
     });
     
     y -= mm(6);
     const instructionText = 'To accept this proposal digitally with a legally binding electronic signature:';
-    const instructionLines = wrapText(instructionText, boxWidth - mm(10), 9, font);
+    const instructionLines = wrapText(instructionText, boxWidth - mm(10), 12, font);
     for (const line of instructionLines) {
       page4.drawText(line, { 
         x: p4x + mm(5), 
         y, 
-        size: 9, 
+        size: 12, 
         font, 
         color: crunchCharcoal 
       });
@@ -1549,13 +1549,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y -= mm(8);
     // Create clickable link with underline
     const linkText = 'CLICK HERE TO SIGN DIGITALLY';
-    const linkWidth = bold.widthOfTextAtSize(linkText, 10);
+    const linkWidth = bold.widthOfTextAtSize(linkText, 12);
     const linkX = p4x + mm(5);
     
     page4.drawText(linkText, { 
       x: linkX, 
       y, 
-      size: 10, 
+      size: 12, 
       font: bold, 
       color: rgb(0.9, 0.72, 0.01) // Yellow-gold color for link
     });
@@ -1602,7 +1602,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     page4.drawText('Or copy this link:', { 
       x: p4x + mm(5), 
       y, 
-      size: 8, 
+      size: 12, 
       font, 
       color: crunchCharcoal 
     });
