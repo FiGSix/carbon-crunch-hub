@@ -1533,7 +1533,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     });
     
     y -= mm(6);
-    const instructionText = 'To accept this proposal digitally with a legally binding electronic signature:';
+    const instructionText = 'To accept this proposal please sign digitally below:';
     const instructionLines = wrapText(instructionText, boxWidth - mm(10), 12, font);
     for (const line of instructionLines) {
       page4.drawText(line, { 
