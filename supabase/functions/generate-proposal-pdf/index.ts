@@ -1366,7 +1366,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     page4.drawText(row.year.toString(), { 
       x: leftTextInColumn(colYearX), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1374,9 +1374,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // MWh Generated (center-aligned, 2 decimals)
     const mwhText = row.mwhGenerated.toFixed(2);
     page4.drawText(mwhText, { 
-      x: centerTextInColumn(mwhText, colMWhX, colMWhWidth, 0, font, 9), 
+      x: centerTextInColumn(mwhText, colMWhX, colMWhWidth, 0, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1384,9 +1384,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // tCO₂e Offset (center-aligned, 2 decimals)
     const tco2Text = row.tco2Offset.toFixed(2);
     page4.drawText(tco2Text, { 
-      x: centerTextInColumn(tco2Text, colTCO2X, colTCO2Width, 0, font, 9), 
+      x: centerTextInColumn(tco2Text, colTCO2X, colTCO2Width, 0, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1394,9 +1394,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // Client Price (center-aligned)
     const priceText = `R ${row.clientPrice.toFixed(2)}`;
     page4.drawText(priceText, { 
-      x: centerTextInColumn(priceText, colPriceX, colPriceWidth, 0, font, 9), 
+      x: centerTextInColumn(priceText, colPriceX, colPriceWidth, 0, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1404,9 +1404,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // Client Revenue (right-aligned, with commas)
     const revenueText = `R ${row.clientRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     page4.drawText(revenueText, { 
-      x: rightTextInColumn(revenueText, colRevenueX, colRevenueWidth, font, 9), 
+      x: rightTextInColumn(revenueText, colRevenueX, colRevenueWidth, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
