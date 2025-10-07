@@ -302,6 +302,42 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
     return lines;
   };
 
+  const wrapUrl = (url: string, maxWidth: number, size: number, f = font) => {
+    const usedFont = (f && typeof (f as any).widthOfTextAtSize === 'function') ? f : font;
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    // Break URL at logical points: /, ?, &, =
+    for (let i = 0; i < url.length; i++) {
+      const char = url[i];
+      const testLine = currentLine + char;
+      const width = usedFont.widthOfTextAtSize(testLine, size);
+      
+      if (width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = char;
+      } else {
+        currentLine = testLine;
+        
+        // Force break opportunity after these characters
+        if (char === '/' || char === '?' || char === '&' || char === '=') {
+          const nextChar = url[i + 1];
+          if (nextChar) {
+            const projectedWidth = usedFont.widthOfTextAtSize(currentLine + nextChar + nextChar, size);
+            // If adding more chars would exceed, break now
+            if (projectedWidth > maxWidth * 0.9) {
+              lines.push(currentLine);
+              currentLine = '';
+            }
+          }
+        }
+      }
+    }
+    
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  };
+
   const drawHeading = (page: any, text: string, x: number, y: number) => {
     page.drawText(text, { x, y, size: 18, font: bold, color: colors.white });
   };
@@ -1572,12 +1608,12 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     });
     
     y -= mm(4);
-    const urlLines = wrapText(acceptanceUrl, boxWidth - mm(10), 8, font);
+    const urlLines = wrapUrl(acceptanceUrl, boxWidth - mm(10), 7, font);
     for (const line of urlLines) {
       page4.drawText(line, { 
         x: p4x + mm(5), 
         y, 
-        size: 8, 
+        size: 7, 
         font, 
         color: rgb(0.05, 0.65, 0.91) 
       });
