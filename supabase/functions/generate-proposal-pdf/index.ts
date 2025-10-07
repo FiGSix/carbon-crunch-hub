@@ -1509,17 +1509,17 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     
     // Draw highlighted box for digital signature
     const boxY = y;
-    const boxHeight = mm(38);
+    const boxHeight = mm(42);
     const boxWidth = page4.getSize().width - p4x * 2;
     
-    // Background box (light blue)
+    // Background box (light yellow/cream)
     page4.drawRectangle({
       x: p4x,
       y: boxY - boxHeight,
       width: boxWidth,
       height: boxHeight,
-      color: rgb(0.94, 0.97, 1), // Light blue background
-      borderColor: rgb(0.05, 0.65, 0.91), // Primary blue border
+      color: rgb(1, 0.98, 0.9), // Light yellow/cream background
+      borderColor: rgb(0.9, 0.72, 0.01), // Darker yellow-gold border
       borderWidth: 2,
     });
     
@@ -1529,7 +1529,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       y, 
       size: 11, 
       font: bold,
-      color: rgb(0.02, 0.42, 0.57) 
+      color: crunchCharcoal 
     });
     
     y -= mm(6);
@@ -1557,7 +1557,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       y, 
       size: 10, 
       font: bold, 
-      color: rgb(0.05, 0.65, 0.91) // Blue color for link
+      color: rgb(0.9, 0.72, 0.01) // Yellow-gold color for link
     });
     
     // Draw underline to make it obviously clickable
@@ -1565,7 +1565,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       start: { x: linkX, y: y - mm(1) },
       end: { x: linkX + linkWidth, y: y - mm(1) },
       thickness: 1,
-      color: rgb(0.05, 0.65, 0.91),
+      color: rgb(0.9, 0.72, 0.01),
     });
     
     // Add link annotation to make it clickable
@@ -1575,7 +1575,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
         Subtype: 'Link',
         Rect: [linkX, y - mm(2), linkX + linkWidth, y + mm(5)],
         Border: [0, 0, 0],
-        C: [0.05, 0.65, 0.91],
+        C: [0.9, 0.72, 0.01],
         A: {
           Type: 'Action',
           S: 'URI',
@@ -1615,7 +1615,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
         y, 
         size: 7, 
         font, 
-        color: rgb(0.05, 0.65, 0.91) 
+        color: rgb(0.9, 0.72, 0.01) 
       });
       y -= mm(3.5);
     }
@@ -1628,7 +1628,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       y -= mm(3.5);
     }
     
-    y -= mm(4);
+    y -= mm(8);
   } else if (proposal.status === 'signed' && proposal.signed_at) {
     // Show signed status for approved proposals
     y -= mm(8);
