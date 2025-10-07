@@ -93,45 +93,45 @@ export default function ProposalAcceptance() {
   const canSubmit = hasScrolledToBottom && hasAgreed && typedName.trim().length > 0 && validateTypedName();
 
   const handleSubmit = async () => {
-    if (!canSubmit || !proposal) return;
+    if (!canSubmit || !proposal || !token) return;
 
     setIsSubmitting(true);
     try {
       // Get user info for audit trail
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      const { ip } = await ipResponse.json();
-      const userAgent = navigator.userAgent;
+      let ipAddress = '';
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipResponse.json();
+        ipAddress = ip;
+      } catch (e) {
+        console.warn('Failed to get IP address:', e);
+      }
 
-      // Create agreement record
-      const { error: agreementError } = await supabase
-        .from('proposal_agreements')
-        .insert({
-          proposal_id: proposal.id,
-          signed_by: proposal.client_id || proposal.client_reference_id,
-          signature_type: 'typed_name',
-          typed_name: typedName,
-          ip_address: ip,
-          user_agent: userAgent,
-          accepted_terms_version: '1.0',
-          metadata: {
-            signed_via: 'pdf_link',
-            browser: navigator.userAgent,
-            timestamp: new Date().toISOString()
-          }
+      // Call the public Edge Function
+      const { data, error } = await supabase.functions.invoke('accept-proposal', {
+        body: {
+          token,
+          typedName,
+          ipAddress,
+          userAgent: navigator.userAgent
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.alreadySigned) {
+        toast({
+          description: "This proposal has already been signed.",
         });
+        setTimeout(() => {
+          navigate(`/proposals/${proposal.id}?token=${token}`);
+        }, 1500);
+        return;
+      }
 
-      if (agreementError) throw agreementError;
-
-      // Update proposal status
-      const { error: proposalError } = await supabase
-        .from('proposals')
-        .update({
-          status: 'approved',
-          signed_at: new Date().toISOString()
-        })
-        .eq('id', proposal.id);
-
-      if (proposalError) throw proposalError;
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast({
         description: "Thank you for accepting this proposal. You will receive a confirmation email shortly.",
@@ -145,7 +145,7 @@ export default function ProposalAcceptance() {
     } catch (err) {
       console.error("Error submitting agreement:", err);
       toast({
-        description: "Failed to submit agreement. Please try again.",
+        description: err instanceof Error ? err.message : "Failed to submit agreement. Please try again.",
         variant: "destructive",
       });
     } finally {

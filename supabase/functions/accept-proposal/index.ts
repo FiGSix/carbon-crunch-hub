@@ -1,0 +1,167 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface AcceptProposalRequest {
+  token: string;
+  typedName: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { token, typedName, ipAddress, userAgent }: AcceptProposalRequest = await req.json();
+
+    console.log(`Accepting proposal with token: ${token.substring(0, 8)}...`);
+
+    // 1. Validate token and get proposal
+    const { data: proposalData, error: proposalError } = await supabase
+      .rpc('get_proposal_by_token_direct', { token_param: token });
+
+    if (proposalError) {
+      console.error("Error fetching proposal:", proposalError);
+      throw new Error("Invalid or expired invitation token");
+    }
+
+    if (!proposalData || proposalData.length === 0) {
+      throw new Error("Proposal not found or invitation has expired");
+    }
+
+    const proposal = proposalData[0];
+
+    // 2. Validate proposal status
+    if (proposal.status === 'approved' || proposal.status === 'signed') {
+      return new Response(
+        JSON.stringify({ 
+          error: "This proposal has already been signed",
+          alreadySigned: true 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (proposal.status === 'rejected') {
+      return new Response(
+        JSON.stringify({ error: "This proposal has been rejected and cannot be signed" }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // 3. Validate token expiration
+    if (new Date(proposal.invitation_expires_at) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: "Invitation link has expired" }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // 4. Validate typed name (basic check)
+    if (!typedName || typedName.trim().length < 2) {
+      return new Response(
+        JSON.stringify({ error: "Please provide a valid name" }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const signedBy = proposal.client_reference_id || proposal.client_id;
+    if (!signedBy) {
+      console.error("No client reference found for proposal:", proposal.id);
+      throw new Error("Invalid proposal configuration");
+    }
+
+    // 5. Create agreement record
+    const { error: agreementError } = await supabase
+      .from('proposal_agreements')
+      .insert({
+        proposal_id: proposal.id,
+        signed_by: signedBy,
+        signature_type: 'typed_name',
+        typed_name: typedName,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        accepted_terms_version: '1.0',
+        metadata: {
+          signed_via: 'acceptance_link',
+          token_used: token.substring(0, 8) + '...',
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    if (agreementError) {
+      console.error("Error creating agreement:", agreementError);
+      throw new Error("Failed to record agreement");
+    }
+
+    // 6. Update proposal status
+    const { error: updateError } = await supabase
+      .from('proposals')
+      .update({
+        status: 'approved',
+        signed_at: new Date().toISOString()
+      })
+      .eq('id', proposal.id);
+
+    if (updateError) {
+      console.error("Error updating proposal:", updateError);
+      throw new Error("Failed to update proposal status");
+    }
+
+    console.log(`✅ Proposal ${proposal.id} successfully signed by ${typedName}`);
+
+    // 7. Mark invitation as viewed (for analytics)
+    await supabase.rpc('mark_invitation_viewed', { token_param: token });
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        proposalId: proposal.id,
+        message: "Proposal accepted successfully"
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+
+  } catch (error) {
+    console.error("Error in accept-proposal function:", error);
+    
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Failed to accept proposal",
+        details: error instanceof Error ? error.stack : undefined
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});
