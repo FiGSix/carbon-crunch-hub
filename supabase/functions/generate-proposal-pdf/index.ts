@@ -1451,7 +1451,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   
   // Digital Signature Section - only for pending proposals
   if (proposal.status === 'pending' && proposal.invitation_token && proposal.invitation_expires_at) {
-    y -= mm(8);
+    y -= mm(2);
     
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
     const acceptanceUrl = `${siteUrl}/proposals/${proposal.id}/accept?token=${proposal.invitation_token}`;
@@ -1473,7 +1473,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     
     // Draw highlighted box for digital signature
     const boxY = y;
-    const boxHeight = mm(40);
+    const boxHeight = mm(38);
     const boxWidth = page4.getSize().width - p4x * 2;
     
     // Background box (light blue)
@@ -1488,7 +1488,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     });
     
     y -= mm(6);
-    page4.drawText('Digital Signature Option (Recommended)', { 
+    page4.drawText('Digital Signature', { 
       x: p4x + mm(5), 
       y, 
       size: 11, 
@@ -1498,13 +1498,17 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     
     y -= mm(6);
     const instructionText = 'To accept this proposal digitally with a legally binding electronic signature:';
-    page4.drawText(instructionText, { 
-      x: p4x + mm(5), 
-      y, 
-      size: 9, 
-      font, 
-      color: crunchCharcoal 
-    });
+    const instructionLines = wrapText(instructionText, boxWidth - mm(10), 9, font);
+    for (const line of instructionLines) {
+      page4.drawText(line, { 
+        x: p4x + mm(5), 
+        y, 
+        size: 9, 
+        font, 
+        color: crunchCharcoal 
+      });
+      y -= mm(4);
+    }
     
     y -= mm(8);
     // Create clickable link with underline
@@ -1610,20 +1614,6 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     y -= mm(8);
     console.log('[PDF] Showing signed status for approved proposal');
   }
-  
-  // Manual signature option
-  y = drawParagraph(page4, 'Alternatively, if you prefer to print and sign manually, you may do so below:', p4x, y, page4.getSize().width - p4x * 2);
-  
-  y -= mm(10);
-  // Signature lines
-  page4.drawText('Client Signature:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page4, p4x + mm(35), y + mm(2), mm(90));
-  y -= mm(10);
-  page4.drawText('Name:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page4, p4x + mm(18), y + mm(2), mm(70));
-  y -= mm(10);
-  page4.drawText('Date:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page4, p4x + mm(15), y + mm(2), mm(40));
 
   drawPageNumber(page4, 4, 4);
 
