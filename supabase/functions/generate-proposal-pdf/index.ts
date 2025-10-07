@@ -1426,7 +1426,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   page4.drawText('TOTAL', { 
     x: leftTextInColumn(colYearX), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1434,9 +1434,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total MWh
   const totalMWhText = totalMWh.toFixed(2);
   page4.drawText(totalMWhText, { 
-    x: centerTextInColumn(totalMWhText, colMWhX, colMWhWidth, 0, bold, 9), 
+    x: centerTextInColumn(totalMWhText, colMWhX, colMWhWidth, 0, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1444,9 +1444,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total tCO₂e
   const totalTCO2Text = totalTCO2.toFixed(2);
   page4.drawText(totalTCO2Text, { 
-    x: centerTextInColumn(totalTCO2Text, colTCO2X, colTCO2Width, 0, bold, 9), 
+    x: centerTextInColumn(totalTCO2Text, colTCO2X, colTCO2Width, 0, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1454,9 +1454,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Price column shows "-" for totals
   const dashText = '-';
   page4.drawText(dashText, { 
-    x: centerTextInColumn(dashText, colPriceX, colPriceWidth, 0, bold, 9), 
+    x: centerTextInColumn(dashText, colPriceX, colPriceWidth, 0, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1464,9 +1464,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total Revenue
   const totalRevenueText = `R ${totalRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   page4.drawText(totalRevenueText, { 
-    x: rightTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, bold, 9), 
+    x: rightTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
