@@ -36,6 +36,11 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
   const signingLocation = "South Africa";
   const installationDate = getInstallationDate();
   const signingDate = getSigningDate();
+  
+  // Calculate revenue share percentages
+  const clientSharePercentage = proposal?.client_share_percentage || 0;
+  const cessionaryPercentage = (100 - clientSharePercentage).toFixed(1);
+  const ownerPercentage = clientSharePercentage.toFixed(1);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -256,8 +261,8 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
                   <ol className="list-decimal ml-6 space-y-1">
                     <li>Crunch Carbon shall distribute the proceeds of the sale of the Carbon Credits between itself and the Owner in the following proportions (the <span className="font-semibold">"Shares"</span>):
                       <ul className="list-disc ml-6 mt-1">
-                        <li>Crunch Carbon shall be entitled to [CESSIONARY PERCENTAGE]% of the proceeds; and</li>
-                        <li>the Owner shall be entitled to [OWNER PERCENTAGE]% of the proceeds.</li>
+                        <li>Crunch Carbon shall be entitled to {cessionaryPercentage}% of the proceeds; and</li>
+                        <li>the Owner shall be entitled to {ownerPercentage}% of the proceeds.</li>
                       </ul>
                     </li>
                     <li>Crunch Carbon shall pay the Owner's Share to the Owner within 30 (thirty) days of receipt of the proceeds of the sale of the Carbon Credits.</li>
