@@ -14,4 +14,6 @@ export interface EmailTemplateData {
   invitationLink: string;
   tokenPreview: string;
   proposalId: string;
+  systemSize?: string;
+  carbonCredits?: number;
 }
