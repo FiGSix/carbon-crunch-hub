@@ -73,8 +73,13 @@ function RecoveryRedirectShim() {
   useEffect(() => {
     const hash = window.location.hash;
     
-    // If we have a recovery token but we're not on the reset-password page, redirect there
-    if (hash.includes('type=recovery') && location.pathname !== '/reset-password') {
+    // Redirect to /reset-password if hash contains recovery-related params
+    if (location.pathname !== '/reset-password' && hash && (
+      hash.includes('access_token=') ||
+      hash.includes('type=recovery') ||
+      hash.includes('error=') ||
+      hash.includes('error_code=')
+    )) {
       window.location.replace(`/reset-password${hash}`);
     }
   }, [location.pathname]);

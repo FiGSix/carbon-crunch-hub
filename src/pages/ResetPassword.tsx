@@ -28,6 +28,30 @@ const ResetPassword = () => {
     // Parse tokens from URL hash fragment (Supabase sends tokens in #, not ?)
     const hash = window.location.hash.substring(1); // Remove the '#'
     const params = new URLSearchParams(hash);
+    
+    // First check for errors in the URL (e.g., expired OTP, access denied)
+    const errorParam = params.get('error');
+    const errorCode = params.get('error_code');
+    const errorDescription = params.get('error_description');
+    
+    if (errorParam || errorCode) {
+      // Map error codes to user-friendly messages
+      let errorMessage = 'This reset link has expired or was already used. Please request a new one.';
+      
+      if (errorCode === 'otp_expired') {
+        errorMessage = 'This reset link has expired. Please request a new one.';
+      } else if (errorParam === 'access_denied') {
+        errorMessage = 'Access denied. This link may have already been used or is invalid.';
+      } else if (errorDescription) {
+        errorMessage = decodeURIComponent(errorDescription);
+      }
+      
+      setError(errorMessage);
+      // Clear the hash for security
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+    
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
     const type = params.get('type');
