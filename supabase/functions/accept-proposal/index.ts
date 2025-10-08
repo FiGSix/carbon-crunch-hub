@@ -140,38 +140,56 @@ serve(async (req) => {
     await supabase.rpc('mark_invitation_viewed', { token_param: token });
 
     // 8. Send cession agreement confirmation email in background
-    // Use EdgeRuntime.waitUntil to avoid blocking the response
-    const clientEmail = proposal.content?.clientInfo?.email || 
-                       proposal.client_id ? (await supabase.from('profiles').select('email').eq('id', proposal.client_id).single()).data?.email : 
-                       (await supabase.from('clients').select('email').eq('id', signedBy).single()).data?.email;
-
-    if (clientEmail) {
-      // Start background task to send confirmation email
+    // Fetch client email asynchronously without blocking response
+    (async () => {
       try {
-        // Fire and forget - don't await, don't block response
-        supabase.functions.invoke('send-cession-agreement-email', {
-          body: { 
-            proposalId: proposal.id, 
-            clientEmail: clientEmail 
-          }
-        }).then(({ data, error }) => {
+        let clientEmail: string | null = null;
+
+        // Try to get email from proposal content first
+        if (proposal.content?.clientInfo?.email) {
+          clientEmail = proposal.content.clientInfo.email;
+        } 
+        // If client_id exists, try profiles table
+        else if (proposal.client_id) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', proposal.client_id)
+            .single();
+          clientEmail = data?.email || null;
+        }
+        // Fallback to clients table using signedBy
+        else {
+          const { data } = await supabase
+            .from('clients')
+            .select('email')
+            .eq('id', signedBy)
+            .single();
+          clientEmail = data?.email || null;
+        }
+
+        if (clientEmail) {
+          console.log(`📧 Sending cession agreement email to ${clientEmail}`);
+          
+          const { data, error } = await supabase.functions.invoke('send-cession-agreement-email', {
+            body: { 
+              proposalId: proposal.id, 
+              clientEmail: clientEmail 
+            }
+          });
+
           if (error) {
             console.error('❌ Background email send failed:', error);
           } else {
             console.log('✅ Background email sent successfully:', data);
           }
-        }).catch(err => {
-          console.error('❌ Background email send exception:', err);
-        });
-        
-        console.log(`📧 Cession agreement email queued for ${clientEmail}`);
+        } else {
+          console.warn('⚠️ No client email found, skipping confirmation email');
+        }
       } catch (bgError) {
-        console.error('❌ Error queueing background email:', bgError);
-        // Don't fail the main flow if email queueing fails
+        console.error('❌ Error in background email task:', bgError);
       }
-    } else {
-      console.warn('⚠️ No client email found, skipping confirmation email');
-    }
+    })(); // Immediately invoked async function - fire and forget
 
     return new Response(
       JSON.stringify({ 
