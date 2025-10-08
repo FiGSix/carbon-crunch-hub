@@ -23,10 +23,20 @@ const ResetPassword = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if we have the required access_token and refresh_token
+  // Check if we have the required access_token and refresh_token from hash fragment
   useEffect(() => {
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    // Parse tokens from URL hash fragment (Supabase sends tokens in #, not ?)
+    const hash = window.location.hash.substring(1); // Remove the '#'
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+    
+    // Validate this is a recovery type link
+    if (type !== 'recovery') {
+      setError('Invalid password reset link type. Please request a new one.');
+      return;
+    }
     
     if (!accessToken || !refreshToken) {
       setError('Invalid password reset link. Please request a new one.');
@@ -42,11 +52,14 @@ const ResetPassword = () => {
       
       if (error) {
         setError('Invalid or expired reset link. Please request a new one.');
+      } else {
+        // Clear tokens from URL for security
+        window.history.replaceState(null, '', window.location.pathname);
       }
     };
 
     setSession();
-  }, [searchParams]);
+  }, []);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 6) {
