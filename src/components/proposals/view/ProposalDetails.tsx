@@ -20,7 +20,6 @@ interface ProposalDetailsProps {
   token?: string | null;
   onApprove: (typedName: string) => Promise<void>;
   onReject: () => Promise<void>;
-  isReviewLater?: boolean;
   showActions?: boolean;
 }
 
@@ -29,7 +28,6 @@ export function ProposalDetails({
   token, 
   onApprove, 
   onReject,
-  isReviewLater = false,
   showActions = false
 }: ProposalDetailsProps) {
   const { userRole } = useAuth();
@@ -112,7 +110,7 @@ export function ProposalDetails({
         reviewLaterUntil={proposal.review_later_until}
       />
       
-      {!proposal.archived_at && !isReviewLater && proposal.status !== 'pending' && (
+      {!proposal.archived_at && proposal.status !== 'pending' && (
         <ProposalStatusFooter 
           status={proposal.status} 
           signedAt={proposal.signed_at} 

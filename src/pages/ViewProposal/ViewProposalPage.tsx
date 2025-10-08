@@ -35,14 +35,11 @@ const ViewProposalPage = () => {
       showSignInPrompt={viewProposalAuth.showSignInPrompt}
       
       // Action props
-      canDelete={viewProposalLogic.canDelete}
-      isReviewLater={viewProposalLogic.isReviewLater}
       canTakeAction={viewProposalLogic.canTakeAction}
       isClient={viewProposalLogic.isClient}
       handleApprove={viewProposalLogic.handleApprove}
       handleReject={viewProposalLogic.handleReject}
       handleDelete={viewProposalLogic.handleDelete}
-      handleReviewLater={viewProposalLogic.handleReviewLater}
       handleSignInClick={viewProposalAuth.handleSignInClick}
       deleteDialogOpen={viewProposalLogic.deleteDialogOpen}
       setDeleteDialogOpen={viewProposalLogic.setDeleteDialogOpen}

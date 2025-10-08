@@ -10,14 +10,11 @@ interface ProposalContentProps {
   proposal: ProposalData;
   token: string | null;
   clientEmail: string | null;
-  canDelete: boolean;
-  isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
   handleApprove: (typedName: string) => Promise<void>;
   handleReject: () => Promise<void>;
   handleDelete: () => Promise<void>;
-  handleReviewLater: () => Promise<void>;
   handleSignInClick: () => void;
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: (open: boolean) => void;
@@ -29,14 +26,11 @@ export function ProposalContent({
   proposal,
   token,
   clientEmail,
-  canDelete,
-  isReviewLater,
   canTakeAction,
   isClient,
   handleApprove,
   handleReject,
   handleDelete,
-  handleReviewLater,
   handleSignInClick,
   deleteDialogOpen,
   setDeleteDialogOpen,
@@ -53,11 +47,7 @@ export function ProposalContent({
         showInvitationBadge={!!token}
         projectSize={projectInfo.size}
         projectName={projectInfo.name}
-        canDelete={canDelete}
         isDeleted={!!proposal.deleted_at}
-        isReviewLater={isReviewLater}
-        onDeleteClick={() => setDeleteDialogOpen(true)}
-        onReviewLaterClick={handleReviewLater}
         proposalId={proposal.id}
         proposal={proposal as any}
         onProposalUpdate={onProposalUpdate}
@@ -69,7 +59,6 @@ export function ProposalContent({
           token={token}
           onApprove={handleApprove}
           onReject={handleReject}
-          isReviewLater={isReviewLater}
           showActions={canTakeAction}
         />
         

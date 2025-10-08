@@ -1,9 +1,7 @@
 
 
-import { CheckCircle2, Trash2, ChevronLeft } from "lucide-react";
+import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
 import { ProposalPdfButton } from "./ProposalPdfButton";
 import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
 import { useNavigate } from "react-router-dom";
@@ -15,11 +13,7 @@ interface ProposalHeaderProps {
   showInvitationBadge: boolean;
   projectSize?: string;
   projectName?: string;
-  canDelete?: boolean;
   isDeleted?: boolean;
-  isReviewLater?: boolean;
-  onDeleteClick?: () => void;
-  onReviewLaterClick?: () => void;
   showBackButton?: boolean;
   proposalId?: string;
   proposal?: Proposal;
@@ -31,11 +25,7 @@ export function ProposalHeader({
   showInvitationBadge, 
   projectSize, 
   projectName,
-  canDelete,
   isDeleted,
-  isReviewLater,
-  onDeleteClick,
-  onReviewLaterClick,
   showBackButton = true,
   proposalId,
   proposal,
@@ -97,14 +87,6 @@ export function ProposalHeader({
           </div>
         )}
         
-        {/* Only clients can use "Review Later" feature for pending proposals */}
-        {!isDeleted && userRole === "client" && onReviewLaterClick && (
-          <ProposalReviewLaterButton 
-            onClick={onReviewLaterClick} 
-            isReviewLater={isReviewLater}
-          />
-        )}
-        
         {/* PDF Download button for agents and admins */}
         {!isDeleted && (userRole === "agent" || userRole === "admin") && proposalId && (
           <ProposalPdfButton 
@@ -119,26 +101,6 @@ export function ProposalHeader({
             proposal={proposal as any} 
             onProposalUpdate={onProposalUpdate}
           />
-        )}
-        
-        {canDelete && !isDeleted && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDeleteClick}
-                  className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete this proposal</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         )}
       </div>
     </div>

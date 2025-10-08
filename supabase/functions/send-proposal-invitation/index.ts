@@ -52,8 +52,8 @@ const handler = async (req: Request): Promise<Response> => {
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
 
     // Use the VERIFIED token from the database to construct invitation link
-    // Using /accept route for consistency with PDF links
-    const invitationLink = `${siteUrl}/proposals/${proposalId}/accept?token=${verifiedToken}`;
+    // Direct clients to main proposal view page
+    const invitationLink = `${siteUrl}/proposals/${proposalId}?token=${verifiedToken}`;
 
     console.log(`Sending invitation email to ${clientEmail} for project ${projectName}`);
     console.log(`Invitation link: ${invitationLink}`);

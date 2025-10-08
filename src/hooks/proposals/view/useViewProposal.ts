@@ -27,7 +27,6 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     handleApprove, 
     handleReject,
     handleDelete,
-    handleReviewLater,
     deleteDialogOpen,
     setDeleteDialogOpen,
     deleteLoading
@@ -43,7 +42,7 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
   }, [initialProposal, initialLoading, initialError]);
   
   // Get proposal status data
-  const { canDelete, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
+  const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
 
   // Create wrapper functions that convert boolean returns to void and pass typed name
   const handleApproveWrapper = async (typedName: string): Promise<void> => {
@@ -64,12 +63,6 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     }
   };
 
-  const handleReviewLaterWrapper = async (): Promise<void> => {
-    if (proposal?.id) {
-      await handleReviewLater(proposal.id, !!proposal.review_later_until);
-    }
-  };
-
   return {
     proposal,
     loading,
@@ -78,12 +71,9 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     handleApprove: handleApproveWrapper,
     handleReject: handleRejectWrapper,
     handleDelete: handleDeleteWrapper,
-    handleReviewLater: handleReviewLaterWrapper,
     deleteDialogOpen,
     setDeleteDialogOpen,
     deleteLoading,
-    canDelete,
-    isReviewLater,
     canTakeAction,
     isClient,
     isAuthenticated,

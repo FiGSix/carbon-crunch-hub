@@ -21,14 +21,11 @@ interface ViewProposalContentProps {
   showSignInPrompt: boolean;
   
   // Action props
-  canDelete: boolean;
-  isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
   handleApprove: (typedName: string) => Promise<void>;
   handleReject: () => Promise<void>;
   handleDelete: () => Promise<void>;
-  handleReviewLater: () => Promise<void>;
   handleSignInClick: () => void;
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: (open: boolean) => void;
@@ -48,14 +45,11 @@ export function ViewProposalContent({
   showAuthForm,
   handleAuthComplete,
   showSignInPrompt,
-  canDelete,
-  isReviewLater,
   canTakeAction,
   isClient,
   handleApprove,
   handleReject,
   handleDelete,
-  handleReviewLater,
   handleSignInClick,
   deleteDialogOpen,
   setDeleteDialogOpen,
@@ -141,14 +135,11 @@ export function ViewProposalContent({
       proposal={proposal}
       token={token}
       clientEmail={clientEmail}
-      canDelete={canDelete && !!user}
-      isReviewLater={isReviewLater}
       canTakeAction={canTakeAction && !!user}
       isClient={isClient}
       handleApprove={handleApproveWrapper}
       handleReject={handleRejectWrapper}
       handleDelete={handleDeleteWrapper}
-      handleReviewLater={handleReviewLater}
       handleSignInClick={handleSignInClick}
       deleteDialogOpen={deleteDialogOpen}
       setDeleteDialogOpen={setDeleteDialogOpen}
