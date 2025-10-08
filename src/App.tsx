@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
@@ -11,7 +11,7 @@ import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { createOptimizedLazyComponent, withOptimizedRouteLoading } from "@/lib/performance/OptimizedLoader";
 // Only import diagnostics in development
 const DisplayDiagnostics = import.meta.env.DEV 
@@ -63,6 +63,25 @@ import { createQueryClient } from "@/lib/queryClient";
 // Create optimized query client
 const queryClient = createQueryClient();
 
+/**
+ * Recovery Redirect Shim - Ensures password reset links always land on /reset-password
+ * Supabase may redirect to Site URL (/) with recovery hash, this catches and fixes it
+ */
+function RecoveryRedirectShim() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    const hash = window.location.hash;
+    
+    // If we have a recovery token but we're not on the reset-password page, redirect there
+    if (hash.includes('type=recovery') && location.pathname !== '/reset-password') {
+      window.location.replace(`/reset-password${hash}`);
+    }
+  }, [location.pathname]);
+  
+  return null;
+}
+
 function App() {
   // Diagnostic logging in development only
   logger.info("Application initializing");
@@ -72,9 +91,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthErrorBoundary>
-            <AuthProvider>
-              <AuthNavigationHandler />
-              <TooltipProvider>
+              <AuthProvider>
+                <RecoveryRedirectShim />
+                <AuthNavigationHandler />
+                <TooltipProvider>
                 {import.meta.env.DEV && DisplayDiagnostics && (
                   <Suspense fallback={null}>
                     <DisplayDiagnostics />
