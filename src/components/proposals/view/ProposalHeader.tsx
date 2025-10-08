@@ -113,8 +113,8 @@ export function ProposalHeader({
           />
         )}
         
-        {/* Invitation Button - Shown for agents viewing their own proposals */}
-        {proposal && userRole === "agent" && !isDeleted && (
+        {/* Invitation Button - Shown for agents and admins viewing proposals */}
+        {proposal && (userRole === "agent" || userRole === "admin") && !isDeleted && (
           <ProposalInviteButton 
             proposal={proposal as any} 
             onProposalUpdate={onProposalUpdate}
