@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
 import { ProposalPdfButton } from "./ProposalPdfButton";
+import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { Proposal } from "@/components/proposals/types";
 
 interface ProposalHeaderProps {
   title: string;
@@ -19,7 +21,9 @@ interface ProposalHeaderProps {
   onDeleteClick?: () => void;
   onReviewLaterClick?: () => void;
   showBackButton?: boolean;
-  proposalId?: string; // Added for PDF generation
+  proposalId?: string;
+  proposal?: Proposal;
+  onProposalUpdate?: () => void;
 }
 
 export function ProposalHeader({ 
@@ -33,7 +37,9 @@ export function ProposalHeader({
   onDeleteClick,
   onReviewLaterClick,
   showBackButton = true,
-  proposalId
+  proposalId,
+  proposal,
+  onProposalUpdate
 }: ProposalHeaderProps) {
   const navigate = useNavigate();
   const { userRole, profile } = useAuth();
@@ -104,6 +110,14 @@ export function ProposalHeader({
           <ProposalPdfButton 
             proposalId={proposalId} 
             proposalTitle={title}
+          />
+        )}
+        
+        {/* Invitation Button - Shown for agents viewing their own proposals */}
+        {proposal && userRole === "agent" && !isDeleted && (
+          <ProposalInviteButton 
+            proposal={proposal as any} 
+            onProposalUpdate={onProposalUpdate}
           />
         )}
         

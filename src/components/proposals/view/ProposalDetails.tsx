@@ -127,6 +127,9 @@ export function ProposalDetails({
           showActions={showActions}
           clientName={proposal.content?.clientInfo?.name || 'Client'}
           proposalTitle={proposal.title}
+          accessedViaToken={!!token}
+          token={token}
+          proposalId={proposal.id}
         />
       )}
     </Card>

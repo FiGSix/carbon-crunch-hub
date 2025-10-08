@@ -3,6 +3,7 @@ import { useState } from "react";
 import { X, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,9 @@ interface ProposalActionFooterProps {
   showActions: boolean;
   clientName: string;
   proposalTitle: string;
+  accessedViaToken?: boolean;
+  token?: string | null;
+  proposalId?: string;
 }
 
 export function ProposalActionFooter({ 
@@ -29,8 +33,12 @@ export function ProposalActionFooter({
   onReject,
   showActions,
   clientName,
-  proposalTitle
+  proposalTitle,
+  accessedViaToken = false,
+  token = null,
+  proposalId
 }: ProposalActionFooterProps) {
+  const navigate = useNavigate();
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -39,6 +47,16 @@ export function ProposalActionFooter({
   if (!showActions) {
     return null;
   }
+  
+  const handleApproveClick = () => {
+    if (accessedViaToken && proposalId && token) {
+      // Navigate to acceptance page with token
+      navigate(`/proposals/${proposalId}/accept?token=${token}`);
+    } else {
+      // Show signature dialog for authenticated users
+      setShowSignatureDialog(true);
+    }
+  };
   
   const handleApprove = async (typedName: string) => {
     try {
@@ -91,10 +109,11 @@ export function ProposalActionFooter({
         <Button 
           variant="default" 
           className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2"
-          onClick={() => setShowSignatureDialog(true)}
+          onClick={handleApproveClick}
           disabled={isRejecting}
         >
-          <CheckCircle2 className="mr-2 h-4 w-4" /> Approve Proposal
+          <CheckCircle2 className="mr-2 h-4 w-4" /> 
+          {accessedViaToken ? "Accept Agreement" : "Approve Proposal"}
         </Button>
       </CardFooter>
       

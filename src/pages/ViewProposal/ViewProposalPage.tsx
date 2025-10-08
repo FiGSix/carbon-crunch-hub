@@ -12,6 +12,13 @@ const ViewProposalPage = () => {
     viewProposalLogic.token
   );
   
+  // Wrap fetchProposal to provide current id and token
+  const handleProposalUpdate = () => {
+    if (viewProposalLogic.id) {
+      viewProposalLogic.fetchProposal(viewProposalLogic.id, viewProposalLogic.token);
+    }
+  };
+  
   return (
     <ViewProposalContent
       // Data props
@@ -42,6 +49,7 @@ const ViewProposalPage = () => {
       
       // Utility props
       handleRetry={viewProposalLogic.handleRetry}
+      onProposalUpdate={handleProposalUpdate}
     />
   );
 };

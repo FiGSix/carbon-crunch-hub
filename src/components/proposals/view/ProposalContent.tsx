@@ -22,6 +22,7 @@ interface ProposalContentProps {
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: (open: boolean) => void;
   showSignInPrompt: boolean;
+  onProposalUpdate?: () => void;
 }
 
 export function ProposalContent({
@@ -39,7 +40,8 @@ export function ProposalContent({
   handleSignInClick,
   deleteDialogOpen,
   setDeleteDialogOpen,
-  showSignInPrompt
+  showSignInPrompt,
+  onProposalUpdate
 }: ProposalContentProps) {
   // Extract project info from the proposal content for the header
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
@@ -57,6 +59,8 @@ export function ProposalContent({
         onDeleteClick={() => setDeleteDialogOpen(true)}
         onReviewLaterClick={handleReviewLater}
         proposalId={proposal.id}
+        proposal={proposal as any}
+        onProposalUpdate={onProposalUpdate}
       />
       
       <div className="space-y-8">

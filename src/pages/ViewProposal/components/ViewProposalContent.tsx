@@ -35,6 +35,7 @@ interface ViewProposalContentProps {
   
   // Utility props
   handleRetry: () => void;
+  onProposalUpdate?: () => void;
 }
 
 export function ViewProposalContent({
@@ -58,7 +59,8 @@ export function ViewProposalContent({
   handleSignInClick,
   deleteDialogOpen,
   setDeleteDialogOpen,
-  handleRetry
+  handleRetry,
+  onProposalUpdate
 }: ViewProposalContentProps) {
   
   if (loading) {
@@ -151,6 +153,7 @@ export function ViewProposalContent({
       deleteDialogOpen={deleteDialogOpen}
       setDeleteDialogOpen={setDeleteDialogOpen}
       showSignInPrompt={showSignInPrompt}
+      onProposalUpdate={onProposalUpdate}
     />
   );
 }
