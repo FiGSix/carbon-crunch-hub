@@ -34,6 +34,7 @@ export interface CreateClientData {
   email: string;
   phone?: string;
   companyName?: string;
+  registrationNumber?: string;
   notes?: string;
   createdBy: string;
 }

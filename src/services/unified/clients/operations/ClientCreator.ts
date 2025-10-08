@@ -23,6 +23,7 @@ export class ClientCreator {
         email: clientData.email,
         phone: clientData.phone,
         company_name: clientData.companyName,
+        registration_number: clientData.registrationNumber,
         notes: clientData.notes,
         created_by: clientData.createdBy
       };

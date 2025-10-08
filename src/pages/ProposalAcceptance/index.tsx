@@ -193,6 +193,7 @@ export default function ProposalAcceptance() {
         
         <TermsAndConditionsSection 
           onScrolledToBottom={() => setHasScrolledToBottom(true)}
+          proposal={proposal}
         />
         
         <SignatureSection

@@ -43,7 +43,8 @@ export interface ClientInformation {
   phone: string;
   companyName: string;
   existingClient: boolean;
-  address?: string; // Added address field as optional
+  address?: string;
+  registrationNumber?: string;
 }
 
 export interface ProjectInformation {

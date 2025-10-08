@@ -106,11 +106,12 @@ serve(async (req) => {
         typed_name: typedName,
         ip_address: ipAddress,
         user_agent: userAgent,
-        accepted_terms_version: '1.0',
+        accepted_terms_version: '2.0',
         metadata: {
           signed_via: 'acceptance_link',
           token_used: token.substring(0, 8) + '...',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          signing_location: 'South Africa'
         }
       });
 
