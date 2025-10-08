@@ -87,9 +87,13 @@ serve(async (req) => {
           const pdfBuffer = await pdfResponse.arrayBuffer();
           const filename = `Cession_Agreement_${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
           
+          // Convert ArrayBuffer to base64 string for Resend
+          const uint8Array = new Uint8Array(pdfBuffer);
+          const base64String = btoa(String.fromCharCode(...uint8Array));
+          
           pdfAttachment = {
             filename,
-            content: new Uint8Array(pdfBuffer),
+            content: base64String,
           };
           console.log(`[Cession Email] PDF fetched successfully, size: ${pdfBuffer.byteLength} bytes`);
         } else {
