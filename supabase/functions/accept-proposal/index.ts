@@ -139,6 +139,40 @@ serve(async (req) => {
     // 7. Mark invitation as viewed (for analytics)
     await supabase.rpc('mark_invitation_viewed', { token_param: token });
 
+    // 8. Send cession agreement confirmation email in background
+    // Use EdgeRuntime.waitUntil to avoid blocking the response
+    const clientEmail = proposal.content?.clientInfo?.email || 
+                       proposal.client_id ? (await supabase.from('profiles').select('email').eq('id', proposal.client_id).single()).data?.email : 
+                       (await supabase.from('clients').select('email').eq('id', signedBy).single()).data?.email;
+
+    if (clientEmail) {
+      // Start background task to send confirmation email
+      try {
+        // Fire and forget - don't await, don't block response
+        supabase.functions.invoke('send-cession-agreement-email', {
+          body: { 
+            proposalId: proposal.id, 
+            clientEmail: clientEmail 
+          }
+        }).then(({ data, error }) => {
+          if (error) {
+            console.error('❌ Background email send failed:', error);
+          } else {
+            console.log('✅ Background email sent successfully:', data);
+          }
+        }).catch(err => {
+          console.error('❌ Background email send exception:', err);
+        });
+        
+        console.log(`📧 Cession agreement email queued for ${clientEmail}`);
+      } catch (bgError) {
+        console.error('❌ Error queueing background email:', bgError);
+        // Don't fail the main flow if email queueing fails
+      }
+    } else {
+      console.warn('⚠️ No client email found, skipping confirmation email');
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
