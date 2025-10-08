@@ -19,8 +19,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Only agents can send invitations
-  if (userRole !== "agent") {
+  // Only agents and admins can send invitations
+  if (userRole !== "agent" && userRole !== "admin") {
     return null;
   }
   
