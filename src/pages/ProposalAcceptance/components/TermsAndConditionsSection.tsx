@@ -64,7 +64,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Terms and Conditions</CardTitle>
+          <CardTitle>Cession Agreement</CardTitle>
           {hasReachedBottom && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
