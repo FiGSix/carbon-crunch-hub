@@ -241,7 +241,7 @@ export default function ProposalAcceptance() {
   return (
     <div className="container max-w-4xl mx-auto px-4 py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Accept Proposal</h1>
+        <h1 className="text-3xl font-bold mb-2">Proposal & Cession Agreement</h1>
         <p className="text-muted-foreground">
           Please review the proposal details and terms carefully before signing.
         </p>
