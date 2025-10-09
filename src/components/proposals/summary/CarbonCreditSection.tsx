@@ -1,5 +1,4 @@
 
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
 import { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from "@/lib/calculations/carbon";
@@ -9,6 +8,8 @@ import {
 } from "./carbon/carbonCalculations";
 import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
 import { useRevenueCalculations } from "./carbon/hooks/useRevenueCalculations";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef } from "react";
 
 interface CarbonCreditSectionProps {
   systemSize: string;
@@ -44,6 +45,59 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
   const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
   const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum: number, val: number) => sum + val, 0);
+
+  // Persist totalClientRevenue to proposal when calculated
+  const lastSavedRevenue = useRef<number | null>(null);
+  
+  useEffect(() => {
+    const persistRevenue = async () => {
+      if (!proposalId || !totalClientSpecificRevenue || loading) return;
+      
+      const roundedRevenue = Math.round(totalClientSpecificRevenue);
+      
+      // Only update if value has changed
+      if (lastSavedRevenue.current === roundedRevenue) return;
+      
+      try {
+        const { data: currentProposal } = await supabase
+          .from('proposals')
+          .select('content')
+          .eq('id', proposalId)
+          .single();
+        
+        if (!currentProposal) return;
+        
+        const content = currentProposal.content as any;
+        const currentRevenue = content?.financials?.totalClientRevenue;
+        
+        // Skip if already set to the same value
+        if (currentRevenue === roundedRevenue) {
+          lastSavedRevenue.current = roundedRevenue;
+          return;
+        }
+        
+        // Update the proposal with the calculated revenue
+        await supabase
+          .from('proposals')
+          .update({
+            content: {
+              ...(typeof content === 'object' ? content : {}),
+              financials: {
+                ...(content?.financials || {}),
+                totalClientRevenue: roundedRevenue
+              }
+            }
+          })
+          .eq('id', proposalId);
+        
+        lastSavedRevenue.current = roundedRevenue;
+      } catch (error) {
+        console.error('Failed to persist total client revenue:', error);
+      }
+    };
+    
+    persistRevenue();
+  }, [proposalId, totalClientSpecificRevenue, loading]);
 
   if (loading) {
     return (
