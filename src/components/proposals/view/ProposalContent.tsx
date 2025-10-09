@@ -5,6 +5,7 @@ import { ProposalDetails } from './ProposalDetails';
 import { ProposalDeleteDialog } from './ProposalDeleteDialog';
 import { SignInPrompt } from './SignInPrompt';
 import { ProjectInformation, ProposalData } from '@/types/proposals';
+import { useAuth } from '@/contexts/auth';
 
 interface ProposalContentProps {
   proposal: ProposalData;
@@ -37,6 +38,8 @@ export function ProposalContent({
   showSignInPrompt,
   onProposalUpdate
 }: ProposalContentProps) {
+  const { userRole } = useAuth();
+  
   // Extract project info from the proposal content for the header
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
 
@@ -69,13 +72,15 @@ export function ProposalContent({
         )}
       </div>
 
-      {/* Delete Dialog */}
-      <ProposalDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onDelete={handleDelete}
-        isClient={isClient}
-      />
+      {/* Delete Dialog - Only for agents and admins */}
+      {!isClient && (userRole === 'agent' || userRole === 'admin') && (
+        <ProposalDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDelete={handleDelete}
+          isClient={isClient}
+        />
+      )}
     </div>
   );
 }
