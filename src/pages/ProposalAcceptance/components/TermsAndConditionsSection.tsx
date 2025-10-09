@@ -260,86 +260,143 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">14. TERMINATION</h4>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>Either Party may terminate this agreement by giving the other Party not less than 60 (sixty) days' prior written notice.</li>
-                <li>Notwithstanding clause 14.1 above, Crunch Carbon shall be entitled to terminate this agreement with immediate effect if –
-                  <ol className="list-[lower-alpha] ml-6 mt-1 space-y-1">
-                    <li>the Owner commits a material breach of this agreement and fails to remedy such breach within 14 (fourteen) days of receiving written notice from Crunch Carbon requiring it to do so;</li>
-                    <li>the Owner becomes insolvent or enters into business rescue proceedings or liquidation;</li>
-                    <li>the Installation is removed or ceases to operate for a period exceeding 6 (six) months; or</li>
-                    <li>the Owner ceases to be the legal owner of the Installation.</li>
-                  </ol>
-                </li>
-                <li>Upon termination of this agreement, all Carbon Credits that have accrued but have not yet been sold shall revert to the Owner.</li>
-              </ol>
+              <h4 className="font-semibold mb-2">11. INCORPORATION OF THIS AGREEMENT INTO THE PROVISIONS OF THE AGREEMENT</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>11.1</strong> This Agreement forms an integral part of the main agreement between the Parties, and all subsequent amendments to that agreement shall be deemed to be incorporated into this Agreement.</p>
+              </div>
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">15. CESSION AND ASSIGNMENT</h4>
-              <p className="text-sm">
-                Neither Party shall be entitled to cede, assign or otherwise transfer any of its rights or obligations under this agreement without the prior written consent of the other Party, which consent shall not be unreasonably withheld.
-              </p>
+              <h4 className="font-semibold mb-2">12. TERMINATION</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>12.1</strong> This Agreement may be terminated by mutual consent of the Parties, provided that:</p>
+                <p className="ml-4"><strong>12.1.1</strong> either Party may terminate this Agreement by giving the other Party not less than 30 (thirty) Days' prior written notice;</p>
+                <p className="ml-4"><strong>12.1.2</strong> the termination of this Agreement shall be triggered by the termination of the extraction of Data from the Project;</p>
+                <p className="ml-4"><strong>12.1.3</strong> upon termination, the Owner shall be responsible for requesting removal of the Project from CDSA's GHG register;</p>
+                <p className="ml-4"><strong>12.1.4</strong> either Party may terminate this Agreement if the other Party commits a material breach of this Agreement;</p>
+                <p className="ml-4"><strong>12.1.5</strong> the Party in breach shall have 14 (fourteen) Days from the date of receipt of written notice to remedy the breach, failing which:</p>
+                <p className="ml-8"><strong>12.1.5.1</strong> the aggrieved Party shall be entitled to claim specific performance or cancel this Agreement and claim damages; and</p>
+                <p className="ml-8"><strong>12.1.5.2</strong> either Party may terminate this Agreement immediately if the other Party becomes insolvent, enters into liquidation (whether voluntary or compulsory), or enters into any compromise or arrangement with creditors.</p>
+                <p><strong>12.2</strong> Termination of this Agreement shall not affect any rights or obligations that have accrued prior to the date of termination.</p>
+              </div>
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">16. NOTICES AND DOMICILIA</h4>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>The Parties choose as their domicilium citandi et executandi for all purposes under this agreement, whether in respect of court process, notices or other documents or communications of whatsoever nature, the following addresses –
-                  <div className="ml-4 mt-2 space-y-2">
-                    <div>
-                      <p className="font-semibold">Owner:</p>
-                      <p className="ml-4">Physical address: {companyAddress}</p>
-                      <p className="ml-4">Email: {ownerEmail}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold">Crunch Carbon:</p>
-                      <p className="ml-4">Physical address: Unit 3B, 5th Floor, Sovereign Quay, 32 Somerset Road, De Waterkant, Cape Town, 8001</p>
-                      <p className="ml-4">Email: info@crunchcarbon.com</p>
-                    </div>
+              <h4 className="font-semibold mb-2">13. DISPUTE RESOLUTION</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>13.1</strong> In the event of any dispute arising out of or in connection with this Agreement, the Parties shall first attempt to resolve the dispute through mediation, and if mediation is unsuccessful, the dispute shall be referred to arbitration in accordance with clause 14.</p>
+                <p><strong>13.2</strong> Nothing in this clause shall prevent either Party from seeking urgent interim relief from a court of competent jurisdiction.</p>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">14. ARBITRATION</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>14.1</strong> Any dispute which has not been resolved in terms of clause 13 shall be submitted to arbitration.</p>
+                <p><strong>14.2</strong> The arbitration shall be conducted in accordance with the provisions of the Arbitration Act, 1965, and shall be held within 21 (twenty-one) Days of the dispute being referred to arbitration.</p>
+                <p><strong>14.3</strong> The arbitrator shall be a person with expertise in accounting, legal matters, or such other field as may be appropriate to the dispute.</p>
+                <p><strong>14.4</strong> If the Parties fail to agree on the appointment of an arbitrator within 7 (seven) Days of the dispute being referred to arbitration, the arbitrator shall be appointed by the Chairperson of the relevant Provincial Attorneys' Association.</p>
+                <p><strong>14.5</strong> [Reserved]</p>
+                <p><strong>14.6</strong> The decision of the arbitrator shall be final and binding on the Parties.</p>
+                <p><strong>14.7</strong> The provisions of this clause shall not prevent either Party from obtaining urgent interim relief from a court of competent jurisdiction pending the outcome of the arbitration.</p>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">15. FORCE MAJEURE</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>15.1</strong> Neither Party shall be liable to the other for any delay or failure to perform any of its obligations under this Agreement to the extent that such delay or failure is caused by an event of force majeure, provided that:</p>
+                <p className="ml-4"><strong>15.1.1</strong> the event is beyond the reasonable control of the affected Party;</p>
+                <p className="ml-4"><strong>15.1.2</strong> the affected Party could not have avoided the event by taking reasonable precautions; and</p>
+                <p className="ml-4"><strong>15.1.3</strong> the affected Party has taken all reasonable steps to mitigate the effects of the event.</p>
+                <p><strong>15.2</strong> Events of force majeure include, but are not limited to:</p>
+                <p className="ml-4"><strong>15.2.1</strong> war, invasion, act of foreign enemies, hostilities, civil war, rebellion, revolution, insurrection, or military or usurped power;</p>
+                <p className="ml-4"><strong>15.2.2</strong> natural disasters such as earthquakes, floods, storms, or other acts of God;</p>
+                <p className="ml-4"><strong>15.2.3</strong> explosions, fires, or destruction of equipment;</p>
+                <p className="ml-4"><strong>15.2.4</strong> strikes, lockouts, or other industrial action; and</p>
+                <p className="ml-4"><strong>15.2.5</strong> any act or omission of any governmental or other authority.</p>
+                <p><strong>15.3</strong> If an event of force majeure continues for a period exceeding 30 (thirty) Days, either Party may terminate this Agreement by giving written notice to the other Party, and such termination shall take effect from the date of commencement of the event of force majeure.</p>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">16. DOMICILIUM CITANDI ET EXECUTANDI AND NOTICES</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>16.1</strong> The Parties choose as their domicilium citandi et executandi for all purposes under this Agreement the following addresses:</p>
+                <div className="ml-4 mt-2 space-y-2">
+                  <div>
+                    <p className="font-semibold">Owner:</p>
+                    <p className="ml-4">Physical address: {companyAddress}</p>
+                    <p className="ml-4">Email: {ownerEmail}</p>
                   </div>
-                </li>
-                <li>Any notice or communication required or permitted to be given in terms of this agreement shall be valid and effective only if in writing and delivered by hand or sent by email to the Party concerned at its chosen address set out in clause 16.1 above.</li>
-                <li>Any notice delivered by hand shall be deemed to have been received on the date of delivery.</li>
-                <li>Any notice sent by email shall be deemed to have been received on the Business Day following the date of transmission.</li>
-                <li>Either Party may by written notice to the other Party change its chosen address to another address in the Republic of South Africa, provided that the change shall become effective on the 7th (seventh) Business Day from the deemed receipt of the notice by the other Party.</li>
-              </ol>
-            </section>
-
-            <section>
-              <h4 className="font-semibold mb-2">17. GENERAL</h4>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>This agreement constitutes the entire agreement between the Parties in relation to the subject matter hereof and supersedes all prior agreements, understandings and arrangements between the Parties, whether written or oral.</li>
-                <li>No addition to, variation, novation or consensual cancellation of this agreement shall be of any force or effect unless reduced to writing and signed by the Parties.</li>
-                <li>No indulgence, leniency or extension of time which either Party may grant or show to the other shall in any way prejudice the rights of the Party granting or showing such indulgence, leniency or extension of time or preclude such Party from exercising any of its rights in the future.</li>
-                <li>If any provision of this agreement is found to be invalid, unlawful or unenforceable, such provision shall be severed from the remainder of this agreement which shall continue to be valid and enforceable.</li>
-                <li>This agreement shall be governed by and construed in accordance with the laws of the Republic of South Africa.</li>
-                <li>The Parties consent to the non-exclusive jurisdiction of the High Court of South Africa (Western Cape Division, Cape Town) in respect of all matters arising out of or in connection with this agreement.</li>
-              </ol>
-            </section>
-
-            <section>
-              <h4 className="font-semibold mb-2">18. SIGNATURE</h4>
-              <p className="text-sm mb-4">
-                The Parties have caused this agreement to be signed by their duly authorised representatives on the date first written above.
-              </p>
-              <div className="space-y-4 text-sm">
-                <div>
-                  <p className="font-semibold">SIGNED by the OWNER:</p>
-                  <div className="ml-4 mt-2">
-                    <p>Name: {ownerName}</p>
-                    <p>Capacity: [Owner/Director/Authorised Signatory]</p>
-                    <p>Date: {signingDate}</p>
-                    <p>Signature: [Electronic signature by typing name]</p>
+                  <div>
+                    <p className="font-semibold">Crunch Carbon on behalf of CDSA:</p>
+                    <p className="ml-4">Physical address: 4 Sandown Valley Crescent, Sandown, Sandton, 2031</p>
+                    <p className="ml-4">Email: info@crunchcarbon.com</p>
                   </div>
                 </div>
-                <div>
-                  <p className="font-semibold">SIGNED by CRUNCH CARBON SOLUTIONS (PTY) LTD:</p>
-                  <div className="ml-4 mt-2">
-                    <p>Name: [Crunch Carbon Representative]</p>
-                    <p>Capacity: Director</p>
+                <p><strong>16.2</strong> Any notice or communication required or permitted to be given in terms of this Agreement shall be valid and effective only if in writing and:</p>
+                <p className="ml-4"><strong>16.2.1</strong> delivered by hand, in which case it shall be deemed to have been received on the date of delivery; or</p>
+                <p className="ml-4"><strong>16.2.2</strong> sent by fax or email, in which case it shall be deemed to have been received on the Day following the date of transmission.</p>
+                <p><strong>16.3</strong> Notwithstanding the provisions of clause 16.2, any notice or communication actually received by a Party shall be deemed to be adequate notice or communication to that Party, notwithstanding that it was not sent to or delivered at the Party's chosen address.</p>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">17. TERMINATION/EXPIRATION ASSISTANCE</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p>Upon termination or expiration of this Agreement, the Parties shall meet to discuss any outstanding matters relating to the termination or expiration of this Agreement.</p>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">18. GENERAL</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>18.1</strong> No Party shall be deemed to have waived any right under this Agreement unless such waiver is in writing and signed by the Party granting the waiver.</p>
+                <p><strong>18.2</strong> This Agreement constitutes the entire agreement between the Parties in relation to the subject matter hereof and supersedes all prior agreements, understandings and arrangements between the Parties, whether written or oral.</p>
+                <p><strong>18.3</strong> If any provision of this Agreement is found to be invalid, unlawful or unenforceable, such provision shall be severed from the remainder of this Agreement, which shall continue to be valid and enforceable.</p>
+                <p><strong>18.4</strong> The provisions of this Agreement which by their nature are intended to survive termination or expiration shall survive any termination or expiration of this Agreement.</p>
+                <p><strong>18.5</strong> Neither Party shall be entitled to cede, assign or otherwise transfer any of its rights or obligations under this Agreement without the prior written consent of the other Party, which consent shall not be unreasonably withheld.</p>
+                <p><strong>18.6</strong> This Agreement may be executed in any number of counterparts, each of which when executed and delivered shall constitute an original, but all the counterparts together shall constitute one and the same instrument.</p>
+                <p><strong>18.7</strong> The Parties to this Agreement shall remain the Parties for the duration of this Agreement, and no new Party may be added or substituted without the written consent of all existing Parties.</p>
+                <p><strong>18.8</strong> Each Party warrants that it has the authority to enter into this Agreement and that the person signing this Agreement on behalf of that Party has the authority to bind that Party. Each Party indemnifies the other Party against any loss suffered as a result of any breach of this warranty.</p>
+                <p><strong>18.9</strong> Each Party acknowledges that it has had the opportunity to obtain independent legal advice before signing this Agreement.</p>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">19. SIGNATURE</h4>
+              <div className="space-y-4 text-sm">
+                <p className="font-semibold">THUS, DONE AND SIGNED AT {signingLocation.toUpperCase()} ON THIS DATE {signingDate} IN THE PRESENCE OF THE UNDERSIGNED WITNESSES.</p>
+                
+                <div className="mt-4">
+                  <p className="font-semibold">AS WITNESSES:</p>
+                  <div className="ml-4 mt-2 space-y-2">
+                    <p>1. _____________________________</p>
+                    <p>2. _____________________________</p>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <p className="font-semibold mb-2">FOR AND ON BEHALF OF THE OWNER:</p>
+                  <div className="ml-4 space-y-2">
+                    <p>Name: {ownerName}</p>
+                    <p>Signature: _____________________________</p>
                     <p>Date: {signingDate}</p>
-                    <p>Signature: [Crunch Carbon Signature]</p>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <p className="font-semibold mb-2">FOR AND ON BEHALF OF CRUNCH CARBON PTY (LTD):</p>
+                  <div className="ml-4 space-y-4">
+                    <div>
+                      <p>Witness: ANDREW D. STOCKIL</p>
+                      <p>Signature: _____________________________</p>
+                    </div>
+                    <div>
+                      <p>Witness: JOHANITA BURGER</p>
+                      <p>Signature: _____________________________</p>
+                    </div>
                   </div>
                 </div>
               </div>
