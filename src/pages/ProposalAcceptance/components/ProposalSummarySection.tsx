@@ -90,11 +90,11 @@ export function ProposalSummarySection({ proposal }: ProposalSummarySectionProps
                   <p className="text-2xl font-bold text-primary">{proposal.client_share_percentage}%</p>
                 </div>
               )}
-              {proposal.carbon_credits && proposal.client_share_percentage && (
+              {(proposal.content?.financials?.totalClientRevenue || (proposal.carbon_credits && proposal.client_share_percentage)) && (
                 <div>
                   <p className="text-sm text-muted-foreground">Total Estimated Revenue</p>
                   <p className="text-2xl font-bold text-primary">
-                    R{((proposal.carbon_credits * proposal.client_share_percentage * 10) / 100).toLocaleString()}
+                    R{(proposal.content?.financials?.totalClientRevenue || ((proposal.carbon_credits * proposal.client_share_percentage * 10) / 100)).toLocaleString()}
                   </p>
                 </div>
               )}

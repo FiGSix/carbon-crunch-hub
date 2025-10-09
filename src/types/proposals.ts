@@ -83,6 +83,9 @@ export interface ProposalContent {
   agentCommissionRevenue?: Record<string, number>; // Agent commission by year
   crunchCommissionRevenue?: Record<string, number>; // Crunch Carbon commission by year
   calculationMetadata?: CalculationMetadata; // Metadata about how calculations were performed
+  financials?: {
+    totalClientRevenue?: number; // Total client revenue across all years
+  };
 }
 
 /**

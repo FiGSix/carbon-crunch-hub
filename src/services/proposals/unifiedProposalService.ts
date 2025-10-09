@@ -5,6 +5,7 @@ import { normalizeToKWp } from "@/lib/calculations/carbon/normalization";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/lib/calculations/carbon";
 import type { Database } from "@/integrations/supabase/types";
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
@@ -123,7 +124,15 @@ export async function createProposal(
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio, agentProfile?.commission_override);
     
-    // Step 4: Insert proposal
+    // Step 5: Calculate total client revenue using UnifiedCarbonService
+    const { revenueByYear } = await UnifiedCarbonService.calculateComplete({
+      sizeKwp: systemSizeKWp,
+      commissionDate: projectInfo.commissionDate
+    }, totalClientPortfolio);
+    
+    const totalClientRevenue = Object.values(revenueByYear).reduce((sum: number, val: number) => sum + val, 0);
+    
+    // Step 6: Insert proposal
     const proposalData: ProposalInsert = {
       title: proposalTitle,
       agent_id: agentId,
@@ -133,7 +142,10 @@ export async function createProposal(
         title: proposalTitle,
         eligibilityCriteria,
         projectInfo,
-        clientInfo
+        clientInfo,
+        financials: {
+          totalClientRevenue: Math.round(totalClientRevenue)
+        }
       } as any,
       eligibility_criteria: eligibilityCriteria as any,
       project_info: projectInfo as any,
