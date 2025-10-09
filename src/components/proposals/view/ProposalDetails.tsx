@@ -21,6 +21,7 @@ interface ProposalDetailsProps {
   onApprove: (typedName: string) => Promise<void>;
   onReject: () => Promise<void>;
   showActions?: boolean;
+  isClient?: boolean;
 }
 
 export function ProposalDetails({ 
@@ -28,7 +29,8 @@ export function ProposalDetails({
   token, 
   onApprove, 
   onReject,
-  showActions = false
+  showActions = false,
+  isClient = false
 }: ProposalDetailsProps) {
   const { userRole } = useAuth();
   
@@ -125,6 +127,7 @@ export function ProposalDetails({
           showActions={showActions}
           clientName={proposal.content?.clientInfo?.name || 'Client'}
           proposalTitle={proposal.title}
+          isClient={isClient}
           accessedViaToken={!!token}
           token={token}
           proposalId={proposal.id}

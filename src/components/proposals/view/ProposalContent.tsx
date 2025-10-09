@@ -60,6 +60,7 @@ export function ProposalContent({
           onApprove={handleApprove}
           onReject={handleReject}
           showActions={canTakeAction}
+          isClient={isClient}
         />
         
         {/* Sign In Prompt - Show when not logged in but token access is valid */}

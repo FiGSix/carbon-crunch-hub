@@ -23,6 +23,7 @@ interface ProposalActionFooterProps {
   showActions: boolean;
   clientName: string;
   proposalTitle: string;
+  isClient?: boolean;
   accessedViaToken?: boolean;
   token?: string | null;
   proposalId?: string;
@@ -34,6 +35,7 @@ export function ProposalActionFooter({
   showActions,
   clientName,
   proposalTitle,
+  isClient = false,
   accessedViaToken = false,
   token = null,
   proposalId
@@ -49,11 +51,14 @@ export function ProposalActionFooter({
   }
   
   const handleApproveClick = () => {
-    if (accessedViaToken && proposalId && token) {
-      // Navigate to acceptance page with token
-      navigate(`/proposals/${proposalId}/accept?token=${token}`);
+    // If user is a client, always navigate to accept page
+    if (isClient && proposalId) {
+      const acceptUrl = token 
+        ? `/proposals/${proposalId}/accept?token=${token}`
+        : `/proposals/${proposalId}/accept`;
+      navigate(acceptUrl);
     } else {
-      // Show signature dialog for authenticated users
+      // Show signature dialog for non-clients (e.g., agents)
       setShowSignatureDialog(true);
     }
   };
