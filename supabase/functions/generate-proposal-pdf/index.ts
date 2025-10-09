@@ -1154,7 +1154,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const commissionDateStr = anyProposal.project_info?.commission_date || 
                             anyProposal.content?.projectInfo?.commissionDate || null;
   const commissionDate = commissionDateStr ? new Date(commissionDateStr) : null;
-  const commissionYear = commissionDate ? commissionDate.getFullYear() : new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
+  const commissionYearRaw = commissionDate ? commissionDate.getFullYear() : currentYear;
+  const commissionYear = Math.max(commissionYearRaw, currentYear); // Never show past years
   
   // Calculate yearly energy with pro-rating for commission year
   const calculateYearlyEnergy = (systemKWp: number, actualYear: number): number => {
@@ -1191,9 +1193,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   let totalTCO2 = 0;
   let totalRevenue = 0;
   
-  for (let year = 1; year <= 7; year++) {
-    const actualYear = commissionYear + year - 1;
-    
+  // Build table using available carbon price years (filtered to current/future only)
+  const availableYears = Object.keys(carbonPrices)
+    .map(y => parseInt(y))
+    .filter(y => y >= currentYear)
+    .sort((a, b) => a - b);
+
+  for (const actualYear of availableYears) {
     // Use real calculation functions
     const yearlyEnergyKWh = calculateYearlyEnergy(systemSizeKWp, actualYear);
     const yearlyEnergyMWh = yearlyEnergyKWh / 1000;
@@ -1226,7 +1232,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const revenueTableY = y;
   const revenueTableWidth = page4.getSize().width - p4x * 2;
   const revenueRowHeight = mm(12);
-  const revenueTableHeight = revenueRowHeight * 9; // Header + 7 data rows + totals row
+  const revenueTableHeight = revenueRowHeight * (revenueData.length + 2); // Header + data rows + totals row
   
   // Draw outer border
   page4.drawRectangle({
