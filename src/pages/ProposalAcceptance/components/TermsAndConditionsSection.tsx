@@ -372,8 +372,10 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
                 <div className="mt-4">
                   <p className="font-semibold">AS WITNESSES:</p>
                   <div className="ml-4 mt-2 space-y-2">
-                    <p>1. _____________________________</p>
-                    <p>2. _____________________________</p>
+                    <p>1. DIGITAL WITNESS 1</p>
+                    <p className="text-xs text-muted-foreground ml-6">(Digital verification upon client signature)</p>
+                    <p>2. DIGITAL WITNESS 2</p>
+                    <p className="text-xs text-muted-foreground ml-6">(Digital verification upon client signature)</p>
                   </div>
                 </div>
 
@@ -386,15 +388,13 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <p className="font-semibold mb-2">FOR AND ON BEHALF OF CRUNCH CARBON PTY (LTD):</p>
-                  <div className="ml-4 space-y-2">
-                    <p>Witness: ANDREW D. STOCKIL</p>
-                    <p className="text-xs text-muted-foreground ml-6">(Digital verification upon client signature)</p>
-                    <p>Witness: JOHANITA BURGER</p>
-                    <p className="text-xs text-muted-foreground ml-6">(Digital verification upon client signature)</p>
-                  </div>
+              <div className="mt-6">
+                <p className="font-semibold mb-2">FOR AND ON BEHALF OF CRUNCH CARBON PTY (LTD):</p>
+                <div className="ml-4 space-y-2">
+                  <p>Witness: ANDREW D. STOCKIL</p>
+                  <p>Witness: JOHANITA BURGER</p>
                 </div>
+              </div>
               </div>
             </section>
           </div>

@@ -160,10 +160,10 @@ serve(async (req) => {
         ip_address: ipAddress,
         user_agent: userAgent,
         accepted_terms_version: '2.0',
-        witness_1_name: 'ANDREW D. STOCKIL',
+        witness_1_name: 'DIGITAL WITNESS 1',
         witness_1_verified_at: witnessTimestamp,
         witness_1_ip_address: ipAddress,
-        witness_2_name: 'JOHANITA BURGER',
+        witness_2_name: 'DIGITAL WITNESS 2',
         witness_2_verified_at: witnessTimestamp,
         witness_2_ip_address: ipAddress,
         witness_method: 'automatic_system',
@@ -175,8 +175,8 @@ serve(async (req) => {
           signing_location: 'South Africa',
           witness_info: {
             method: 'automatic_system',
-            witness_1: 'ANDREW D. STOCKIL',
-            witness_2: 'JOHANITA BURGER',
+            witness_1: 'DIGITAL WITNESS 1',
+            witness_2: 'DIGITAL WITNESS 2',
             witnessed_at: witnessTimestamp
           }
         }
