@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 interface AcceptProposalRequest {
-  token: string;
+  token?: string;
+  proposalId?: string;
   typedName: string;
   ipAddress?: string;
   userAgent?: string;
@@ -25,24 +26,59 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token, typedName, ipAddress, userAgent }: AcceptProposalRequest = await req.json();
+    const { token, proposalId, typedName, ipAddress, userAgent }: AcceptProposalRequest = await req.json();
 
-    console.log(`Accepting proposal with token: ${token.substring(0, 8)}...`);
-
-    // 1. Validate token and get proposal
-    const { data: proposalData, error: proposalError } = await supabase
-      .rpc('get_proposal_by_token_direct', { token_param: token });
-
-    if (proposalError) {
-      console.error("Error fetching proposal:", proposalError);
-      throw new Error("Invalid or expired invitation token");
+    if (!token && !proposalId) {
+      throw new Error("Either token or proposalId is required");
     }
 
-    if (!proposalData || proposalData.length === 0) {
-      throw new Error("Proposal not found or invitation has expired");
-    }
+    console.log(`Accepting proposal with ${token ? `token: ${token.substring(0, 8)}...` : `proposalId: ${proposalId}`}`);
 
-    const proposal = proposalData[0];
+    let proposal: any;
+
+    // 1. Get proposal either by token or by ID (for authenticated users)
+    if (token) {
+      // Token-based access
+      const { data: proposalData, error: proposalError } = await supabase
+        .rpc('get_proposal_by_token_direct', { token_param: token });
+
+      if (proposalError) {
+        console.error("Error fetching proposal by token:", proposalError);
+        throw new Error("Invalid or expired invitation token");
+      }
+
+      if (!proposalData || proposalData.length === 0) {
+        throw new Error("Proposal not found or invitation has expired");
+      }
+
+      proposal = proposalData[0];
+    } else if (proposalId) {
+      // Authenticated user access - query directly with RLS
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        throw new Error("Authentication required");
+      }
+
+      // Create client with user's auth token for RLS
+      const userSupabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: proposalData, error: proposalError } = await userSupabase
+        .from('proposals')
+        .select('*')
+        .eq('id', proposalId)
+        .single();
+
+      if (proposalError) {
+        console.error("Error fetching proposal by ID:", proposalError);
+        throw new Error("Proposal not found or you don't have access");
+      }
+
+      proposal = proposalData;
+    }
 
     // 2. Validate proposal status
     if (proposal.status === 'approved' || proposal.status === 'signed') {
@@ -68,8 +104,8 @@ serve(async (req) => {
       );
     }
 
-    // 3. Validate token expiration
-    if (new Date(proposal.invitation_expires_at) < new Date()) {
+    // 3. Validate token expiration (only for token-based access)
+    if (token && proposal.invitation_expires_at && new Date(proposal.invitation_expires_at) < new Date()) {
       return new Response(
         JSON.stringify({ error: "Invitation link has expired" }),
         { 
@@ -90,7 +126,23 @@ serve(async (req) => {
       );
     }
 
-    const signedBy = proposal.client_reference_id || proposal.client_id;
+    // Get signed_by from proposal or from authenticated user
+    let signedBy = proposal.client_reference_id || proposal.client_id;
+    
+    // If no client reference and we have auth, use the authenticated user
+    if (!signedBy && !token) {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const userSupabase = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          { global: { headers: { Authorization: authHeader } } }
+        );
+        const { data: { user } } = await userSupabase.auth.getUser();
+        signedBy = user?.id;
+      }
+    }
+    
     if (!signedBy) {
       console.error("No client reference found for proposal:", proposal.id);
       throw new Error("Invalid proposal configuration");
@@ -108,8 +160,9 @@ serve(async (req) => {
         user_agent: userAgent,
         accepted_terms_version: '2.0',
         metadata: {
-          signed_via: 'acceptance_link',
-          token_used: token.substring(0, 8) + '...',
+          signed_via: token ? 'acceptance_link' : 'authenticated_user',
+          token_used: token ? token.substring(0, 8) + '...' : null,
+          proposal_id_used: proposalId || null,
           timestamp: new Date().toISOString(),
           signing_location: 'South Africa'
         }
@@ -136,8 +189,10 @@ serve(async (req) => {
 
     console.log(`✅ Proposal ${proposal.id} successfully signed by ${typedName}`);
 
-    // 7. Mark invitation as viewed (for analytics)
-    await supabase.rpc('mark_invitation_viewed', { token_param: token });
+    // 7. Mark invitation as viewed (for analytics) - only if token was used
+    if (token) {
+      await supabase.rpc('mark_invitation_viewed', { token_param: token });
+    }
 
     // 8. Send cession agreement confirmation email in background
     // Fetch client email asynchronously without blocking response

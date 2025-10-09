@@ -24,16 +24,19 @@ export default function ProposalAcceptance() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setError("Invalid invitation link. Token is missing.");
+    if (token) {
+      // Token-based access (from email link)
+      fetchProposalByToken();
+    } else if (id) {
+      // Authenticated user access (logged in, no token)
+      fetchProposalAuthenticated();
+    } else {
+      setError("Invalid proposal link.");
       setLoading(false);
-      return;
     }
-
-    fetchProposal();
   }, [id, token]);
 
-  const fetchProposal = async () => {
+  const fetchProposalByToken = async () => {
     try {
       setLoading(true);
       
@@ -69,6 +72,55 @@ export default function ProposalAcceptance() {
       
       setProposal(transformedProposal);
     } catch (err) {
+      console.error("Error fetching proposal by token:", err);
+      setError(err instanceof Error ? err.message : "Failed to load proposal");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProposalAuthenticated = async () => {
+    try {
+      setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("You must be logged in to view this proposal");
+      }
+
+      // Query proposal directly (RLS will ensure user has access)
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error("Proposal not found or you don't have access to it");
+
+      // Transform the data to match ProposalData type
+      const transformedProposal: ProposalData = {
+        id: data.id,
+        title: data.title,
+        status: data.status,
+        content: (data.content as unknown) as ProposalContent,
+        created_at: data.created_at,
+        signed_at: data.signed_at,
+        archived_at: data.archived_at,
+        review_later_until: data.review_later_until,
+        client_id: data.client_id,
+        client_reference_id: data.client_reference_id,
+        agent_id: data.agent_id,
+        annual_energy: data.annual_energy,
+        carbon_credits: data.carbon_credits,
+        client_share_percentage: data.client_share_percentage,
+        invitation_token: data.invitation_token,
+        invitation_expires_at: data.invitation_expires_at,
+      };
+      
+      setProposal(transformedProposal);
+    } catch (err) {
       console.error("Error fetching proposal:", err);
       setError(err instanceof Error ? err.message : "Failed to load proposal");
     } finally {
@@ -93,7 +145,7 @@ export default function ProposalAcceptance() {
   const canSubmit = hasScrolledToBottom && hasAgreed && typedName.trim().length > 0 && validateTypedName();
 
   const handleSubmit = async () => {
-    if (!canSubmit || !proposal || !token) return;
+    if (!canSubmit || !proposal) return;
 
     setIsSubmitting(true);
     try {
@@ -110,7 +162,8 @@ export default function ProposalAcceptance() {
       // Call the public Edge Function
       const { data, error } = await supabase.functions.invoke('accept-proposal', {
         body: {
-          token,
+          token: token || undefined,
+          proposalId: !token ? proposal.id : undefined,
           typedName,
           ipAddress,
           userAgent: navigator.userAgent
@@ -124,7 +177,10 @@ export default function ProposalAcceptance() {
           description: "This proposal has already been signed.",
         });
         setTimeout(() => {
-          navigate(`/proposals/${proposal.id}?token=${token}`);
+          const redirectUrl = token 
+            ? `/proposals/${proposal.id}?token=${token}`
+            : `/proposals/${proposal.id}`;
+          navigate(redirectUrl);
         }, 1500);
         return;
       }
@@ -139,7 +195,10 @@ export default function ProposalAcceptance() {
 
       // Redirect to view proposal page
       setTimeout(() => {
-        navigate(`/proposals/${proposal.id}?token=${token}`);
+        const redirectUrl = token 
+          ? `/proposals/${proposal.id}?token=${token}`
+          : `/proposals/${proposal.id}`;
+        navigate(redirectUrl);
       }, 2000);
 
     } catch (err) {
