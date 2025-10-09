@@ -212,108 +212,51 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">6. ACCESS TO THE INSTALLATION</h4>
-              <p className="mb-2 text-sm">
-                The Owner hereby grants Crunch Carbon, and any person duly authorised by Crunch Carbon, the right of access to the Premises to inspect and test the Installation at all reasonable times, provided that –
-              </p>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>Crunch Carbon provides the Owner with at least 48 (forty-eight) hours' prior written notice of its intention to access the Premises; and</li>
-                <li>Crunch Carbon complies with all reasonable safety and security measures required by the Owner when accessing the Premises.</li>
-              </ol>
-            </section>
-
-            <section>
-              <h4 className="font-semibold mb-2">7. MAINTENANCE OF THE INSTALLATION</h4>
-              <p className="text-sm">
-                The Owner undertakes to maintain the Installation in good working order and condition and to ensure that the Installation complies with all applicable Laws and safety standards.
-              </p>
-            </section>
-
-            <section>
-              <h4 className="font-semibold mb-2">8. FINANCIAL PROVISIONS</h4>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="font-semibold mb-1">8.1 Sale of the Carbon Credits</p>
-                  <ol className="list-decimal ml-6 space-y-1">
-                    <li>Crunch Carbon shall be solely responsible for the sale of the Carbon Credits and shall be entitled to sell the Carbon Credits at such times and on such terms as it deems fit.</li>
-                    <li>Crunch Carbon shall not be obliged to sell the Carbon Credits at any particular time or for any particular price.</li>
-                  </ol>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">8.2 Distribution of the proceeds</p>
-                  <ol className="list-decimal ml-6 space-y-1">
-                    <li>Crunch Carbon shall distribute the proceeds of the sale of the Carbon Credits between itself and the Owner in the following proportions (the <span className="font-semibold">"Shares"</span>):
-                      <ul className="list-disc ml-6 mt-1">
-                        <li>Crunch Carbon shall be entitled to {cessionaryPercentage}% of the proceeds; and</li>
-                        <li>the Owner shall be entitled to {ownerPercentage}% of the proceeds.</li>
-                      </ul>
-                    </li>
-                    <li>Crunch Carbon shall pay the Owner's Share to the Owner within 30 (thirty) days of receipt of the proceeds of the sale of the Carbon Credits.</li>
-                    <li>All payments shall be made by electronic funds transfer into such bank account as the Owner may nominate in writing from time to time.</li>
-                  </ol>
-                </div>
+              <h4 className="font-semibold mb-2">7. INDEMNITY</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>7.1</strong> The Owner indemnifies and holds harmless Crunch Carbon on behalf of CDSA, its directors, officers, employees, and agents against any and all claims, losses, damages, liabilities, costs and expenses (including reasonable legal fees) arising out of or in connection with any breach by the Owner of its representations, warranties or obligations under this Agreement.</p>
+                <p><strong>7.2</strong> [Reserved]</p>
               </div>
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">9. RECORDS AND REPORTING</h4>
-              <p className="mb-2 text-sm">Crunch Carbon shall –</p>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>keep proper records of all sales of the Carbon Credits and of the distribution of the proceeds thereof; and</li>
-                <li>provide the Owner with a written statement setting out the details of all sales of the Carbon Credits and the distribution of the proceeds thereof within 30 (thirty) days of the end of each financial year of Crunch Carbon.</li>
-              </ol>
+              <h4 className="font-semibold mb-2">8. ACKNOWLEDGEMENT AND ACCEPTANCE</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p>CDSA acknowledges and accepts the cession of the rights to the environmental benefits in terms of clause 5 and assumes all rights and obligations of the cessionary under this Agreement.</p>
+              </div>
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">10. WARRANTIES</h4>
-              <p className="mb-2 text-sm">Crunch Carbon does not warrant or make any representations to the Owner in respect of –</p>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>the amount of Carbon Credits that may be earned by the Owner;</li>
-                <li>the price at which the Carbon Credits may be sold; or</li>
-                <li>the amount of the proceeds that may be distributed to the Owner.</li>
-              </ol>
+              <h4 className="font-semibold mb-2">9. PROTECTION OF CRUNCH CARBON AND CDSA'S INTELLECTUAL PROPERTY</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>9.1</strong> The Owner acknowledges that all Intellectual Property used in connection with the commercialization of the Carbon Credits belongs to and shall remain the property of CDSA and is confidential and proprietary to CDSA.</p>
+                <p><strong>9.2</strong> The Owner acknowledges that it may have access to certain Intellectual Property for the limited purpose of participating in the programme and that such access does not confer any ownership rights in the Intellectual Property.</p>
+                <p><strong>9.3</strong> The Owner undertakes not to disclose any Intellectual Property to any third party without the prior written consent of CDSA and to use the Intellectual Property solely for the purpose of participating in the programme.</p>
+                <p><strong>9.4</strong> Nothing in this Agreement shall be construed as conferring any license or right to use the Intellectual Property for any purpose other than as expressly provided in this Agreement.</p>
+                <p><strong>9.5</strong> The Owner warrants that:</p>
+                <p className="ml-4"><strong>9.5.1</strong> it will not infringe CDSA's Intellectual Property and specifically:</p>
+                <p className="ml-8"><strong>9.5.1.1</strong> it will not copy, reproduce, distribute, modify, or create derivative works of the Intellectual Property;</p>
+                <p className="ml-8"><strong>9.5.1.2</strong> it will not reverse engineer, decompile, or disassemble any software that forms part of the Intellectual Property;</p>
+                <p className="ml-8"><strong>9.5.1.3</strong> it will not remove, alter, or obscure any copyright, trademark, or other proprietary rights notices from the Intellectual Property;</p>
+                <p className="ml-8"><strong>9.5.1.4</strong> it will not use the Intellectual Property to develop competing products or services; and</p>
+                <p className="ml-8"><strong>9.5.1.5</strong> it will not:</p>
+                <p className="ml-12"><strong>9.5.1.5.1</strong> sell, rent, lease, sublicense, or transfer the Intellectual Property to any third party; and</p>
+                <p className="ml-12"><strong>9.5.1.5.2</strong> use the Intellectual Property for any unlawful purpose or in any manner inconsistent with this Agreement.</p>
+              </div>
             </section>
 
             <section>
-              <h4 className="font-semibold mb-2">11. INDEMNITY</h4>
-              <p className="text-sm">
-                The Owner indemnifies and holds harmless Crunch Carbon, its directors, officers, employees and agents against any and all claims, losses, damages, liabilities, costs and expenses (including legal fees) arising out of or in connection with –
-              </p>
-              <ol className="list-decimal ml-6 space-y-2 text-sm mt-2">
-                <li>any breach by the Owner of any of its obligations under this agreement;</li>
-                <li>any misrepresentation or breach of warranty by the Owner;</li>
-                <li>the Installation or the use thereof; or</li>
-                <li>any claim by any third party that the Carbon Credits are subject to any lien, encumbrance or other security interest.</li>
-              </ol>
-            </section>
-
-            <section>
-              <h4 className="font-semibold mb-2">12. CONFIDENTIALITY</h4>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>Each Party undertakes to keep confidential all information disclosed to it by the other Party in connection with this agreement, except to the extent that such information –
-                  <ol className="list-[lower-alpha] ml-6 mt-1 space-y-1">
-                    <li>is or becomes publicly available otherwise than through a breach of this clause;</li>
-                    <li>is required to be disclosed by law or by any regulatory authority; or</li>
-                    <li>is disclosed to the Party's professional advisers, auditors or bankers on a confidential basis.</li>
-                  </ol>
-                </li>
-                <li>The provisions of this clause shall survive the termination of this agreement.</li>
-              </ol>
-            </section>
-
-            <section>
-              <h4 className="font-semibold mb-2">13. BREACH</h4>
-              <ol className="list-decimal ml-6 space-y-2 text-sm">
-                <li>If either Party commits a breach of any of the provisions of this agreement and fails to remedy such breach within 14 (fourteen) days of receiving written notice from the other Party requiring it to do so, the other Party shall be entitled, without prejudice to any other rights it may have in terms of this agreement or at law –
-                  <ol className="list-[lower-alpha] ml-6 mt-1 space-y-1">
-                    <li>to claim specific performance of any obligation, whether or not the due date for performance has arrived;</li>
-                    <li>to claim immediate payment of all amounts owing by the defaulting Party to the other Party;</li>
-                    <li>to cancel this agreement; and/or</li>
-                    <li>to claim damages.</li>
-                  </ol>
-                </li>
-                <li>The rights referred to in clause 13.1 above are cumulative and the exercise of any one of them shall not preclude the exercise of any other right.</li>
-              </ol>
+              <h4 className="font-semibold mb-2">10. REVENUE, MONETARY ARRANGEMENTS, AND RELATED RESPONSIBILITIES</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>10.1</strong> CDSA shall:</p>
+                <p className="ml-4"><strong>10.1.1</strong> establish and maintain an account with the Registry for the issuance and holding of Carbon Credits generated from the Project;</p>
+                <p className="ml-4"><strong>10.1.2</strong> be responsible for all costs associated with establishing and maintaining the Registry account;</p>
+                <p className="ml-4"><strong>10.1.3</strong> be responsible for all fees charged by VVBs for validation and verification services and any audit fees;</p>
+                <p className="ml-4"><strong>10.1.4</strong> coordinate the sale of Carbon Credits and actively seek buyers;</p>
+                <p className="ml-4"><strong>10.1.5</strong> have sole discretion in selecting buyers and negotiating sale terms, provided that CDSA acts in good faith and with reasonable commercial judgment;</p>
+                <p className="ml-4"><strong>10.1.6</strong> distribute revenue from Carbon Credit sales, with the Owner entitled to receive {ownerPercentage}% of the gross revenue received from the sale of Carbon Credits; and</p>
+                <p className="ml-4"><strong>10.1.7</strong> transfer the Owner's share of revenue on a periodic basis as Carbon Credits are sold and payment is received, typically within 30 (thirty) Days of receipt of payment from buyers.</p>
+              </div>
             </section>
 
             <section>
