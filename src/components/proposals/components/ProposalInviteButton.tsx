@@ -156,6 +156,29 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     );
   }
   
-  // Don't show invitation buttons for proposals that have been viewed
+  // For pending proposals that have been viewed, allow resending
+  if (proposal.status === "pending" && proposal.invitation_viewed_at) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResend}
+        className="text-carbon-blue-600"
+        disabled={isProcessing || sending}
+      >
+        {isProcessing || sending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...
+          </>
+        ) : (
+          <>
+            Send Again <Mail className="h-4 w-4 ml-1" />
+          </>
+        )}
+      </Button>
+    );
+  }
+  
+  // Don't show for other statuses (signed, rejected, etc.)
   return null;
 }
