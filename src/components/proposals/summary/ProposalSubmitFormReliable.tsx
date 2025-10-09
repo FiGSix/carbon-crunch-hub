@@ -39,6 +39,7 @@ export function ProposalSubmitFormReliable({
   const [progress, setProgress] = useState<ProposalProgress | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [backgroundTaskId, setBackgroundTaskId] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   const proposalService = ReliableProposalService.getInstance();
 
@@ -46,7 +47,22 @@ export function ProposalSubmitFormReliable({
   useEffect(() => {
     if (!backgroundTaskId) return;
 
+    const startTime = Date.now();
+    const MAX_POLL_TIME = 60000; // 60 seconds max polling time
+
     const checkTaskStatus = async () => {
+      // Safety check: stop polling after max time
+      if (Date.now() - startTime > MAX_POLL_TIME) {
+        setBackgroundTaskId(null);
+        setIsSubmitting(false);
+        toast({
+          title: "Processing Taking Longer Than Expected",
+          description: "Your proposal is still being created. Please check your proposals list in a moment.",
+        });
+        setTimeout(() => navigate('/proposals'), 2000);
+        return;
+      }
+
       try {
         const status = proposalService.getTaskStatus(backgroundTaskId);
         
@@ -65,12 +81,19 @@ export function ProposalSubmitFormReliable({
           
           setTimeout(() => navigate('/proposals'), 1500);
         } else if (status?.status === 'failed') {
+          // Clear background task ID to stop polling
+          setBackgroundTaskId(null);
           setIsSubmitting(false);
           setProgress(null);
+          setHasError(true);
+          
           toast({
-            title: "Processing Complete",
-            description: "Your proposal will be created shortly. You can continue working while we process it in the background.",
+            title: "Proposal Creation Failed",
+            description: "We encountered an issue creating your proposal. Please try again or contact support if the problem persists.",
+            variant: "destructive",
           });
+          
+          // Don't auto-navigate on failure - let user retry
         }
       } catch (error) {
         // Ignore errors in background monitoring
@@ -137,14 +160,13 @@ export function ProposalSubmitFormReliable({
       devLogger.proposals.error("Error in proposal submission", error);
       setIsSubmitting(false);
       setProgress(null);
+      setHasError(true);
       
       toast({
-        title: "Temporary Issue",
-        description: "We're processing your proposal in the background. You can continue working and will be notified when it's ready.",
+        title: "Proposal Creation Failed",
+        description: "We encountered an issue creating your proposal. Please try again.",
+        variant: "destructive",
       });
-      
-      // Navigate anyway to prevent user frustration
-      setTimeout(() => navigate('/proposals'), 2000);
     }
   };
 
@@ -223,6 +245,8 @@ export function ProposalSubmitFormReliable({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Creating...
             </>
+          ) : hasError ? (
+            "Retry Creation"
           ) : (
             "Create Proposal"
           )}
