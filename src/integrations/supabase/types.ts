@@ -319,6 +319,13 @@ export type Database = {
           signed_by: string
           typed_name: string | null
           user_agent: string | null
+          witness_1_ip_address: unknown | null
+          witness_1_name: string | null
+          witness_1_verified_at: string | null
+          witness_2_ip_address: unknown | null
+          witness_2_name: string | null
+          witness_2_verified_at: string | null
+          witness_method: string | null
         }
         Insert: {
           accepted_terms_version?: string
@@ -332,6 +339,13 @@ export type Database = {
           signed_by: string
           typed_name?: string | null
           user_agent?: string | null
+          witness_1_ip_address?: unknown | null
+          witness_1_name?: string | null
+          witness_1_verified_at?: string | null
+          witness_2_ip_address?: unknown | null
+          witness_2_name?: string | null
+          witness_2_verified_at?: string | null
+          witness_method?: string | null
         }
         Update: {
           accepted_terms_version?: string
@@ -345,6 +359,13 @@ export type Database = {
           signed_by?: string
           typed_name?: string | null
           user_agent?: string | null
+          witness_1_ip_address?: unknown | null
+          witness_1_name?: string | null
+          witness_1_verified_at?: string | null
+          witness_2_ip_address?: unknown | null
+          witness_2_name?: string | null
+          witness_2_verified_at?: string | null
+          witness_method?: string | null
         }
         Relationships: [
           {

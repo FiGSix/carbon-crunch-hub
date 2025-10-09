@@ -390,7 +390,9 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
                   <p className="font-semibold mb-2">FOR AND ON BEHALF OF CRUNCH CARBON PTY (LTD):</p>
                   <div className="ml-4 space-y-2">
                     <p>Witness: ANDREW D. STOCKIL</p>
+                    <p className="text-xs text-muted-foreground ml-6">(Digital verification upon client signature)</p>
                     <p>Witness: JOHANITA BURGER</p>
+                    <p className="text-xs text-muted-foreground ml-6">(Digital verification upon client signature)</p>
                   </div>
                 </div>
               </div>

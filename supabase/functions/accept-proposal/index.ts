@@ -148,7 +148,8 @@ serve(async (req) => {
       throw new Error("Invalid proposal configuration");
     }
 
-    // 5. Create agreement record
+    // 5. Create agreement record with automatic system witnesses
+    const witnessTimestamp = new Date().toISOString();
     const { error: agreementError } = await supabase
       .from('proposal_agreements')
       .insert({
@@ -159,12 +160,25 @@ serve(async (req) => {
         ip_address: ipAddress,
         user_agent: userAgent,
         accepted_terms_version: '2.0',
+        witness_1_name: 'ANDREW D. STOCKIL',
+        witness_1_verified_at: witnessTimestamp,
+        witness_1_ip_address: ipAddress,
+        witness_2_name: 'JOHANITA BURGER',
+        witness_2_verified_at: witnessTimestamp,
+        witness_2_ip_address: ipAddress,
+        witness_method: 'automatic_system',
         metadata: {
           signed_via: token ? 'acceptance_link' : 'authenticated_user',
           token_used: token ? token.substring(0, 8) + '...' : null,
           proposal_id_used: proposalId || null,
           timestamp: new Date().toISOString(),
-          signing_location: 'South Africa'
+          signing_location: 'South Africa',
+          witness_info: {
+            method: 'automatic_system',
+            witness_1: 'ANDREW D. STOCKIL',
+            witness_2: 'JOHANITA BURGER',
+            witnessed_at: witnessTimestamp
+          }
         }
       });
 
