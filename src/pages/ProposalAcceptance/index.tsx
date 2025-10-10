@@ -6,6 +6,7 @@ import { PageLoading } from "@/components/ui/loading-states";
 import { ProposalSummarySection } from "./components/ProposalSummarySection";
 import { TermsAndConditionsSection } from "./components/TermsAndConditionsSection";
 import { SignatureSection } from "./components/SignatureSection";
+import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProposalAcceptance() {
@@ -22,6 +23,7 @@ export default function ProposalAcceptance() {
   const [hasAgreed, setHasAgreed] = useState(false);
   const [typedName, setTypedName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -189,17 +191,8 @@ export default function ProposalAcceptance() {
         throw new Error(data.error);
       }
 
-      toast({
-        description: "Thank you for accepting this proposal. You will receive a confirmation email shortly.",
-      });
-
-      // Redirect to view proposal page
-      setTimeout(() => {
-        const redirectUrl = token 
-          ? `/proposals/${proposal.id}?token=${token}`
-          : `/proposals/${proposal.id}`;
-        navigate(redirectUrl);
-      }, 2000);
+      // Show onboarding modal instead of toast and redirect
+      setShowOnboardingModal(true);
 
     } catch (err) {
       console.error("Error submitting agreement:", err);
@@ -268,6 +261,13 @@ export default function ProposalAcceptance() {
           onSubmit={handleSubmit}
         />
       </div>
+
+      <PostSignatureOnboardingModal
+        open={showOnboardingModal}
+        onOpenChange={setShowOnboardingModal}
+        proposalId={proposal.id}
+        token={token}
+      />
     </div>
   );
 }
