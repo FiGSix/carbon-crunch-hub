@@ -27,8 +27,7 @@ export function PostSignatureOnboardingModal({
   const navigate = useNavigate();
 
   const handleProceedToOnboarding = () => {
-    // For now, redirect to dashboard - future: navigate to onboarding wizard
-    navigate('/dashboard');
+    navigate('/onboarding');
   };
 
   const handleBackToDashboard = () => {

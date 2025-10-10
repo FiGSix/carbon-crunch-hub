@@ -51,6 +51,8 @@ const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
+const ProjectOnboardingList = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingList"), "ProjectOnboardingList");
+const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingDetail"), "ProjectOnboardingDetail");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -332,6 +334,30 @@ function App() {
                         <PageErrorBoundary pageName="Notifications">
                           <Suspense fallback={<PageLoader />}>
                             <Notifications />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/onboarding" 
+                    element={
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Project Onboarding">
+                          <Suspense fallback={<PageLoader />}>
+                            <ProjectOnboardingList />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/onboarding/:projectId" 
+                    element={
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Project Detail">
+                          <Suspense fallback={<PageLoader />}>
+                            <ProjectOnboardingDetail />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>
