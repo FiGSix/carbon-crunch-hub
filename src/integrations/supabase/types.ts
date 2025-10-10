@@ -178,6 +178,78 @@ export type Database = {
           },
         ]
       }
+      data_access_config: {
+        Row: {
+          api_key_encrypted: string | null
+          configured_by: string | null
+          created_at: string
+          credential_method: string
+          delegated_email: string | null
+          first_data_ingested_at: string | null
+          id: string
+          last_test_at: string | null
+          last_test_error: string | null
+          last_test_status: string | null
+          portal_url: string | null
+          project_id: string
+          provider: string
+          readonly_username: string | null
+          site_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          configured_by?: string | null
+          created_at?: string
+          credential_method: string
+          delegated_email?: string | null
+          first_data_ingested_at?: string | null
+          id?: string
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_status?: string | null
+          portal_url?: string | null
+          project_id: string
+          provider: string
+          readonly_username?: string | null
+          site_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          configured_by?: string | null
+          created_at?: string
+          credential_method?: string
+          delegated_email?: string | null
+          first_data_ingested_at?: string | null
+          id?: string
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_status?: string | null
+          portal_url?: string | null
+          project_id?: string
+          provider?: string
+          readonly_username?: string | null
+          site_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_access_config_configured_by_fkey"
+            columns: ["configured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_access_config_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "project_onboarding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -213,6 +285,405 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      onboarding_activity_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown | null
+          mentioned_users: string[] | null
+          new_value: string | null
+          old_value: string | null
+          project_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown | null
+          mentioned_users?: string[] | null
+          new_value?: string | null
+          old_value?: string | null
+          project_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown | null
+          mentioned_users?: string[] | null
+          new_value?: string | null
+          old_value?: string | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_activity_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_activity_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_onboarding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          edited_by: string | null
+          id: string
+          mentioned_users: string[] | null
+          parent_comment_id: string | null
+          project_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          edited_by?: string | null
+          id?: string
+          mentioned_users?: string[] | null
+          parent_comment_id?: string | null
+          project_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          edited_by?: string | null
+          id?: string
+          mentioned_users?: string[] | null
+          parent_comment_id?: string | null
+          project_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_comments_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_onboarding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_documents: {
+        Row: {
+          category: string
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          is_validated: boolean | null
+          mime_type: string | null
+          project_id: string
+          replaces_doc_id: string | null
+          uploaded_at: string
+          uploaded_by: string
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
+          version: number
+        }
+        Insert: {
+          category: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          is_validated?: boolean | null
+          mime_type?: string | null
+          project_id: string
+          replaces_doc_id?: string | null
+          uploaded_at?: string
+          uploaded_by: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          version?: number
+        }
+        Update: {
+          category?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          is_validated?: boolean | null
+          mime_type?: string | null
+          project_id?: string
+          replaces_doc_id?: string | null
+          uploaded_at?: string
+          uploaded_by?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_onboarding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_documents_replaces_doc_id_fkey"
+            columns: ["replaces_doc_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_documents_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_fields: {
+        Row: {
+          battery_capacity_kwh: number | null
+          battery_cost: number | null
+          battery_model: string | null
+          battery_serial: string | null
+          commissioning_date: string | null
+          created_at: string
+          id: string
+          inverter_capacity_kw: number | null
+          inverter_cost: number | null
+          inverter_model: string | null
+          inverter_serial: string | null
+          labor_cost: number | null
+          maintenance_agreement_term_years: number | null
+          maintenance_cost_annual: number | null
+          meter_serial: string | null
+          meter_type: string | null
+          panel_brand: string | null
+          panel_cost: number | null
+          panel_quantity: number | null
+          panel_size_wp: number | null
+          project_id: string
+          system_address: string | null
+          system_gps_lat: number | null
+          system_gps_lng: number | null
+          total_capex: number | null
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          battery_capacity_kwh?: number | null
+          battery_cost?: number | null
+          battery_model?: string | null
+          battery_serial?: string | null
+          commissioning_date?: string | null
+          created_at?: string
+          id?: string
+          inverter_capacity_kw?: number | null
+          inverter_cost?: number | null
+          inverter_model?: string | null
+          inverter_serial?: string | null
+          labor_cost?: number | null
+          maintenance_agreement_term_years?: number | null
+          maintenance_cost_annual?: number | null
+          meter_serial?: string | null
+          meter_type?: string | null
+          panel_brand?: string | null
+          panel_cost?: number | null
+          panel_quantity?: number | null
+          panel_size_wp?: number | null
+          project_id: string
+          system_address?: string | null
+          system_gps_lat?: number | null
+          system_gps_lng?: number | null
+          total_capex?: number | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          battery_capacity_kwh?: number | null
+          battery_cost?: number | null
+          battery_model?: string | null
+          battery_serial?: string | null
+          commissioning_date?: string | null
+          created_at?: string
+          id?: string
+          inverter_capacity_kw?: number | null
+          inverter_cost?: number | null
+          inverter_model?: string | null
+          inverter_serial?: string | null
+          labor_cost?: number | null
+          maintenance_agreement_term_years?: number | null
+          maintenance_cost_annual?: number | null
+          meter_serial?: string | null
+          meter_type?: string | null
+          panel_brand?: string | null
+          panel_cost?: number | null
+          panel_quantity?: number | null
+          panel_size_wp?: number | null
+          project_id?: string
+          system_address?: string | null
+          system_gps_lat?: number | null
+          system_gps_lng?: number | null
+          total_capex?: number | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "project_onboarding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_fields_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_tasks: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string | null
+          category: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          project_id: string
+          related_doc_category: string | null
+          related_field: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          category?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          project_id: string
+          related_doc_category?: string | null
+          related_field?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          category?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          project_id?: string
+          related_doc_category?: string | null
+          related_field?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_tasks_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_onboarding"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -302,6 +773,83 @@ export type Database = {
             columns: ["status_changed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_onboarding: {
+        Row: {
+          assigned_epc_id: string | null
+          audit_ready: boolean
+          audit_ready_marked_at: string | null
+          audit_ready_marked_by: string | null
+          created_at: string
+          data_access_verified: boolean
+          data_access_verified_at: string | null
+          id: string
+          last_modified_by: string | null
+          onboarding_complete: boolean
+          onboarding_completed_at: string | null
+          proposal_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_epc_id?: string | null
+          audit_ready?: boolean
+          audit_ready_marked_at?: string | null
+          audit_ready_marked_by?: string | null
+          created_at?: string
+          data_access_verified?: boolean
+          data_access_verified_at?: string | null
+          id?: string
+          last_modified_by?: string | null
+          onboarding_complete?: boolean
+          onboarding_completed_at?: string | null
+          proposal_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_epc_id?: string | null
+          audit_ready?: boolean
+          audit_ready_marked_at?: string | null
+          audit_ready_marked_by?: string | null
+          created_at?: string
+          data_access_verified?: boolean
+          data_access_verified_at?: string | null
+          id?: string
+          last_modified_by?: string | null
+          onboarding_complete?: boolean
+          onboarding_completed_at?: string | null
+          proposal_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_onboarding_assigned_epc_id_fkey"
+            columns: ["assigned_epc_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_onboarding_audit_ready_marked_by_fkey"
+            columns: ["audit_ready_marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_onboarding_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_onboarding_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -729,6 +1277,15 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string
       }
+      get_project_step_status: {
+        Args: { proposal_id_param: string }
+        Returns: {
+          audit_ready_status: string
+          cession_status: string
+          data_access_status: string
+          onboarding_status: string
+        }[]
+      }
       get_proposal_by_token: {
         Args: { token_param: string }
         Returns: {
@@ -882,6 +1439,10 @@ export type Database = {
           client_reference_id: string
           proposal_id: string
         }[]
+      }
+      validate_onboarding_completion: {
+        Args: { project_id_param: string }
+        Returns: boolean
       }
       validate_token_direct: {
         Args: { token_param: string }
