@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import type { OnboardingFields } from "@/types/onboarding";
+import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
+import type { OnboardingFields, OnboardingDocument } from "@/types/onboarding";
 
 interface OnboardingTabProps {
   projectId: string;
@@ -19,6 +20,30 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<OnboardingFields>>(fields || {});
+  const [documents, setDocuments] = useState<OnboardingDocument[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [projectId]);
+
+  const fetchDocuments = async () => {
+    setLoadingDocs(true);
+    try {
+      const { data, error } = await supabase
+        .from('onboarding_documents')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
 
   const handleInputChange = (field: keyof OnboardingFields, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -378,6 +403,179 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Battery Details */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Battery Details (Optional)</CardTitle>
+              <CardDescription>Information about battery storage if installed</CardDescription>
+            </div>
+            {formData.battery_model ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="battery_model">Model</Label>
+              <Input
+                id="battery_model"
+                value={formData.battery_model || ''}
+                onChange={(e) => handleInputChange('battery_model', e.target.value)}
+                placeholder="Tesla Powerwall 2"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="battery_capacity_kwh">Capacity (kWh)</Label>
+              <Input
+                id="battery_capacity_kwh"
+                type="number"
+                step="0.01"
+                value={formData.battery_capacity_kwh || ''}
+                onChange={(e) => handleInputChange('battery_capacity_kwh', parseFloat(e.target.value))}
+                placeholder="13.5"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="battery_serial">Serial Number</Label>
+              <Input
+                id="battery_serial"
+                value={formData.battery_serial || ''}
+                onChange={(e) => handleInputChange('battery_serial', e.target.value)}
+                placeholder="BAT123456"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="battery_cost">Cost (R)</Label>
+              <Input
+                id="battery_cost"
+                type="number"
+                step="0.01"
+                value={formData.battery_cost || ''}
+                onChange={(e) => handleInputChange('battery_cost', parseFloat(e.target.value))}
+                placeholder="80000"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Metering Details */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Metering Details</CardTitle>
+              <CardDescription>Information about energy metering equipment</CardDescription>
+            </div>
+            {getSectionStatus(['meter_type', 'meter_serial']) ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="meter_type">Meter Type *</Label>
+              <Select
+                value={formData.meter_type || ''}
+                onValueChange={(value) => handleInputChange('meter_type', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select meter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="discrete">Discrete Meter</SelectItem>
+                  <SelectItem value="inverter_integrated">Inverter Integrated</SelectItem>
+                  <SelectItem value="smart_meter">Smart Meter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meter_serial">Serial Number *</Label>
+              <Input
+                id="meter_serial"
+                value={formData.meter_serial || ''}
+                onChange={(e) => handleInputChange('meter_serial', e.target.value)}
+                placeholder="MTR123456"
+              />
+            </div>
+          </div>
+
+          {formData.meter_type === 'discrete' && (
+            <OnboardingFileUpload
+              projectId={projectId}
+              category="calibration_cert"
+              documents={documents}
+              onUploadComplete={fetchDocuments}
+              label="Calibration Certificate"
+              required
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* O&M Agreement */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Operations & Maintenance</CardTitle>
+              <CardDescription>Maintenance agreement details</CardDescription>
+            </div>
+            {getSectionStatus(['maintenance_agreement_term_years']) ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="maintenance_agreement_term_years">Agreement Term (Years)</Label>
+              <Input
+                id="maintenance_agreement_term_years"
+                type="number"
+                value={formData.maintenance_agreement_term_years || ''}
+                onChange={(e) => handleInputChange('maintenance_agreement_term_years', parseInt(e.target.value))}
+                placeholder="5"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maintenance_cost_annual">Annual Cost (R)</Label>
+              <Input
+                id="maintenance_cost_annual"
+                type="number"
+                step="0.01"
+                value={formData.maintenance_cost_annual || ''}
+                onChange={(e) => handleInputChange('maintenance_cost_annual', parseFloat(e.target.value))}
+                placeholder="25000"
+              />
+            </div>
+          </div>
+
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="om_agreement"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="O&M Agreement"
+          />
         </CardContent>
       </Card>
 
