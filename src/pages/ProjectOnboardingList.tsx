@@ -29,8 +29,8 @@ export default function ProjectOnboardingList() {
     try {
       setIsLoading(true);
 
-      // Fetch projects with signed proposals
-      const { data: onboardingData, error } = await supabase
+      // Build base query
+      let query = supabase
         .from('project_onboarding')
         .select(`
           id,
@@ -49,8 +49,29 @@ export default function ProjectOnboardingList() {
             content
           )
         `)
-        .not('proposals.signed_at', 'is', null)
-        .order('updated_at', { ascending: false });
+        .not('proposals.signed_at', 'is', null);
+
+      // Apply role-based filtering
+      if (userRole === 'agent') {
+        query = query.eq('proposals.agent_id', user?.id);
+      } else if (userRole === 'client') {
+        // For clients, filter by either client_id or client_reference_id
+        // First, get client record if exists
+        const { data: clientRecord } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('user_id', user?.id)
+          .single();
+
+        if (clientRecord) {
+          query = query.or(`client_id.eq.${user?.id},client_reference_id.eq.${clientRecord.id}`, { foreignTable: 'proposals' });
+        } else {
+          query = query.eq('proposals.client_id', user?.id);
+        }
+      }
+      // Admin sees all projects (no filter needed)
+
+      const { data: onboardingData, error } = await query.order('updated_at', { ascending: false });
 
       if (error) throw error;
 
@@ -108,9 +129,13 @@ export default function ProjectOnboardingList() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Project Onboarding</h1>
+              <h1 className="text-3xl font-bold text-foreground">
+                {userRole === 'client' ? 'My Projects' : 'Project Onboarding'}
+              </h1>
               <p className="text-muted-foreground mt-2">
-                Complete onboarding for signed proposals
+                {userRole === 'client' 
+                  ? 'Track the onboarding progress of your solar projects'
+                  : 'Complete onboarding for signed proposals'}
               </p>
             </div>
           </div>

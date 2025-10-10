@@ -70,7 +70,7 @@ export function DashboardSidebar() {
       name: "Project Onboarding",
       href: "/onboarding",
       icon: ClipboardCheck,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "client"]
     },
     {
       name: "Agent Management",
