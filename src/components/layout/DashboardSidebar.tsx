@@ -9,7 +9,8 @@ import {
   LogOut,
   User,
   UserCog,
-  FileSignature
+  FileSignature,
+  ClipboardCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -63,6 +64,12 @@ export function DashboardSidebar() {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,
+      roles: ["admin", "agent"]
+    },
+    {
+      name: "Project Onboarding",
+      href: "/onboarding",
+      icon: ClipboardCheck,
       roles: ["admin", "agent"]
     },
     {
