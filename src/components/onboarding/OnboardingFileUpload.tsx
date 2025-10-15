@@ -45,9 +45,10 @@ export function OnboardingFileUpload({
         });
 
       if (error) {
+        console.error('Database insert error:', error);
         toast({
           title: "Error",
-          description: "Failed to save document record",
+          description: `Failed to save document record${error.code ? ` (${error.code})` : ''}: ${error.message}`,
           variant: "destructive",
         });
       } else {
