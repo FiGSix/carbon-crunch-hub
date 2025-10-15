@@ -444,7 +444,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                       <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>This is normally the Inverter directly, in which case you select SSEG (this means your inverter is on the SSEG list published by the government). Only select Discrete Meter if you have a dedicated, separate meter which measures how much power the system produces.</p>
+                      <p>If we are using your inverter only select SSEG. Only choose Dedicated if you have a dedicated energy meter to measuring how much power your solar system produces. The SSEG usually refers to the inverter itself, so select SSEG, which also means your inverter shall be listed on the national or provincial government's official SSEG list.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
