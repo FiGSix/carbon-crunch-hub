@@ -540,7 +540,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="battery_cost">Cost (R)</Label>
+              <Label htmlFor="battery_cost">Total Cost Installed incl. VAT & Labour for Batteries (Rands)</Label>
               <Input
                 id="battery_cost"
                 type="number"
