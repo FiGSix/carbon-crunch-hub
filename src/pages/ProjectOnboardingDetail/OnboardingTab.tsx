@@ -607,7 +607,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="panel_cost">Total Cost incl. Labor installed for Solar Panels(Rands)</Label>
+              <Label htmlFor="panel_cost">Total Cost Installed incl. VAT & Labour for Solar Panels (Rands)</Label>
               <Input
                 id="panel_cost"
                 type="number"
