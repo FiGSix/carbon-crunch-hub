@@ -224,7 +224,19 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="commissioning_date">Commissioning Date *</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="commissioning_date">Commissioning or Installation Date *</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>The Commissioning or installation date is not necessarily the day the system was physically installed, but rather the day the system first produced solar electricity.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="commissioning_date"
                 type="date"
