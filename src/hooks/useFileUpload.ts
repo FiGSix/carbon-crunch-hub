@@ -8,6 +8,7 @@ interface UseFileUploadOptions {
   bucket: string;
   maxSizeInMB?: number;
   allowedTypes?: string[];
+  folderPrefix?: string; // e.g., projectId for project-scoped uploads
   onSuccess?: (url: string, userId: string) => void;
   onError?: (error: string) => void;
 }
@@ -16,6 +17,7 @@ export function useFileUpload({
   bucket,
   maxSizeInMB = 5,
   allowedTypes = ['image/*'],
+  folderPrefix,
   onSuccess,
   onError
 }: UseFileUploadOptions) {
@@ -25,6 +27,19 @@ export function useFileUpload({
 
   const uploadFile = async (file: File, fileName?: string) => {
     if (!file || !user) return null;
+
+    // Preflight auth check to prevent anonymous uploads
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      const error = 'You are not authenticated. Please sign in and try again.';
+      toast({
+        title: "Authentication Required",
+        description: error,
+        variant: "destructive",
+      });
+      onError?.(error);
+      return null;
+    }
 
     // Validate file type
     if (!allowedTypes.some(type => file.type.match(type.replace('*', '.*')))) {
@@ -54,7 +69,12 @@ export function useFileUpload({
 
     try {
       const fileExt = file.name.split('.').pop();
-      const finalFileName = fileName || `${user.id}/${Date.now()}.${fileExt}`;
+      // Use project-first folder structure if folderPrefix provided
+      const finalFileName = fileName || (
+        folderPrefix 
+          ? `${folderPrefix}/${user.id}/${Date.now()}.${fileExt}`
+          : `${user.id}/${Date.now()}.${fileExt}`
+      );
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
@@ -72,9 +92,12 @@ export function useFileUpload({
       return publicUrl;
     } catch (error: any) {
       const errorMessage = error.message || 'Upload failed';
+      const isRLSError = errorMessage.includes('row-level security') || errorMessage.includes('policy');
       toast({
-        title: "Upload failed",
-        description: errorMessage,
+        title: isRLSError ? "Storage upload failed - Permission denied" : "Upload failed",
+        description: isRLSError 
+          ? "You don't have permission to upload to this location. Please contact support."
+          : errorMessage,
         variant: "destructive",
       });
       onError?.(errorMessage);

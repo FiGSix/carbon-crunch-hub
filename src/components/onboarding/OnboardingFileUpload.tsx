@@ -32,6 +32,7 @@ export function OnboardingFileUpload({
     bucket: 'onboarding-documents',
     maxSizeInMB: 10,
     allowedTypes: ['application/pdf', 'image/*'],
+    folderPrefix: projectId, // Use project-first folder structure
     onSuccess: async (url, userId) => {
       // Validate userId is present
       if (!userId) {
