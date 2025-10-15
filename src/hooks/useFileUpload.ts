@@ -8,7 +8,7 @@ interface UseFileUploadOptions {
   bucket: string;
   maxSizeInMB?: number;
   allowedTypes?: string[];
-  onSuccess?: (url: string) => void;
+  onSuccess?: (url: string, userId: string) => void;
   onError?: (error: string) => void;
 }
 
@@ -67,7 +67,7 @@ export function useFileUpload({
         .getPublicUrl(finalFileName);
 
       const publicUrl = data.publicUrl;
-      onSuccess?.(publicUrl);
+      onSuccess?.(publicUrl, user.id);
       
       return publicUrl;
     } catch (error: any) {

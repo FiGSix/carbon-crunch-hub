@@ -32,7 +32,17 @@ export function OnboardingFileUpload({
     bucket: 'onboarding-documents',
     maxSizeInMB: 10,
     allowedTypes: ['application/pdf', 'image/*'],
-    onSuccess: async (url) => {
+    onSuccess: async (url, userId) => {
+      // Validate userId is present
+      if (!userId) {
+        toast({
+          title: "Error",
+          description: "Authentication error: User ID not available",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Insert document record
       const { error } = await supabase
         .from('onboarding_documents')
@@ -41,7 +51,7 @@ export function OnboardingFileUpload({
           category,
           file_name: url.split('/').pop() || 'document',
           file_url: url,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id || '',
+          uploaded_by: userId,
         });
 
       if (error) {
