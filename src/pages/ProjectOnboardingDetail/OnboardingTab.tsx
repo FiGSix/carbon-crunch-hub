@@ -669,6 +669,59 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         </CardContent>
       </Card>
 
+      {/* Project Documentation */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Project Documentation</CardTitle>
+              <CardDescription>Upload required project documents</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="coc"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="Certificate of Compliance (CoC)"
+          />
+
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="invoice"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="Invoice 1"
+          />
+
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="invoice"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="Invoice 2"
+          />
+
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="invoice"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="Invoice 3"
+          />
+
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="invoice"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="Invoice 4"
+          />
+        </CardContent>
+      </Card>
+
       {/* O&M Agreement */}
       <Card>
         <CardHeader>
