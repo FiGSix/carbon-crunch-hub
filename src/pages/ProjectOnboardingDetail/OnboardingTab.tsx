@@ -489,7 +489,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Battery Details (Optional)</CardTitle>
+              <CardTitle>Battery Details (if you have a battery)</CardTitle>
               <CardDescription>Information about battery storage if installed</CardDescription>
             </div>
             {formData.battery_model ? (
@@ -502,6 +502,33 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="battery_brand">Battery Brand</Label>
+              <Select
+                value={formData.battery_brand || ''}
+                onValueChange={(value) => handleInputChange('battery_brand', value)}
+              >
+                <SelectTrigger id="battery_brand">
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alpha-ESS">Alpha-ESS</SelectItem>
+                  <SelectItem value="Dyness">Dyness</SelectItem>
+                  <SelectItem value="Fox ESS">Fox ESS</SelectItem>
+                  <SelectItem value="Freedom Won">Freedom Won</SelectItem>
+                  <SelectItem value="Greenrich">Greenrich</SelectItem>
+                  <SelectItem value="Hubble Energy">Hubble Energy</SelectItem>
+                  <SelectItem value="i-G3N">i-G3N</SelectItem>
+                  <SelectItem value="Pylontech">Pylontech</SelectItem>
+                  <SelectItem value="Revov">Revov</SelectItem>
+                  <SelectItem value="Solar MD">Solar MD</SelectItem>
+                  <SelectItem value="Sunsynk">Sunsynk</SelectItem>
+                  <SelectItem value="Volta">Volta</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="battery_model">Model</Label>
               <Input
                 id="battery_model"
@@ -512,7 +539,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="battery_capacity_kwh">Capacity (kWh)</Label>
+              <Label htmlFor="battery_capacity_kwh">Total Battery Capacity (kWh)</Label>
               <Input
                 id="battery_capacity_kwh"
                 type="number"
@@ -520,16 +547,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 value={formData.battery_capacity_kwh || ''}
                 onChange={(e) => handleInputChange('battery_capacity_kwh', parseFloat(e.target.value))}
                 placeholder="13.5"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_serial">Serial Number</Label>
-              <Input
-                id="battery_serial"
-                value={formData.battery_serial || ''}
-                onChange={(e) => handleInputChange('battery_serial', e.target.value)}
-                placeholder="BAT123456"
               />
             </div>
 

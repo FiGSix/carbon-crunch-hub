@@ -37,6 +37,7 @@ export interface OnboardingFields {
   data_collector_present: string | null;
   data_collector_serial: string | null;
   // Battery Details
+  battery_brand: string | null;
   battery_model: string | null;
   battery_capacity_kwh: number | null;
   battery_serial: string | null;
