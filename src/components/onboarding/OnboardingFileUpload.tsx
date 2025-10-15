@@ -57,9 +57,12 @@ export function OnboardingFileUpload({
 
       if (error) {
         console.error('Database insert error:', error);
+        const isRLSError = error.message?.includes('row-level security') || error.message?.includes('policy');
         toast({
-          title: "Error",
-          description: `Failed to save document record${error.code ? ` (${error.code})` : ''}: ${error.message}`,
+          title: isRLSError ? "Database insert failed - Permission denied" : "Error",
+          description: isRLSError
+            ? "Failed to save document record due to permissions. Please contact support."
+            : `Failed to save document record${error.code ? ` (${error.code})` : ''}: ${error.message}`,
           variant: "destructive",
         });
       } else {
