@@ -34,6 +34,8 @@ export interface OnboardingFields {
   inverter_capacity_kw: number | null;
   inverter_serial: string | null;
   inverter_cost: number | null;
+  data_collector_present: string | null;
+  data_collector_serial: string | null;
   // Battery Details
   battery_model: string | null;
   battery_capacity_kwh: number | null;

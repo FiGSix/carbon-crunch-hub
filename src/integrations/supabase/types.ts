@@ -504,6 +504,8 @@ export type Database = {
           commissioning_date: string | null
           connection_type: string | null
           created_at: string
+          data_collector_present: string | null
+          data_collector_serial: string | null
           id: string
           inverter_brand: string | null
           inverter_capacity_kw: number | null
@@ -540,6 +542,8 @@ export type Database = {
           commissioning_date?: string | null
           connection_type?: string | null
           created_at?: string
+          data_collector_present?: string | null
+          data_collector_serial?: string | null
           id?: string
           inverter_brand?: string | null
           inverter_capacity_kw?: number | null
@@ -576,6 +580,8 @@ export type Database = {
           commissioning_date?: string | null
           connection_type?: string | null
           created_at?: string
+          data_collector_present?: string | null
+          data_collector_serial?: string | null
           id?: string
           inverter_brand?: string | null
           inverter_capacity_kw?: number | null
