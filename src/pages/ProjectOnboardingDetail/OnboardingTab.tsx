@@ -458,7 +458,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="SSEG">SSEG</SelectItem>
-                  <SelectItem value="Discrete">Discrete</SelectItem>
+                  <SelectItem value="Discrete">Dedicated Meter</SelectItem>
                 </SelectContent>
               </Select>
             </div>
