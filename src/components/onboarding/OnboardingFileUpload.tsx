@@ -134,25 +134,29 @@ export function OnboardingFileUpload({
         onDrop={handleDrop}
       >
         <CardContent className="p-6">
-          <div className="flex flex-col items-center justify-center gap-3 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 text-center max-w-sm mx-auto">
             <Upload className="h-8 w-8 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">
                 Drag and drop your file here, or
               </p>
-              <label htmlFor={`file-${category}`} className="cursor-pointer">
-                <span className="text-sm text-primary hover:underline">
-                  browse to upload
-                </span>
-                <input
-                  id={`file-${category}`}
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,image/*"
-                  onChange={handleFileSelect}
-                  disabled={uploading}
-                />
-              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById(`file-${category}`)?.click()}
+                disabled={uploading}
+                className="mt-2"
+              >
+                Browse to Upload
+              </Button>
+              <input
+                id={`file-${category}`}
+                type="file"
+                className="hidden"
+                accept=".pdf,image/*"
+                onChange={handleFileSelect}
+                disabled={uploading}
+              />
             </div>
             {uploading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
