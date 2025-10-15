@@ -497,6 +497,7 @@ export type Database = {
       onboarding_fields: {
         Row: {
           alternative_power_source: string | null
+          battery_brand: string | null
           battery_capacity_kwh: number | null
           battery_cost: number | null
           battery_model: string | null
@@ -535,6 +536,7 @@ export type Database = {
         }
         Insert: {
           alternative_power_source?: string | null
+          battery_brand?: string | null
           battery_capacity_kwh?: number | null
           battery_cost?: number | null
           battery_model?: string | null
@@ -573,6 +575,7 @@ export type Database = {
         }
         Update: {
           alternative_power_source?: string | null
+          battery_brand?: string | null
           battery_capacity_kwh?: number | null
           battery_cost?: number | null
           battery_model?: string | null
