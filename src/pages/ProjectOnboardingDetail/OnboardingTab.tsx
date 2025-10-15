@@ -28,6 +28,18 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
     fetchDocuments();
   }, [projectId]);
 
+  // Auto-calculate total_capex from component costs
+  useEffect(() => {
+    const inverterCost = formData.inverter_cost || 0;
+    const batteryCost = formData.battery_cost || 0;
+    const panelCost = formData.panel_cost || 0;
+    const calculatedTotal = inverterCost + batteryCost + panelCost;
+    
+    if (calculatedTotal > 0) {
+      setFormData(prev => ({ ...prev, total_capex: calculatedTotal }));
+    }
+  }, [formData.inverter_cost, formData.battery_cost, formData.panel_cost]);
+
   const fetchDocuments = async () => {
     setLoadingDocs(true);
     try {
@@ -639,27 +651,19 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="total_capex">Total CAPEX (R) *</Label>
+              <Label htmlFor="total_capex">Total Cost Installed incl. VAT & Labour (Rands)</Label>
               <Input
                 id="total_capex"
                 type="number"
                 step="0.01"
                 value={formData.total_capex || ''}
-                onChange={(e) => handleInputChange('total_capex', parseFloat(e.target.value))}
-                placeholder="500000"
+                readOnly
+                className="bg-muted cursor-not-allowed"
+                placeholder="Auto-calculated from component costs"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="labor_cost">Labor Cost (R)</Label>
-              <Input
-                id="labor_cost"
-                type="number"
-                step="0.01"
-                value={formData.labor_cost || ''}
-                onChange={(e) => handleInputChange('labor_cost', parseFloat(e.target.value))}
-                placeholder="100000"
-              />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from Inverter + Battery + Panel costs
+              </p>
             </div>
           </div>
         </CardContent>
