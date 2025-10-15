@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, AlertCircle, Info, MapPin } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { OnboardingFields, OnboardingDocument } from "@/types/onboarding";
@@ -23,7 +23,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
   const [formData, setFormData] = useState<Partial<OnboardingFields>>(fields || {});
   const [documents, setDocuments] = useState<OnboardingDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
-  const [isGeocoding, setIsGeocoding] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -61,65 +60,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
 
   const handleInputChange = (field: keyof OnboardingFields, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleGeocodeAddress = async () => {
-    if (!formData.system_address) {
-      toast({
-        title: "No address",
-        description: "Please enter an address first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      toast({
-        title: "Configuration Error",
-        description: "Google Maps API key not configured",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGeocoding(true);
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(formData.system_address)}&key=${apiKey}`
-      );
-      
-      const data = await response.json();
-      
-      if (data.status === 'OK' && data.results[0]) {
-        const location = data.results[0].geometry.location;
-        setFormData(prev => ({
-          ...prev,
-          system_gps_lat: location.lat,
-          system_gps_lng: location.lng,
-        }));
-        
-        toast({
-          title: "Success",
-          description: "GPS coordinates calculated successfully",
-        });
-      } else {
-        toast({
-          title: "Geocoding failed",
-          description: "Could not find coordinates for this address",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to calculate GPS coordinates",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeocoding(false);
-    }
   };
 
   const handleSaveDraft = async () => {
@@ -317,54 +257,28 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               />
             </div>
 
-            <div className="col-span-2">
-              <div className="flex items-center gap-2 mb-2">
-                <Label>GPS Coordinates</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGeocodeAddress}
-                  disabled={!formData.system_address || isGeocoding}
-                >
-                  {isGeocoding ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <MapPin className="mr-2 h-4 w-4" />
-                      Calculate from Address
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="system_gps_lat">Latitude</Label>
-                  <Input
-                    id="system_gps_lat"
-                    type="number"
-                    step="0.000001"
-                    value={formData.system_gps_lat || ''}
-                    onChange={(e) => handleInputChange('system_gps_lat', parseFloat(e.target.value))}
-                    placeholder="-26.2041"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="system_gps_lat">GPS Latitude</Label>
+              <Input
+                id="system_gps_lat"
+                type="number"
+                step="0.000001"
+                value={formData.system_gps_lat || ''}
+                onChange={(e) => handleInputChange('system_gps_lat', parseFloat(e.target.value))}
+                placeholder="-26.2041"
+              />
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="system_gps_lng">Longitude</Label>
-                  <Input
-                    id="system_gps_lng"
-                    type="number"
-                    step="0.000001"
-                    value={formData.system_gps_lng || ''}
-                    onChange={(e) => handleInputChange('system_gps_lng', parseFloat(e.target.value))}
-                    placeholder="28.0473"
-                  />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="system_gps_lng">GPS Longitude</Label>
+              <Input
+                id="system_gps_lng"
+                type="number"
+                step="0.000001"
+                value={formData.system_gps_lng || ''}
+                onChange={(e) => handleInputChange('system_gps_lng', parseFloat(e.target.value))}
+                placeholder="28.0473"
+              />
             </div>
 
             <div className="space-y-2">
