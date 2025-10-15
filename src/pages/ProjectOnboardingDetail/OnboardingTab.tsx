@@ -330,16 +330,13 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
           </div>
 
-          {formData.meter_type === 'Discrete' && (
-            <OnboardingFileUpload
-              projectId={projectId}
-              category="calibration_cert"
-              documents={documents}
-              onUploadComplete={fetchDocuments}
-              label="Calibration Certificate for Meter (Filename, .pdf / .jpg)"
-              required
-            />
-          )}
+          <OnboardingFileUpload
+            projectId={projectId}
+            category="calibration_cert"
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+            label="Meter Calibration Certificate for Meter (Filename, .pdf / .jpg)"
+          />
         </CardContent>
       </Card>
 
