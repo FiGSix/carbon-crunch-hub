@@ -509,6 +509,7 @@ export type Database = {
           inverter_capacity_kw: number | null
           inverter_cost: number | null
           inverter_model: string | null
+          inverter_quantity: number | null
           inverter_serial: string | null
           labor_cost: number | null
           maintenance_agreement_term_years: number | null
@@ -544,6 +545,7 @@ export type Database = {
           inverter_capacity_kw?: number | null
           inverter_cost?: number | null
           inverter_model?: string | null
+          inverter_quantity?: number | null
           inverter_serial?: string | null
           labor_cost?: number | null
           maintenance_agreement_term_years?: number | null
@@ -579,6 +581,7 @@ export type Database = {
           inverter_capacity_kw?: number | null
           inverter_cost?: number | null
           inverter_model?: string | null
+          inverter_quantity?: number | null
           inverter_serial?: string | null
           labor_cost?: number | null
           maintenance_agreement_term_years?: number | null

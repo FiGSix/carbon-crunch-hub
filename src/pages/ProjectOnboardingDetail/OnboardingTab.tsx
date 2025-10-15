@@ -386,6 +386,17 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="inverter_quantity">Number of Inverters</Label>
+              <Input
+                id="inverter_quantity"
+                type="number"
+                value={formData.inverter_quantity || ''}
+                onChange={(e) => handleInputChange('inverter_quantity', parseInt(e.target.value))}
+                placeholder="1"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="inverter_capacity_kw">Capacity (kW) *</Label>
               <Input
                 id="inverter_capacity_kw"
