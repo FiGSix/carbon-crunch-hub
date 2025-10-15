@@ -188,26 +188,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
     try {
       setIsSaving(true);
 
-      // Validate required fields
-      const requiredFields = [
-        'system_address',
-        'commissioning_date',
-        'inverter_model',
-        'inverter_serial',
-        'total_capex'
-      ];
-
-      const missingFields = requiredFields.filter(field => !formData[field as keyof OnboardingFields]);
-
-      if (missingFields.length > 0) {
-        toast({
-          title: "Validation Failed",
-          description: `Missing required fields: ${missingFields.join(', ')}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Save fields
       const { error: fieldsError } = await supabase
         .from('onboarding_fields')
@@ -315,7 +295,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="system_address">System Address *</Label>
+              <Label htmlFor="system_address">System Address</Label>
               <Input
                 id="system_address"
                 value={formData.system_address || ''}
@@ -326,7 +306,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label htmlFor="commissioning_date">Commissioning or Installation Date *</Label>
+                <Label htmlFor="commissioning_date">Commissioning or Installation Date</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -540,7 +520,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inverter_model">Model *</Label>
+              <Label htmlFor="inverter_model">Model</Label>
               <Input
                 id="inverter_model"
                 value={formData.inverter_model || ''}
@@ -561,7 +541,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inverter_capacity_kw">Capacity (kW) *</Label>
+              <Label htmlFor="inverter_capacity_kw">Capacity (kW)</Label>
               <Input
                 id="inverter_capacity_kw"
                 type="number"
@@ -573,7 +553,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inverter_serial">Serial Number *</Label>
+              <Label htmlFor="inverter_serial">Serial Number</Label>
               <Input
                 id="inverter_serial"
                 value={formData.inverter_serial || ''}
