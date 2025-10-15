@@ -507,6 +507,7 @@ export type Database = {
           created_at: string
           data_collector_present: string | null
           data_collector_serial: string | null
+          has_maintenance_agreement: boolean | null
           id: string
           installer_company_name: string | null
           installer_email: string | null
@@ -550,6 +551,7 @@ export type Database = {
           created_at?: string
           data_collector_present?: string | null
           data_collector_serial?: string | null
+          has_maintenance_agreement?: boolean | null
           id?: string
           installer_company_name?: string | null
           installer_email?: string | null
@@ -593,6 +595,7 @@ export type Database = {
           created_at?: string
           data_collector_present?: string | null
           data_collector_serial?: string | null
+          has_maintenance_agreement?: boolean | null
           id?: string
           installer_company_name?: string | null
           installer_email?: string | null

@@ -875,38 +875,70 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="maintenance_agreement_term_years">Agreement Term (Years)</Label>
-              <Input
-                id="maintenance_agreement_term_years"
-                type="number"
-                value={formData.maintenance_agreement_term_years || ''}
-                onChange={(e) => handleInputChange('maintenance_agreement_term_years', parseInt(e.target.value))}
-                placeholder="5"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="maintenance_cost_annual">Annual Cost (R)</Label>
-              <Input
-                id="maintenance_cost_annual"
-                type="number"
-                step="0.01"
-                value={formData.maintenance_cost_annual || ''}
-                onChange={(e) => handleInputChange('maintenance_cost_annual', parseFloat(e.target.value))}
-                placeholder="25000"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="has_maintenance_agreement">Do you have a maintenance agreement?</Label>
+            <Select
+              value={formData.has_maintenance_agreement === null || formData.has_maintenance_agreement === undefined ? '' : String(formData.has_maintenance_agreement)}
+              onValueChange={(value) => handleInputChange('has_maintenance_agreement', value === 'true')}
+            >
+              <SelectTrigger id="has_maintenance_agreement">
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <OnboardingFileUpload
-            projectId={projectId}
-            category="om_agreement"
-            documents={documents}
-            onUploadComplete={fetchDocuments}
-            label="O&M Agreement"
-          />
+          {formData.has_maintenance_agreement !== null && formData.has_maintenance_agreement !== undefined && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance_agreement_term_years">
+                    Agreement Term (Years)
+                    {formData.has_maintenance_agreement && <span className="text-destructive ml-1">*</span>}
+                  </Label>
+                  <Input
+                    id="maintenance_agreement_term_years"
+                    type="number"
+                    value={formData.maintenance_agreement_term_years || ''}
+                    onChange={(e) => handleInputChange('maintenance_agreement_term_years', parseInt(e.target.value))}
+                    placeholder="5"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance_cost_annual">
+                    Annual Cost (R)
+                    {formData.has_maintenance_agreement && <span className="text-destructive ml-1">*</span>}
+                  </Label>
+                  <Input
+                    id="maintenance_cost_annual"
+                    type="number"
+                    step="0.01"
+                    value={formData.maintenance_cost_annual || ''}
+                    onChange={(e) => handleInputChange('maintenance_cost_annual', parseFloat(e.target.value))}
+                    placeholder="25000"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>
+                  O&M Agreement
+                  {formData.has_maintenance_agreement && <span className="text-destructive ml-1">*</span>}
+                </Label>
+                <OnboardingFileUpload
+                  projectId={projectId}
+                  category="om_agreement"
+                  documents={documents}
+                  onUploadComplete={fetchDocuments}
+                  label="O&M Agreement"
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

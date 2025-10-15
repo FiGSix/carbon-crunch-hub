@@ -58,6 +58,7 @@ export interface OnboardingFields {
   // Metering
   meter_serial: string | null;
   // O&M
+  has_maintenance_agreement: boolean | null;
   maintenance_agreement_term_years: number | null;
   maintenance_cost_annual: number | null;
   // Metadata
