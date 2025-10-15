@@ -492,7 +492,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               <CardTitle>Battery Details (if you have a battery)</CardTitle>
               <CardDescription>Information about battery storage if installed</CardDescription>
             </div>
-            {formData.battery_model ? (
+            {formData.battery_brand ? (
               <CheckCircle2 className="h-5 w-5 text-green-600" />
             ) : (
               <AlertCircle className="h-5 w-5 text-muted-foreground" />
@@ -526,16 +526,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_model">Model</Label>
-              <Input
-                id="battery_model"
-                value={formData.battery_model || ''}
-                onChange={(e) => handleInputChange('battery_model', e.target.value)}
-                placeholder="Tesla Powerwall 2"
-              />
             </div>
 
             <div className="space-y-2">
