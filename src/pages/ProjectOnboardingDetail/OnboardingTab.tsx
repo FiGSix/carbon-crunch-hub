@@ -378,11 +378,11 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                   <SelectItem value="Huawei">Huawei</SelectItem>
                   <SelectItem value="Lux">Lux</SelectItem>
                   <SelectItem value="Megarevo">Megarevo</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
                   <SelectItem value="Solis">Solis</SelectItem>
                   <SelectItem value="Sungrow">Sungrow</SelectItem>
                   <SelectItem value="SunSynk">SunSynk</SelectItem>
                   <SelectItem value="Victron">Victron</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
