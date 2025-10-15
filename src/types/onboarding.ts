@@ -27,6 +27,10 @@ export interface OnboardingFields {
   connection_type: string | null;
   alternative_power_source: string | null;
   meter_type: string | null;
+  // Installer Details
+  installer_id: string | null;
+  installer_company_name: string | null;
+  installer_email: string | null;
   // Inverter Details
   inverter_brand: string | null;
   inverter_model: string | null;

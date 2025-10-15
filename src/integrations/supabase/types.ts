@@ -508,6 +508,9 @@ export type Database = {
           data_collector_present: string | null
           data_collector_serial: string | null
           id: string
+          installer_company_name: string | null
+          installer_email: string | null
+          installer_id: string | null
           inverter_brand: string | null
           inverter_capacity_kw: number | null
           inverter_cost: number | null
@@ -548,6 +551,9 @@ export type Database = {
           data_collector_present?: string | null
           data_collector_serial?: string | null
           id?: string
+          installer_company_name?: string | null
+          installer_email?: string | null
+          installer_id?: string | null
           inverter_brand?: string | null
           inverter_capacity_kw?: number | null
           inverter_cost?: number | null
@@ -588,6 +594,9 @@ export type Database = {
           data_collector_present?: string | null
           data_collector_serial?: string | null
           id?: string
+          installer_company_name?: string | null
+          installer_email?: string | null
+          installer_id?: string | null
           inverter_brand?: string | null
           inverter_capacity_kw?: number | null
           inverter_cost?: number | null
@@ -616,6 +625,13 @@ export type Database = {
           validated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "onboarding_fields_installer_id_fkey"
+            columns: ["installer_id"]
+            isOneToOne: false
+            referencedRelation: "solar_installers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "onboarding_fields_project_id_fkey"
             columns: ["project_id"]
@@ -1088,6 +1104,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      solar_installers: {
+        Row: {
+          address: string | null
+          company_name: string
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_name: string
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       system_settings: {
         Row: {

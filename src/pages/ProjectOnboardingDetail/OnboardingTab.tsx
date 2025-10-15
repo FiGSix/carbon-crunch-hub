@@ -11,6 +11,12 @@ import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUplo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { OnboardingFields, OnboardingDocument } from "@/types/onboarding";
 
+interface SolarInstaller {
+  id: string;
+  company_name: string;
+  email: string | null;
+}
+
 interface OnboardingTabProps {
   projectId: string;
   fields: OnboardingFields | null;
@@ -23,9 +29,12 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
   const [formData, setFormData] = useState<Partial<OnboardingFields>>(fields || {});
   const [documents, setDocuments] = useState<OnboardingDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [installers, setInstallers] = useState<SolarInstaller[]>([]);
+  const [loadingInstallers, setLoadingInstallers] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
+    fetchInstallers();
   }, [projectId]);
 
   // Auto-calculate total_capex from component costs
@@ -55,6 +64,87 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
       console.error('Error fetching documents:', error);
     } finally {
       setLoadingDocs(false);
+    }
+  };
+
+  const fetchInstallers = async () => {
+    setLoadingInstallers(true);
+    try {
+      const { data, error } = await supabase
+        .from('solar_installers')
+        .select('id, company_name, email')
+        .order('company_name');
+
+      if (error) throw error;
+      setInstallers((data || []) as SolarInstaller[]);
+    } catch (error) {
+      console.error('Error fetching installers:', error);
+    } finally {
+      setLoadingInstallers(false);
+    }
+  };
+
+  const handleInstallerSelect = async (installerId: string) => {
+    if (installerId === 'new') {
+      // Clear installer data to allow manual entry
+      setFormData(prev => ({
+        ...prev,
+        installer_id: undefined,
+        installer_company_name: '',
+        installer_email: ''
+      }));
+      return;
+    }
+
+    const installer = installers.find(i => i.id === installerId);
+    if (installer) {
+      setFormData(prev => ({
+        ...prev,
+        installer_id: installerId,
+        installer_company_name: installer.company_name,
+        installer_email: installer.email || ''
+      }));
+    }
+  };
+
+  const handleCreateNewInstaller = async (companyName: string, email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('solar_installers')
+        .insert({
+          company_name: companyName,
+          email: email || null,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh installers list
+      await fetchInstallers();
+
+      // Update form data with new installer
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          installer_id: data.id,
+          installer_company_name: data.company_name,
+          installer_email: data.email || ''
+        }));
+
+        toast({
+          title: "Success",
+          description: "New installer added successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating installer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add new installer",
+        variant: "destructive",
+      });
     }
   };
 
@@ -255,6 +345,57 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 onChange={(e) => handleInputChange('commissioning_date', e.target.value)}
                 max={new Date().toISOString().split('T')[0]}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="installer_select">EPC or Solar Installer Company Name</Label>
+              <Select
+                value={formData.installer_id || 'new'}
+                onValueChange={handleInstallerSelect}
+              >
+                <SelectTrigger id="installer_select">
+                  <SelectValue placeholder="Select installer or add new" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">+ Add New Installer</SelectItem>
+                  {installers.map((installer) => (
+                    <SelectItem key={installer.id} value={installer.id}>
+                      {installer.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(!formData.installer_id || formData.installer_id === 'new') && (
+                <Input
+                  id="installer_company_name"
+                  value={formData.installer_company_name || ''}
+                  onChange={(e) => handleInputChange('installer_company_name', e.target.value)}
+                  placeholder="Enter company name"
+                  className="mt-2"
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="installer_email">EPC or Solar Installer Email Address</Label>
+              <Input
+                id="installer_email"
+                type="email"
+                value={formData.installer_email || ''}
+                onChange={(e) => handleInputChange('installer_email', e.target.value)}
+                placeholder="installer@example.com"
+              />
+              {(!formData.installer_id || formData.installer_id === 'new') && formData.installer_company_name && formData.installer_email && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCreateNewInstaller(formData.installer_company_name!, formData.installer_email!)}
+                  className="mt-2"
+                >
+                  Save as New Installer
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2">
