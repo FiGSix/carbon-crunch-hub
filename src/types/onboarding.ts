@@ -24,6 +24,9 @@ export interface OnboardingFields {
   system_gps_lat: number | null;
   system_gps_lng: number | null;
   commissioning_date: string | null;
+  connection_type: string | null;
+  alternative_power_source: string | null;
+  meter_type: string | null;
   // Inverter Details
   inverter_model: string | null;
   inverter_capacity_kw: number | null;
@@ -44,7 +47,6 @@ export interface OnboardingFields {
   labor_cost: number | null;
   // Metering
   meter_serial: string | null;
-  meter_type: string | null;
   // O&M
   maintenance_agreement_term_years: number | null;
   maintenance_cost_annual: number | null;

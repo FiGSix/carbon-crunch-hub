@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { OnboardingFields, OnboardingDocument } from "@/types/onboarding";
 
 interface OnboardingTabProps {
@@ -255,6 +256,67 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 onChange={(e) => handleInputChange('system_gps_lng', parseFloat(e.target.value))}
                 placeholder="28.0473"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="connection_type">Connection Type</Label>
+              <Select
+                value={formData.connection_type || ''}
+                onValueChange={(value) => handleInputChange('connection_type', value)}
+              >
+                <SelectTrigger id="connection_type">
+                  <SelectValue placeholder="Select connection type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Residential Agricultural">Residential Agricultural</SelectItem>
+                  <SelectItem value="Commercial">Commercial</SelectItem>
+                  <SelectItem value="Industrial">Industrial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="alternative_power_source">Alternative Power Source</Label>
+              <Select
+                value={formData.alternative_power_source || ''}
+                onValueChange={(value) => handleInputChange('alternative_power_source', value)}
+              >
+                <SelectTrigger id="alternative_power_source">
+                  <SelectValue placeholder="Select power source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Eskom">Eskom</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="meter_type">Meter Type</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>This is normally the Inverter directly, in which case you select SSEG (this means your inverter is on the SSEG list published by the government). Only select Discrete Meter if you have a dedicated, separate meter which measures how much power the system produces.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Select
+                value={formData.meter_type || ''}
+                onValueChange={(value) => handleInputChange('meter_type', value)}
+              >
+                <SelectTrigger id="meter_type">
+                  <SelectValue placeholder="Select meter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SSEG">SSEG</SelectItem>
+                  <SelectItem value="Discrete">Discrete</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -505,7 +567,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               <CardTitle>Metering Details</CardTitle>
               <CardDescription>Information about energy metering equipment</CardDescription>
             </div>
-            {getSectionStatus(['meter_type', 'meter_serial']) ? (
+            {getSectionStatus(['meter_serial']) ? (
               <CheckCircle2 className="h-5 w-5 text-green-600" />
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-600" />
@@ -514,23 +576,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="meter_type">Meter Type *</Label>
-              <Select
-                value={formData.meter_type || ''}
-                onValueChange={(value) => handleInputChange('meter_type', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select meter type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="discrete">Discrete Meter</SelectItem>
-                  <SelectItem value="inverter_integrated">Inverter Integrated</SelectItem>
-                  <SelectItem value="smart_meter">Smart Meter</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="meter_serial">Serial Number *</Label>
               <Input
@@ -542,7 +587,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
           </div>
 
-          {formData.meter_type === 'discrete' && (
+          {formData.meter_type === 'Discrete' && (
             <OnboardingFileUpload
               projectId={projectId}
               category="calibration_cert"

@@ -496,11 +496,13 @@ export type Database = {
       }
       onboarding_fields: {
         Row: {
+          alternative_power_source: string | null
           battery_capacity_kwh: number | null
           battery_cost: number | null
           battery_model: string | null
           battery_serial: string | null
           commissioning_date: string | null
+          connection_type: string | null
           created_at: string
           id: string
           inverter_capacity_kw: number | null
@@ -528,11 +530,13 @@ export type Database = {
           validated_by: string | null
         }
         Insert: {
+          alternative_power_source?: string | null
           battery_capacity_kwh?: number | null
           battery_cost?: number | null
           battery_model?: string | null
           battery_serial?: string | null
           commissioning_date?: string | null
+          connection_type?: string | null
           created_at?: string
           id?: string
           inverter_capacity_kw?: number | null
@@ -560,11 +564,13 @@ export type Database = {
           validated_by?: string | null
         }
         Update: {
+          alternative_power_source?: string | null
           battery_capacity_kwh?: number | null
           battery_cost?: number | null
           battery_model?: string | null
           battery_serial?: string | null
           commissioning_date?: string | null
+          connection_type?: string | null
           created_at?: string
           id?: string
           inverter_capacity_kw?: number | null
