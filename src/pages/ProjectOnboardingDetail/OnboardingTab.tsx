@@ -186,6 +186,33 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="system_name">System Name</Label>
+              <Input
+                id="system_name"
+                value={formData.system_name || ''}
+                onChange={(e) => handleInputChange('system_name', e.target.value)}
+                placeholder="e.g., Main Building Solar Array"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ownership_type">Ownership Type</Label>
+              <Select
+                value={formData.ownership_type || ''}
+                onValueChange={(value) => handleInputChange('ownership_type', value)}
+              >
+                <SelectTrigger id="ownership_type">
+                  <SelectValue placeholder="Select ownership type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Authorised Representative">Authorised Representative</SelectItem>
+                  <SelectItem value="Owner">Owner</SelectItem>
+                  <SelectItem value="Financed">Financed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="system_address">System Address *</Label>
               <Input
                 id="system_address"

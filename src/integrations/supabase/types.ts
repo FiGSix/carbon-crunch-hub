@@ -512,6 +512,7 @@ export type Database = {
           maintenance_cost_annual: number | null
           meter_serial: string | null
           meter_type: string | null
+          ownership_type: string | null
           panel_brand: string | null
           panel_cost: number | null
           panel_quantity: number | null
@@ -520,6 +521,7 @@ export type Database = {
           system_address: string | null
           system_gps_lat: number | null
           system_gps_lng: number | null
+          system_name: string | null
           total_capex: number | null
           updated_at: string
           validated_at: string | null
@@ -542,6 +544,7 @@ export type Database = {
           maintenance_cost_annual?: number | null
           meter_serial?: string | null
           meter_type?: string | null
+          ownership_type?: string | null
           panel_brand?: string | null
           panel_cost?: number | null
           panel_quantity?: number | null
@@ -550,6 +553,7 @@ export type Database = {
           system_address?: string | null
           system_gps_lat?: number | null
           system_gps_lng?: number | null
+          system_name?: string | null
           total_capex?: number | null
           updated_at?: string
           validated_at?: string | null
@@ -572,6 +576,7 @@ export type Database = {
           maintenance_cost_annual?: number | null
           meter_serial?: string | null
           meter_type?: string | null
+          ownership_type?: string | null
           panel_brand?: string | null
           panel_cost?: number | null
           panel_quantity?: number | null
@@ -580,6 +585,7 @@ export type Database = {
           system_address?: string | null
           system_gps_lat?: number | null
           system_gps_lng?: number | null
+          system_name?: string | null
           total_capex?: number | null
           updated_at?: string
           validated_at?: string | null

@@ -18,6 +18,8 @@ export interface OnboardingFields {
   id: string;
   project_id: string;
   // System Details
+  system_name: string | null;
+  ownership_type: string | null;
   system_address: string | null;
   system_gps_lat: number | null;
   system_gps_lng: number | null;
