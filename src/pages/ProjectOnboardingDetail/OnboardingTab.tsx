@@ -484,6 +484,70 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         </CardContent>
       </Card>
 
+      {/* Battery Details */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Battery Details (Optional)</CardTitle>
+              <CardDescription>Information about battery storage if installed</CardDescription>
+            </div>
+            {formData.battery_model ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="battery_model">Model</Label>
+              <Input
+                id="battery_model"
+                value={formData.battery_model || ''}
+                onChange={(e) => handleInputChange('battery_model', e.target.value)}
+                placeholder="Tesla Powerwall 2"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="battery_capacity_kwh">Capacity (kWh)</Label>
+              <Input
+                id="battery_capacity_kwh"
+                type="number"
+                step="0.01"
+                value={formData.battery_capacity_kwh || ''}
+                onChange={(e) => handleInputChange('battery_capacity_kwh', parseFloat(e.target.value))}
+                placeholder="13.5"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="battery_serial">Serial Number</Label>
+              <Input
+                id="battery_serial"
+                value={formData.battery_serial || ''}
+                onChange={(e) => handleInputChange('battery_serial', e.target.value)}
+                placeholder="BAT123456"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="battery_cost">Cost (R)</Label>
+              <Input
+                id="battery_cost"
+                type="number"
+                step="0.01"
+                value={formData.battery_cost || ''}
+                onChange={(e) => handleInputChange('battery_cost', parseFloat(e.target.value))}
+                placeholder="80000"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Panel Details */}
       <Card>
         <CardHeader>
@@ -587,70 +651,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 value={formData.labor_cost || ''}
                 onChange={(e) => handleInputChange('labor_cost', parseFloat(e.target.value))}
                 placeholder="100000"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Battery Details */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Battery Details (Optional)</CardTitle>
-              <CardDescription>Information about battery storage if installed</CardDescription>
-            </div>
-            {formData.battery_model ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="battery_model">Model</Label>
-              <Input
-                id="battery_model"
-                value={formData.battery_model || ''}
-                onChange={(e) => handleInputChange('battery_model', e.target.value)}
-                placeholder="Tesla Powerwall 2"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_capacity_kwh">Capacity (kWh)</Label>
-              <Input
-                id="battery_capacity_kwh"
-                type="number"
-                step="0.01"
-                value={formData.battery_capacity_kwh || ''}
-                onChange={(e) => handleInputChange('battery_capacity_kwh', parseFloat(e.target.value))}
-                placeholder="13.5"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_serial">Serial Number</Label>
-              <Input
-                id="battery_serial"
-                value={formData.battery_serial || ''}
-                onChange={(e) => handleInputChange('battery_serial', e.target.value)}
-                placeholder="BAT123456"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_cost">Cost (R)</Label>
-              <Input
-                id="battery_cost"
-                type="number"
-                step="0.01"
-                value={formData.battery_cost || ''}
-                onChange={(e) => handleInputChange('battery_cost', parseFloat(e.target.value))}
-                placeholder="80000"
               />
             </div>
           </div>
