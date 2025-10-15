@@ -154,12 +154,11 @@ export default function ProjectOnboardingDetail() {
             </TabsContent>
 
             <TabsContent value="onboarding" className="mt-6">
-              <OnboardingTab
-                projectId={projectId!}
-                fields={fields}
-                proposalData={proposalData}
-                onRefresh={fetchProjectData}
-              />
+            <OnboardingTab
+              projectId={projectId!}
+              fields={fields}
+              onRefresh={fetchProjectData}
+            />
             </TabsContent>
 
             <TabsContent value="data-access" className="mt-6">

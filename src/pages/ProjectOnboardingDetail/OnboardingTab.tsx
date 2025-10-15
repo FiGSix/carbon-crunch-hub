@@ -14,42 +14,15 @@ import type { OnboardingFields, OnboardingDocument } from "@/types/onboarding";
 interface OnboardingTabProps {
   projectId: string;
   fields: OnboardingFields | null;
-  proposalData?: any;
   onRefresh: () => void;
 }
 
-export function OnboardingTab({ projectId, fields, proposalData, onRefresh }: OnboardingTabProps) {
+export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<OnboardingFields>>(fields || {});
   const [documents, setDocuments] = useState<OnboardingDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
-
-  // Pre-populate fields from proposal data on initial load
-  useEffect(() => {
-    if (proposalData && fields) {
-      const projectInfo = proposalData.content?.projectInfo || {};
-      const updates: Partial<OnboardingFields> = {};
-
-      // Only populate if the field is empty
-      if (!fields.system_address && projectInfo.address) {
-        updates.system_address = projectInfo.address;
-      }
-      if (!fields.commissioning_date && projectInfo.commissionDate) {
-        updates.commissioning_date = projectInfo.commissionDate;
-      }
-      if (!fields.system_name && projectInfo.name) {
-        updates.system_name = projectInfo.name;
-      }
-      if (!fields.panel_total_kwp && (proposalData.system_size_kwp || projectInfo.size)) {
-        updates.panel_total_kwp = proposalData.system_size_kwp || parseFloat(projectInfo.size) || null;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        setFormData(prev => ({ ...prev, ...updates }));
-      }
-    }
-  }, [proposalData, fields]);
 
   useEffect(() => {
     fetchDocuments();
