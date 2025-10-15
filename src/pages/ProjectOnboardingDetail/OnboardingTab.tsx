@@ -290,6 +290,34 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="meter_type">Meter Type</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>This is normally the Inverter directly, in which case you select SSEG (this means your inverter is on the SSEG list published by the government). Only select Discrete Meter if you have a dedicated, separate meter which measures how much power the system produces.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Select
+                value={formData.meter_type || ''}
+                onValueChange={(value) => handleInputChange('meter_type', value)}
+              >
+                <SelectTrigger id="meter_type">
+                  <SelectValue placeholder="Select meter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SSEG">SSEG</SelectItem>
+                  <SelectItem value="Discrete">Discrete</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <OnboardingFileUpload
