@@ -464,13 +464,15 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
           </div>
 
-          <OnboardingFileUpload
-            projectId={projectId}
-            category="calibration_cert"
-            documents={documents}
-            onUploadComplete={fetchDocuments}
-            label="Meter Calibration Certificate for Meter (Filename, .pdf / .jpg)"
-          />
+          {formData.meter_type === "Discrete" && (
+            <OnboardingFileUpload
+              projectId={projectId}
+              category="calibration_cert"
+              documents={documents}
+              onUploadComplete={fetchDocuments}
+              label="Meter Calibration Certificate for Meter (Filename, .pdf / .jpg)"
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -590,28 +592,30 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="data_collector_serial">Data Collector or Dongle Serial Number</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>If we need to collect production data directly from the inverter we need to know the dongle serial number. This is normally somewhere on the dongle itself, but might also be on your invoice.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            {formData.data_collector_present === "yes" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="data_collector_serial">Data Collector or Dongle Serial Number</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>If we need to collect production data directly from the inverter we need to know the dongle serial number. This is normally somewhere on the dongle itself, but might also be on your invoice.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Input
+                  id="data_collector_serial"
+                  type="text"
+                  value={formData.data_collector_serial || ''}
+                  onChange={(e) => handleInputChange('data_collector_serial', e.target.value)}
+                  placeholder="Enter serial number"
+                />
               </div>
-              <Input
-                id="data_collector_serial"
-                type="text"
-                value={formData.data_collector_serial || ''}
-                onChange={(e) => handleInputChange('data_collector_serial', e.target.value)}
-                placeholder="Enter serial number"
-              />
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
