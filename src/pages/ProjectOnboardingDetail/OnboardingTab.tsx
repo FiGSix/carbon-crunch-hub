@@ -430,7 +430,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inverter_cost">Cost (R)</Label>
+              <Label htmlFor="inverter_cost">Total Cost Installed incl. VAT & Labour for Inverter(s) (Rands)</Label>
               <Input
                 id="inverter_cost"
                 type="number"
