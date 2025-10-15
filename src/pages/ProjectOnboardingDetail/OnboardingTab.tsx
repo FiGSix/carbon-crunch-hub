@@ -318,7 +318,28 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meter_serial">Meter Serial Number</Label>
+              <Input
+                id="meter_serial"
+                value={formData.meter_serial || ''}
+                onChange={(e) => handleInputChange('meter_serial', e.target.value)}
+                placeholder="MTR123456"
+              />
+            </div>
           </div>
+
+          {formData.meter_type === 'Discrete' && (
+            <OnboardingFileUpload
+              projectId={projectId}
+              category="calibration_cert"
+              documents={documents}
+              onUploadComplete={fetchDocuments}
+              label="Calibration Certificate for Meter (Filename, .pdf / .jpg)"
+              required
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -556,47 +577,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Metering Details */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Metering Details</CardTitle>
-              <CardDescription>Information about energy metering equipment</CardDescription>
-            </div>
-            {getSectionStatus(['meter_serial']) ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="meter_serial">Serial Number *</Label>
-              <Input
-                id="meter_serial"
-                value={formData.meter_serial || ''}
-                onChange={(e) => handleInputChange('meter_serial', e.target.value)}
-                placeholder="MTR123456"
-              />
-            </div>
-          </div>
-
-          {formData.meter_type === 'Discrete' && (
-            <OnboardingFileUpload
-              projectId={projectId}
-              category="calibration_cert"
-              documents={documents}
-              onUploadComplete={fetchDocuments}
-              label="Calibration Certificate"
-              required
-            />
-          )}
         </CardContent>
       </Card>
 
