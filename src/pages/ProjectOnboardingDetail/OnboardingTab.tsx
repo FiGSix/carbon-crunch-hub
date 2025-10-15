@@ -674,7 +674,19 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Project Documentation</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle>Project Documentation</CardTitle>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-md">
+                      <p>To ensure your system is fully compliant with all legal and audit requirements, we need two key documents: a Certificate of Compliance (COC) and your system invoice(s). The COC must clearly show the system address, be signed and dated — if you don't have one, we can connect you with a trusted electrical contractor. Please upload the COC as a PDF or clear photo, along with your invoice or proof of payment showing the total system cost.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <CardDescription>Upload required project documents</CardDescription>
             </div>
           </div>
