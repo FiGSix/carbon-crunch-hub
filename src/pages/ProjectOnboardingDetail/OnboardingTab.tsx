@@ -92,7 +92,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         'commissioning_date',
         'inverter_model',
         'inverter_serial',
-        'panel_brand',
         'total_capex'
       ];
 
@@ -563,7 +562,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               <CardTitle>Panel Details</CardTitle>
               <CardDescription>Information about the solar panels</CardDescription>
             </div>
-            {getSectionStatus(['panel_brand']) ? (
+            {getSectionStatus(['panel_quantity', 'panel_total_kwp']) ? (
               <CheckCircle2 className="h-5 w-5 text-green-600" />
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-600" />
@@ -572,16 +571,6 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="panel_brand">Brand *</Label>
-              <Input
-                id="panel_brand"
-                value={formData.panel_brand || ''}
-                onChange={(e) => handleInputChange('panel_brand', e.target.value)}
-                placeholder="Canadian Solar"
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="panel_size_wp">Size (Wp)</Label>
               <Input
@@ -595,7 +584,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="panel_quantity">Quantity</Label>
+              <Label htmlFor="panel_quantity">Number of Solar Panels</Label>
               <Input
                 id="panel_quantity"
                 type="number"
@@ -606,7 +595,19 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="panel_cost">Total Cost (R)</Label>
+              <Label htmlFor="panel_total_kwp">Total Solar Array Size (kWp)</Label>
+              <Input
+                id="panel_total_kwp"
+                type="number"
+                step="0.01"
+                value={formData.panel_total_kwp || ''}
+                onChange={(e) => handleInputChange('panel_total_kwp', parseFloat(e.target.value))}
+                placeholder="110"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="panel_cost">Total Cost incl. Labor installed for Solar Panels(Rands)</Label>
               <Input
                 id="panel_cost"
                 type="number"

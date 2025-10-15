@@ -46,6 +46,7 @@ export interface OnboardingFields {
   panel_brand: string | null;
   panel_size_wp: number | null;
   panel_quantity: number | null;
+  panel_total_kwp: number | null;
   panel_cost: number | null;
   // Financial
   total_capex: number | null;
