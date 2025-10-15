@@ -505,6 +505,7 @@ export type Database = {
           connection_type: string | null
           created_at: string
           id: string
+          inverter_brand: string | null
           inverter_capacity_kw: number | null
           inverter_cost: number | null
           inverter_model: string | null
@@ -539,6 +540,7 @@ export type Database = {
           connection_type?: string | null
           created_at?: string
           id?: string
+          inverter_brand?: string | null
           inverter_capacity_kw?: number | null
           inverter_cost?: number | null
           inverter_model?: string | null
@@ -573,6 +575,7 @@ export type Database = {
           connection_type?: string | null
           created_at?: string
           id?: string
+          inverter_brand?: string | null
           inverter_capacity_kw?: number | null
           inverter_cost?: number | null
           inverter_model?: string | null

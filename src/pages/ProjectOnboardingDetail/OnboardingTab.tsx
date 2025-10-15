@@ -348,6 +348,34 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="inverter_brand">Inverter Brand</Label>
+              <Select
+                value={formData.inverter_brand || ''}
+                onValueChange={(value) => handleInputChange('inverter_brand', value)}
+              >
+                <SelectTrigger id="inverter_brand">
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alpha ESS">Alpha ESS</SelectItem>
+                  <SelectItem value="Atess">Atess</SelectItem>
+                  <SelectItem value="Deye">Deye</SelectItem>
+                  <SelectItem value="Dyness">Dyness</SelectItem>
+                  <SelectItem value="Fronius">Fronius</SelectItem>
+                  <SelectItem value="GoodWe">GoodWe</SelectItem>
+                  <SelectItem value="Huawei">Huawei</SelectItem>
+                  <SelectItem value="Lux">Lux</SelectItem>
+                  <SelectItem value="Megarevo">Megarevo</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Solis">Solis</SelectItem>
+                  <SelectItem value="Sungrow">Sungrow</SelectItem>
+                  <SelectItem value="SunSynk">SunSynk</SelectItem>
+                  <SelectItem value="Victron">Victron</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="inverter_model">Model *</Label>
               <Input
                 id="inverter_model"

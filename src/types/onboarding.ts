@@ -28,6 +28,7 @@ export interface OnboardingFields {
   alternative_power_source: string | null;
   meter_type: string | null;
   // Inverter Details
+  inverter_brand: string | null;
   inverter_model: string | null;
   inverter_capacity_kw: number | null;
   inverter_serial: string | null;
