@@ -31,6 +31,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [installers, setInstallers] = useState<SolarInstaller[]>([]);
   const [loadingInstallers, setLoadingInstallers] = useState(false);
+  const [isPanelTotalManuallyOverridden, setIsPanelTotalManuallyOverridden] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -48,6 +49,17 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
       setFormData(prev => ({ ...prev, total_capex: calculatedTotal }));
     }
   }, [formData.inverter_cost, formData.battery_cost, formData.panel_cost]);
+
+  // Auto-calculate panel_total_kwp from panel_size_wp and panel_quantity
+  useEffect(() => {
+    if (!isPanelTotalManuallyOverridden && formData.panel_size_wp && formData.panel_quantity) {
+      const calculatedKwp = (formData.panel_size_wp * formData.panel_quantity) / 1000;
+      setFormData(prev => ({ 
+        ...prev, 
+        panel_total_kwp: parseFloat(calculatedKwp.toFixed(2)) 
+      }));
+    }
+  }, [formData.panel_size_wp, formData.panel_quantity, isPanelTotalManuallyOverridden]);
 
   const fetchDocuments = async () => {
     setLoadingDocs(true);
@@ -738,7 +750,10 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 type="number"
                 step="1"
                 value={formData.panel_size_wp || ''}
-                onChange={(e) => handleInputChange('panel_size_wp', parseFloat(e.target.value))}
+                onChange={(e) => {
+                  setIsPanelTotalManuallyOverridden(false);
+                  handleInputChange('panel_size_wp', parseFloat(e.target.value));
+                }}
                 placeholder="550"
               />
             </div>
@@ -749,7 +764,10 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 id="panel_quantity"
                 type="number"
                 value={formData.panel_quantity || ''}
-                onChange={(e) => handleInputChange('panel_quantity', parseInt(e.target.value))}
+                onChange={(e) => {
+                  setIsPanelTotalManuallyOverridden(false);
+                  handleInputChange('panel_quantity', parseInt(e.target.value));
+                }}
                 placeholder="200"
               />
             </div>
@@ -761,7 +779,10 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
                 type="number"
                 step="0.01"
                 value={formData.panel_total_kwp || ''}
-                onChange={(e) => handleInputChange('panel_total_kwp', parseFloat(e.target.value))}
+                onChange={(e) => {
+                  setIsPanelTotalManuallyOverridden(true);
+                  handleInputChange('panel_total_kwp', parseFloat(e.target.value));
+                }}
                 placeholder="110"
               />
             </div>
