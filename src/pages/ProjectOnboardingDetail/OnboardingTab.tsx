@@ -9,7 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { OnboardingFields, OnboardingDocument } from "@/types/onboarding";
+import type { OnboardingFields, OnboardingDocument, ProjectOnboarding } from "@/types/onboarding";
+import { useAuth } from "@/contexts/auth";
+import { getAllAdminUserIds } from "@/services/adminService";
+import { createNotification } from "@/services/notificationService";
 
 interface SolarInstaller {
   id: string;
@@ -20,11 +23,13 @@ interface SolarInstaller {
 interface OnboardingTabProps {
   projectId: string;
   fields: OnboardingFields | null;
+  project?: ProjectOnboarding | null;
   onRefresh: () => void;
 }
 
-export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabProps) {
+export function OnboardingTab({ projectId, fields, project, onRefresh }: OnboardingTabProps) {
   const { toast } = useToast();
+  const { user, userRole } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<OnboardingFields>>(fields || {});
   const [documents, setDocuments] = useState<OnboardingDocument[]>([]);
@@ -199,8 +204,19 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
   const handleValidateAndComplete = async () => {
     try {
       setIsSaving(true);
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "User not authenticated",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // Save fields
+      console.log("Starting validation and completion process...");
+
+      // First, save all current data
       const { error: fieldsError } = await supabase
         .from('onboarding_fields')
         .upsert({
@@ -210,44 +226,107 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
           updated_at: new Date().toISOString(),
         });
 
-      if (fieldsError) throw fieldsError;
+      if (fieldsError) {
+        console.error("Error saving fields:", fieldsError);
+        throw fieldsError;
+      }
 
-      // Call validation function
+      console.log("Fields saved successfully, validating...");
+
+      // Validate completion using RPC function
       const { data: isValid, error: validationError } = await supabase
-        .rpc('validate_onboarding_completion', { project_id_param: projectId });
+        .rpc('validate_onboarding_completion', { 
+          project_id_param: projectId 
+        });
 
-      if (validationError) throw validationError;
+      if (validationError) {
+        console.error("Validation error:", validationError);
+        throw validationError;
+      }
 
-      if (isValid) {
-        // Update project status
+      console.log("Validation result:", isValid);
+
+      if (!isValid) {
+        toast({
+          title: "Validation Failed",
+          description: "Please ensure all required fields and documents are complete before submitting.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Role-based completion logic
+      if (userRole === 'admin') {
+        // ADMIN PATH: Full validation and completion
         const { error: updateError } = await supabase
           .from('project_onboarding')
           .update({
             onboarding_complete: true,
             onboarding_completed_at: new Date().toISOString(),
+            admin_validated: true,
+            admin_validated_at: new Date().toISOString(),
+            admin_validated_by: user.id,
           })
           .eq('id', projectId);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error("Error updating onboarding status:", updateError);
+          throw updateError;
+        }
 
         toast({
           title: "Success",
-          description: "Onboarding completed successfully!",
+          description: "Onboarding validated and marked complete!",
         });
-
-        onRefresh();
       } else {
+        // CLIENT/AGENT PATH: Submit for admin review
+        const { error: submitError } = await supabase
+          .from('project_onboarding')
+          .update({
+            submitted_for_review: true,
+            submitted_for_review_at: new Date().toISOString(),
+            submitted_by: user.id,
+          })
+          .eq('id', projectId);
+
+        if (submitError) {
+          console.error("Error submitting for review:", submitError);
+          throw submitError;
+        }
+
+        // Notify all admins
+        try {
+          const adminIds = await getAllAdminUserIds();
+          const notificationPromises = adminIds.map(adminId =>
+            createNotification({
+              userId: adminId,
+              title: "Project Ready for Review",
+              message: `A project onboarding has been submitted for review by ${user.email}`,
+              type: "info",
+              relatedId: projectId,
+              relatedType: "project_onboarding",
+            })
+          );
+
+          await Promise.allSettled(notificationPromises);
+          console.log("Admin notifications sent successfully");
+        } catch (notifError) {
+          console.error("Error sending notifications:", notifError);
+          // Don't fail the submission if notifications fail
+        }
+
         toast({
-          title: "Validation Failed",
-          description: "Please ensure all required fields and documents are complete",
-          variant: "destructive",
+          title: "Submitted for Review",
+          description: "Project marked as complete and admins have been notified for review.",
         });
       }
+
+      onRefresh();
     } catch (error) {
-      console.error('Error validating:', error);
+      console.error('Error in handleValidateAndComplete:', error);
       toast({
         title: "Error",
-        description: "Failed to validate onboarding",
+        description: "Failed to process request. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -996,13 +1075,29 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Draft
         </Button>
-        <Button
-          onClick={handleValidateAndComplete}
-          disabled={isSaving}
-        >
-          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Validate & Mark Complete
-        </Button>
+        
+        {userRole === 'admin' ? (
+          <Button
+            onClick={handleValidateAndComplete}
+            disabled={isSaving}
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Validate & Mark Complete
+          </Button>
+        ) : project?.submitted_for_review ? (
+          <Button disabled variant="secondary">
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Submitted - Awaiting Admin Review
+          </Button>
+        ) : (
+          <Button
+            onClick={handleValidateAndComplete}
+            disabled={isSaving}
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mark Complete - Ready for Review
+          </Button>
+        )}
       </div>
     </div>
   );

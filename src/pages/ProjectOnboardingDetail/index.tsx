@@ -157,6 +157,7 @@ export default function ProjectOnboardingDetail() {
             <OnboardingTab
               projectId={projectId!}
               fields={fields}
+              project={project}
               onRefresh={fetchProjectData}
             />
             </TabsContent>

@@ -828,6 +828,9 @@ export type Database = {
       }
       project_onboarding: {
         Row: {
+          admin_validated: boolean | null
+          admin_validated_at: string | null
+          admin_validated_by: string | null
           assigned_epc_id: string | null
           audit_ready: boolean
           audit_ready_marked_at: string | null
@@ -840,9 +843,15 @@ export type Database = {
           onboarding_complete: boolean
           onboarding_completed_at: string | null
           proposal_id: string
+          submitted_by: string | null
+          submitted_for_review: boolean | null
+          submitted_for_review_at: string | null
           updated_at: string
         }
         Insert: {
+          admin_validated?: boolean | null
+          admin_validated_at?: string | null
+          admin_validated_by?: string | null
           assigned_epc_id?: string | null
           audit_ready?: boolean
           audit_ready_marked_at?: string | null
@@ -855,9 +864,15 @@ export type Database = {
           onboarding_complete?: boolean
           onboarding_completed_at?: string | null
           proposal_id: string
+          submitted_by?: string | null
+          submitted_for_review?: boolean | null
+          submitted_for_review_at?: string | null
           updated_at?: string
         }
         Update: {
+          admin_validated?: boolean | null
+          admin_validated_at?: string | null
+          admin_validated_by?: string | null
           assigned_epc_id?: string | null
           audit_ready?: boolean
           audit_ready_marked_at?: string | null
@@ -870,6 +885,9 @@ export type Database = {
           onboarding_complete?: boolean
           onboarding_completed_at?: string | null
           proposal_id?: string
+          submitted_by?: string | null
+          submitted_for_review?: boolean | null
+          submitted_for_review_at?: string | null
           updated_at?: string
         }
         Relationships: [

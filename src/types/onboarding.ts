@@ -12,6 +12,13 @@ export interface ProjectOnboarding {
   onboarding_completed_at: string | null;
   data_access_verified_at: string | null;
   assigned_epc_id: string | null;
+  // Submission and admin review workflow
+  submitted_for_review: boolean;
+  submitted_for_review_at: string | null;
+  submitted_by: string | null;
+  admin_validated: boolean;
+  admin_validated_at: string | null;
+  admin_validated_by: string | null;
 }
 
 export interface OnboardingFields {
