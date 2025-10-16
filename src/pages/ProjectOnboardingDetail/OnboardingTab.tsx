@@ -503,8 +503,9 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
                   <SelectValue placeholder="Select connection type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Residential Agricultural">Residential Agricultural</SelectItem>
+                  <SelectItem value="Residential">Residential</SelectItem>
                   <SelectItem value="Commercial">Commercial</SelectItem>
+                  <SelectItem value="Agricultural">Agricultural</SelectItem>
                   <SelectItem value="Industrial">Industrial</SelectItem>
                 </SelectContent>
               </Select>
