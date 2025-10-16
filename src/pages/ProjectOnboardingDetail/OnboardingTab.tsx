@@ -699,7 +699,7 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
               <CardTitle>Panel Details</CardTitle>
               <CardDescription>Information about the solar panels</CardDescription>
             </div>
-            {getSectionStatus(['panel_quantity', 'panel_total_kwp']) ? (
+            {getSectionStatus(['panel_brand', 'panel_quantity', 'panel_total_kwp']) ? (
               <CheckCircle2 className="h-5 w-5 text-green-600" />
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-600" />
@@ -708,6 +708,29 @@ export function OnboardingTab({ projectId, fields, onRefresh }: OnboardingTabPro
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="panel_brand">Panel Brand / Manufacturer</Label>
+              <Select
+                value={formData.panel_brand || ''}
+                onValueChange={(value) => handleInputChange('panel_brand', value)}
+              >
+                <SelectTrigger id="panel_brand">
+                  <SelectValue placeholder="Select panel brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="JA Solar">JA Solar</SelectItem>
+                  <SelectItem value="Jinko Solar">Jinko Solar</SelectItem>
+                  <SelectItem value="Longi Solar">Longi Solar</SelectItem>
+                  <SelectItem value="Canadian Solar">Canadian Solar</SelectItem>
+                  <SelectItem value="Trina Solar">Trina Solar</SelectItem>
+                  <SelectItem value="Q Cells">Q Cells</SelectItem>
+                  <SelectItem value="REC Solar">REC Solar</SelectItem>
+                  <SelectItem value="Sunpower">Sunpower</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="panel_size_wp">Size (Wp)</Label>
               <Input
