@@ -121,6 +121,7 @@ export function useOptimizedAuth(): OptimizedAuthState & OptimizedAuthActions {
           phone: profileData.phone,
           avatar_url: profileData.avatar_url,
           company_logo_url: profileData.company_logo_url,
+          agent_status: profileData.agent_status,
           created_at: profileData.created_at,
           terms_accepted_at: profileData.terms_accepted_at,
           intro_video_viewed: profileData.intro_video_viewed,

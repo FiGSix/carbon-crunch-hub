@@ -19,6 +19,8 @@ export async function signUp(email: string, password: string, role: UserRole, me
       options: {
         data: {
           role,
+          // Set pending_approval status for agents
+          ...(role === 'agent' ? { agent_status: 'pending_approval' } : {}),
           ...metadata,
         },
         emailRedirectTo: `${window.location.origin}/login`

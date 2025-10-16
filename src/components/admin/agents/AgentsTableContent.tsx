@@ -15,7 +15,7 @@ import { AgentStatusDropdown } from './AgentStatusDropdown';
 import { CommissionOverrideDialog } from './CommissionOverrideDialog';
 import { AgentDetailsDialog } from './AgentDetailsDialog';
 import { AgentData } from './AgentsManagementTable';
-import { MoreHorizontal, Eye, TrendingUp, Users, Award } from 'lucide-react';
+import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   DropdownMenu,
@@ -55,14 +55,25 @@ export function AgentsTableContent({
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      active: { variant: 'default' as const, label: 'Active' },
-      inactive: { variant: 'secondary' as const, label: 'Inactive' },
-      suspended: { variant: 'destructive' as const, label: 'Suspended' },
-      pending_approval: { variant: 'outline' as const, label: 'Pending' }
+      active: { variant: 'default' as const, label: 'Active', className: '' },
+      inactive: { variant: 'secondary' as const, label: 'Inactive', className: '' },
+      suspended: { variant: 'destructive' as const, label: 'Suspended', className: '' },
+      pending_approval: { 
+        variant: 'outline' as const, 
+        label: 'Pending Approval',
+        className: 'border-yellow-500 text-yellow-600 animate-pulse'
+      }
     };
     
     const config = variants[status as keyof typeof variants] || variants.inactive;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return (
+      <Badge 
+        variant={config.variant}
+        className={config.className}
+      >
+        {config.label}
+      </Badge>
+    );
   };
 
   const formatCurrency = (amount: number) => {
@@ -208,6 +219,21 @@ export function AgentsTableContent({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      
+                      {/* Show Approve option FIRST if status is pending_approval */}
+                      {agent.agent_status === 'pending_approval' && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => onUpdateStatus(agent.agent_id, 'active')}
+                            className="text-green-600 font-medium"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve Agent
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      
                       <DropdownMenuItem 
                         onClick={() => {
                           setSelectedAgent(agent);

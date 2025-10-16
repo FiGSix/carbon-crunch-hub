@@ -10,6 +10,7 @@ import { TablePagination } from './TablePagination';
 import { AgentsAdvancedFilters } from './enhanced-filters/AgentsAdvancedFilters';
 import { useAgentsRealtime } from './realtime/useAgentsRealtime';
 import { useToast } from '@/hooks/use-toast';
+import { createNotification } from '@/services/notificationService';
 
 export interface AgentData {
   agent_id: string;
@@ -110,12 +111,31 @@ export function AgentsManagementTable() {
 
   const updateAgentStatusMutation = useMutation({
     mutationFn: async ({ agentId, status }: { agentId: string; status: string }) => {
+      // Get current agent status before updating
+      const { data: agentProfile } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name, agent_status')
+        .eq('id', agentId)
+        .single();
+      
       const { error } = await supabase
         .from('profiles')
         .update({ agent_status: status })
         .eq('id', agentId);
 
       if (error) throw error;
+      
+      // Send notification to agent if they're being approved (from pending_approval to active)
+      if (status === 'active' && agentProfile?.agent_status === 'pending_approval') {
+        await createNotification({
+          userId: agentId,
+          title: 'Account Approved!',
+          message: 'Your agent account has been approved. You can now start creating proposals and managing clients.',
+          type: 'success',
+          relatedType: 'agent_approval',
+          relatedId: agentId
+        });
+      }
     },
     onSuccess: async () => {
       await invalidateAgentManagement();
