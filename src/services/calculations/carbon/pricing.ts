@@ -63,6 +63,12 @@ export async function calculateRevenueByYear(
   
   Object.entries(carbonPrices).forEach(([year, price]) => {
     const yearNum = parseInt(year);
+    
+    // Skip years before commissioning date
+    if (commissionDateTime && yearNum < commissionDateTime.getFullYear()) {
+      return;
+    }
+    
     let yearCredits = carbonCreditsPerYear;
     
     // Pro-rate for commission year if date is provided

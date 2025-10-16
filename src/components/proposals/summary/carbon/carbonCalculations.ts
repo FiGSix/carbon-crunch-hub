@@ -4,6 +4,11 @@ import { UnifiedCarbonService } from '@/services/calculations/carbon';
 export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string): number {
   const annualEnergy = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKWp);
   
+  // Return 0 for years before commissioning
+  if (commissionDate && year < new Date(commissionDate).getFullYear()) {
+    return 0;
+  }
+  
   // Pro-rate for commission year if needed
   if (commissionDate && year === new Date(commissionDate).getFullYear()) {
     const commissionDateTime = new Date(commissionDate);
