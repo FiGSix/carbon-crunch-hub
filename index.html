@@ -48,6 +48,30 @@
       <link rel="stylesheet" href="/src/styles/animations.css">
     </noscript>
 
+    <!-- Defer Vite-injected CSS to prevent render blocking -->
+    <script>
+      // Intercept stylesheets added by Vite and make them async
+      (function() {
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeName === 'LINK' && node.rel === 'stylesheet' && node.href.includes('/css/index-') && !node.media) {
+                node.media = 'print';
+                node.addEventListener('load', function() {
+                  this.media = 'all';
+                }, { once: true });
+              }
+            });
+          });
+        });
+        observer.observe(document.head, { childList: true, subtree: true });
+        
+        // Also check for any existing stylesheets that may have already been added
+        document.addEventListener('DOMContentLoaded', function() {
+          observer.disconnect();
+        });
+      })();
+    </script>
     
     
     <meta property="og:type" content="website" />
