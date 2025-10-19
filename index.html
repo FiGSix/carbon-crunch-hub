@@ -50,24 +50,39 @@
 
     <!-- Defer Vite-injected CSS to prevent render blocking -->
     <script>
-      // Intercept stylesheets added by Vite and make them async
+      // Make Vite CSS load asynchronously to improve FCP
       (function() {
+        // Function to make a stylesheet async
+        function makeAsync(link) {
+          if (link.nodeName === 'LINK' && link.rel === 'stylesheet' && 
+              link.href && link.href.includes('/css/index-') && 
+              (!link.media || link.media === 'all' || link.media === 'screen')) {
+            link.media = 'print';
+            link.addEventListener('load', function() {
+              this.media = 'all';
+            }, { once: true });
+          }
+        }
+        
+        // Check existing stylesheets immediately
+        var existingLinks = document.querySelectorAll('link[rel="stylesheet"]');
+        for (var i = 0; i < existingLinks.length; i++) {
+          makeAsync(existingLinks[i]);
+        }
+        
+        // Observe for new stylesheets
         var observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             mutation.addedNodes.forEach(function(node) {
-              if (node.nodeName === 'LINK' && node.rel === 'stylesheet' && node.href.includes('/css/index-') && !node.media) {
-                node.media = 'print';
-                node.addEventListener('load', function() {
-                  this.media = 'all';
-                }, { once: true });
-              }
+              makeAsync(node);
             });
           });
         });
+        
         observer.observe(document.head, { childList: true, subtree: true });
         
-        // Also check for any existing stylesheets that may have already been added
-        document.addEventListener('DOMContentLoaded', function() {
+        // Disconnect observer after page load
+        window.addEventListener('load', function() {
           observer.disconnect();
         });
       })();
