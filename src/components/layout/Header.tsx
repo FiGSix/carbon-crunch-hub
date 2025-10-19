@@ -91,13 +91,14 @@ export function Header() {
                 href="/" 
                 className="flex items-center touch-manipulation hover:opacity-90 transition-opacity duration-200"
               >
-                <img
+                <OptimizedImage
                   src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
                   alt="CrunchCarbon Logo" 
                   className="h-10 md:h-12 drop-shadow-sm"
                   width={141}
                   height={48}
-                  style={{ maxWidth: '100%', height: 'auto' }}
+                  priority={true}
+                  fetchPriority="high"
                 />
               </a>
             </SafeMotionDiv>
