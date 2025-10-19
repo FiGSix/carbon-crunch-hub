@@ -1385,6 +1385,25 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_data_access_status: {
+        Args: { project_id_param: string }
+        Returns: {
+          configured_by: string
+          created_at: string
+          credential_method: string
+          first_data_ingested_at: string
+          has_credentials: boolean
+          id: string
+          last_test_at: string
+          last_test_error: string
+          last_test_status: string
+          portal_url: string
+          project_id: string
+          provider: string
+          site_id: string
+          updated_at: string
+        }[]
+      }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: string

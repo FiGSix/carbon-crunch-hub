@@ -29,11 +29,35 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
 
   const fetchConfig = async () => {
     try {
-      const { data, error } = await supabase
-        .from('data_access_config')
-        .select('*')
-        .eq('project_id', projectId)
-        .maybeSingle();
+      // Check if user is admin
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+
+      const isAdmin = profile?.role === 'admin';
+
+      let data, error;
+
+      if (isAdmin) {
+        // Admins can see all fields including credentials
+        const result = await supabase
+          .from('data_access_config')
+          .select('*')
+          .eq('project_id', projectId)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+      } else {
+        // Non-admins use secure function (no credential exposure)
+        const result = await supabase
+          .rpc('get_data_access_status', { project_id_param: projectId })
+          .single();
+        data = result.data;
+        error = result.error;
+      }
 
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
