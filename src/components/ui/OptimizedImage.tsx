@@ -77,7 +77,7 @@ export function OptimizedImage({
         width={width}
         height={height}
         loading={priority ? "eager" : "lazy"}
-        fetchPriority={fetchPriority}
+        {...({ fetchpriority: fetchPriority } as any)}
         decoding="async"
         onLoad={() => {
           console.log(`[OptimizedImage] Successfully loaded image: ${src}`);
