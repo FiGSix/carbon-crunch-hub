@@ -130,6 +130,9 @@ export type Database = {
           client_ids: string[]
           id: string
           ip_address: unknown | null
+          modified_fields: Json | null
+          new_values: Json | null
+          old_values: Json | null
           result_count: number
           search_term: string | null
           user_agent: string | null
@@ -141,6 +144,9 @@ export type Database = {
           client_ids: string[]
           id?: string
           ip_address?: unknown | null
+          modified_fields?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
           result_count?: number
           search_term?: string | null
           user_agent?: string | null
@@ -152,6 +158,9 @@ export type Database = {
           client_ids?: string[]
           id?: string
           ip_address?: unknown | null
+          modified_fields?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
           result_count?: number
           search_term?: string | null
           user_agent?: string | null
