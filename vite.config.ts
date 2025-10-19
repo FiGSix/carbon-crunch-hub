@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => ({
     target: 'es2018',
     cssCodeSplit: true,
     cssMinify: true,
-    sourcemap: 'hidden',
+    sourcemap: true,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
