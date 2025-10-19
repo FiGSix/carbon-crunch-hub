@@ -26,6 +26,9 @@ export const queryKeys = {
       [...queryKeys.dashboard.all, 'unified-data', userId, userRole] as const,
     agentPortfolio: (userId: string) => 
       [...queryKeys.dashboard.all, 'agent-portfolio', userId] as const,
+    // Phase 2: New metrics by stage query key
+    metricsByStage: (userId: string, userRole: string) => 
+      [...queryKeys.dashboard.all, 'metrics-by-stage', userId, userRole] as const,
   },
 
   // Proposals related queries
@@ -99,6 +102,7 @@ export const queryKeyUtils = {
         queryKeys.dashboard.stats(userId, userRole),
         queryKeys.dashboard.unifiedData(userId, userRole),
         queryKeys.dashboard.agentPortfolio(userId),
+        queryKeys.dashboard.metricsByStage(userId, userRole), // Phase 2: Added new key
       ];
     }
     return [queryKeys.dashboard.all];
