@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => ({
     minify: 'terser',
     target: 'es2018',
     cssCodeSplit: true,
+    cssMinify: 'lightningcss',
     sourcemap: 'hidden',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
@@ -70,6 +71,12 @@ export default defineConfig(({ mode }) => ({
       mangle: {
         safari10: true,
       },
+    },
+  },
+  css: {
+    devSourcemap: false,
+    modules: {
+      localsConvention: 'camelCase',
     },
   },
   optimizeDeps: {

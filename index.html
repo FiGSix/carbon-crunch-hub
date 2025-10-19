@@ -9,6 +9,11 @@
     <meta name="description" content="Turning Solar Energy into Carbon Credits and Cash.">
     <meta name="author" content="Lovable" />
     
+    <!-- CRITICAL CSS INLINE - Renders instantly without network delay -->
+    <style>
+      :root{--background:0 0% 100%;--foreground:0 0% 10%;--primary:45 100% 50%;--primary-foreground:0 0% 10%;--crunch-yellow:45 100% 50%;--crunch-black:0 0% 10%;--border:0 0% 90%;--ring:45 100% 50%}.dark{--background:0 0% 10%;--foreground:0 0% 98%;--crunch-black:0 0% 98%}*{border-color:hsl(var(--border));box-sizing:border-box;margin:0;padding:0}body{background-color:hsl(var(--background));color:hsl(var(--foreground));font-family:Inter,system-ui,-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}h1,h2,h3,h4,h5,h6{font-weight:700;line-height:1.2}h1{font-size:1.5rem}@media(min-width:768px){h1{font-size:1.875rem}}@media(min-width:1024px){h1{font-size:2.25rem}}@media(min-width:1280px){h1{font-size:3rem}}.container{width:100%;margin-left:auto;margin-right:auto;padding-left:1rem;padding-right:1rem}@media(min-width:768px){.container{padding-left:1.5rem;padding-right:1.5rem}}html{scroll-behavior:smooth}*:focus-visible{outline:none;box-shadow:0 0 0 2px hsl(var(--crunch-yellow)),0 0 0 4px hsl(var(--crunch-yellow)/.2)}
+    </style>
+    
     <!-- Preload critical Google Fonts to reduce render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +21,9 @@
     <!-- Preload critical font files to break dependency chain -->
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Preload LCP image for faster discovery -->
+    <link rel="preload" href="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" as="image" fetchpriority="high">
     
     <!-- Non-blocking font CSS loading -->
     <script>
@@ -30,8 +38,19 @@
     </script>
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
     
-    <!-- Preload LCP image for faster discovery -->
-    <link rel="preload" href="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" as="image" fetchpriority="high">
+    <!-- Preload non-critical CSS for parallel loading -->
+    <link rel="preload" href="/src/styles/base.css" as="style">
+    <link rel="preload" href="/src/styles/components.css" as="style">
+    
+    <!-- Load non-critical CSS with low priority -->
+    <link rel="stylesheet" href="/src/styles/base.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/src/styles/components.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/src/styles/animations.css" media="print" onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet" href="/src/styles/base.css">
+      <link rel="stylesheet" href="/src/styles/components.css">
+      <link rel="stylesheet" href="/src/styles/animations.css">
+    </noscript>
 
     
     
