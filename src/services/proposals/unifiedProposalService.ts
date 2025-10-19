@@ -191,7 +191,7 @@ export async function createProposal(
 }
 
 /**
- * Simple client search
+ * Simple client search - uses secure RPC function
  */
 export async function searchClients(searchTerm: string): Promise<Array<{
   id: string;
@@ -200,24 +200,27 @@ export async function searchClients(searchTerm: string): Promise<Array<{
   company?: string;
   isRegistered: boolean;
 }>> {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('id, first_name, last_name, email, company_name, user_id')
-    .or(`email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%`)
-    .limit(10);
+  try {
+    const { data, error } = await supabase.rpc('search_clients', {
+      search_term: searchTerm
+    });
 
-  if (error) {
-    devLogger.clients.error("Client search error:", error);
+    if (error) {
+      devLogger.clients.error("Client search error:", error);
+      return [];
+    }
+
+    return (data || []).map(client => ({
+      id: client.id,
+      name: client.name,
+      email: client.email,
+      company: client.company,
+      isRegistered: client.is_registered
+    }));
+  } catch (error) {
+    devLogger.clients.error("Client search exception:", error);
     return [];
   }
-
-  return data?.map(client => ({
-    id: client.id,
-    name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
-    email: client.email,
-    company: client.company_name || undefined,
-    isRegistered: client.user_id !== null
-  })) || [];
 }
 
 export type { ProposalInsert };
