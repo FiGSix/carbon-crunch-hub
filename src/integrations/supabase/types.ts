@@ -1365,6 +1365,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_dashboard_metrics_by_stage: {
+        Args: { user_id_param: string; user_role_param: string }
+        Returns: {
+          audit_ready_mwp: number
+          audit_ready_revenue: number
+          onboarding_mwp: number
+          pending_approval_mwp: number
+        }[]
+      }
       get_dashboard_stats_optimized: {
         Args: { user_id_param: string; user_role_param: string }
         Returns: {
