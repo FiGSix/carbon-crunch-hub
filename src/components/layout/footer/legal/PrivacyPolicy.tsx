@@ -2,6 +2,7 @@
 export function PrivacyPolicy() {
   return (
     <div className="text-sm space-y-4 mt-4">
+      <h2 className="font-bold text-lg mb-2">Privacy Policy</h2>
       <p>
         This Privacy Policy explains how Crunch Carbon collects, shares, and uses any information that relates to you when you use our Site, engage with us on social media, or otherwise interact with us (your "Personal Data"). This Privacy Policy also explains the rights you have concerning the Personal Data that we process and how you can exercise these rights.
       </p>

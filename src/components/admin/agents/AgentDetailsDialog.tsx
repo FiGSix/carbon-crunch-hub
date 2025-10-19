@@ -56,9 +56,11 @@ export function AgentDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Agent Details
+          <DialogTitle asChild>
+            <h2 className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Agent Details
+            </h2>
           </DialogTitle>
           <DialogDescription>
             Complete information and performance metrics for {agent.agent_name}

@@ -68,7 +68,7 @@ const TestimonialCard = ({
             {testimonial.name.charAt(0)}
           </div>
           <div>
-            <h4 className="font-bold text-crunch-black">{testimonial.name}</h4>
+            <h3 className="font-bold text-crunch-black">{testimonial.name}</h3>
             <p className="text-sm text-crunch-black/70">{testimonial.location}</p>
           </div>
         </div>

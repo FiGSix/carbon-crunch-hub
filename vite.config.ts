@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
     minify: 'terser',
     target: 'es2018',
     cssCodeSplit: true,
-    cssMinify: 'lightningcss',
+    cssMinify: true,
     sourcemap: 'hidden',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
