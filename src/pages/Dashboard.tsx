@@ -5,12 +5,11 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
-import { OptimizedStatsCardsSection } from "@/components/dashboard/sections/OptimizedStatsCardsSection";
-import { ChartsSection } from "@/components/dashboard/sections/ChartsSection";
+import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useUnifiedDashboardData } from "@/hooks/dashboard/useUnifiedDashboardData";
+import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
-import { useOptimizedAgentPortfolio } from "@/hooks/dashboard/useOptimizedAgentPortfolio";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useAuth } from "@/contexts/auth";
 import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
@@ -18,21 +17,31 @@ import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
 const Dashboard = memo(() => {
   const { userRole } = useAuth();
   
-  // Single unified data source - replaces multiple scattered hooks
+  // Phase 4: Fetch dashboard metrics by stage (4 new cards)
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    error: metricsError,
+    refetch: refetchMetrics
+  } = useDashboardMetricsByStage();
+
+  // Fetch proposals for Recent Projects section
   const {
     data: dashboardData,
-    isLoading: loading,
-    error,
-    refetch
+    isLoading: proposalsLoading,
+    error: proposalsError,
+    refetch: refetchProposals
   } = useUnifiedDashboardData();
 
   // Helper functions with stable references
   const {
     getWelcomeMessage,
     getUserDisplayName,
-    formatUserRole,
-    handleRefreshProposals
-  } = useDashboardHelpers(() => refetch());
+    formatUserRole
+  } = useDashboardHelpers(() => {
+    refetchMetrics();
+    refetchProposals();
+  });
 
   const {
     isModalOpen,
@@ -42,14 +51,10 @@ const Dashboard = memo(() => {
     closeModal
   } = useAgentIntroVideo();
 
-  // Load agent portfolio data only for agents
-  const { 
-    portfolioData: agentPortfolioData, 
-    loading: agentPortfolioLoading 
-  } = useOptimizedAgentPortfolio();
+  const loading = metricsLoading || proposalsLoading;
 
   // Handle loading and error states
-  if (loading) {
+  if (loading && !metrics && !dashboardData) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -59,13 +64,19 @@ const Dashboard = memo(() => {
     );
   }
 
-  if (error || !dashboardData) {
+  if ((metricsError || proposalsError) && !metrics && !dashboardData) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-muted-foreground mb-4">Failed to load dashboard data</p>
-            <Button onClick={handleRefreshProposals} variant="outline">
+            <Button 
+              onClick={() => {
+                refetchMetrics();
+                refetchProposals();
+              }} 
+              variant="outline"
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
             </Button>
@@ -79,14 +90,17 @@ const Dashboard = memo(() => {
     <DashboardLayout>
       <DashboardHeader 
         title="Dashboard" 
-        description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}
+        description={`${getWelcomeMessage()} Here's an overview of your carbon credit projects.`}
         userName={getUserDisplayName()}
         userRole={formatUserRole(userRole)}
         actions={
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRefreshProposals}
+            onClick={() => {
+              refetchMetrics();
+              refetchProposals();
+            }}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''} text-crunch-yellow`} />
@@ -95,29 +109,21 @@ const Dashboard = memo(() => {
         }
       />
       
+      {/* Phase 4: New 4-Card Metrics Section */}
       <QueryErrorBoundary>
-        <OptimizedStatsCardsSection 
-          userRole={userRole}
-          portfolioSize={dashboardData.portfolioSize}
-          totalProposals={dashboardData.totalProposals}
-          potentialRevenue={dashboardData.potentialRevenue}
-          co2Offset={dashboardData.co2Offset}
-          loading={false}
+        <DashboardMetricsByStageCards 
+          metrics={metrics || getEmptyMetrics()}
+          loading={metricsLoading}
         />
       </QueryErrorBoundary>
       
-      {shouldRenderCharts(userRole) && (
-        <QueryErrorBoundary>
-          <ChartsSection userRole={userRole} />
-        </QueryErrorBoundary>
-      )}
-      
+      {/* Recent Projects Section (unchanged) */}
       <QueryErrorBoundary>
         <div className="grid grid-cols-1 gap-6">
           <RecentProjectsNew 
-            proposals={dashboardData.proposals}
-            loading={false}
-            onRefresh={handleRefreshProposals}
+            proposals={dashboardData?.proposals || []}
+            loading={proposalsLoading}
+            onRefresh={() => refetchProposals()}
           />
         </div>
       </QueryErrorBoundary>
@@ -133,10 +139,5 @@ const Dashboard = memo(() => {
     </DashboardLayout>
   );
 });
-
-// Memoized helper function to determine if charts should be rendered
-const shouldRenderCharts = (userRole: string | null): boolean => {
-  return userRole !== 'agent';
-};
 
 export default Dashboard;
