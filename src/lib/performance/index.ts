@@ -25,6 +25,11 @@ export {
   staggerConfig
 } from './motion-config';
 
+export {
+  dashboardPerformanceMonitor,
+  type DashboardPerformanceMetrics
+} from './DashboardPerformanceMonitor';
+
 import { performanceMonitor } from './PerformanceMonitor';
 
 // Global performance utilities
