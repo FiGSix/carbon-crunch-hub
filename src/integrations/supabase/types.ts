@@ -122,6 +122,42 @@ export type Database = {
           },
         ]
       }
+      client_access_audit: {
+        Row: {
+          accessed_at: string
+          accessed_by: string
+          action: string
+          client_ids: string[]
+          id: string
+          ip_address: unknown | null
+          result_count: number
+          search_term: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          accessed_by: string
+          action: string
+          client_ids: string[]
+          id?: string
+          ip_address?: unknown | null
+          result_count?: number
+          search_term?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          accessed_by?: string
+          action?: string
+          client_ids?: string[]
+          id?: string
+          ip_address?: unknown | null
+          result_count?: number
+          search_term?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           company_name: string | null
@@ -1490,6 +1526,15 @@ export type Database = {
       is_proposal_client: {
         Args: { proposal_client_reference_id: string }
         Returns: boolean
+      }
+      log_client_access: {
+        Args: {
+          action_param: string
+          client_ids_param: string[]
+          result_count_param?: number
+          search_term_param?: string
+        }
+        Returns: undefined
       }
       mark_invitation_viewed: {
         Args: { token_param: string }
