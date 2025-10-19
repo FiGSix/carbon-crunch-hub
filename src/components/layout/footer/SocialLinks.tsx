@@ -16,6 +16,7 @@ export function SocialLinks() {
           href={social.href} 
           target="_blank" 
           rel="noopener noreferrer"
+          aria-label={social.name}
           className="bg-crunch-black/5 hover:bg-crunch-yellow/20 w-10 h-10 flex items-center justify-center rounded-full transition-colors"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
