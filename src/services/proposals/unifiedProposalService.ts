@@ -89,13 +89,14 @@ export async function createProposal(
   });
 
   try {
-    // Check if agent is approved before proceeding
+    // Step 1: Get agent profile to check approval status and commission override
     const { data: agentProfile } = await supabase
       .from('profiles')
-      .select('agent_status, role')
+      .select('agent_status, role, commission_override')
       .eq('id', agentId)
       .single();
     
+    // Check if agent is approved before proceeding
     if (agentProfile?.role === 'agent' && agentProfile?.agent_status === 'pending_approval') {
       proposalLogger.warn("Attempted proposal creation by pending agent", { agentId });
       return {
@@ -112,20 +113,13 @@ export async function createProposal(
       clientEmail: clientInfo.email
     });
 
-    // Step 1: Handle client
+    // Step 2: Handle client
     const clientId = selectedClientId || await findOrCreateClient(clientInfo, agentId);
     
-    // Step 2: Calculate system values
+    // Step 3: Calculate system values
     const systemSizeKWp = normalizeToKWp(projectInfo.size) || 0;
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
     const carbonCredits = calculateCarbonCredits(systemSizeKWp);
-    
-    // Step 3: Get agent profile to check for commission override
-    const { data: agentProfile } = await supabase
-      .from('profiles')
-      .select('commission_override')
-      .eq('id', agentId)
-      .single();
     
     // Step 4: Get portfolio sizes
     const [clientPortfolioKWp, agentPortfolioKWp] = await Promise.all([
