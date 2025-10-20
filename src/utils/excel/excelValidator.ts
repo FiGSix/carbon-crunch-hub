@@ -62,7 +62,7 @@ export function validateProposalRows(rows: BulkProposalRow[]): ValidationError[]
     if (!row.commission_date) {
       errors.push({ row: rowNum, field: 'commission_date', message: 'Commission date is required' });
     } else if (!isValidDate(row.commission_date)) {
-      errors.push({ row: rowNum, field: 'commission_date', message: 'Invalid date format (use YYYY-MM-DD)' });
+      errors.push({ row: rowNum, field: 'commission_date', message: 'Invalid date format (use YYYY/MM/DD)' });
     } else {
       const commissionYear = new Date(row.commission_date).getFullYear();
       if (commissionYear < 2022) {
@@ -120,9 +120,12 @@ function isValidEmail(email: string): boolean {
  * Validate date format (YYYY-MM-DD)
  */
 function isValidDate(dateString: string): boolean {
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  // Accept both YYYY/MM/DD and YYYY-MM-DD formats
+  const dateRegex = /^\d{4}[-\/]\d{2}[-\/]\d{2}$/;
   if (!dateRegex.test(dateString)) return false;
   
-  const date = new Date(dateString);
+  // Normalize to YYYY-MM-DD for Date parsing
+  const normalizedDate = dateString.replace(/\//g, '-');
+  const date = new Date(normalizedDate);
   return date instanceof Date && !isNaN(date.getTime());
 }
