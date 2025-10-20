@@ -42,7 +42,7 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
   }, [initialProposal, initialLoading, initialError]);
   
   // Get proposal status data
-  const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
+  const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal, token);
 
   // Create wrapper functions that convert boolean returns to void and pass typed name
   const handleApproveWrapper = async (typedName: string): Promise<void> => {

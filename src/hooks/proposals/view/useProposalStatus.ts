@@ -6,21 +6,27 @@ import { ProposalData } from "@/types/proposals";
 /**
  * Hook to determine proposal status and user permissions
  */
-export function useProposalStatus(proposal: ProposalData | null) {
+export function useProposalStatus(proposal: ProposalData | null, token?: string | null) {
   const { user, userRole } = useAuth();
 
   return useMemo(() => {
-    if (!proposal || !user) {
+    if (!proposal) {
       return {
         isClient: false,
         canTakeAction: false,
-        isAuthenticated: false
+        isAuthenticated: !!user
       };
     }
 
-    const isClient = userRole === 'client' && (
-      proposal.client_id === user.id || 
-      proposal.client_reference_id === user.id
+    // Client is either:
+    // 1. Authenticated as client with matching ID
+    // 2. Accessing via invitation token (prospective client)
+    const isClient = (
+      (userRole === 'client' && (
+        proposal.client_id === user.id || 
+        proposal.client_reference_id === user.id
+      )) ||
+      (!!token && !user) // Token access without authentication = prospective client
     );
     
     // Can take action (approve/reject) if client and proposal is pending
@@ -33,5 +39,5 @@ export function useProposalStatus(proposal: ProposalData | null) {
       canTakeAction,
       isAuthenticated: !!user
     };
-  }, [proposal, user, userRole]);
+  }, [proposal, user, userRole, token]);
 }
