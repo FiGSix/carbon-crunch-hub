@@ -3,6 +3,7 @@
 import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProposalPdfButton } from "./ProposalPdfButton";
+import { SignedAgreementDownloadButton } from "./SignedAgreementDownloadButton";
 import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -85,6 +86,14 @@ export function ProposalHeader({
             <CheckCircle2 className="h-5 w-5 mr-2" />
             <span>Viewing invitation</span>
           </div>
+        )}
+        
+        {/* Signed Agreement Download button - Shown for all users on signed proposals */}
+        {!isDeleted && proposalId && proposal?.status === 'approved' && (
+          <SignedAgreementDownloadButton 
+            proposalId={proposalId} 
+            proposalTitle={title}
+          />
         )}
         
         {/* PDF Download button for agents and admins */}

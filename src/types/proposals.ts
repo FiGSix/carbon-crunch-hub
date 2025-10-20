@@ -235,3 +235,30 @@ export interface BulkUploadResult {
   }>;
   createdProposalIds: string[];
 }
+
+/**
+ * Proposal Agreement with signature metadata
+ */
+export interface ProposalAgreement {
+  id: string;
+  proposal_id: string;
+  signed_by: string;
+  typed_name: string;
+  signature_type: 'typed_name';
+  signed_at: string;
+  ip_address: string;
+  user_agent: string;
+  witness_1_name: string;
+  witness_1_verified_at: string;
+  witness_2_name: string;
+  witness_2_verified_at: string;
+  accepted_terms_version: string;
+  metadata: {
+    signed_via: 'acceptance_link' | 'authenticated_user';
+    token_used?: string;
+    proposal_id_used?: string;
+    timestamp: string;
+  };
+  signed_pdf_url?: string;
+  created_at: string;
+}

@@ -150,7 +150,7 @@ serve(async (req) => {
 
     // 5. Create agreement record with automatic system witnesses
     const witnessTimestamp = new Date().toISOString();
-    const { error: agreementError } = await supabase
+    const { data: newAgreement, error: agreementError } = await supabase
       .from('proposal_agreements')
       .insert({
         proposal_id: proposal.id,
@@ -180,12 +180,16 @@ serve(async (req) => {
             witnessed_at: witnessTimestamp
           }
         }
-      });
+      })
+      .select()
+      .single();
 
-    if (agreementError) {
+    if (agreementError || !newAgreement) {
       console.error("Error creating agreement:", agreementError);
       throw new Error("Failed to record agreement");
     }
+
+    console.log(`✅ Agreement created with ID: ${newAgreement.id}`);
 
     // 6. Update proposal status
     const { error: updateError } = await supabase
@@ -203,12 +207,37 @@ serve(async (req) => {
 
     console.log(`✅ Proposal ${proposal.id} successfully signed by ${typedName}`);
 
-    // 7. Mark invitation as viewed (for analytics) - only if token was used
+    // 7. Generate signed agreement PDF in background
+    (async () => {
+      try {
+        console.log('🖊️ Generating signed agreement PDF...');
+        
+        const { data: signedPdfResult, error: pdfError } = await supabase.functions.invoke(
+          'generate-signed-agreement-pdf',
+          {
+            body: { 
+              proposalId: proposal.id,
+              agreementId: newAgreement.id
+            }
+          }
+        );
+
+        if (pdfError) {
+          console.error('❌ Failed to generate signed PDF:', pdfError);
+        } else {
+          console.log('✅ Signed agreement PDF generated:', signedPdfResult?.signed_pdf_url);
+        }
+      } catch (error) {
+        console.error('❌ Error in signed PDF generation:', error);
+      }
+    })();
+
+    // 8. Mark invitation as viewed (for analytics) - only if token was used
     if (token) {
       await supabase.rpc('mark_invitation_viewed', { token_param: token });
     }
 
-    // 8. Send cession agreement confirmation email in background
+    // 9. Send cession agreement confirmation email in background
     // Fetch client email asynchronously without blocking response
     (async () => {
       try {

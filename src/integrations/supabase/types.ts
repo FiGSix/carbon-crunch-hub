@@ -977,6 +977,7 @@ export type Database = {
           signature_type: Database["public"]["Enums"]["signature_type"]
           signed_at: string
           signed_by: string
+          signed_pdf_url: string | null
           typed_name: string | null
           user_agent: string | null
           witness_1_ip_address: unknown | null
@@ -997,6 +998,7 @@ export type Database = {
           signature_type?: Database["public"]["Enums"]["signature_type"]
           signed_at?: string
           signed_by: string
+          signed_pdf_url?: string | null
           typed_name?: string | null
           user_agent?: string | null
           witness_1_ip_address?: unknown | null
@@ -1017,6 +1019,7 @@ export type Database = {
           signature_type?: Database["public"]["Enums"]["signature_type"]
           signed_at?: string
           signed_by?: string
+          signed_pdf_url?: string | null
           typed_name?: string | null
           user_agent?: string | null
           witness_1_ip_address?: unknown | null

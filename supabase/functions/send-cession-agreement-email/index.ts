@@ -59,22 +59,26 @@ serve(async (req) => {
       ? `${proposal.carbon_credits.toLocaleString()} credits`
       : 'N/A';
 
-    console.log(`[Cession Email] Generating/fetching PDF for proposal: ${proposalId}`);
+    console.log(`[Cession Email] Fetching signed agreement PDF for proposal: ${proposalId}`);
 
-    // Ensure PDF exists by invoking generate-proposal-pdf
-    const { data: pdfResult, error: pdfError } = await supabase.functions.invoke(
-      'generate-proposal-pdf',
-      {
-        body: { proposalId, forceRegenerate: false }
-      }
-    );
+    // Fetch the signed PDF URL from proposal_agreements
+    const { data: agreement, error: agreementError } = await supabase
+      .from('proposal_agreements')
+      .select('signed_pdf_url')
+      .eq('proposal_id', proposalId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (pdfError) {
-      console.error('[Cession Email] Error generating PDF:', pdfError);
-      // Continue without attachment rather than failing completely
+    // Use signed PDF if available, otherwise fall back to unsigned proposal PDF
+    const pdfUrl = agreement?.signed_pdf_url || proposal.pdf_url;
+
+    if (!agreement?.signed_pdf_url) {
+      console.warn('[Cession Email] Signed PDF not found, using unsigned proposal PDF as fallback');
+    } else {
+      console.log('[Cession Email] Using signed agreement PDF:', pdfUrl);
     }
 
-    const pdfUrl = pdfResult?.url || proposal.pdf_url;
     let pdfAttachment = null;
 
     // Fetch PDF from storage if URL exists
