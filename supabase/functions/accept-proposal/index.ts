@@ -38,7 +38,19 @@ serve(async (req) => {
       userAgent 
     }: AcceptProposalRequest = await req.json();
 
+    // Enhanced logging for debugging
+    console.log('📥 Request payload:', {
+      hasToken: !!token,
+      hasProposalId: !!proposalId,
+      typedName: typedName,
+      typedNameLength: typedName?.length,
+      signatureType: signatureType,
+      hasSignatureImage: !!signatureImage,
+      signatureImagePrefix: signatureImage?.substring(0, 30)
+    });
+
     if (!token && !proposalId) {
+      console.error('❌ Missing both token and proposalId');
       throw new Error("Either token or proposalId is required");
     }
 
@@ -91,7 +103,10 @@ serve(async (req) => {
     }
 
     // 2. Validate proposal status
+    console.log('🔍 Validating proposal status:', proposal.status);
+    
     if (proposal.status === 'approved' || proposal.status === 'signed') {
+      console.error('❌ Proposal already signed:', proposal.id);
       return new Response(
         JSON.stringify({ 
           error: "This proposal has already been signed",
@@ -105,6 +120,7 @@ serve(async (req) => {
     }
 
     if (proposal.status === 'rejected') {
+      console.error('❌ Proposal already rejected:', proposal.id);
       return new Response(
         JSON.stringify({ error: "This proposal has been rejected and cannot be signed" }),
         { 
@@ -126,9 +142,20 @@ serve(async (req) => {
     }
 
     // 4. Validate typed name (basic check)
+    console.log('🔍 Validating typed name:', { 
+      typedName, 
+      length: typedName?.length,
+      trimmedLength: typedName?.trim().length 
+    });
+    
     if (!typedName || typedName.trim().length < 2) {
+      console.error('❌ Invalid typed name:', { typedName, length: typedName?.length });
       return new Response(
-        JSON.stringify({ error: "Please provide a valid name" }),
+        JSON.stringify({ 
+          error: "Please provide a valid name (minimum 2 characters)",
+          validation: 'typedName',
+          received: typedName
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -137,6 +164,11 @@ serve(async (req) => {
     }
 
     // Get signed_by from proposal or from authenticated user
+    console.log('🔍 Finding signedBy:', { 
+      client_reference_id: proposal.client_reference_id,
+      client_id: proposal.client_id 
+    });
+    
     let signedBy = proposal.client_reference_id || proposal.client_id;
     
     // If no client reference and we have auth, use the authenticated user
@@ -150,21 +182,38 @@ serve(async (req) => {
         );
         const { data: { user } } = await userSupabase.auth.getUser();
         signedBy = user?.id;
+        console.log('🔍 Got signedBy from authenticated user:', signedBy);
       }
     }
     
     if (!signedBy) {
-      console.error("No client reference found for proposal:", proposal.id);
-      throw new Error("Invalid proposal configuration");
+      console.error("❌ No client reference found for proposal:", proposal.id);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid proposal configuration - no client reference",
+          validation: 'signedBy'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+    
+    console.log('✅ signedBy identified:', signedBy);
 
     // Upload signature image if provided
     let signatureImageUrl: string | null = null;
     if (signatureImage && signatureType === 'canvas') {
-      console.log(`📸 Uploading signature image for proposal ${proposal.id}`);
+      console.log(`📸 Uploading signature image for proposal ${proposal.id}`, {
+        imageLength: signatureImage.length,
+        imagePrefix: signatureImage.substring(0, 50)
+      });
       try {
         const base64Data = signatureImage.replace(/^data:image\/\w+;base64,/, '');
+        console.log('📸 Base64 data length:', base64Data.length);
         const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        console.log('📸 Buffer size:', buffer.length);
         
         const fileName = `signature_${proposal.id}_${Date.now()}.png`;
         const filePath = `signatures/${fileName}`;
