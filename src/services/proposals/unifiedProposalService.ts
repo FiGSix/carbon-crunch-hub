@@ -89,6 +89,21 @@ export async function createProposal(
   });
 
   try {
+    // Check if agent is approved before proceeding
+    const { data: agentProfile } = await supabase
+      .from('profiles')
+      .select('agent_status, role')
+      .eq('id', agentId)
+      .single();
+    
+    if (agentProfile?.role === 'agent' && agentProfile?.agent_status === 'pending_approval') {
+      proposalLogger.warn("Attempted proposal creation by pending agent", { agentId });
+      return {
+        success: false,
+        error: "Your agent account must be approved before you can create proposals."
+      };
+    }
+
     proposalLogger.info("Creating proposal", { 
       proposalTitle, 
       agentId, 

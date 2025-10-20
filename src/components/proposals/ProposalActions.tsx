@@ -6,10 +6,15 @@ import { useAuth } from "@/contexts/auth";
 
 export function ProposalActions() {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
+  const { userRole, profile } = useAuth();
   
   // Only show for agents and admins
   if (userRole !== "agent" && userRole !== "admin") {
+    return null;
+  }
+  
+  // Hide for pending approval agents
+  if (userRole === "agent" && profile?.agent_status === "pending_approval") {
     return null;
   }
   

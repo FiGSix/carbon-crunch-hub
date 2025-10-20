@@ -2,8 +2,9 @@
 import React, { memo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
@@ -15,7 +16,7 @@ import { useAuth } from "@/contexts/auth";
 import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
 
 const Dashboard = memo(() => {
-  const { userRole } = useAuth();
+  const { userRole, profile } = useAuth();
   
   // Phase 4: Fetch dashboard metrics by stage (4 new cards)
   const {
@@ -108,6 +109,17 @@ const Dashboard = memo(() => {
           </Button>
         }
       />
+      
+      {/* Show pending approval notice for agents */}
+      {userRole === "agent" && profile?.agent_status === "pending_approval" && (
+        <Alert className="mb-6">
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Account Pending Approval</AlertTitle>
+          <AlertDescription>
+            Your agent account is under review. You can browse the dashboard, but you will not be able to create proposals or access client management until an administrator approves your account. This typically takes 24-48 hours.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Phase 4: New 4-Card Metrics Section */}
       <QueryErrorBoundary>

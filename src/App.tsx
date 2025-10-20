@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/auth";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
+import { AgentApprovalGuard } from "@/components/auth/AgentApprovalGuard";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
@@ -234,11 +235,13 @@ function App() {
                     path="/create-proposal" 
                     element={
                       <PrivateRoute allowedRoles={['agent', 'admin']}>
-                        <PageErrorBoundary pageName="Create Proposal">
-                          <Suspense fallback={<PageLoader />}>
-                            <CreateProposal />
-                          </Suspense>
-                        </PageErrorBoundary>
+                        <AgentApprovalGuard>
+                          <PageErrorBoundary pageName="Create Proposal">
+                            <Suspense fallback={<PageLoader />}>
+                              <CreateProposal />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </AgentApprovalGuard>
                       </PrivateRoute>
                     } 
                   />
@@ -270,11 +273,13 @@ function App() {
                     path="/my-clients" 
                     element={
                       <PrivateRoute allowedRoles={['agent', 'admin']}>
-                        <PageErrorBoundary pageName="My Clients">
-                          <Suspense fallback={<PageLoader />}>
-                            <MyClients />
-                          </Suspense>
-                        </PageErrorBoundary>
+                        <AgentApprovalGuard>
+                          <PageErrorBoundary pageName="My Clients">
+                            <Suspense fallback={<PageLoader />}>
+                              <MyClients />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </AgentApprovalGuard>
                       </PrivateRoute>
                     } 
                   />
