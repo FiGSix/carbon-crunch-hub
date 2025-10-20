@@ -30,6 +30,7 @@ export function ProposalActionButtons({ proposal, onProposalUpdate }: ProposalAc
       const updateData: any = {
         client_share_override_enabled: clientShare !== null,
         client_share_override_set_at: clientShare !== null ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
       };
 
       if (clientShare !== null) {
