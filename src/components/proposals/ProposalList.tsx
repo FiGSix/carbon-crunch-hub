@@ -3,6 +3,7 @@ import { useEffect, memo, useMemo, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
+import { ClientShareCell } from "./components/ClientShareCell";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -55,6 +56,11 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       </TableCell>
       {userRole === "admin" && (
         <TableCell>{proposal.agent || "Unassigned"}</TableCell>
+      )}
+      {userRole === "admin" && (
+        <TableCell>
+          <ClientShareCell proposal={proposal} />
+        </TableCell>
       )}
       <TableCell className="text-center">{formattedRevenue}</TableCell>
       <TableCell className="text-right">
@@ -146,6 +152,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
+            {userRole === "admin" && <TableHead>Client Share</TableHead>}
             <TableHead className="text-center">First Yr Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>

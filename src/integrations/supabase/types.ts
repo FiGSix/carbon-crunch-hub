@@ -1048,6 +1048,9 @@ export type Database = {
           carbon_credits: number | null
           client_id: string | null
           client_reference_id: string | null
+          client_share_override_enabled: boolean | null
+          client_share_override_set_at: string | null
+          client_share_override_set_by: string | null
           client_share_percentage: number | null
           content: Json
           created_at: string
@@ -1082,6 +1085,9 @@ export type Database = {
           carbon_credits?: number | null
           client_id?: string | null
           client_reference_id?: string | null
+          client_share_override_enabled?: boolean | null
+          client_share_override_set_at?: string | null
+          client_share_override_set_by?: string | null
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
@@ -1116,6 +1122,9 @@ export type Database = {
           carbon_credits?: number | null
           client_id?: string | null
           client_reference_id?: string | null
+          client_share_override_enabled?: boolean | null
+          client_share_override_set_at?: string | null
+          client_share_override_set_by?: string | null
           client_share_percentage?: number | null
           content?: Json
           created_at?: string
@@ -1160,6 +1169,13 @@ export type Database = {
             columns: ["client_reference_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_share_override_set_by_fkey"
+            columns: ["client_share_override_set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
