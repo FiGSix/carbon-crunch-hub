@@ -1063,11 +1063,24 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
               <CardTitle>Operations & Maintenance</CardTitle>
               <CardDescription>Maintenance agreement details</CardDescription>
             </div>
-            {getSectionStatus(['maintenance_agreement_term_years']) ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-muted-foreground" />
-            )}
+            {(() => {
+              if (formData.has_maintenance_agreement === null || formData.has_maintenance_agreement === undefined) {
+                return <AlertCircle className="h-5 w-5 text-orange-600" />;
+              } else if (formData.has_maintenance_agreement === false) {
+                return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+              } else {
+                const hasRequiredFields = !!(
+                  formData.maintenance_agreement_term_years &&
+                  formData.maintenance_cost_annual &&
+                  documents.some(doc => doc.category === 'om_agreement')
+                );
+                return hasRequiredFields ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                );
+              }
+            })()}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1087,7 +1100,7 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
             </Select>
           </div>
 
-          {formData.has_maintenance_agreement !== null && formData.has_maintenance_agreement !== undefined && (
+          {formData.has_maintenance_agreement === true && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
