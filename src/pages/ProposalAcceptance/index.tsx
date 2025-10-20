@@ -22,6 +22,7 @@ export default function ProposalAcceptance() {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [typedName, setTypedName] = useState("");
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
@@ -144,7 +145,7 @@ export default function ProposalAcceptance() {
     return clientWords.every(word => typed.includes(word));
   };
 
-  const canSubmit = hasScrolledToBottom && hasAgreed && typedName.trim().length > 0 && validateTypedName();
+  const canSubmit = hasScrolledToBottom && hasAgreed && (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
 
   const handleSubmit = async () => {
     if (!canSubmit || !proposal) return;
@@ -167,6 +168,8 @@ export default function ProposalAcceptance() {
           token: token || undefined,
           proposalId: !token ? proposal.id : undefined,
           typedName,
+          signatureImage: signatureImage || undefined,
+          signatureType: signatureImage ? 'canvas' : 'typed_name',
           ipAddress,
           userAgent: navigator.userAgent
         }
@@ -254,6 +257,8 @@ export default function ProposalAcceptance() {
           onAgreeChange={setHasAgreed}
           typedName={typedName}
           onTypedNameChange={setTypedName}
+          signatureImage={signatureImage}
+          onSignatureImageChange={setSignatureImage}
           clientName={getClientName()}
           isValid={validateTypedName()}
           canSubmit={canSubmit}
