@@ -37,6 +37,7 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
   const [installers, setInstallers] = useState<SolarInstaller[]>([]);
   const [loadingInstallers, setLoadingInstallers] = useState(false);
   const [isPanelTotalManuallyOverridden, setIsPanelTotalManuallyOverridden] = useState(false);
+  const [inverterSerials, setInverterSerials] = useState<string[]>([]);
 
   useEffect(() => {
     fetchDocuments();
@@ -65,6 +66,28 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
       }));
     }
   }, [formData.panel_size_wp, formData.panel_quantity, isPanelTotalManuallyOverridden]);
+
+  // Initialize and manage inverter serial numbers based on quantity
+  useEffect(() => {
+    const quantity = formData.inverter_quantity || 1;
+    
+    // Parse existing serial(s)
+    let existingSerials: string[] = [];
+    if (formData.inverter_serial) {
+      try {
+        // Try parsing as JSON array
+        const parsed = JSON.parse(formData.inverter_serial as string);
+        existingSerials = Array.isArray(parsed) ? parsed : [formData.inverter_serial as string];
+      } catch {
+        // If not JSON, treat as single serial
+        existingSerials = [formData.inverter_serial as string];
+      }
+    }
+    
+    // Adjust array size to match quantity
+    const newSerials = Array(quantity).fill('').map((_, i) => existingSerials[i] || '');
+    setInverterSerials(newSerials);
+  }, [formData.inverter_quantity, formData.inverter_serial]);
 
   const fetchDocuments = async () => {
     setLoadingDocs(true);
@@ -169,16 +192,31 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSerialChange = (index: number, value: string) => {
+    const newSerials = [...inverterSerials];
+    newSerials[index] = value;
+    setInverterSerials(newSerials);
+    
+    // Store as JSON array if multiple, single string if one
+    const serialValue = newSerials.length === 1 
+      ? newSerials[0] 
+      : JSON.stringify(newSerials);
+    
+    handleInputChange('inverter_serial', serialValue);
+  };
+
   const handleSaveDraft = async () => {
     try {
       setIsSaving(true);
 
+      // Prepare data for upsert, excluding auto-managed fields
+      const { id, created_at, updated_at, validated_at, validated_by, ...upsertData } = formData;
+      
       const { error } = await supabase
         .from('onboarding_fields')
         .upsert({
           project_id: projectId,
-          ...formData,
-          updated_at: new Date().toISOString(),
+          ...upsertData as any,
         });
 
       if (error) throw error;
@@ -216,14 +254,15 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
 
       console.log("Starting validation and completion process...");
 
+      // Prepare data for upsert, excluding auto-managed fields
+      const { id, created_at, updated_at, validated_at, validated_by, ...upsertData } = formData;
+      
       // First, save all current data
       const { error: fieldsError } = await supabase
         .from('onboarding_fields')
         .upsert({
           project_id: projectId,
-          ...formData,
-          validated_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          ...upsertData as any,
         });
 
       if (fieldsError) {
@@ -335,6 +374,26 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
   };
 
   const getSectionStatus = (fields: string[]) => {
+    // Special handling for inverter_serial validation
+    if (fields.includes('inverter_serial')) {
+      const otherFields = fields.filter(f => f !== 'inverter_serial');
+      const otherFieldsFilled = otherFields.every(field => formData[field as keyof OnboardingFields]);
+      
+      // Check serial numbers
+      let hasAllSerials = false;
+      if (formData.inverter_serial) {
+        try {
+          const parsed = JSON.parse(formData.inverter_serial as string);
+          const serials = Array.isArray(parsed) ? parsed : [formData.inverter_serial as string];
+          hasAllSerials = serials.every(s => s && s.trim().length > 0);
+        } catch {
+          hasAllSerials = (formData.inverter_serial as string).trim().length > 0;
+        }
+      }
+      
+      return otherFieldsFilled && hasAllSerials;
+    }
+    
     const allFilled = fields.every(field => formData[field as keyof OnboardingFields]);
     return allFilled;
   };
@@ -646,14 +705,27 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="inverter_serial">Serial Number</Label>
-              <Input
-                id="inverter_serial"
-                value={formData.inverter_serial || ''}
-                onChange={(e) => handleInputChange('inverter_serial', e.target.value)}
-                placeholder="ABC123456"
-              />
+            <div className="space-y-2 md:col-span-2">
+              <Label>
+                Serial Number{(formData.inverter_quantity || 1) > 1 ? 's' : ''}
+              </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {inverterSerials.map((serial, index) => (
+                  <div key={index} className="space-y-1">
+                    {inverterSerials.length > 1 && (
+                      <Label htmlFor={`inverter_serial_${index}`} className="text-xs text-muted-foreground">
+                        Inverter {index + 1}
+                      </Label>
+                    )}
+                    <Input
+                      id={`inverter_serial_${index}`}
+                      value={serial}
+                      onChange={(e) => handleSerialChange(index, e.target.value)}
+                      placeholder={`Serial ${inverterSerials.length > 1 ? index + 1 : ''}`}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
