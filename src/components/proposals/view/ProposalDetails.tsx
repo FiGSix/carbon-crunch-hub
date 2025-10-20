@@ -101,6 +101,7 @@ export function ProposalDetails({
                 selectedClientId={clientId}
                 proposalId={proposal.id}
                 proposalData={proposalData}
+                isClient={isClient}
               />
             </>
           )}

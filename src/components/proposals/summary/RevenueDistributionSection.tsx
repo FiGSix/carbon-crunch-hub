@@ -16,16 +16,18 @@ interface RevenueDistributionSectionProps {
     agent_commission_percentage?: number;
     agent_portfolio_kwp?: number;
   } | null;
+  isClient?: boolean;
 }
 
 export function RevenueDistributionSection({ 
   systemSize, 
   selectedClientId, 
   proposalId,
-  proposalData 
+  proposalData,
+  isClient: isClientProp
 }: RevenueDistributionSectionProps) {
   const { profile } = useAuth();
-  const isClient = profile?.role === 'client';
+  const isClient = isClientProp !== undefined ? isClientProp : profile?.role === 'client';
   
   const { portfolioData: clientPortfolioData, loading: clientLoading } = usePortfolioData({
     selectedClientId,

@@ -56,6 +56,7 @@ export function SummaryStep({
             systemSize={projectInfo.size}
             selectedClientId={selectedClientId}
             proposalId={proposalId}
+            isClient={false}
           />
         </div>
       </CardContent>
