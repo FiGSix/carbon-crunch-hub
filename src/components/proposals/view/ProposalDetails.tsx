@@ -102,6 +102,7 @@ export function ProposalDetails({
                 proposalId={proposal.id}
                 proposalData={proposalData}
                 isClient={isClient}
+                token={token}
               />
             </>
           )}

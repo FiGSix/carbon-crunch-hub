@@ -34,6 +34,17 @@ export function useProposalStatus(proposal: ProposalData | null, token?: string 
       proposal.status === 'pending' && 
       !proposal.archived_at;
 
+    // Debug logging
+    console.log("🔍 useProposalStatus - Status Check", {
+      proposalId: proposal.id,
+      hasToken: !!token,
+      hasUser: !!user,
+      userRole,
+      isClient,
+      canTakeAction,
+      tokenAccess: !!token && !user
+    });
+
     return {
       isClient,
       canTakeAction,

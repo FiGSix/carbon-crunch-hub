@@ -17,6 +17,7 @@ interface RevenueDistributionSectionProps {
     agent_portfolio_kwp?: number;
   } | null;
   isClient?: boolean;
+  token?: string | null;
 }
 
 export function RevenueDistributionSection({ 
@@ -24,10 +25,27 @@ export function RevenueDistributionSection({
   selectedClientId, 
   proposalId,
   proposalData,
-  isClient: isClientProp
+  isClient: isClientProp,
+  token
 }: RevenueDistributionSectionProps) {
-  const { profile } = useAuth();
-  const isClient = isClientProp !== undefined ? isClientProp : profile?.role === 'client';
+  const { profile, user } = useAuth();
+  
+  // Defensive fallback: If isClientProp is undefined, check:
+  // 1. If user is authenticated as client
+  // 2. If accessing via token without authentication (prospective client)
+  const displayIsClient = isClientProp !== undefined 
+    ? isClientProp 
+    : (profile?.role === 'client' || (!!token && !user));
+  
+  // Debug logging
+  console.log("🎨 RevenueDistributionSection - Display Logic", {
+    isClientProp,
+    profileRole: profile?.role,
+    hasToken: !!token,
+    hasUser: !!user,
+    displayIsClient,
+    willShowAllCards: !displayIsClient
+  });
   
   const { portfolioData: clientPortfolioData, loading: clientLoading } = usePortfolioData({
     selectedClientId,
@@ -63,7 +81,7 @@ export function RevenueDistributionSection({
     <div>
       <h3 className="text-lg font-semibold mb-3 text-carbon-gray-900">Revenue Distribution</h3>
       
-      <div className={`grid grid-cols-1 ${isClient ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
+      <div className={`grid grid-cols-1 ${displayIsClient ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
         <div className="p-4 bg-carbon-green-50 rounded-lg border border-carbon-green-200">
           <p className="text-sm text-carbon-gray-500">Client Share</p>
           <p className="text-xl font-bold text-carbon-green-600">{clientSharePercentage}%</p>
@@ -72,7 +90,7 @@ export function RevenueDistributionSection({
           </p>
         </div>
         
-        {!isClient && (
+        {!displayIsClient && (
           <>
             <div className="p-4 bg-carbon-blue-50 rounded-lg border border-carbon-blue-200">
               <p className="text-sm text-carbon-gray-500">Agent Commission</p>
