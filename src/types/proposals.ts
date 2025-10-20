@@ -197,3 +197,41 @@ export interface ProposalListProps {
   proposals: ProposalListItem[];
   onProposalUpdate?: () => void;
 }
+
+/**
+ * Bulk upload types for Excel-based proposal creation
+ */
+export interface BulkProposalRow {
+  proposal_title: string;
+  client_email: string;
+  client_first_name: string;
+  client_last_name: string;
+  client_phone?: string;
+  client_company_name?: string;
+  project_name: string;
+  project_address: string;
+  system_size: number;
+  system_size_unit: 'kWp' | 'MWp';
+  commission_date: string;
+  in_south_africa: boolean;
+  not_registered: boolean;
+  under_15mwp: boolean;
+  commissioned_after_2022: boolean;
+  legal_ownership: boolean;
+  additional_notes?: string;
+  client_share_override?: number;
+  agent_commission_override?: number;
+}
+
+export interface BulkUploadResult {
+  success: boolean;
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  errors: Array<{
+    row: number;
+    data: Partial<BulkProposalRow>;
+    error: string;
+  }>;
+  createdProposalIds: string[];
+}

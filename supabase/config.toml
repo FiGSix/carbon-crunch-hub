@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.generate-proposal-pdf]
 verify_jwt = true
+
+[functions.bulk-upload-proposals]
+verify_jwt = true
