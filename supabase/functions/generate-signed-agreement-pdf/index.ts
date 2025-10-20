@@ -156,12 +156,58 @@ async function generateSignedPdf(
   signatureImageUrl?: string | null
 ): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb, degrees } = await import('https://esm.sh/pdf-lib@1.17.1');
+  const { addCessionAgreementPages } = await import('../_shared/cession-agreement-pdf.ts');
 
-  console.log('[Signed PDF] Loading base PDF document');
-  const pdfDoc = await PDFDocument.load(basePdfBytes);
-  const pages = pdfDoc.getPages();
+  console.log('[Signed PDF] Creating new PDF document');
+  const pdfDoc = await PDFDocument.create();
+  
+  // Embed fonts
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fonts = { regular: font, bold };
+
+  // STEP 1: Add Cession Agreement pages
+  console.log('[Signed PDF] Adding Cession Agreement pages');
+  await addCessionAgreementPages(pdfDoc, fonts, proposal);
+
+  // STEP 2: Add "ANNEXURE A" separator page
+  console.log('[Signed PDF] Adding Annexure A separator');
+  const separatorPage = pdfDoc.addPage([595.28, 841.89]); // A4 size
+  const { width: sepWidth, height: sepHeight } = separatorPage.getSize();
+  
+  // Yellow header bar
+  separatorPage.drawRectangle({
+    x: 0,
+    y: sepHeight - 100,
+    width: sepWidth,
+    height: 100,
+    color: rgb(1, 0.804, 0.012), // Crunch yellow
+  });
+  
+  separatorPage.drawText('ANNEXURE A', {
+    x: sepWidth / 2 - 100,
+    y: sepHeight / 2 + 20,
+    size: 32,
+    font: bold,
+    color: rgb(0.137, 0.122, 0.125), // Crunch charcoal
+  });
+  
+  separatorPage.drawText('PROPOSAL', {
+    x: sepWidth / 2 - 70,
+    y: sepHeight / 2 - 20,
+    size: 28,
+    font: bold,
+    color: rgb(0.137, 0.122, 0.125),
+  });
+
+  // STEP 3: Merge base proposal PDF pages
+  console.log('[Signed PDF] Merging proposal PDF pages');
+  const basePdfDoc = await PDFDocument.load(basePdfBytes);
+  const copiedPages = await pdfDoc.copyPages(basePdfDoc, basePdfDoc.getPageIndices());
+  copiedPages.forEach(page => pdfDoc.addPage(page));
+
+  // STEP 4: Add watermark and initials to ALL pages
+  const pages = pdfDoc.getPages();
 
   const crunchYellow = rgb(1, 0.804, 0.012);
   const crunchCharcoal = rgb(0.137, 0.122, 0.125);
@@ -174,10 +220,11 @@ async function generateSignedPdf(
   };
 
   const initials = getInitials(agreement.typed_name);
+  const totalPagesBeforeSig = pages.length;
 
   console.log(`[Signed PDF] Adding watermark and initials (${initials}) to ${pages.length} pages`);
 
-  // Add watermark and initials to all pages
+  // Add watermark and initials to all pages (including Cession Agreement and Proposal)
   pages.forEach((page, index) => {
     const { width, height } = page.getSize();
 
@@ -201,8 +248,8 @@ async function generateSignedPdf(
       color: crunchCharcoal,
     });
 
-    // Add page number
-    page.drawText(`Page ${index + 1} of ${pages.length}`, {
+    // Add page number (pages before signature page)
+    page.drawText(`Page ${index + 1} of ${totalPagesBeforeSig + 1}`, {
       x: width / 2 - 40,
       y: 30,
       size: 10,
@@ -211,7 +258,10 @@ async function generateSignedPdf(
     });
   });
 
-  // Create signature page
+  // Update total pages count after adding signature page
+  const finalTotalPages = totalPagesBeforeSig + 1;
+
+  // STEP 5: Create signature page
   console.log('[Signed PDF] Creating signature page');
   const sigPage = pdfDoc.addPage([595.28, 841.89]); // A4 size
   const { width, height } = sigPage.getSize();
@@ -231,6 +281,15 @@ async function generateSignedPdf(
     size: 24,
     font: bold,
     color: crunchCharcoal,
+  });
+
+  // Add page number to signature page
+  sigPage.drawText(`Page ${finalTotalPages} of ${finalTotalPages}`, {
+    x: width / 2 - 40,
+    y: 30,
+    size: 10,
+    font,
+    color: rgb(0.5, 0.5, 0.5),
   });
 
   let y = height - 150;
