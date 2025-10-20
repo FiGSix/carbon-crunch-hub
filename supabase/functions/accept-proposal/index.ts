@@ -193,12 +193,16 @@ serve(async (req) => {
 
     // 5. Create agreement record with automatic system witnesses
     const witnessTimestamp = new Date().toISOString();
+    
+    // Map frontend signature type to database enum
+    const dbSignatureType = signatureType === 'canvas' ? 'electronic_signature' : 'typed_name';
+    
     const { data: newAgreement, error: agreementError } = await supabase
       .from('proposal_agreements')
       .insert({
         proposal_id: proposal.id,
         signed_by: signedBy,
-        signature_type: signatureType,
+        signature_type: dbSignatureType,
         signature_image_url: signatureImageUrl,
         typed_name: typedName,
         ip_address: ipAddress,
