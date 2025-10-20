@@ -141,18 +141,20 @@ serve(async (req) => {
       );
     }
 
-    // 4. Validate typed name (basic check)
-    console.log('🔍 Validating typed name:', { 
+    // 4. Validate typed name (conditional based on signature type)
+    console.log('🔍 Validating signature:', { 
+      signatureType,
       typedName, 
-      length: typedName?.length,
-      trimmedLength: typedName?.trim().length 
+      typedNameLength: typedName?.length,
+      hasSignatureImage: !!signatureImage
     });
     
-    if (!typedName || typedName.trim().length < 2) {
-      console.error('❌ Invalid typed name:', { typedName, length: typedName?.length });
+    // Only require typed name if signature type is 'typed_name'
+    if (signatureType === 'typed_name' && (!typedName || typedName.trim().length < 2)) {
+      console.error('❌ Invalid typed name for typed signature:', { typedName, length: typedName?.length });
       return new Response(
         JSON.stringify({ 
-          error: "Please provide a valid name (minimum 2 characters)",
+          error: "Please provide a valid name (minimum 2 characters) when using typed signature",
           validation: 'typedName',
           received: typedName
         }),
@@ -162,6 +164,9 @@ serve(async (req) => {
         }
       );
     }
+    
+    // For canvas signatures, typed name is optional
+    console.log(`✅ Signature validation passed for ${signatureType} signature`);
 
     // Get signed_by from proposal or from authenticated user
     console.log('🔍 Finding signedBy:', { 
@@ -253,7 +258,7 @@ serve(async (req) => {
         signed_by: signedBy,
         signature_type: dbSignatureType,
         signature_image_url: signatureImageUrl,
-        typed_name: typedName,
+        typed_name: typedName?.trim() || null,
         ip_address: ipAddress,
         user_agent: userAgent,
         accepted_terms_version: '2.0',
@@ -302,7 +307,7 @@ serve(async (req) => {
       throw new Error("Failed to update proposal status");
     }
 
-    console.log(`✅ Proposal ${proposal.id} successfully signed by ${typedName}`);
+    console.log(`✅ Proposal ${proposal.id} successfully signed via ${signatureType}`);
 
     // 7. Generate signed agreement PDF in background
     (async () => {

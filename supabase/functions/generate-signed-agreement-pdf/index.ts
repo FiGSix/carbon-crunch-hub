@@ -212,8 +212,9 @@ async function generateSignedPdf(
   const crunchYellow = rgb(1, 0.804, 0.012);
   const crunchCharcoal = rgb(0.137, 0.122, 0.125);
 
-  // Extract initials from typed name
-  const getInitials = (name: string): string => {
+  // Extract initials from typed name (or use default if none)
+  const getInitials = (name: string | null): string => {
+    if (!name || !name.trim()) return 'CC'; // Default to "CC" (Crunch Carbon) if no name
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return parts.map(p => p[0]).join('').toUpperCase();
@@ -316,7 +317,7 @@ async function generateSignedPdf(
 
   // Embed signature image if provided
   let signatureImage = null;
-  if (signatureImageUrl && agreement.signature_type_used === 'canvas') {
+  if (signatureImageUrl && agreement.signature_type === 'electronic_signature') {
     try {
       console.log('[Signed PDF] Fetching signature image:', signatureImageUrl);
       const sigImageResponse = await fetch(signatureImageUrl);
@@ -341,7 +342,7 @@ async function generateSignedPdf(
   y -= lineHeight + 10;
 
   // Draw signature (image or typed name)
-  if (signatureImage && agreement.signature_type_used === 'canvas') {
+  if (signatureImage && agreement.signature_type === 'electronic_signature') {
     sigPage.drawImage(signatureImage, {
       x: leftMargin,
       y: y - 60,
