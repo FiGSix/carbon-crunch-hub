@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, CheckCircle2, AlertCircle, PenTool } from "lucide-react";
+import { SignaturePad } from "@/components/proposals/signature/SignatureCanvas";
 
 interface ApprovalSignatureDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (typedName: string) => Promise<void>;
+  onConfirm: (typedName: string, signatureImage?: string | null) => Promise<void>;
   clientName: string;
   proposalTitle: string;
 }
@@ -24,6 +26,7 @@ export function ApprovalSignatureDialog({
 }: ApprovalSignatureDialogProps) {
   const [hasAgreed, setHasAgreed] = useState(false);
   const [typedName, setTypedName] = useState("");
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
 
@@ -32,6 +35,7 @@ export function ApprovalSignatureDialog({
     if (!open) {
       setHasAgreed(false);
       setTypedName("");
+      setSignatureImage(null);
       setHasScrolledToBottom(false);
     }
   }, [open]);
@@ -46,14 +50,14 @@ export function ApprovalSignatureDialog({
   };
 
   const isValid = validateTypedName() && typedName.trim().length > 0;
-  const canSubmit = hasScrolledToBottom && hasAgreed && isValid;
+  const canSubmit = hasScrolledToBottom && hasAgreed && (isValid || signatureImage !== null);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
     setIsSubmitting(true);
     try {
-      await onConfirm(typedName);
+      await onConfirm(typedName, signatureImage);
       onOpenChange(false);
     } catch (error) {
       // Error handling is done in parent component
@@ -146,39 +150,60 @@ export function ApprovalSignatureDialog({
 
           {/* Signature Input */}
           <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-            <div>
-              <Label htmlFor="signature" className="text-sm font-semibold">
-                Type your full name to sign
-              </Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Your name must match: {clientName}
-              </p>
-            </div>
-            <Input
-              id="signature"
-              type="text"
-              placeholder="Type your full name"
-              value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
-              disabled={!hasAgreed}
-              className={`${
-                typedName.trim().length > 0 && !isValid
-                  ? 'border-destructive'
-                  : ''
-              }`}
-            />
-            {typedName.trim().length > 0 && !isValid && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                <span>Name doesn't match the client name</span>
-              </div>
-            )}
-            {isValid && (
-              <div className="flex items-center gap-2 text-sm text-green-600">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Name verified</span>
-              </div>
-            )}
+            <Tabs defaultValue="draw" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="draw" disabled={!hasAgreed || !hasScrolledToBottom}>
+                  Draw Signature
+                </TabsTrigger>
+                <TabsTrigger value="type" disabled={!hasAgreed || !hasScrolledToBottom}>
+                  Type Name
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="draw" className="space-y-2 mt-4">
+                <SignaturePad 
+                  onSignatureChange={setSignatureImage}
+                  clientName={clientName}
+                />
+                {signatureImage && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Signature captured</span>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="type" className="space-y-2 mt-4">
+                <Label htmlFor="signature" className="text-sm">
+                  Type your full name to sign (must match: {clientName})
+                </Label>
+                <Input
+                  id="signature"
+                  type="text"
+                  placeholder="Type your full name"
+                  value={typedName}
+                  onChange={(e) => setTypedName(e.target.value)}
+                  disabled={!hasAgreed}
+                  className={`${
+                    typedName.trim().length > 0 && !isValid
+                      ? 'border-destructive'
+                      : ''
+                  }`}
+                />
+                {typedName.trim().length > 0 && !isValid && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Name doesn't match the client name</span>
+                  </div>
+                )}
+                {isValid && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Name verified</span>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 
@@ -211,7 +236,7 @@ export function ApprovalSignatureDialog({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground text-center">
-          By clicking this button, your electronic signature is legally binding
+          By clicking this button, your signature is legally binding
         </p>
       </DialogContent>
     </Dialog>

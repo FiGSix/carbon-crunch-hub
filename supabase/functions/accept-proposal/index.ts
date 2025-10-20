@@ -10,6 +10,8 @@ interface AcceptProposalRequest {
   token?: string;
   proposalId?: string;
   typedName: string;
+  signatureImage?: string;
+  signatureType?: 'canvas' | 'typed_name';
   ipAddress?: string;
   userAgent?: string;
 }
@@ -26,7 +28,15 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token, proposalId, typedName, ipAddress, userAgent }: AcceptProposalRequest = await req.json();
+    const { 
+      token, 
+      proposalId, 
+      typedName, 
+      signatureImage,
+      signatureType = 'typed_name',
+      ipAddress, 
+      userAgent 
+    }: AcceptProposalRequest = await req.json();
 
     if (!token && !proposalId) {
       throw new Error("Either token or proposalId is required");
@@ -148,6 +158,39 @@ serve(async (req) => {
       throw new Error("Invalid proposal configuration");
     }
 
+    // Upload signature image if provided
+    let signatureImageUrl: string | null = null;
+    if (signatureImage && signatureType === 'canvas') {
+      console.log(`📸 Uploading signature image for proposal ${proposal.id}`);
+      try {
+        const base64Data = signatureImage.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        
+        const fileName = `signature_${proposal.id}_${Date.now()}.png`;
+        const filePath = `signatures/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('signed-agreements')
+          .upload(filePath, buffer, {
+            contentType: 'image/png',
+            upsert: false
+          });
+        
+        if (uploadError) {
+          console.error('❌ Error uploading signature image:', uploadError);
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('signed-agreements')
+            .getPublicUrl(filePath);
+          
+          signatureImageUrl = publicUrl;
+          console.log(`✅ Signature image uploaded: ${signatureImageUrl}`);
+        }
+      } catch (uploadErr) {
+        console.error('❌ Exception uploading signature:', uploadErr);
+      }
+    }
+
     // 5. Create agreement record with automatic system witnesses
     const witnessTimestamp = new Date().toISOString();
     const { data: newAgreement, error: agreementError } = await supabase
@@ -155,7 +198,8 @@ serve(async (req) => {
       .insert({
         proposal_id: proposal.id,
         signed_by: signedBy,
-        signature_type: 'typed_name',
+        signature_type: signatureType,
+        signature_image_url: signatureImageUrl,
         typed_name: typedName,
         ip_address: ipAddress,
         user_agent: userAgent,

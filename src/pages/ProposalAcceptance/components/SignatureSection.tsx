@@ -3,7 +3,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, AlertCircle, Loader2, PenTool } from "lucide-react";
+import { SignaturePad } from "@/components/proposals/signature/SignatureCanvas";
 
 interface SignatureSectionProps {
   hasScrolledToBottom: boolean;
@@ -11,6 +13,8 @@ interface SignatureSectionProps {
   onAgreeChange: (checked: boolean) => void;
   typedName: string;
   onTypedNameChange: (name: string) => void;
+  signatureImage: string | null;
+  onSignatureImageChange: (image: string | null) => void;
   clientName: string;
   isValid: boolean;
   canSubmit: boolean;
@@ -24,12 +28,16 @@ export function SignatureSection({
   onAgreeChange,
   typedName,
   onTypedNameChange,
+  signatureImage,
+  onSignatureImageChange,
   clientName,
   isValid,
   canSubmit,
   isSubmitting,
   onSubmit,
 }: SignatureSectionProps) {
+  const hasSignature = signatureImage !== null || isValid;
+  
   return (
     <Card className="border-2 border-primary/20">
       <CardHeader>
@@ -86,46 +94,67 @@ export function SignatureSection({
           </div>
         </div>
 
-        {/* Step 3: Type name */}
+        {/* Step 3: Sign */}
         <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-          {isValid && typedName.trim().length > 0 ? (
+          {hasSignature ? (
             <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
           ) : (
             <div className="h-5 w-5 rounded-full border-2 border-muted-foreground mt-0.5 flex-shrink-0" />
           )}
           <div className="flex-1 space-y-3">
             <div>
-              <p className="font-medium">Step 3: Sign with Your Name</p>
+              <p className="font-medium">Step 3: Sign with Your Signature</p>
               <p className="text-sm text-muted-foreground">
-                Type your full name to sign this agreement
+                Draw your signature or type your name
               </p>
             </div>
-            <div className="space-y-2">
-              <Input
-                type="text"
-                placeholder="Type your full name"
-                value={typedName}
-                onChange={(e) => onTypedNameChange(e.target.value)}
-                disabled={!hasAgreed}
-                className={`${
-                  typedName.trim().length > 0 && !isValid
-                    ? 'border-destructive'
-                    : ''
-                }`}
-              />
-              {typedName.trim().length > 0 && !isValid && (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Name doesn't match the client name ({clientName})</span>
-                </div>
-              )}
-              {isValid && (
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Name verified</span>
-                </div>
-              )}
-            </div>
+            
+            <Tabs defaultValue="draw" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="draw" disabled={!hasAgreed}>Draw Signature</TabsTrigger>
+                <TabsTrigger value="type" disabled={!hasAgreed}>Type Name</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="draw" className="space-y-2 mt-4">
+                <SignaturePad 
+                  onSignatureChange={onSignatureImageChange}
+                  clientName={clientName}
+                />
+                {signatureImage && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Signature captured</span>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="type" className="space-y-2 mt-4">
+                <Input
+                  type="text"
+                  placeholder="Type your full name"
+                  value={typedName}
+                  onChange={(e) => onTypedNameChange(e.target.value)}
+                  disabled={!hasAgreed}
+                  className={`${
+                    typedName.trim().length > 0 && !isValid
+                      ? 'border-destructive'
+                      : ''
+                  }`}
+                />
+                {typedName.trim().length > 0 && !isValid && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Name doesn't match the client name ({clientName})</span>
+                  </div>
+                )}
+                {isValid && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Name verified</span>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 
@@ -150,8 +179,7 @@ export function SignatureSection({
             )}
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-3">
-            By clicking this button, you acknowledge that your electronic signature is legally binding
-            and that you accept all terms and conditions outlined in this proposal.
+            Your signature is legally binding. You can either draw or type your name.
           </p>
         </div>
       </CardContent>

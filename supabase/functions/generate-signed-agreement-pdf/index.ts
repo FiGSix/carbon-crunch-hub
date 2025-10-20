@@ -91,7 +91,12 @@ serve(async (req) => {
     const basePdfBytes = new Uint8Array(await pdfResponse.arrayBuffer());
 
     // 5. Generate signed PDF using pdf-lib
-    const signedPdfBytes = await generateSignedPdf(basePdfBytes, proposal, agreement);
+    const signedPdfBytes = await generateSignedPdf(
+      basePdfBytes, 
+      proposal, 
+      agreement,
+      agreement.signature_image_url
+    );
 
     // 6. Upload signed PDF to storage
     const fileName = `signed_agreement_${proposalId}_${agreementId}.pdf`;
@@ -144,7 +149,12 @@ serve(async (req) => {
   }
 });
 
-async function generateSignedPdf(basePdfBytes: Uint8Array, proposal: any, agreement: any): Promise<Uint8Array> {
+async function generateSignedPdf(
+  basePdfBytes: Uint8Array, 
+  proposal: any, 
+  agreement: any,
+  signatureImageUrl?: string | null
+): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb, degrees } = await import('https://esm.sh/pdf-lib@1.17.1');
 
   console.log('[Signed PDF] Loading base PDF document');
@@ -245,8 +255,63 @@ async function generateSignedPdf(basePdfBytes: Uint8Array, proposal: any, agreem
     });
   };
 
-  // Signature details
-  drawLabelValue('Signed By:', agreement.typed_name, y);
+  // Embed signature image if provided
+  let signatureImage = null;
+  if (signatureImageUrl && agreement.signature_type_used === 'canvas') {
+    try {
+      console.log('[Signed PDF] Fetching signature image:', signatureImageUrl);
+      const sigImageResponse = await fetch(signatureImageUrl);
+      if (sigImageResponse.ok) {
+        const sigImageBytes = await sigImageResponse.arrayBuffer();
+        signatureImage = await pdfDoc.embedPng(new Uint8Array(sigImageBytes));
+        console.log('[Signed PDF] Signature image embedded successfully');
+      }
+    } catch (err) {
+      console.error('[Signed PDF] Error embedding signature image:', err);
+    }
+  }
+
+  // Signature section
+  sigPage.drawText('SIGNATURE', {
+    x: leftMargin,
+    y: y,
+    size: 14,
+    font: bold,
+    color: crunchCharcoal,
+  });
+  y -= lineHeight + 10;
+
+  // Draw signature (image or typed name)
+  if (signatureImage && agreement.signature_type_used === 'canvas') {
+    sigPage.drawImage(signatureImage, {
+      x: leftMargin,
+      y: y - 60,
+      width: 200,
+      height: 50,
+    });
+    
+    sigPage.drawLine({
+      start: { x: leftMargin, y: y - 65 },
+      end: { x: leftMargin + 200, y: y - 65 },
+      thickness: 1,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    
+    sigPage.drawText('(Drawn Signature)', {
+      x: leftMargin,
+      y: y - 80,
+      size: 9,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    
+    y -= 95;
+  } else {
+    drawLabelValue('Signed By:', agreement.typed_name || 'N/A', y);
+    y -= lineHeight;
+  }
+
+  drawLabelValue('Typed Name:', agreement.typed_name || 'N/A', y);
   y -= lineHeight;
 
   const signedDate = new Date(agreement.signed_at).toLocaleString('en-ZA', {

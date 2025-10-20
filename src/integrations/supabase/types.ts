@@ -974,7 +974,9 @@ export type Database = {
           ip_address: unknown | null
           metadata: Json | null
           proposal_id: string
+          signature_image_url: string | null
           signature_type: Database["public"]["Enums"]["signature_type"]
+          signature_type_used: string | null
           signed_at: string
           signed_by: string
           signed_pdf_url: string | null
@@ -995,7 +997,9 @@ export type Database = {
           ip_address?: unknown | null
           metadata?: Json | null
           proposal_id: string
+          signature_image_url?: string | null
           signature_type?: Database["public"]["Enums"]["signature_type"]
+          signature_type_used?: string | null
           signed_at?: string
           signed_by: string
           signed_pdf_url?: string | null
@@ -1016,7 +1020,9 @@ export type Database = {
           ip_address?: unknown | null
           metadata?: Json | null
           proposal_id?: string
+          signature_image_url?: string | null
           signature_type?: Database["public"]["Enums"]["signature_type"]
+          signature_type_used?: string | null
           signed_at?: string
           signed_by?: string
           signed_pdf_url?: string | null
