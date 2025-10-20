@@ -44,8 +44,8 @@ export function SignaturePad({ onSignatureChange, clientName }: SignatureCanvasP
               className: 'w-full h-40 cursor-crosshair',
               style: { touchAction: 'none' }
             }}
-            backgroundColor="hsl(var(--background))"
-            penColor="hsl(var(--foreground))"
+            backgroundColor="#ffffff"
+            penColor="#000000"
           />
           <div className="absolute bottom-2 right-2 text-xs text-muted-foreground pointer-events-none">
             Sign here
