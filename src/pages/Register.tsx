@@ -1,4 +1,4 @@
-
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -8,6 +8,11 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 const Register = () => {
   const [searchParams] = useSearchParams();
   const initialRole = searchParams.get('role') === 'agent' ? 'agent' : 'client';
+  
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   
   return (
     <div className="min-h-screen flex flex-col">

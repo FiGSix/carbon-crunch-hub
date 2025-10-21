@@ -16,6 +16,11 @@ const Login = () => {
   const hasRedirectedRef = useRef(false);
   const lastRedirectAttemptRef = useRef<number>(0);
   
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     // Prevent rapid redirect attempts
     const now = Date.now();
