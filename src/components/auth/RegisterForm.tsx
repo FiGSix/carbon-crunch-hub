@@ -31,7 +31,7 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
   return (
     <FormErrorBoundary formName="Registration Form">
       <form onSubmit={handleSubmit}>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <RegisterRoleSelect 
           role={formData.role} 
           onRoleChange={handleRoleChange} 
