@@ -232,6 +232,11 @@ const navItems = [
     description: "Information for energy consultants" 
   },
   { 
+    label: "Why Choose Us", 
+    href: "/why-choose-us",
+    description: "The right carbon partner" 
+  },
+  { 
     label: "About", 
     href: "/about",
     description: "Learn more about CrunchCarbon" 

@@ -44,6 +44,7 @@ const SystemDiagnostics = createOptimizedLazyComponent(() => import("./pages/Sys
 const Dashboard = createOptimizedLazyComponent(() => import("./pages/Dashboard"), "Dashboard");
 const CreateProposal = createOptimizedLazyComponent(() => import("./pages/CreateProposal"), "CreateProposal");
 const ProposalsOptimized = createOptimizedLazyComponent(() => import("./pages/ProposalsOptimized"), "ProposalsOptimized");
+const WhyChooseUs = createOptimizedLazyComponent(() => import("./pages/WhyChooseUs"), "WhyChooseUs");
 const Profile = createOptimizedLazyComponent(() => import("./pages/Profile"), "Profile");
 const MyClients = createOptimizedLazyComponent(() => import("./pages/MyClients"), "MyClients");
 const SystemSettings = createOptimizedLazyComponent(() => import("./pages/SystemSettings"), "SystemSettings");
@@ -169,6 +170,11 @@ function App() {
                   <Route path="/agents" element={
                     <PageErrorBoundary pageName="Agents">
                       <Suspense fallback={<PageLoader />}><Agents /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/why-choose-us" element={
+                    <PageErrorBoundary pageName="Why Choose Us">
+                      <Suspense fallback={<PageLoader />}><WhyChooseUs /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/login" element={
