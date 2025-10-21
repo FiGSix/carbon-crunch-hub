@@ -40,15 +40,26 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
+      console.error("Authentication failed:", authError);
       return new Response(
         JSON.stringify({ error: "Invalid authentication" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check if user is admin
-    const { data: roleData, error: roleError } = await supabase.rpc('get_user_role');
-    if (roleError || roleData !== 'admin') {
+    console.log("User authenticated:", user.id);
+
+    // Check if user is admin by querying profiles directly
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    console.log("User role check:", { userId: user.id, role: profileData?.role, error: profileError });
+
+    if (profileError || !profileData || profileData.role !== 'admin') {
+      console.error("Admin check failed:", { profileError, profileData });
       return new Response(
         JSON.stringify({ error: "Admin privileges required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -57,8 +68,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, firstName, lastName, companyName }: InvitationRequest = await req.json();
 
+    console.log("Processing invitation for:", email);
+
     // Validate email
     if (!email || !email.includes("@")) {
+      console.error("Invalid email format:", email);
       return new Response(
         JSON.stringify({ error: "Valid email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -66,13 +80,16 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check if invitation already exists
-    const { data: existingInvitation } = await supabase
+    const { data: existingInvitation, error: invitationCheckError } = await supabase
       .from("agent_invitations")
       .select("id, status")
       .eq("email", email)
       .single();
 
+    console.log("Existing invitation check:", { exists: !!existingInvitation, status: existingInvitation?.status });
+
     if (existingInvitation && existingInvitation.status === 'pending') {
+      console.log("Duplicate invitation attempt:", email);
       return new Response(
         JSON.stringify({ error: "An invitation has already been sent to this email" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -80,13 +97,16 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check if user already exists with this email
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: profileCheckError } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
       .single();
 
+    console.log("Existing profile check:", { exists: !!existingProfile, error: profileCheckError });
+
     if (existingProfile) {
+      console.log("User already exists:", email);
       return new Response(
         JSON.stringify({ error: "A user with this email already exists" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -96,6 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate secure invitation token
     const invitationToken = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '');
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+
+    console.log("Creating invitation record for:", email);
 
     // Insert invitation into database
     const { data: invitation, error: invitationError } = await supabase
@@ -122,6 +144,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate registration link
     const registrationLink = `${req.headers.get("origin") || "https://yourapp.com"}/register?role=agent&token=${invitationToken}`;
+
+    console.log("Sending invitation email to:", email);
 
     // Send invitation email
     const emailResponse = await resend.emails.send({
