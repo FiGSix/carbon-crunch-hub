@@ -7,6 +7,7 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get('token');
   const initialRole = searchParams.get('role') === 'agent' ? 'agent' : 'client';
   
   // Scroll to top on page load
@@ -33,7 +34,10 @@ const Register = () => {
               <p className="text-carbon-gray-600 mt-3">Join CrunchCarbon and start earning from carbon credits</p>
             </div>
             
-            <RegisterForm initialRole={initialRole as "client" | "agent"} />
+            <RegisterForm 
+              initialRole={initialRole as "client" | "agent"} 
+              invitationToken={invitationToken || undefined}
+            />
             
             <div className="mt-8 pt-6 border-t border-border text-center">
               <p className="text-carbon-gray-600">

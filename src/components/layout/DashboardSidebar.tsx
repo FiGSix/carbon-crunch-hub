@@ -10,7 +10,8 @@ import {
   User,
   UserCog,
   FileSignature,
-  ClipboardCheck
+  ClipboardCheck,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -76,6 +77,12 @@ export function DashboardSidebar() {
       name: "Agent Management",
       href: "/admin/agents",
       icon: UserCog,
+      roles: ["admin"]
+    },
+    {
+      name: "User Management",
+      href: "/admin/users",
+      icon: Shield,
       roles: ["admin"]
     },
     {

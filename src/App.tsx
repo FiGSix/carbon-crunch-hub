@@ -50,6 +50,7 @@ const MyClients = createOptimizedLazyComponent(() => import("./pages/MyClients")
 const SystemSettings = createOptimizedLazyComponent(() => import("./pages/SystemSettings"), "SystemSettings");
 const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
+const AdminUserManagement = createOptimizedLazyComponent(() => import("./pages/AdminUserManagement"), "AdminUserManagement");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
@@ -321,6 +322,18 @@ function App() {
                         <PageErrorBoundary pageName="Agent Management">
                           <Suspense fallback={<PageLoader />}>
                             <AdminAgentManagement />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/users" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="User Management">
+                          <Suspense fallback={<PageLoader />}>
+                            <AdminUserManagement />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>

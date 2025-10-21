@@ -122,6 +122,48 @@ export type Database = {
           },
         ]
       }
+      agent_invitations: {
+        Row: {
+          accepted_at: string | null
+          company_name: string | null
+          created_at: string | null
+          email: string
+          expires_at: string
+          first_name: string | null
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          last_name: string | null
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          email: string
+          expires_at: string
+          first_name?: string | null
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          last_name?: string | null
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          first_name?: string | null
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          last_name?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       client_access_audit: {
         Row: {
           accessed_at: string
@@ -1262,6 +1304,33 @@ export type Database = {
           setting_value?: Json
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      user_role_audit: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          performed_by: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          performed_by?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          performed_by?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
