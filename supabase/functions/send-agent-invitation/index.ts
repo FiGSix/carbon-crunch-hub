@@ -142,8 +142,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate registration link
-    const registrationLink = `${req.headers.get("origin") || "https://yourapp.com"}/register?role=agent&token=${invitationToken}`;
+    // Generate registration link using production domain
+    const registrationLink = `https://crunchcarbon.app/register?role=agent&token=${invitationToken}`;
 
     console.log("Sending invitation email to:", email);
 
