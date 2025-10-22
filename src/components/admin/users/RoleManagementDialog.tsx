@@ -88,7 +88,7 @@ export function RoleManagementDialog({
 
       // Execute role changes
       for (const role of rolesToAdd) {
-        const { error } = await supabase.functions.invoke('manage-user-role', {
+        const { data, error } = await supabase.functions.invoke('manage-user-role', {
           body: {
             userId: user.id,
             action: 'add',
@@ -99,11 +99,20 @@ export function RoleManagementDialog({
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Edge function error:', error);
+          throw new Error(error.message || 'Failed to add role');
+        }
+
+        // Check for non-2xx responses with error in data
+        if (data && typeof data === 'object' && 'error' in data) {
+          console.error('Edge function returned error:', data.error);
+          throw new Error(data.error);
+        }
       }
 
       for (const role of rolesToRemove) {
-        const { error } = await supabase.functions.invoke('manage-user-role', {
+        const { data, error } = await supabase.functions.invoke('manage-user-role', {
           body: {
             userId: user.id,
             action: 'remove',
@@ -114,7 +123,16 @@ export function RoleManagementDialog({
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Edge function error:', error);
+          throw new Error(error.message || 'Failed to remove role');
+        }
+
+        // Check for non-2xx responses with error in data
+        if (data && typeof data === 'object' && 'error' in data) {
+          console.error('Edge function returned error:', data.error);
+          throw new Error(data.error);
+        }
       }
 
       toast({

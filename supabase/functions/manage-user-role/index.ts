@@ -42,9 +42,24 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if requesting user is admin
-    const { data: roleData, error: roleError } = await supabase.rpc('get_user_role');
-    if (roleError || roleData !== 'admin') {
+    // Check if requesting user is admin by querying user_roles table directly
+    const { data: userRoles, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    if (roleError) {
+      console.error('Error fetching user roles:', roleError);
+      return new Response(
+        JSON.stringify({ error: "Failed to verify admin privileges" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const isAdmin = userRoles?.some(r => r.role === 'admin');
+    console.log('User role check:', { userId: user.id, userRoles, isAdmin });
+    
+    if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: "Admin privileges required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -52,6 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { userId, action, role }: RoleManagementRequest = await req.json();
+    console.log('Role management request:', { userId, action, role, requestedBy: user.id });
 
     // Validate input
     if (!userId || !action || !role) {
@@ -123,6 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       result = insertData;
+      console.log('Role added successfully:', { userId, role, result });
 
       // Log to audit table
       await supabase.from("user_role_audit").insert({
@@ -147,8 +164,10 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("role", role);
 
       if (deleteError) {
+        console.error('Error deleting role:', deleteError);
         throw deleteError;
       }
+      console.log('Role removed successfully:', { userId, role });
 
       // Log to audit table
       await supabase.from("user_role_audit").insert({
@@ -195,6 +214,8 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error) {
     console.error("Error in manage-user-role:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),
       {
