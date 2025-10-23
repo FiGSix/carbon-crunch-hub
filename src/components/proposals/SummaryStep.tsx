@@ -51,6 +51,8 @@ export function SummaryStep({
             commissionDate={projectInfo.commissionDate}
             selectedClientId={selectedClientId}
             proposalId={proposalId}
+            phases={projectInfo.phases}
+            isMultiPhase={projectInfo.isMultiPhase}
           />
           <RevenueDistributionSection 
             systemSize={projectInfo.size}

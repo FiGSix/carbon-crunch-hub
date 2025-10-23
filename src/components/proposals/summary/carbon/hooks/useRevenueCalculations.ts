@@ -4,19 +4,24 @@ import { UnifiedCarbonService } from '@/services/calculations/carbon';
 import { PortfolioData } from '@/services/proposals/portfolioService';
 import { dataCache } from '@/lib/cache/UnifiedCache';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { ProjectPhase } from '@/types/proposals';
 
 interface UseRevenueCalculationsProps {
   systemSize: string;
   commissionDate?: string;
   portfolioData: PortfolioData | null;
   proposalId?: string | null;
+  phases?: ProjectPhase[];
+  isMultiPhase?: boolean;
 }
 
 export function useRevenueCalculations({
   systemSize,
   commissionDate,
   portfolioData,
-  proposalId
+  proposalId,
+  phases,
+  isMultiPhase
 }: UseRevenueCalculationsProps) {
   const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -29,8 +34,9 @@ export function useRevenueCalculations({
   // Create cache key for this calculation
   const cacheKey = useMemo(() => {
     const portfolioSize = portfolioData?.totalKWp || systemSizeKWp;
-    return `revenue_${systemSizeKWp}_${commissionDate || 'no-date'}_${portfolioSize}_${proposalId || 'no-id'}`;
-  }, [systemSizeKWp, commissionDate, portfolioData?.totalKWp, proposalId]);
+    const phaseKey = phases ? phases.map(p => `${p.sizeKWp}-${p.commissionDate}`).join('_') : 'no-phases';
+    return `revenue_${systemSizeKWp}_${commissionDate || 'no-date'}_${portfolioSize}_${proposalId || 'no-id'}_${isMultiPhase ? 'multi' : 'single'}_${phaseKey}`;
+  }, [systemSizeKWp, commissionDate, portfolioData?.totalKWp, proposalId, phases, isMultiPhase]);
 
   const [calculationResult, setCalculationResult] = useState<any>(null);
 
@@ -50,11 +56,13 @@ export function useRevenueCalculations({
 
         const portfolioSize = portfolioData?.totalKWp || systemSizeKWp;
         
+        // Build specs based on whether this is multi-phase or single-phase
+        const specs = phases && phases.length > 0
+          ? { sizeKwp: systemSizeKWp, phases }
+          : { sizeKwp: systemSizeKWp, commissionDate };
+        
         // Use the unified service to calculate complete financials
-        const result = await UnifiedCarbonService.calculateComplete({
-          sizeKwp: systemSizeKWp,
-          commissionDate
-        }, portfolioSize);
+        const result = await UnifiedCarbonService.calculateComplete(specs, portfolioSize);
 
         // Cache the result for 5 minutes
         dataCache.set(cacheKey, result.revenueByYear, 5 * 60 * 1000);

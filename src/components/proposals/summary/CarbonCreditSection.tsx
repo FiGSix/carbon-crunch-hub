@@ -16,9 +16,11 @@ interface CarbonCreditSectionProps {
   commissionDate?: string;
   selectedClientId?: string | null;
   proposalId?: string | null;
+  phases?: any[];
+  isMultiPhase?: boolean;
 }
 
-export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId }: CarbonCreditSectionProps) {
+export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId, phases, isMultiPhase }: CarbonCreditSectionProps) {
   const { portfolioData, loading: portfolioLoading } = usePortfolioData({
     selectedClientId,
     systemSize,
@@ -34,14 +36,16 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     systemSize,
     commissionDate,
     portfolioData,
-    proposalId
+    proposalId,
+    phases,
+    isMultiPhase
   });
 
   const loading = portfolioLoading || revenueLoading;
 
-  // Extract multi-phase data
-  const isMultiPhase = calculationResult?.isMultiPhase || false;
-  const phases = calculationResult?.phases || [];
+  // Extract multi-phase data from calculation result (for display in table)
+  const calculatedPhases = calculationResult?.phases || [];
+  const calculatedIsMultiPhase = calculationResult?.isMultiPhase || false;
 
   // Use client-specific revenue for display (this is what the client actually gets)
   const displayRevenue = clientSpecificRevenue;
@@ -139,8 +143,8 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       <h4 className="font-medium text-carbon-gray-700 mb-2">Client Revenue by Year</h4>
       
       <CarbonCreditTableWrapper
-        isMultiPhase={isMultiPhase}
-        phases={phases}
+        isMultiPhase={calculatedIsMultiPhase}
+        phases={calculatedPhases}
         consolidatedRevenue={displayRevenue}
         systemSizeKWp={systemSizeKWp}
         commissionDate={commissionDate}

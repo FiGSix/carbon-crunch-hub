@@ -95,6 +95,8 @@ export function ProposalDetails({
                 commissionDate={projectInfo.commissionDate}
                 selectedClientId={clientId}
                 proposalId={proposal.id}
+                phases={projectInfo.phases}
+                isMultiPhase={projectInfo.isMultiPhase}
               />
               <RevenueDistributionSection 
                 systemSize={projectInfo.size} 

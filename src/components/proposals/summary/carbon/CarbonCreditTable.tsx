@@ -50,6 +50,13 @@ export function CarbonCreditTable({
     const loadTableData = async () => {
       try {
         setLoading(true);
+        
+        // Handle empty revenue gracefully
+        if (Object.keys(revenue).length === 0) {
+          setTableData([]);
+          return;
+        }
+        
         const data: TableRowData[] = [];
         
         for (const [year, amount] of Object.entries(revenue)) {
@@ -76,9 +83,7 @@ export function CarbonCreditTable({
       }
     };
     
-    if (Object.keys(revenue).length > 0) {
-      loadTableData();
-    }
+    loadTableData();
   }, [revenue, systemSizeKWp, commissionDate, portfolioSize]);
 
   if (loading) {
@@ -86,6 +91,17 @@ export function CarbonCreditTable({
       <div className="overflow-x-auto">
         <div className="animate-pulse">
           <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loading && tableData.length === 0) {
+    return (
+      <div className="overflow-x-auto">
+        <div className="p-8 text-center text-muted-foreground">
+          <p>No carbon credit projection data available for this configuration.</p>
+          <p className="text-sm mt-2">Check that commission dates are valid and pricing exists for the selected years (currently through 2030).</p>
         </div>
       </div>
     );
