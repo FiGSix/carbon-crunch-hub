@@ -1,6 +1,7 @@
 
 import { useEffect, memo, useMemo, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ClientShareCell } from "./components/ClientShareCell";
@@ -45,7 +46,16 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
     <TableRow className={isCurrentUser ? "bg-carbon-green-50" : ""}>
       <TableCell className="font-medium">{proposal.name}</TableCell>
       <TableCell>{proposal.client}</TableCell>
-      <TableCell>{formattedDate}</TableCell>
+      <TableCell>
+        {proposal.isMultiPhase ? (
+          <div className="flex items-center gap-2">
+            <span>{formattedDate}</span>
+            <Badge variant="outline" className="text-xs">Multi</Badge>
+          </div>
+        ) : (
+          formattedDate
+        )}
+      </TableCell>
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
         <ProposalStatusDropdown 

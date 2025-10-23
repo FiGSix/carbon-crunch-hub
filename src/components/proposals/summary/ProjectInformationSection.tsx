@@ -29,12 +29,20 @@ export function ProjectInformationSection({ projectInfo }: ProjectInformationSec
           <p className="font-medium">{projectInfo.address}</p>
         </div>
         <div>
-          <p className="text-sm text-carbon-gray-500">Commission Date</p>
-          <p className="font-medium">
-            {projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0 ? 
-              `Multiple phases (${projectInfo.phases.length} phases)` :
-              projectInfo.commissionDate && new Date(projectInfo.commissionDate).toLocaleDateString()}
-          </p>
+          <p className="text-sm text-carbon-gray-500">Commission Date{projectInfo.isMultiPhase && projectInfo.phases ? 's' : ''}</p>
+          <div className="font-medium">
+            {projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0 ? (
+              <div className="space-y-1">
+                {projectInfo.phases.map((phase: any, idx: number) => (
+                  <div key={idx}>
+                    {phase.phaseName || `Phase ${phase.phaseNumber}`}: {new Date(phase.commissionDate).toLocaleDateString()}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              projectInfo.commissionDate && new Date(projectInfo.commissionDate).toLocaleDateString()
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -24,10 +24,11 @@ interface OnboardingTabProps {
   projectId: string;
   fields: OnboardingFields | null;
   project?: ProjectOnboarding | null;
+  proposal?: any;
   onRefresh: () => void;
 }
 
-export function OnboardingTab({ projectId, fields, project, onRefresh }: OnboardingTabProps) {
+export function OnboardingTab({ projectId, fields, project, proposal, onRefresh }: OnboardingTabProps) {
   const { toast } = useToast();
   const { user, userRole } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
@@ -454,28 +455,80 @@ export function OnboardingTab({ projectId, fields, project, onRefresh }: Onboard
               />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="commissioning_date">Commissioning or Installation Date</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>The Commissioning or installation date is not necessarily the day the system was physically installed, but rather the day the system first produced solar electricity.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            {/* Multi-Phase Commission Dates Display */}
+            {proposal?.content?.projectInfo?.isMultiPhase && 
+             proposal?.content?.projectInfo?.phases?.length > 0 && (
+              <div className="col-span-full space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label>Commission Dates (Multi-Phase Project)</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>This project has multiple phases with different commission dates. Each phase will generate carbon credits from its respective commission date.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  {proposal.content.projectInfo.phases.map((phase: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center">
+                      <span className="font-medium">
+                        {phase.phaseName || `Phase ${phase.phaseNumber}`}
+                      </span>
+                      <div className="text-right">
+                        <span className="text-sm text-muted-foreground mr-3">
+                          {phase.sizeKWp} kWp
+                        </span>
+                        <span className="font-mono">
+                          {new Date(phase.commissionDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t mt-2 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Earliest Commission Date:</span>
+                    <span className="font-semibold">
+                      {new Date(
+                        Math.min(
+                          ...proposal.content.projectInfo.phases.map((p: any) => 
+                            new Date(p.commissionDate).getTime()
+                          )
+                        )
+                      ).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <Input
-                id="commissioning_date"
-                type="date"
-                value={formData.commissioning_date || ''}
-                onChange={(e) => handleInputChange('commissioning_date', e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
+            )}
+
+            {/* Single Commission Date Field - only show for single-phase projects */}
+            {(!proposal?.content?.projectInfo?.isMultiPhase) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="commissioning_date">Commissioning or Installation Date</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>The Commissioning or installation date is not necessarily the day the system was physically installed, but rather the day the system first produced solar electricity.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Input
+                  id="commissioning_date"
+                  type="date"
+                  value={formData.commissioning_date || ''}
+                  onChange={(e) => handleInputChange('commissioning_date', e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="installer_select">EPC or Solar Installer Company Name</Label>

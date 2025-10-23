@@ -165,6 +165,8 @@ export interface ProposalListItem {
   system_size_kwp?: number | null;
   agent?: string;
   content?: ProposalContent;
+  isMultiPhase?: boolean;
+  phases?: ProjectPhase[];
 }
 
 /**
