@@ -159,12 +159,12 @@ const handler = async (req: Request): Promise<Response> => {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); color: #1A1A1A; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
             .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
-            .button { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-            .benefits { background: #f9fafb; padding: 20px; border-radius: 6px; margin: 20px 0; }
+            .button { display: inline-block; background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); color: #1A1A1A; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; box-shadow: 0 4px 6px rgba(244, 196, 48, 0.3); }
+            .benefits { background: #FFF9E6; padding: 20px; border-radius: 6px; margin: 20px 0; }
             .benefit-item { margin: 10px 0; padding-left: 25px; position: relative; }
-            .benefit-item:before { content: "✓"; position: absolute; left: 0; color: #10b981; font-weight: bold; }
+            .benefit-item:before { content: "✓"; position: absolute; left: 0; color: #F4C430; font-weight: bold; }
             .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 20px; }
           </style>
         </head>
