@@ -22,6 +22,7 @@ interface CarbonCreditTableProps {
   totalMWhGenerated: number;
   totalCarbonCredits: number;
   totalClientSpecificRevenue: number;
+  isPhaseTable?: boolean;
 }
 
 interface TableRowData {
@@ -39,7 +40,8 @@ export function CarbonCreditTable({
   portfolioSize,
   totalMWhGenerated,
   totalCarbonCredits,
-  totalClientSpecificRevenue
+  totalClientSpecificRevenue,
+  isPhaseTable = false
 }: CarbonCreditTableProps) {
   const [tableData, setTableData] = useState<TableRowData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,9 +93,9 @@ export function CarbonCreditTable({
 
   return (
     <div className="overflow-x-auto">
-      <Table>
+      <Table className={isPhaseTable ? 'text-sm' : ''}>
         <TableHeader>
-          <TableRow className="bg-carbon-gray-50">
+          <TableRow className={isPhaseTable ? 'bg-muted/50' : 'bg-carbon-gray-50'}>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">Year</TableHead>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">MWh Generated per Year</TableHead>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">tCO₂e Offset per Year</TableHead>

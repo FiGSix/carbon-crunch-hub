@@ -32,6 +32,8 @@ export function useRevenueCalculations({
     return `revenue_${systemSizeKWp}_${commissionDate || 'no-date'}_${portfolioSize}_${proposalId || 'no-id'}`;
   }, [systemSizeKWp, commissionDate, portfolioData?.totalKWp, proposalId]);
 
+  const [calculationResult, setCalculationResult] = useState<any>(null);
+
   useEffect(() => {
     const calculateRevenues = async () => {
       try {
@@ -58,9 +60,11 @@ export function useRevenueCalculations({
         dataCache.set(cacheKey, result.revenueByYear, 5 * 60 * 1000);
         
         setClientSpecificRevenue(result.revenueByYear);
+        setCalculationResult(result);
       } catch (error) {
         devLogger.components.error('Error calculating revenues:', error);
         setClientSpecificRevenue({});
+        setCalculationResult(null);
       } finally {
         setLoading(false);
       }
@@ -70,6 +74,7 @@ export function useRevenueCalculations({
   }, [cacheKey, systemSizeKWp, commissionDate, portfolioData]);
 
   return {
+    calculationResult,
     clientSpecificRevenue,
     loading,
     systemSizeKWp

@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
+import { CarbonCreditTableWrapper } from "./carbon/CarbonCreditTableWrapper";
 import { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from "@/lib/calculations/carbon";
 import { 
   calculateTotalMWhGenerated, 
@@ -26,6 +26,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   });
 
   const { 
+    calculationResult,
     clientSpecificRevenue, 
     loading: revenueLoading, 
     systemSizeKWp 
@@ -37,6 +38,10 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   });
 
   const loading = portfolioLoading || revenueLoading;
+
+  // Extract multi-phase data
+  const isMultiPhase = calculationResult?.isMultiPhase || false;
+  const phases = calculationResult?.phases || [];
 
   // Use client-specific revenue for display (this is what the client actually gets)
   const displayRevenue = clientSpecificRevenue;
@@ -133,8 +138,10 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       
       <h4 className="font-medium text-carbon-gray-700 mb-2">Client Revenue by Year</h4>
       
-      <CarbonCreditTable 
-        revenue={displayRevenue}
+      <CarbonCreditTableWrapper
+        isMultiPhase={isMultiPhase}
+        phases={phases}
+        consolidatedRevenue={displayRevenue}
         systemSizeKWp={systemSizeKWp}
         commissionDate={commissionDate}
         portfolioSize={portfolioData?.totalKWp || systemSizeKWp}
