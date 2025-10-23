@@ -49,16 +49,15 @@ export function getCrunchCommissionPercentage(
 }
 
 /**
- * Calculate revenue by year using dynamic pricing
+ * Calculate revenue by year using pre-fetched carbon prices (synchronous, optimized)
  */
-export async function calculateRevenueByYear(
+export function calculateRevenueByYearSync(
   carbonCreditsPerYear: number,
   clientSharePercentage: number,
+  carbonPrices: Record<string, number>,
   commissionDate?: string | Date
-): Promise<Record<string, number>> {
-  const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
+): Record<string, number> {
   const revenue: Record<string, number> = {};
-  
   const commissionDateTime = commissionDate ? new Date(commissionDate) : null;
   
   Object.entries(carbonPrices).forEach(([year, price]) => {
@@ -85,4 +84,16 @@ export async function calculateRevenueByYear(
   });
   
   return revenue;
+}
+
+/**
+ * Calculate revenue by year using dynamic pricing (async version for backward compatibility)
+ */
+export async function calculateRevenueByYear(
+  carbonCreditsPerYear: number,
+  clientSharePercentage: number,
+  commissionDate?: string | Date
+): Promise<Record<string, number>> {
+  const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
+  return calculateRevenueByYearSync(carbonCreditsPerYear, clientSharePercentage, carbonPrices, commissionDate);
 }

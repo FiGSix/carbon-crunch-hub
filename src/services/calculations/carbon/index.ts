@@ -22,11 +22,12 @@ export { normalizeToKWp, validateSystemSize } from './validation';
 export { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
 
 // Export pricing functions
-export { 
-  getClientSharePercentage, 
-  getAgentCommissionPercentage, 
+export {
+  getClientSharePercentage,
+  getAgentCommissionPercentage,
   getCrunchCommissionPercentage,
-  calculateRevenueByYear 
+  calculateRevenueByYear,
+  calculateRevenueByYearSync
 } from './pricing';
 
 // Export formatting functions
@@ -60,6 +61,7 @@ export class UnifiedCarbonService {
   static getAgentCommissionPercentage = getAgentCommissionPercentage;
   static getCrunchCommissionPercentage = getCrunchCommissionPercentage;
   static calculateRevenueByYear = calculateRevenueByYear;
+  static calculateRevenueByYearSync = calculateRevenueByYearSync;
   static formatSystemSize = formatSystemSize;
   static calculatePortfolioTotals = calculatePortfolioTotals;
   static calculateComplete = calculateComplete;
@@ -68,7 +70,13 @@ export class UnifiedCarbonService {
 // Import individual functions
 import { normalizeToKWp, validateSystemSize } from './validation';
 import { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
-import { getClientSharePercentage, getAgentCommissionPercentage, getCrunchCommissionPercentage, calculateRevenueByYear } from './pricing';
+import { 
+  getClientSharePercentage, 
+  getAgentCommissionPercentage, 
+  getCrunchCommissionPercentage, 
+  calculateRevenueByYear,
+  calculateRevenueByYearSync
+} from './pricing';
 import { formatSystemSize } from './formatting';
 import { calculatePortfolioTotals } from './portfolio';
 import { calculateComplete } from './core';
