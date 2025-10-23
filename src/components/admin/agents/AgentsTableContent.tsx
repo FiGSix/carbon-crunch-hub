@@ -15,7 +15,14 @@ import { AgentStatusDropdown } from './AgentStatusDropdown';
 import { CommissionOverrideDialog } from './CommissionOverrideDialog';
 import { AgentDetailsDialog } from './AgentDetailsDialog';
 import { AgentData } from './AgentsManagementTable';
-import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle, Info } from 'lucide-react';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { getAgentDisplayCommission, getDefaultCommissionDescription } from '@/utils/admin/commissionHelpers';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   DropdownMenu,
@@ -182,12 +189,25 @@ export function AgentsTableContent({
                   <div className="space-y-1">
                     {agent.commission_override ? (
                       <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs font-medium">
                           {agent.commission_override}% override
                         </Badge>
                       </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Default rate</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-help">
+                              <span>Tier-based rate</span>
+                              <Info className="h-3 w-3" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs font-medium mb-1">Dynamic Commission Tiers:</p>
+                            <p className="text-xs">{getDefaultCommissionDescription()}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                     <div className="text-xs font-medium">
                       {formatCurrency(agent.total_commission)} earned
