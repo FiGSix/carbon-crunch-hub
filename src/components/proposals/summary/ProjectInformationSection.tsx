@@ -30,7 +30,11 @@ export function ProjectInformationSection({ projectInfo }: ProjectInformationSec
         </div>
         <div>
           <p className="text-sm text-carbon-gray-500">Commission Date</p>
-          <p className="font-medium">{projectInfo.commissionDate && new Date(projectInfo.commissionDate).toLocaleDateString()}</p>
+          <p className="font-medium">
+            {projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0 ? 
+              `Multiple phases (${projectInfo.phases.length} phases)` :
+              projectInfo.commissionDate && new Date(projectInfo.commissionDate).toLocaleDateString()}
+          </p>
         </div>
       </div>
     </div>
