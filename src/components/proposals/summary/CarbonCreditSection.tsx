@@ -4,7 +4,9 @@ import { CarbonCreditTableWrapper } from "./carbon/CarbonCreditTableWrapper";
 import { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from "@/lib/calculations/carbon";
 import { 
   calculateTotalMWhGenerated, 
-  calculateTotalCarbonCredits
+  calculateTotalCarbonCredits,
+  aggregateYearlyMWhFromPhases,
+  aggregateYearlyCarbonCreditsFromPhases
 } from "./carbon/carbonCalculations";
 import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
 import { useRevenueCalculations } from "./carbon/hooks/useRevenueCalculations";
@@ -51,8 +53,15 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   const displayRevenue = clientSpecificRevenue;
 
   // Calculate totals using helper functions
-  const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
-  const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
+  // For multi-phase, aggregate from phases to respect individual commission dates
+  const totalMWhGenerated = calculatedIsMultiPhase && calculatedPhases.length > 0
+    ? Object.values(aggregateYearlyMWhFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
+    : calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
+  
+  const totalCarbonCredits = calculatedIsMultiPhase && calculatedPhases.length > 0
+    ? Object.values(aggregateYearlyCarbonCreditsFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
+    : calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
+  
   const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum: number, val: number) => sum + val, 0);
 
   // Persist totalClientRevenue to proposal when calculated

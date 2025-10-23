@@ -38,3 +38,51 @@ export function calculateTotalCarbonCredits(systemSizeKWp: number, revenue: Reco
     return total + calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
   }, 0);
 }
+
+/**
+ * Aggregate yearly MWh across all phases for multi-phase projects
+ */
+export function aggregateYearlyMWhFromPhases(
+  phases: Array<{ sizeKWp: number; commissionDate: string }>,
+  years: string[]
+): Record<string, number> {
+  const aggregated: Record<string, number> = {};
+  
+  years.forEach(year => {
+    aggregated[year] = phases.reduce((sum, phase) => {
+      const yearNum = parseInt(year);
+      const yearlyEnergy = calculateYearlyEnergy(
+        phase.sizeKWp,
+        yearNum,
+        phase.commissionDate
+      );
+      return sum + (yearlyEnergy / 1000); // Convert to MWh
+    }, 0);
+  });
+  
+  return aggregated;
+}
+
+/**
+ * Aggregate yearly tCO₂e across all phases for multi-phase projects
+ */
+export function aggregateYearlyCarbonCreditsFromPhases(
+  phases: Array<{ sizeKWp: number; commissionDate: string }>,
+  years: string[]
+): Record<string, number> {
+  const aggregated: Record<string, number> = {};
+  
+  years.forEach(year => {
+    aggregated[year] = phases.reduce((sum, phase) => {
+      const yearNum = parseInt(year);
+      const yearlyCredits = calculateYearlyCarbonCredits(
+        phase.sizeKWp,
+        yearNum,
+        phase.commissionDate
+      );
+      return sum + yearlyCredits;
+    }, 0);
+  });
+  
+  return aggregated;
+}

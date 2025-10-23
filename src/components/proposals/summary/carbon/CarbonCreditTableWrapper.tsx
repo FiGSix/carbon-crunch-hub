@@ -4,6 +4,10 @@ import { ChevronDown } from "lucide-react";
 import { CarbonCreditTable } from "./CarbonCreditTable";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PhaseRevenue } from "@/services/calculations/carbon/types";
+import { 
+  aggregateYearlyMWhFromPhases,
+  aggregateYearlyCarbonCreditsFromPhases
+} from "./carbonCalculations";
 
 interface CarbonCreditTableWrapperProps {
   isMultiPhase: boolean;
@@ -117,6 +121,8 @@ export function CarbonCreditTableWrapper({
           totalMWhGenerated={totalMWhGenerated}
           totalCarbonCredits={totalCarbonCredits}
           totalClientSpecificRevenue={totalClientSpecificRevenue}
+          preCalculatedYearlyMWh={aggregateYearlyMWhFromPhases(phases, Object.keys(consolidatedRevenue))}
+          preCalculatedYearlyCredits={aggregateYearlyCarbonCreditsFromPhases(phases, Object.keys(consolidatedRevenue))}
           isPhaseTable={false}
         />
       </div>

@@ -23,6 +23,8 @@ interface CarbonCreditTableProps {
   totalCarbonCredits: number;
   totalClientSpecificRevenue: number;
   isPhaseTable?: boolean;
+  preCalculatedYearlyMWh?: Record<string, number>;
+  preCalculatedYearlyCredits?: Record<string, number>;
 }
 
 interface TableRowData {
@@ -41,7 +43,9 @@ export function CarbonCreditTable({
   totalMWhGenerated,
   totalCarbonCredits,
   totalClientSpecificRevenue,
-  isPhaseTable = false
+  isPhaseTable = false,
+  preCalculatedYearlyMWh,
+  preCalculatedYearlyCredits
 }: CarbonCreditTableProps) {
   const [tableData, setTableData] = useState<TableRowData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,8 +64,15 @@ export function CarbonCreditTable({
         const data: TableRowData[] = [];
         
         for (const [year, amount] of Object.entries(revenue)) {
-          const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, parseInt(year), commissionDate);
-          const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
+          // Use pre-calculated data if available (multi-phase consolidated), otherwise calculate
+          const yearlyEnergy = preCalculatedYearlyMWh?.[year] !== undefined
+            ? preCalculatedYearlyMWh[year] * 1000 // Convert MWh back to kWh for consistency
+            : calculateYearlyEnergy(systemSizeKWp, parseInt(year), commissionDate);
+            
+          const yearlyCarbonCredits = preCalculatedYearlyCredits?.[year] !== undefined
+            ? preCalculatedYearlyCredits[year]
+            : calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
+          
           const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize);
           const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize);
           
@@ -84,7 +95,7 @@ export function CarbonCreditTable({
     };
     
     loadTableData();
-  }, [revenue, systemSizeKWp, commissionDate, portfolioSize]);
+  }, [revenue, systemSizeKWp, commissionDate, portfolioSize, preCalculatedYearlyMWh, preCalculatedYearlyCredits]);
 
   if (loading) {
     return (
