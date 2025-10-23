@@ -28,6 +28,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
 // Optimized lazy loading with error handling and performance tracking
@@ -196,6 +197,11 @@ function App() {
                   <Route path="/reset-password" element={
                     <PageErrorBoundary pageName="Reset Password">
                       <ResetPassword />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/auth/callback" element={
+                    <PageErrorBoundary pageName="Auth Callback">
+                      <AuthCallback />
                     </PageErrorBoundary>
                   } />
                   <Route path="/verify-email" element={

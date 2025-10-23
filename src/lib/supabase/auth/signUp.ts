@@ -23,7 +23,7 @@ export async function signUp(email: string, password: string, role: UserRole, me
           ...(role === 'agent' ? { agent_status: 'pending_approval' } : {}),
           ...metadata,
         },
-        emailRedirectTo: `${window.location.origin}/login`
+        emailRedirectTo: `${window.location.origin}/auth/callback`
       },
     });
     
