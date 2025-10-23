@@ -1,11 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { EligibilityCriteria, ClientInformation, ProjectInformation, ProjectPhase } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/normalization";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/lib/calculations/carbon";
 import type { Database } from "@/integrations/supabase/types";
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 import { UnifiedCarbonService } from '@/services/calculations/carbon';
+import type { SystemSpecs } from '@/services/calculations/carbon/types';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
@@ -117,7 +118,10 @@ export async function createProposal(
     const clientId = selectedClientId || await findOrCreateClient(clientInfo, agentId);
     
     // Step 3: Calculate system values
-    const systemSizeKWp = normalizeToKWp(projectInfo.size) || 0;
+    const systemSizeKWp = projectInfo.isMultiPhase && projectInfo.phases
+      ? projectInfo.phases.reduce((sum, p) => sum + p.sizeKWp, 0)
+      : normalizeToKWp(projectInfo.size) || 0;
+    
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
     const carbonCredits = calculateCarbonCredits(systemSizeKWp);
     
@@ -134,10 +138,21 @@ export async function createProposal(
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio, agentProfile?.commission_override);
     
     // Step 5: Calculate total client revenue using UnifiedCarbonService
-    const { revenueByYear } = await UnifiedCarbonService.calculateComplete({
-      sizeKwp: systemSizeKWp,
-      commissionDate: projectInfo.commissionDate
-    }, totalClientPortfolio);
+    const calculationSpecs: SystemSpecs = projectInfo.isMultiPhase && projectInfo.phases
+      ? {
+          sizeKwp: systemSizeKWp,
+          phases: projectInfo.phases,
+          commissionDate: projectInfo.phases[0]?.commissionDate
+        }
+      : {
+          sizeKwp: systemSizeKWp,
+          commissionDate: projectInfo.commissionDate
+        };
+
+    const { revenueByYear } = await UnifiedCarbonService.calculateComplete(
+      calculationSpecs,
+      totalClientPortfolio
+    );
     
     const totalClientRevenue = Object.values(revenueByYear).reduce((sum: number, val: number) => sum + val, 0);
     

@@ -47,11 +47,23 @@ export interface ClientInformation {
   registrationNumber?: string;
 }
 
+export interface ProjectPhase {
+  phaseNumber: number;
+  phaseName?: string;
+  sizeKWp: number;
+  commissionDate: string;
+}
+
 export interface ProjectInformation {
   name: string;
   address: string;
+  isMultiPhase: boolean;
+  // Legacy fields for single-phase projects
   size: string;
   commissionDate: string;
+  // Multi-phase data
+  phases?: ProjectPhase[];
+  totalSystemSize?: number;
   additionalNotes: string;
 }
 

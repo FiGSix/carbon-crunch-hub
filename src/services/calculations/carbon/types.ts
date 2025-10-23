@@ -1,10 +1,22 @@
 import { UserRole } from '@/contexts/auth/types';
+import { ProjectPhase } from '@/types/proposals';
 
 export interface SystemSpecs {
   sizeKwp: number;
   location?: string;
   unitStandard?: 'kWp' | 'MWp';
   commissionDate?: string | Date;
+  phases?: ProjectPhase[];
+}
+
+export interface PhaseRevenue {
+  phaseNumber: number;
+  phaseName?: string;
+  sizeKWp: number;
+  commissionDate: string;
+  revenueByYear: Record<string, number>;
+  carbonCreditsPerYear: number;
+  annualEnergyKwh: number;
 }
 
 export interface CarbonCalculationResult {
@@ -18,6 +30,9 @@ export interface CarbonCalculationResult {
   crunchCommissionPerYear: number;
   systemSizeKwp: number;
   revenueByYear: Record<string, number>;
+  // Multi-phase data
+  isMultiPhase?: boolean;
+  phases?: PhaseRevenue[];
 }
 
 export interface ValidationResult {

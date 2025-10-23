@@ -37,8 +37,10 @@ const CreateProposal = () => {
   const [projectInfo, setProjectInfo] = useState<ProjectInformation>({
     name: "",
     address: "",
+    isMultiPhase: false,
     size: "",
     commissionDate: "",
+    phases: [],
     additionalNotes: "",
   });
   
@@ -144,6 +146,7 @@ const CreateProposal = () => {
           updateProjectInfo={updateProjectInfo}
           nextStep={nextStep}
           prevStep={prevStep}
+          setProjectInfo={setProjectInfo}
         />
       )}
       

@@ -12,6 +12,8 @@ interface ProjectInfoFormWithConflictCheckProps {
   updateProjectInfo: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleAddressChange: (address: string) => void;
   dateValidationError?: string | null;
+  onPhaseToggle?: (isMultiPhase: boolean) => void;
+  onPhasesChange?: (phases: any[]) => void;
 }
 
 export function ProjectInfoFormWithConflictCheck({ 
@@ -19,7 +21,9 @@ export function ProjectInfoFormWithConflictCheck({
   projectInfo,
   updateProjectInfo,
   handleAddressChange,
-  dateValidationError
+  dateValidationError,
+  onPhaseToggle,
+  onPhasesChange
 }: ProjectInfoFormWithConflictCheckProps) {
   const {
     isChecking,
@@ -109,6 +113,8 @@ export function ProjectInfoFormWithConflictCheck({
         projectInfo={projectInfo}
         updateProjectInfo={updateProjectInfo}
         handleAddressChange={handleAddressChange}
+        onPhaseToggle={onPhaseToggle}
+        onPhasesChange={onPhasesChange}
       />
       
       {/* Block form submission if there's a conflict without override or date error */}

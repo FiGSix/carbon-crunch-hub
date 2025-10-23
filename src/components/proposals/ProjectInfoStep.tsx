@@ -20,13 +20,15 @@ interface ProjectInfoStepProps {
   updateProjectInfo: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   nextStep: () => void;
   prevStep: () => void;
+  setProjectInfo?: (info: ProjectInformation) => void;
 }
 
 export function ProjectInfoStep({ 
   projectInfo, 
   updateProjectInfo, 
   nextStep, 
-  prevStep 
+  prevStep,
+  setProjectInfo
 }: ProjectInfoStepProps) {
   const { toast } = useToast();
   const [addressInputError, setAddressInputError] = useState(false);
@@ -79,15 +81,49 @@ export function ProjectInfoStep({
     }
   };
 
+  // Handle phase toggle
+  const handlePhaseToggle = (isMultiPhase: boolean) => {
+    if (setProjectInfo) {
+      setProjectInfo({
+        ...projectInfo,
+        isMultiPhase,
+        phases: isMultiPhase ? [{ phaseNumber: 1, sizeKWp: 0, commissionDate: "" }] : []
+      });
+    }
+  };
+
+  // Handle phases change
+  const handlePhasesChange = (phases: any[]) => {
+    if (setProjectInfo) {
+      const totalSize = phases.reduce((sum, p) => sum + (p.sizeKWp || 0), 0);
+      setProjectInfo({
+        ...projectInfo,
+        phases,
+        totalSystemSize: totalSize
+      });
+    }
+  };
+
   // Form validation checks
-  const isFormValid = Boolean(
-    projectInfo.name && 
-    projectInfo.address && 
-    projectInfo.size && 
-    projectInfo.commissionDate && 
-    !addressInputError &&
-    !dateValidationError
-  );
+  const isFormValid = projectInfo.isMultiPhase
+    ? Boolean(
+        projectInfo.name &&
+        projectInfo.address &&
+        projectInfo.phases &&
+        projectInfo.phases.length > 0 &&
+        projectInfo.phases.every(p => p.sizeKWp > 0 && p.commissionDate) &&
+        (projectInfo.totalSystemSize || 0) < 15000 &&
+        !addressInputError &&
+        !dateValidationError
+      )
+    : Boolean(
+        projectInfo.name &&
+        projectInfo.address &&
+        projectInfo.size &&
+        projectInfo.commissionDate &&
+        !addressInputError &&
+        !dateValidationError
+      );
   
   return (
     <Card className="retro-card">
@@ -105,6 +141,8 @@ export function ProjectInfoStep({
             updateProjectInfo={handleProjectInfoChange} 
             handleAddressChange={handleAddressChange}
             dateValidationError={dateValidationError}
+            onPhaseToggle={handlePhaseToggle}
+            onPhasesChange={handlePhasesChange}
           />
           <ProjectInfoHelpCard />
         </div>
