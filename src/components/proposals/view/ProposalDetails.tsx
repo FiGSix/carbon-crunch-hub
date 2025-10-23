@@ -88,10 +88,11 @@ export function ProposalDetails({
           <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
           <ProjectInfoSection projectInfo={projectInfo} />
           
-          {projectInfo.size && (
+          {/* Show carbon credit section for both single-phase and multi-phase projects */}
+          {(projectInfo.size || (projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0)) && (
             <>
               <CarbonCreditSection 
-                systemSize={projectInfo.size} 
+                systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}
                 commissionDate={projectInfo.commissionDate}
                 selectedClientId={clientId}
                 proposalId={proposal.id}
@@ -99,7 +100,7 @@ export function ProposalDetails({
                 isMultiPhase={projectInfo.isMultiPhase}
               />
               <RevenueDistributionSection 
-                systemSize={projectInfo.size} 
+                systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}
                 selectedClientId={clientId}
                 proposalId={proposal.id}
                 proposalData={proposalData}
