@@ -6,7 +6,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { PhaseRevenue } from "@/services/calculations/carbon/types";
 import { 
   aggregateYearlyMWhFromPhases,
-  aggregateYearlyCarbonCreditsFromPhases
+  aggregateYearlyCarbonCreditsFromPhases,
+  calculateYearlyEnergy,
+  calculateYearlyCarbonCredits
 } from "./carbonCalculations";
 
 interface CarbonCreditTableWrapperProps {
@@ -52,11 +54,29 @@ export function CarbonCreditTableWrapper({
 
   // Helper function to calculate phase totals
   const calculatePhaseTotalMWh = (phase: PhaseRevenue) => {
-    return Object.values(phase.revenueByYear).length * (phase.annualEnergyKwh / 1000);
+    // Sum actual yearly MWh values for this phase
+    const years = Object.keys(phase.revenueByYear);
+    return years.reduce((sum, year) => {
+      const yearlyEnergy = calculateYearlyEnergy(
+        phase.sizeKWp,
+        parseInt(year),
+        phase.commissionDate
+      );
+      return sum + (yearlyEnergy / 1000); // Convert to MWh
+    }, 0);
   };
 
   const calculatePhaseTotalCredits = (phase: PhaseRevenue) => {
-    return phase.carbonCreditsPerYear * Object.values(phase.revenueByYear).length;
+    // Sum actual yearly carbon credits for this phase
+    const years = Object.keys(phase.revenueByYear);
+    return years.reduce((sum, year) => {
+      const yearlyCredits = calculateYearlyCarbonCredits(
+        phase.sizeKWp,
+        parseInt(year),
+        phase.commissionDate
+      );
+      return sum + yearlyCredits;
+    }, 0);
   };
 
   const calculatePhaseTotalRevenue = (phase: PhaseRevenue) => {
