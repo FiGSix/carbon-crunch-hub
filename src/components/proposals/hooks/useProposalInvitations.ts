@@ -131,10 +131,24 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       // Check for network/invocation errors first
       if (response.error) {
+        const errorDetails = {
+          message: response.error.message,
+          status: (response.error as any).status,
+          code: (response.error as any).code
+        };
+        
         devLogger.proposals.error("Edge function invocation failed", {
-          error: response.error,
+          error: errorDetails,
           duration: invokeDuration
         });
+
+        // Check for authentication errors specifically
+        if (errorDetails.status === 401 || errorDetails.code === 'AUTH_REQUIRED' || errorDetails.code === 'AUTH_EXPIRED') {
+          return { 
+            success: false, 
+            error: 'Your session has expired. Please refresh the page and try again.'
+          };
+        }
         
         // Revert token if we just created it
         if (!proposalData.invitation_token) {

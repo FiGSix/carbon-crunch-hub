@@ -6,6 +6,7 @@ import { verifyTokenConsistency } from "./token-verification.ts";
 import { EmailService } from "./email-service.ts";
 import { createClientNotification } from "./notification-service.ts";
 import { 
+  corsHeaders,
   createCorsResponse, 
   createSuccessResponse, 
   createEmailErrorResponse, 
@@ -14,6 +15,13 @@ import {
 import type { InvitationRequest, EmailTemplateData } from "./types.ts";
 
 const handler = async (req: Request): Promise<Response> => {
+  // Entry logging for debugging
+  console.log("=== 🚀 SEND-PROPOSAL-INVITATION INVOKED ===");
+  console.log("Timestamp:", new Date().toISOString());
+  console.log("Method:", req.method);
+  console.log("Has Authorization header:", !!req.headers.get('authorization'));
+  console.log("==========================================");
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return createCorsResponse();
@@ -27,6 +35,44 @@ const handler = async (req: Request): Promise<Response> => {
     if (!hasApiKey) {
       throw new Error("RESEND_API_KEY is not configured. Please set this environment variable.");
     }
+
+    // Verify authentication (JWT required)
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error("❌ Missing authorization header");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Authentication required. Please refresh your session and try again.",
+          code: "AUTH_REQUIRED"
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    // Verify JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error("❌ Invalid or expired JWT token:", authError?.message);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Session expired. Please refresh the page and try again.",
+          code: "AUTH_EXPIRED"
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("✅ Authenticated user:", user.id);
     
     // Parse and validate request
     const requestData = await req.json();
