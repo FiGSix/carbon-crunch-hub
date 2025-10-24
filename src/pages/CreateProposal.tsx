@@ -22,6 +22,7 @@ const CreateProposal = () => {
     under15MWp: false,
     commissionedAfter2022: false,
     legalOwnership: false,
+    noGovernmentFunding: false,
   });
   
   const [clientInfo, setClientInfo] = useState<ClientInformation>({

@@ -73,6 +73,7 @@ export interface EligibilityCriteria {
   under15MWp: boolean;
   commissionedAfter2022: boolean;
   legalOwnership: boolean;
+  noGovernmentFunding: boolean;
 }
 
 /**
