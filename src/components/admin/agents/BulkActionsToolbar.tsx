@@ -60,10 +60,10 @@ export function BulkActionsToolbar({
           updateData = { agent_status: 'pending_approval' };
           break;
         case 'delete':
-          // For delete, we'll handle it separately
+          // Soft delete by setting deleted_at timestamp
           const { error } = await supabase
             .from('profiles')
-            .delete()
+            .update({ deleted_at: new Date().toISOString() })
             .in('id', agentIds);
           if (error) throw error;
           return;
@@ -143,7 +143,7 @@ export function BulkActionsToolbar({
       case 'pending': 
         return `This will mark ${count} agent(s) as Pending Approval, requiring admin review.`;
       case 'delete': 
-        return `This will permanently delete ${count} agent(s) and all their associated data. This action cannot be undone.`;
+        return `This will archive ${count} agent(s), removing them from the active agent list while preserving their data.`;
       default: 
         return '';
     }
@@ -237,7 +237,7 @@ export function BulkActionsToolbar({
                 onClick={confirmBulkAction}
                 className={bulkAction === 'delete' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
               >
-                {bulkAction === 'delete' ? 'Delete Permanently' : 'Confirm Action'}
+                {bulkAction === 'delete' ? 'Archive Agents' : 'Confirm Action'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

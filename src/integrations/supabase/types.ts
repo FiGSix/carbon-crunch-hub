@@ -21,7 +21,7 @@ export type Database = {
           agent_id: string
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_agent: string | null
         }
         Insert: {
@@ -30,7 +30,7 @@ export type Database = {
           agent_id: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
         }
         Update: {
@@ -39,7 +39,7 @@ export type Database = {
           agent_id?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
         }
         Relationships: [
@@ -171,7 +171,7 @@ export type Database = {
           action: string
           client_ids: string[]
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           modified_fields: Json | null
           new_values: Json | null
           old_values: Json | null
@@ -185,7 +185,7 @@ export type Database = {
           action: string
           client_ids: string[]
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           modified_fields?: Json | null
           new_values?: Json | null
           old_values?: Json | null
@@ -199,7 +199,7 @@ export type Database = {
           action?: string
           client_ids?: string[]
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           modified_fields?: Json | null
           new_values?: Json | null
           old_values?: Json | null
@@ -382,7 +382,7 @@ export type Database = {
           entity_id: string | null
           entity_type: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           mentioned_users: string[] | null
           new_value: string | null
           old_value: string | null
@@ -396,7 +396,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           mentioned_users?: string[] | null
           new_value?: string | null
           old_value?: string | null
@@ -410,7 +410,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           mentioned_users?: string[] | null
           new_value?: string | null
           old_value?: string | null
@@ -830,6 +830,7 @@ export type Database = {
           company_logo_url: string | null
           company_name: string | null
           created_at: string
+          deleted_at: string | null
           email: string
           first_name: string | null
           id: string
@@ -857,6 +858,7 @@ export type Database = {
           company_logo_url?: string | null
           company_name?: string | null
           created_at?: string
+          deleted_at?: string | null
           email: string
           first_name?: string | null
           id: string
@@ -884,6 +886,7 @@ export type Database = {
           company_logo_url?: string | null
           company_name?: string | null
           created_at?: string
+          deleted_at?: string | null
           email?: string
           first_name?: string | null
           id?: string
@@ -1013,7 +1016,7 @@ export type Database = {
           accepted_terms_version: string
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           proposal_id: string
           signature_image_url: string | null
@@ -1024,10 +1027,10 @@ export type Database = {
           signed_pdf_url: string | null
           typed_name: string | null
           user_agent: string | null
-          witness_1_ip_address: unknown | null
+          witness_1_ip_address: unknown
           witness_1_name: string | null
           witness_1_verified_at: string | null
-          witness_2_ip_address: unknown | null
+          witness_2_ip_address: unknown
           witness_2_name: string | null
           witness_2_verified_at: string | null
           witness_method: string | null
@@ -1036,7 +1039,7 @@ export type Database = {
           accepted_terms_version?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           proposal_id: string
           signature_image_url?: string | null
@@ -1047,10 +1050,10 @@ export type Database = {
           signed_pdf_url?: string | null
           typed_name?: string | null
           user_agent?: string | null
-          witness_1_ip_address?: unknown | null
+          witness_1_ip_address?: unknown
           witness_1_name?: string | null
           witness_1_verified_at?: string | null
-          witness_2_ip_address?: unknown | null
+          witness_2_ip_address?: unknown
           witness_2_name?: string | null
           witness_2_verified_at?: string | null
           witness_method?: string | null
@@ -1059,7 +1062,7 @@ export type Database = {
           accepted_terms_version?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           proposal_id?: string
           signature_image_url?: string | null
@@ -1070,10 +1073,10 @@ export type Database = {
           signed_pdf_url?: string | null
           typed_name?: string | null
           user_agent?: string | null
-          witness_1_ip_address?: unknown | null
+          witness_1_ip_address?: unknown
           witness_1_name?: string | null
           witness_1_verified_at?: string | null
-          witness_2_ip_address?: unknown | null
+          witness_2_ip_address?: unknown
           witness_2_name?: string | null
           witness_2_verified_at?: string | null
           witness_method?: string | null
@@ -1367,14 +1370,8 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
-      auth_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      auth_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      auth_user_id: { Args: never; Returns: string }
+      auth_user_role: { Args: never; Returns: string }
       create_agent_user: {
         Args: {
           access_level_param?: string
@@ -1408,10 +1405,7 @@ export type Database = {
         Args: { preferred_unit?: string; size_kwp: number }
         Returns: string
       }
-      generate_secure_token: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_secure_token: { Args: never; Returns: string }
       get_agent_clients: {
         Args: { agent_id_param?: string }
         Returns: {
@@ -1496,14 +1490,8 @@ export type Database = {
           total_proposals: number
         }[]
       }
-      get_client_email: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_client_email: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
       get_dashboard_metrics_by_stage: {
         Args: { user_id_param: string; user_role_param: string }
         Returns: {
@@ -1543,10 +1531,7 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_primary_role: {
-        Args: { _user_id: string }
-        Returns: string
-      }
+      get_primary_role: { Args: { _user_id: string }; Returns: string }
       get_project_step_status: {
         Args: { proposal_id_param: string }
         Returns: {
@@ -1601,10 +1586,7 @@ export type Database = {
           title: string
         }[]
       }
-      get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_role: { Args: never; Returns: string }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -1618,14 +1600,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_current_user_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_current_user_agent: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_current_user_admin: { Args: never; Returns: boolean }
+      is_current_user_agent: { Args: never; Returns: boolean }
       is_proposal_client: {
         Args: { proposal_client_reference_id: string }
         Returns: boolean
@@ -1695,12 +1671,14 @@ export type Database = {
           title: string
         }[]
       }
-      set_request_invitation_token: {
-        Args: { email_input: string; token_input: string } | { token: string }
-        Returns: undefined
-      }
+      set_request_invitation_token:
+        | {
+            Args: { email_input: string; token_input: string }
+            Returns: undefined
+          }
+        | { Args: { token: string }; Returns: boolean }
       test_rls_policies: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           operation: string
           result: string
