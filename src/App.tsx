@@ -30,6 +30,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
+import EmbeddedGame from "./pages/EmbeddedGame";
 
 // Optimized lazy loading with error handling and performance tracking
 const About = createOptimizedLazyComponent(() => import("./pages/About"), "About");
@@ -214,6 +215,9 @@ function App() {
                       <Suspense fallback={<PageLoader />}><ForceLogout /></Suspense>
                     </PageErrorBoundary>
                   } />
+                  
+                  {/* Embedded Game - No navigation or branding */}
+                  <Route path="/game" element={<EmbeddedGame />} />
                   
                   {/* Proposal viewing - accessible with token */}
                   <Route path="/proposals/:id" element={
