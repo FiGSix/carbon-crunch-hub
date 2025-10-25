@@ -2,7 +2,7 @@ const EmbeddedGame = () => {
   return (
     <div className="w-full h-screen overflow-hidden bg-background">
       <iframe 
-        src="https://your-game-url.lovableproject.com/" 
+        src="https://crunching-carbon.lovable.app" 
         className="w-full h-full border-0"
         style={{
           borderRadius: '8px',
