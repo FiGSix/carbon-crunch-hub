@@ -246,4 +246,9 @@ const navItems = [
     href: "/contact",
     description: "Get in touch with us" 
   },
+  { 
+    label: "Got Game?", 
+    href: "/game",
+    description: "Play our interactive game" 
+  },
 ];
