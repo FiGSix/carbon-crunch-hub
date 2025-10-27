@@ -189,10 +189,25 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
                 <SelectValue placeholder="Select provider" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="SolarEdge">SolarEdge</SelectItem>
-                <SelectItem value="Huawei">Huawei</SelectItem>
-                <SelectItem value="SMA">SMA</SelectItem>
+                <SelectItem value="Alpha ESS">Alpha ESS</SelectItem>
+                <SelectItem value="Atess">Atess</SelectItem>
+                <SelectItem value="BlueLog">BlueLog</SelectItem>
+                <SelectItem value="Deye">Deye</SelectItem>
+                <SelectItem value="Dyness">Dyness</SelectItem>
                 <SelectItem value="Fronius">Fronius</SelectItem>
+                <SelectItem value="GoodWe">GoodWe</SelectItem>
+                <SelectItem value="Huawei">Huawei</SelectItem>
+                <SelectItem value="Lux">Lux</SelectItem>
+                <SelectItem value="Megarevo">Megarevo</SelectItem>
+                <SelectItem value="Meteo Control">Meteo Control</SelectItem>
+                <SelectItem value="Sivula">Sivula</SelectItem>
+                <SelectItem value="SMA">SMA</SelectItem>
+                <SelectItem value="Solis">Solis</SelectItem>
+                <SelectItem value="SolarEdge">SolarEdge</SelectItem>
+                <SelectItem value="Sungrow">Sungrow</SelectItem>
+                <SelectItem value="SunSynk">SunSynk</SelectItem>
+                <SelectItem value="Vcomms">Vcomms</SelectItem>
+                <SelectItem value="Victron">Victron</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
