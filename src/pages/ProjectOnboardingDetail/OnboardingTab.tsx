@@ -13,6 +13,7 @@ import type { OnboardingFields, OnboardingDocument, ProjectOnboarding } from "@/
 import { useAuth } from "@/contexts/auth";
 import { getAllAdminUserIds } from "@/services/adminService";
 import { createNotification } from "@/services/notificationService";
+import { logger } from "@/lib/logger";
 
 interface SolarInstaller {
   id: string;
@@ -102,7 +103,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       if (error) throw error;
       setDocuments((data || []) as OnboardingDocument[]);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      logger.error('Error fetching documents', { error, projectId });
     } finally {
       setLoadingDocs(false);
     }
@@ -119,7 +120,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       if (error) throw error;
       setInstallers((data || []) as SolarInstaller[]);
     } catch (error) {
-      console.error('Error fetching installers:', error);
+      logger.error('Error fetching installers', { error });
     } finally {
       setLoadingInstallers(false);
     }
@@ -180,7 +181,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         });
       }
     } catch (error) {
-      console.error('Error creating installer:', error);
+      logger.error('Error creating installer', { error });
       toast({
         title: "Error",
         description: "Failed to add new installer",
@@ -231,7 +232,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       onRefresh();
     } catch (error) {
-      console.error('Error saving draft:', error);
+      logger.error('Error saving draft', { error, projectId });
       toast({
         title: "Error",
         description: "Failed to save draft",
@@ -255,7 +256,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         return;
       }
 
-      console.log("Starting validation and completion process...");
+      logger.info("Starting validation and completion process", { projectId });
 
       // Prepare data for upsert, excluding auto-managed fields
       const { id, created_at, updated_at, validated_at, validated_by, ...upsertData } = formData;
@@ -269,11 +270,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         });
 
       if (fieldsError) {
-        console.error("Error saving fields:", fieldsError);
+        logger.error("Error saving fields", { error: fieldsError, projectId });
         throw fieldsError;
       }
 
-      console.log("Fields saved successfully, validating...");
+      logger.info("Fields saved successfully, validating", { projectId });
 
       // Validate completion using RPC function
       const { data: isValid, error: validationError } = await supabase
@@ -282,11 +283,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         });
 
       if (validationError) {
-        console.error("Validation error:", validationError);
+        logger.error("Validation error", { error: validationError, projectId });
         throw validationError;
       }
 
-      console.log("Validation result:", isValid);
+      logger.info("Validation result", { isValid, projectId });
 
       if (!isValid) {
         toast({
@@ -312,7 +313,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .eq('id', projectId);
 
         if (updateError) {
-          console.error("Error updating onboarding status:", updateError);
+          logger.error("Error updating onboarding status", { error: updateError, projectId });
           throw updateError;
         }
 
@@ -332,7 +333,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .eq('id', projectId);
 
         if (submitError) {
-          console.error("Error submitting for review:", submitError);
+          logger.error("Error submitting for review", { error: submitError, projectId });
           throw submitError;
         }
 
@@ -351,9 +352,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           );
 
           await Promise.allSettled(notificationPromises);
-          console.log("Admin notifications sent successfully");
+          logger.info("Admin notifications sent successfully", { projectId });
         } catch (notifError) {
-          console.error("Error sending notifications:", notifError);
+          logger.warn("Error sending notifications", { error: notifError, projectId });
           // Don't fail the submission if notifications fail
         }
 
@@ -365,7 +366,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       onRefresh();
     } catch (error) {
-      console.error('Error in handleValidateAndComplete:', error);
+      logger.error('Error in handleValidateAndComplete', { error, projectId });
       toast({
         title: "Error",
         description: "Failed to process request. Please try again.",

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ClientInformation, ProjectInformation } from "../types";
-import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { logger } from '@/lib/logger';
 
 interface ProposalContent {
   clientInfo?: ClientInformation;
@@ -33,7 +33,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       setSending(true);
       setError(null);
       
-      console.log("🚀 Starting invitation process for proposal:", id);
+      logger.info("Starting invitation process for proposal", { proposalId: id });
       
       // First verify the proposal is in the correct status
       const { data: proposalData, error: proposalError } = await supabase
@@ -43,14 +43,14 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         .single();
       
       if (proposalError) {
-        devLogger.proposals.error("Error fetching proposal data", proposalError);
+        logger.error("Error fetching proposal data", { error: proposalError });
         return { success: false, error: proposalError.message };
       }
       
       // Verify proposal is in the pending status
       if (proposalData.status !== 'pending') {
         const errorMsg = `Proposal must be in 'pending' status to send invitations. Current status: ${proposalData.status}`;
-        devLogger.proposals.error(errorMsg);
+        logger.error(errorMsg);
         return { success: false, error: errorMsg };
       }
       
@@ -59,7 +59,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       let expirationDate: Date;
       
       if (!tokenToUse) {
-        console.log("📝 No existing token found, generating new one...");
+        logger.debug("No existing token found, generating new one");
         
         // Generate token and set expiration date (48 hours from now)
         expirationDate = new Date();
@@ -68,11 +68,11 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
         
         if (tokenError) {
-          devLogger.proposals.error("Token generation error", tokenError);
+          logger.error("Token generation error", { error: tokenError });
           return { success: false, error: tokenError.message };
         }
         
-        console.log("✅ Token generated successfully:", token.substring(0, 8) + "...");
+        logger.debug("Token generated successfully", { tokenPrefix: token.substring(0, 8) });
         
         // Update the proposal with token and expiration (but NOT invitation_sent_at yet)
         const { error: updateError } = await supabase
@@ -85,14 +85,14 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           .eq('id', id);
         
         if (updateError) {
-          devLogger.proposals.error("Error updating proposal with token", updateError);
+          logger.error("Error updating proposal with token", { error: updateError });
           return { success: false, error: updateError.message };
         }
         
         tokenToUse = token;
-        console.log("✅ Proposal updated with new token (email not sent yet)");
+        logger.debug("Proposal updated with new token (email not sent yet)");
       } else {
-        console.log("📋 Using existing token:", tokenToUse.substring(0, 8) + "...");
+        logger.debug("Using existing token", { tokenPrefix: tokenToUse.substring(0, 8) });
       }
       
       // Extract client info from proposal content
@@ -100,9 +100,9 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       const clientInfo = content?.clientInfo;
       const clientId = proposalData.client_id;
       
-      console.log("📋 Proposal data retrieved:", { 
-        clientInfo: clientInfo?.email ? "✅" : "❌", 
-        clientId: clientId ? "✅" : "❌",
+      logger.debug("Proposal data retrieved", { 
+        hasClientInfo: !!clientInfo?.email,
+        hasClientId: !!clientId,
         hasClientEmail: !!clientInfo?.email,
         tokenLength: tokenToUse.length
       });
@@ -111,7 +111,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         return { success: false, error: "No client email found in the proposal" };
       }
       
-      console.log("📧 Calling email function with token:", tokenToUse.substring(0, 8) + "...");
+      logger.info("Calling email function", { tokenPrefix: tokenToUse.substring(0, 8) });
       
       // Call the edge function to send email with timeout handling
       const invokeStartTime = Date.now();
@@ -127,7 +127,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       });
       const invokeDuration = Date.now() - invokeStartTime;
       
-      console.log(`📧 Edge function responded in ${invokeDuration}ms`);
+      logger.info("Edge function responded", { duration: invokeDuration });
       
       // Check for network/invocation errors first
       if (response.error) {
@@ -137,7 +137,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           code: (response.error as any).code
         };
         
-        devLogger.proposals.error("Edge function invocation failed", {
+        logger.error("Edge function invocation failed", {
           error: errorDetails,
           duration: invokeDuration
         });
@@ -169,7 +169,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       // Parse the response
       const emailResponse = response.data as InvitationResponse;
-      console.log("📧 Email function response:", {
+      logger.info("Email function response", {
         success: emailResponse?.success,
         hasError: !!emailResponse?.error,
         debug: emailResponse?.debug,
@@ -178,7 +178,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       if (!emailResponse?.success) {
         const errorMessage = emailResponse?.details || emailResponse?.error || "Email service error";
-        devLogger.proposals.error("Email sending failed", {
+        logger.error("Email sending failed", {
           error: errorMessage,
           duration: invokeDuration
         });
@@ -198,7 +198,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       }
       
       // ✅ EMAIL SENT SUCCESSFULLY - NOW update invitation_sent_at
-      console.log("✅ Email confirmed sent, updating database...");
+      logger.info("Email confirmed sent, updating database");
       const { error: sentUpdateError } = await supabase
         .from('proposals')
         .update({
@@ -207,12 +207,11 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         .eq('id', id);
       
       if (sentUpdateError) {
-        devLogger.proposals.error("Warning: Email sent but failed to update sent timestamp", sentUpdateError);
+        logger.warn("Email sent but failed to update sent timestamp", { error: sentUpdateError });
         // Don't fail the whole operation since email was actually sent
       }
       
-      console.log("✅ Invitation sent successfully!");
-      console.log("🔗 Debug info:", emailResponse.debug);
+      logger.info("Invitation sent successfully", { debug: emailResponse.debug });
       
       // Set the last sent proposal ID for testing reference
       setLastSentProposalId(id);
@@ -229,7 +228,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         debug: emailResponse.debug
       };
     } catch (error: any) {
-      devLogger.proposals.error("Error sending invitation", error);
+      logger.error("Error sending invitation", { error });
       
       const errorMessage = error instanceof Error ? error.message : "Failed to send invitation";
       setError(errorMessage);
