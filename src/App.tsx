@@ -27,12 +27,12 @@ import TestPage from "./pages/TestPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import EmbeddedGame from "./pages/EmbeddedGame";
 
 // Optimized lazy loading with error handling and performance tracking
+const ResetPassword = createOptimizedLazyComponent(() => import("./pages/ResetPassword"), "ResetPassword");
 const About = createOptimizedLazyComponent(() => import("./pages/About"), "About");
 const Contact = createOptimizedLazyComponent(() => import("./pages/Contact"), "Contact");
 const Calculator = createOptimizedLazyComponent(() => import("./pages/Calculator"), "Calculator");

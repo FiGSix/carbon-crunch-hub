@@ -7,9 +7,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PrivacyPolicy } from './legal/PrivacyPolicy';
-import { TermsOfService } from './legal/TermsOfService';
-import { CookiePolicy } from './legal/CookiePolicy';
+import { lazy, Suspense } from 'react';
+
+// Lazy load legal components to reduce initial bundle size
+const PrivacyPolicy = lazy(() => import('./legal/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
+const TermsOfService = lazy(() => import('./legal/TermsOfService').then(m => ({ default: m.TermsOfService })));
+const CookiePolicy = lazy(() => import('./legal/CookiePolicy').then(m => ({ default: m.CookiePolicy })));
 
 const legalLinks = [
   { label: 'Privacy Policy', id: 'privacy', href: '/privacy' },
@@ -38,9 +41,11 @@ export function LegalLinks() {
               </DialogDescription>
             </DialogHeader>
             
-            {link.id === "privacy" && <PrivacyPolicy />}
-            {link.id === "terms" && <TermsOfService />}
-            {link.id === "cookies" && <CookiePolicy />}
+            <Suspense fallback={<div className="flex items-center justify-center p-8">Loading...</div>}>
+              {link.id === "privacy" && <PrivacyPolicy />}
+              {link.id === "terms" && <TermsOfService />}
+              {link.id === "cookies" && <CookiePolicy />}
+            </Suspense>
           </DialogContent>
         </Dialog>
       ))}

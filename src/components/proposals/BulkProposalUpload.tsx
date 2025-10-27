@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
-import { generateProposalTemplate } from "@/utils/excel/excelTemplateGenerator";
-import { parseExcelFile } from "@/utils/excel/excelParser";
 import { validateProposalRows, ValidationError } from "@/utils/excel/excelValidator";
 import { BulkProposalRow, BulkUploadResult } from "@/types/proposals";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +23,9 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
+    // Dynamically import xlsx only when needed to reduce initial bundle size
+    const { generateProposalTemplate } = await import("@/utils/excel/excelTemplateGenerator");
     generateProposalTemplate();
     toast({
       title: "Template Downloaded",
@@ -61,6 +61,9 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
     setUploadResult(null);
 
     try {
+      // Dynamically import xlsx parser only when needed to reduce initial bundle size
+      const { parseExcelFile } = await import("@/utils/excel/excelParser");
+      
       // Parse the file
       const rows = await parseExcelFile(selectedFile);
       
@@ -91,6 +94,9 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
     setUploading(true);
     
     try {
+      // Dynamically import xlsx parser only when needed to reduce initial bundle size
+      const { parseExcelFile } = await import("@/utils/excel/excelParser");
+      
       // Parse file again for full data
       const rows = await parseExcelFile(file);
       
