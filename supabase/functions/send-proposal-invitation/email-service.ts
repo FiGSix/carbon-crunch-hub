@@ -57,16 +57,22 @@ export class EmailService {
 
             ${projectDetailsHtml}
 
-            <p style="margin: 25px 0 20px 0; color: #4A5568; font-size: 15px; line-height: 1.7;">
-              Click the button below to view the complete proposal. You'll be able to review all details and choose to either approve or reject the proposal.
-            </p>
-
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
               <a href="${data.invitationLink}" 
                  style="display: inline-block; background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); color: #1A1A1A; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(244, 196, 48, 0.3); transition: transform 0.2s;">
-                View Proposal
+                View Your Proposal
               </a>
+            </div>
+
+            <!-- What Happens Next -->
+            <div style="background: #F8FAFC; border-left: 3px solid #F4C430; border-radius: 6px; padding: 20px; margin: 30px 0;">
+              <h3 style="margin: 0 0 12px 0; color: #1A1A1A; font-size: 16px; font-weight: 600;">What happens next?</h3>
+              <ul style="margin: 0; padding: 0 0 0 20px; color: #4A5568; font-size: 14px; line-height: 1.8;">
+                <li style="margin: 8px 0;">Click the button above to view your complete proposal (no login required)</li>
+                <li style="margin: 8px 0;">Review all the details at your convenience</li>
+                <li style="margin: 8px 0;">When ready to approve or reject, you'll create a quick account or sign in (takes 30 seconds)</li>
+              </ul>
             </div>
 
             <!-- Important Notice -->

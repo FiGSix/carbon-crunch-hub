@@ -75,12 +75,11 @@ export function ViewProposalContent({
   if (showAuthForm && clientEmail && proposal) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          Sign in to take action on this proposal
+        <h1 className="text-2xl font-bold text-center mb-4">
+          Almost there! Complete your account to respond
         </h1>
-        <p className="text-center mb-8">
-          To respond to the proposal "{proposal.title}", 
-          please sign in or create an account.
+        <p className="text-center text-muted-foreground mb-8">
+          To approve or reject "{proposal.title}", create your account or sign in below.
         </p>
         <ClientAuthWrapper
           proposalId={proposal.id} 

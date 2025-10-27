@@ -26,9 +26,9 @@ export function LoginForm({ clientEmail, onComplete, onError }: LoginFormProps) 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Sign In to View Proposal</CardTitle>
+        <CardTitle>Welcome Back!</CardTitle>
         <CardDescription>
-          Sign in with your client account to view this proposal. Your account should be linked to: {clientEmail}
+          Sign in to respond to this proposal using {clientEmail}
         </CardDescription>
       </CardHeader>
       <CardContent>

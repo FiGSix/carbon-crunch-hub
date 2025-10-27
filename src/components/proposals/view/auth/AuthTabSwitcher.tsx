@@ -22,8 +22,8 @@ export function AuthTabSwitcher({
       className="w-full"
     >
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="register">Create Account</TabsTrigger>
-        <TabsTrigger value="login">Sign In</TabsTrigger>
+        <TabsTrigger value="register">New User</TabsTrigger>
+        <TabsTrigger value="login">Returning User</TabsTrigger>
       </TabsList>
       
       <TabsContent value="register">
