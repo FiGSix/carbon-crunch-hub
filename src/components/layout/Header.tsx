@@ -92,7 +92,7 @@ export function Header() {
                 className="flex items-center touch-manipulation hover:opacity-90 transition-opacity duration-200"
               >
                 <OptimizedImage
-                  src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
+                  src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc-optimized.png" 
                   alt="CrunchCarbon Logo" 
                   className="h-10 md:h-12 drop-shadow-sm"
                   width={141}
