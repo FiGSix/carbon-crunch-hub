@@ -7,7 +7,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DataAccessConfig } from "@/types/onboarding";
 
 interface DataAccessTabProps {
@@ -180,7 +181,19 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
         <CardContent className="space-y-6">
           {/* Provider */}
           <div className="space-y-2">
-            <Label htmlFor="provider">Provider</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="provider">Data Access Provider</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>The Crunch Carbon team will be required to access the system remotely, please advise on which portal or inverter cloud portal or access point we should use to get access to the energy data.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Select
               value={config.provider || ''}
               onValueChange={(value) => setConfig(prev => ({ ...prev, provider: value }))}
