@@ -21,6 +21,9 @@
     <!-- Preload LCP image for faster discovery -->
     <link rel="preload" href="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" as="image" fetchpriority="high">
     
+    <!-- Modulepreload for main script to reduce chain length -->
+    <link rel="modulepreload" href="/src/main.tsx">
+    
     <!-- Non-blocking font CSS loading -->
     <script>
       !function(e){
@@ -50,41 +53,56 @@
 
     <!-- Defer Vite-injected CSS to prevent render blocking -->
     <script>
-      // Make Vite CSS load asynchronously to improve FCP
+      // Make Vite CSS load asynchronously to improve FCP and reduce chain length
       (function() {
+        var processed = {};
+        
         // Function to make a stylesheet async
         function makeAsync(link) {
-          if (link.nodeName === 'LINK' && link.rel === 'stylesheet' && 
-              link.href && link.href.includes('/css/index-') && 
-              (!link.media || link.media === 'all' || link.media === 'screen')) {
-            link.media = 'print';
-            link.addEventListener('load', function() {
-              this.media = 'all';
-            }, { once: true });
+          if (!link || link.nodeName !== 'LINK' || link.rel !== 'stylesheet') return;
+          if (processed[link.href]) return;
+          
+          var href = link.href || '';
+          // Target Vite's built CSS files (with hash in filename)
+          if (href.includes('/css/index-') || href.includes('/assets/')) {
+            if (!link.media || link.media === 'all' || link.media === 'screen') {
+              processed[link.href] = true;
+              var originalMedia = link.media || 'all';
+              link.media = 'print';
+              link.onload = function() {
+                this.media = originalMedia;
+                this.onload = null;
+              };
+              // Fallback for older browsers
+              setTimeout(function() {
+                link.media = originalMedia;
+              }, 100);
+            }
           }
         }
         
-        // Check existing stylesheets immediately
-        var existingLinks = document.querySelectorAll('link[rel="stylesheet"]');
-        for (var i = 0; i < existingLinks.length; i++) {
-          makeAsync(existingLinks[i]);
+        // Process any existing stylesheets
+        var links = document.getElementsByTagName('link');
+        for (var i = 0; i < links.length; i++) {
+          makeAsync(links[i]);
         }
         
-        // Observe for new stylesheets
+        // Observe for dynamically added stylesheets
         var observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            mutation.addedNodes.forEach(function(node) {
-              makeAsync(node);
-            });
-          });
+          for (var i = 0; i < mutations.length; i++) {
+            var nodes = mutations[i].addedNodes;
+            for (var j = 0; j < nodes.length; j++) {
+              makeAsync(nodes[j]);
+            }
+          }
         });
         
-        observer.observe(document.head, { childList: true, subtree: true });
+        observer.observe(document.head, { childList: true });
         
-        // Disconnect observer after page load
+        // Stop observing after load
         window.addEventListener('load', function() {
           observer.disconnect();
-        });
+        }, { once: true });
       })();
     </script>
     
