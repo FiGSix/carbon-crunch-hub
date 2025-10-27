@@ -213,12 +213,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       // Prepare data for upsert, excluding auto-managed fields
       const { id, created_at, updated_at, validated_at, validated_by, ...upsertData } = formData;
       
-      const { error } = await supabase
-        .from('onboarding_fields')
-        .upsert({
-          project_id: projectId,
-          ...upsertData as any,
-        });
+    const { error } = await supabase
+      .from('onboarding_fields')
+      .upsert({
+        project_id: projectId,
+        ...upsertData as any,
+      }, {
+        onConflict: 'project_id'
+      });
 
       if (error) throw error;
 
