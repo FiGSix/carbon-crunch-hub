@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ export function ApprovalSignatureDialog({
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -39,6 +40,31 @@ export function ApprovalSignatureDialog({
       setHasScrolledToBottom(false);
     }
   }, [open]);
+
+  // Use IntersectionObserver to detect scroll to bottom without forced reflows
+  useEffect(() => {
+    if (!open || !scrollSentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasScrolledToBottom) {
+            setHasScrolledToBottom(true);
+          }
+        });
+      },
+      {
+        root: scrollSentinelRef.current.parentElement,
+        threshold: 1.0,
+      }
+    );
+
+    observer.observe(scrollSentinelRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [open, hasScrolledToBottom]);
 
   const validateTypedName = (): boolean => {
     const client = clientName.toLowerCase().trim();
@@ -63,14 +89,6 @@ export function ApprovalSignatureDialog({
       // Error handling is done in parent component
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 10;
-    if (isAtBottom && !hasScrolledToBottom) {
-      setHasScrolledToBottom(true);
     }
   };
 
@@ -101,7 +119,6 @@ export function ApprovalSignatureDialog({
             </div>
             <ScrollArea 
               className="h-[200px] border rounded-lg p-4"
-              onScrollCapture={handleScroll}
             >
               <div className="prose prose-sm max-w-none space-y-3 text-sm">
                 <p className="font-semibold">Summary of Agreement</p>
@@ -125,6 +142,8 @@ export function ApprovalSignatureDialog({
                   You consent to the collection and use of your system data for carbon credit registration
                   and verification purposes in accordance with applicable data protection regulations.
                 </p>
+                {/* Invisible sentinel element for IntersectionObserver */}
+                <div ref={scrollSentinelRef} className="h-1" aria-hidden="true" />
               </div>
             </ScrollArea>
             <p className="text-xs text-muted-foreground">
