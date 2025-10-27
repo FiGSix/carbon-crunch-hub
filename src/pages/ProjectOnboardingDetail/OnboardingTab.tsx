@@ -717,6 +717,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                   <SelectItem value="Lux">Lux</SelectItem>
                   <SelectItem value="Megarevo">Megarevo</SelectItem>
                   <SelectItem value="Solis">Solis</SelectItem>
+                  <SelectItem value="SolarEdge">SolarEdge</SelectItem>
                   <SelectItem value="Sungrow">Sungrow</SelectItem>
                   <SelectItem value="SunSynk">SunSynk</SelectItem>
                   <SelectItem value="Victron">Victron</SelectItem>
