@@ -1789,6 +1789,12 @@ export type Database = {
           test_name: string
         }[]
       }
+      user_company_ids: {
+        Args: { user_id_param: string }
+        Returns: {
+          company_id: string
+        }[]
+      }
       validate_invitation_token: {
         Args: { token: string }
         Returns: {
