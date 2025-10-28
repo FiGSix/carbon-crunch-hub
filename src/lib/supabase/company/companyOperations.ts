@@ -24,12 +24,12 @@ export interface CompanyMember {
 }
 
 export interface CompanyMemberWithProfile extends CompanyMember {
-  profiles: {
+  profile: {
     first_name: string | null;
     last_name: string | null;
     email: string;
     avatar_url: string | null;
-  };
+  } | null;
 }
 
 /**
@@ -79,12 +79,7 @@ export async function getCompanyMembers(companyId: string) {
   // Combine the data
   const combined = members.map(member => ({
     ...member,
-    profiles: profiles.find(p => p.id === member.user_id) || {
-      first_name: null,
-      last_name: null,
-      email: '',
-      avatar_url: null
-    }
+    profile: profiles.find(p => p.id === member.user_id) || null
   })) as CompanyMemberWithProfile[];
 
   return { data: combined, error: null };
@@ -120,12 +115,7 @@ export async function getPendingApprovals(companyId: string) {
   // Combine the data
   const combined = members.map(member => ({
     ...member,
-    profiles: profiles.find(p => p.id === member.user_id) || {
-      first_name: null,
-      last_name: null,
-      email: '',
-      avatar_url: null
-    }
+    profile: profiles.find(p => p.id === member.user_id) || null
   })) as CompanyMemberWithProfile[];
 
   return { data: combined, error: null };

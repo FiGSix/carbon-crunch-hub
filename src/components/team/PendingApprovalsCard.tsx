@@ -41,8 +41,8 @@ export function PendingApprovalsCard({
 
       <div className="space-y-3">
         {pendingApprovals.map((approval) => {
-          const fullName = `${approval.profiles.first_name || ''} ${approval.profiles.last_name || ''}`.trim();
-          const initials = `${approval.profiles.first_name?.[0] || ''}${approval.profiles.last_name?.[0] || ''}`.toUpperCase();
+          const fullName = `${approval.profile?.first_name || ''} ${approval.profile?.last_name || ''}`.trim();
+          const initials = `${approval.profile?.first_name?.[0] || ''}${approval.profile?.last_name?.[0] || ''}`.toUpperCase();
           const timeAgo = formatDistanceToNow(new Date(approval.invited_at), { addSuffix: true });
 
           return (
@@ -53,7 +53,7 @@ export function PendingApprovalsCard({
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{fullName || 'Unknown'}</p>
                 <p className="text-sm text-muted-foreground truncate">
-                  {approval.profiles.email}
+                  {approval.profile?.email}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Requested {timeAgo}

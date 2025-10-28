@@ -54,8 +54,8 @@ export function TeamMembersCard({ members, isLoading }: TeamMembersCardProps) {
       ) : (
         <div className="space-y-3">
           {activeMembers.map((member) => {
-            const fullName = `${member.profiles.first_name || ''} ${member.profiles.last_name || ''}`.trim();
-            const initials = `${member.profiles.first_name?.[0] || ''}${member.profiles.last_name?.[0] || ''}`.toUpperCase();
+            const fullName = `${member.profile?.first_name || ''} ${member.profile?.last_name || ''}`.trim();
+            const initials = `${member.profile?.first_name?.[0] || ''}${member.profile?.last_name?.[0] || ''}`.toUpperCase();
 
             return (
               <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors">
@@ -70,7 +70,7 @@ export function TeamMembersCard({ members, isLoading }: TeamMembersCardProps) {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
-                    {member.profiles.email}
+                    {member.profile?.email}
                   </p>
                 </div>
                 <Badge variant={member.role === 'team_lead' ? 'default' : 'secondary'}>

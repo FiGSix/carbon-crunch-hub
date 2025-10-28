@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, MoreVertical, Shield, UserCog } from 'lucide-react';
+import { Search, MoreVertical, Shield, UserCog, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RoleManagementDialog } from './RoleManagementDialog';
+import { CompanyManagementDialog } from '@/components/admin/companies/CompanyManagementDialog';
 import { format } from 'date-fns';
 
 interface UserWithRoles {
@@ -39,36 +40,95 @@ interface UserWithRoles {
   role: string;
   created_at: string;
   agent_status: string | null;
+  company_id?: string | null;
+  company_name?: string | null;
+  company_role?: string | null;
 }
 
 export function UserManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['admin-users', searchTerm, roleFilter],
+    queryKey: ['admin-users', searchTerm, roleFilter, companyFilter],
     queryFn: async () => {
-      let query = supabase
+      // First get profiles
+      let profileQuery = supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (searchTerm) {
-        query = query.or(
+        profileQuery = profileQuery.or(
           `email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`
         );
       }
 
       if (roleFilter !== 'all') {
-        query = query.eq('role', roleFilter);
+        profileQuery = profileQuery.eq('role', roleFilter);
       }
 
-      const { data, error } = await query;
+      const { data: profiles, error: profileError } = await profileQuery;
+      if (profileError) throw profileError;
 
+      // Get company memberships
+      const { data: memberships } = await supabase
+        .from('company_members')
+        .select('user_id, company_id, role, status')
+        .eq('status', 'active')
+        .in('user_id', profiles?.map(p => p.id) || []);
+
+      // Get company names
+      const companyIds = [...new Set(memberships?.map(m => m.company_id) || [])];
+      const { data: companies } = await supabase
+        .from('companies')
+        .select('id, company_name')
+        .in('id', companyIds);
+
+      const usersWithCompanies = (profiles || []).map(profile => {
+        const membership = memberships?.find(m => m.user_id === profile.id);
+        const company = companies?.find(c => c.id === membership?.company_id);
+
+        return {
+          id: profile.id,
+          email: profile.email,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          role: profile.role,
+          created_at: profile.created_at,
+          agent_status: profile.agent_status,
+          company_id: membership?.company_id || null,
+          company_name: company?.company_name || null,
+          company_role: membership?.role || null,
+        };
+      });
+
+      // Apply company filter
+      if (companyFilter === 'none') {
+        return usersWithCompanies.filter(u => !u.company_id);
+      } else if (companyFilter !== 'all') {
+        return usersWithCompanies.filter(u => u.company_id === companyFilter);
+      }
+
+      return usersWithCompanies;
+    },
+  });
+
+  // Get unique companies for filter
+  const { data: companies } = useQuery({
+    queryKey: ['companies-filter'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, company_name')
+        .order('company_name');
       if (error) throw error;
-      return data as UserWithRoles[];
+      return data || [];
     },
   });
 
@@ -134,6 +194,20 @@ export function UserManagementTable() {
             <SelectItem value="client">Client</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={companyFilter} onValueChange={setCompanyFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by company" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Companies</SelectItem>
+            <SelectItem value="none">No Company</SelectItem>
+            {companies?.map((company) => (
+              <SelectItem key={company.id} value={company.id}>
+                {company.company_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="border rounded-lg">
@@ -143,6 +217,7 @@ export function UserManagementTable() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Company</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -163,6 +238,26 @@ export function UserManagementTable() {
                       {user.role}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {user.company_name ? (
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:underline"
+                        onClick={() => {
+                          setSelectedCompanyId(user.company_id!);
+                          setCompanyDialogOpen(true);
+                        }}
+                      >
+                        <span className="text-sm">{user.company_name}</span>
+                        {user.company_role === 'team_lead' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Team Lead
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">No Company</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>{getStatusBadge(user.agent_status)}</TableCell>
                   <TableCell>
                     {format(new Date(user.created_at), 'MMM d, yyyy')}
@@ -181,6 +276,15 @@ export function UserManagementTable() {
                           <UserCog className="h-4 w-4 mr-2" />
                           Manage Roles
                         </DropdownMenuItem>
+                        {user.company_id && (
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCompanyId(user.company_id!);
+                            setCompanyDialogOpen(true);
+                          }}>
+                            <Building2 className="h-4 w-4 mr-2" />
+                            View Team
+                          </DropdownMenuItem>
+                        )}
                         {user.role !== 'admin' && (
                           <DropdownMenuItem onClick={() => handleManageRoles(user)}>
                             <Shield className="h-4 w-4 mr-2" />
@@ -194,7 +298,7 @@ export function UserManagementTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -214,6 +318,12 @@ export function UserManagementTable() {
           }}
         />
       )}
+
+      <CompanyManagementDialog
+        companyId={selectedCompanyId}
+        open={companyDialogOpen}
+        onOpenChange={setCompanyDialogOpen}
+      />
     </div>
   );
 }
