@@ -275,20 +275,36 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
               userId: data.user.id
             });
             
-            const { error: companyError } = await createCompany(
+            const { data: companyData, error: companyError } = await createCompany(
               formData.companyName,
               emailDomain,
               data.user.id
             );
             
             if (companyError) {
-              authLogger.error("Failed to create company", {
+              authLogger.error("CRITICAL: Failed to create company during registration", {
                 error: companyError,
-                companyName: formData.companyName
+                errorMessage: companyError.message,
+                errorCode: companyError.code,
+                errorDetails: companyError.details,
+                errorHint: companyError.hint,
+                companyName: formData.companyName,
+                emailDomain,
+                userId: data.user.id,
+                isRLSError: companyError.message?.includes('row-level security') || companyError.code === '42501'
+              });
+              
+              // Show user-facing error for company creation failure
+              toast({
+                title: "Company Setup Warning",
+                description: "Your account was created but company setup failed. Please contact support.",
+                variant: "destructive",
               });
             } else {
               authLogger.info("Company created successfully", {
-                companyName: formData.companyName
+                companyName: formData.companyName,
+                companyId: companyData?.company?.id,
+                membershipId: companyData?.membership?.id
               });
             }
           }

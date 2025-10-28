@@ -43,6 +43,7 @@ interface UserWithRoles {
   company_id?: string | null;
   company_name?: string | null;
   company_role?: string | null;
+  is_legacy_company?: boolean;
 }
 
 export function UserManagementTable() {
@@ -90,9 +91,13 @@ export function UserManagementTable() {
         .select('id, company_name')
         .in('id', companyIds);
 
-      const usersWithCompanies = (profiles || []).map(profile => {
+      const usersWithCompanies: UserWithRoles[] = (profiles || []).map(profile => {
         const membership = memberships?.find(m => m.user_id === profile.id);
         const company = companies?.find(c => c.id === membership?.company_id);
+        
+        // Use company from company_members OR fallback to profile.company_name (legacy)
+        const companyName = company?.company_name || profile.company_name || null;
+        const isLegacyCompany = !company && !!profile.company_name;
 
         return {
           id: profile.id,
@@ -103,8 +108,9 @@ export function UserManagementTable() {
           created_at: profile.created_at,
           agent_status: profile.agent_status,
           company_id: membership?.company_id || null,
-          company_name: company?.company_name || null,
+          company_name: companyName,
           company_role: membership?.role || null,
+          is_legacy_company: isLegacyCompany,
         };
       });
 
@@ -240,15 +246,28 @@ export function UserManagementTable() {
                   </TableCell>
                   <TableCell>
                     {user.company_name ? (
-                      <div 
-                        className="flex items-center gap-2 cursor-pointer hover:underline"
-                        onClick={() => {
-                          setSelectedCompanyId(user.company_id!);
-                          setCompanyDialogOpen(true);
-                        }}
-                      >
-                        <span className="text-sm">{user.company_name}</span>
-                        {user.company_role === 'team_lead' && (
+                      <div className="flex items-center gap-2">
+                        {user.company_id ? (
+                          <button
+                            onClick={() => {
+                              setSelectedCompanyId(user.company_id!);
+                              setCompanyDialogOpen(true);
+                            }}
+                            className="text-primary hover:underline text-sm"
+                          >
+                            {user.company_name}
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm cursor-not-allowed" title="Legacy company data - not linked to company system">
+                            {user.company_name}
+                          </span>
+                        )}
+                        {user.is_legacy_company && (
+                          <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
+                            ⚠️ Not Linked
+                          </Badge>
+                        )}
+                        {user.company_role === 'team_lead' && user.company_id && (
                           <Badge variant="secondary" className="text-xs">
                             Team Lead
                           </Badge>
