@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAdminCompanyManagement } from '@/hooks/useAdminCompanyManagement';
 import { formatDistanceToNow } from 'date-fns';
-import { Crown, Users, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
+import { Crown, Users, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trash2, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
 
 interface CompanyManagementDialogProps {
   companyId: string | null;
@@ -20,10 +21,8 @@ export function CompanyManagementDialog({
   open,
   onOpenChange,
 }: CompanyManagementDialogProps) {
-  const getUserId = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || '';
-  };
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  
   const {
     companyDetails,
     isLoadingDetails,
@@ -39,10 +38,19 @@ export function CompanyManagementDialog({
     isDeclining,
   } = useAdminCompanyManagement(companyId || undefined);
 
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || '');
+    };
+    fetchUserId();
+  }, []);
+
   if (!companyId) return null;
 
   const teamLeads = companyDetails?.members.filter(m => m.role === 'team_lead') || [];
   const regularMembers = companyDetails?.members.filter(m => m.role === 'member') || [];
+  const isAnyOperationPending = isPromoting || isDemoting || isRemoving || isApproving || isDeclining;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,6 +58,15 @@ export function CompanyManagementDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl">Company Management</DialogTitle>
         </DialogHeader>
+
+        {isAnyOperationPending && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+            <div className="flex items-center gap-2 text-primary">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="font-medium">Processing...</span>
+            </div>
+          </div>
+        )}
 
         {isLoadingDetails ? (
           <div className="flex items-center justify-center py-8">
@@ -117,11 +134,8 @@ export function CompanyManagementDialog({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={async () => {
-                              const userId = await getUserId();
-                              demoteFromTeamLead({ memberId: member.id, userId });
-                            }}
-                            disabled={isDemoting || teamLeads.length === 1}
+                            onClick={() => demoteFromTeamLead({ memberId: member.id, userId: currentUserId })}
+                            disabled={isAnyOperationPending || teamLeads.length === 1}
                           >
                             <ArrowDown className="h-4 w-4 mr-1" />
                             Demote
@@ -130,7 +144,7 @@ export function CompanyManagementDialog({
                             size="sm"
                             variant="ghost"
                             onClick={() => removeMember(member.id)}
-                            disabled={isRemoving || teamLeads.length === 1}
+                            disabled={isAnyOperationPending || teamLeads.length === 1}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -178,11 +192,8 @@ export function CompanyManagementDialog({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={async () => {
-                              const userId = await getUserId();
-                              promoteToTeamLead({ memberId: member.id, userId });
-                            }}
-                            disabled={isPromoting}
+                            onClick={() => promoteToTeamLead({ memberId: member.id, userId: currentUserId })}
+                            disabled={isAnyOperationPending}
                           >
                             <ArrowUp className="h-4 w-4 mr-1" />
                             Promote
@@ -191,7 +202,7 @@ export function CompanyManagementDialog({
                             size="sm"
                             variant="ghost"
                             onClick={() => removeMember(member.id)}
-                            disabled={isRemoving}
+                            disabled={isAnyOperationPending}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -240,11 +251,8 @@ export function CompanyManagementDialog({
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={async () => {
-                                const userId = await getUserId();
-                                approveMember({ memberId: member.id, userId });
-                              }}
-                              disabled={isApproving}
+                              onClick={() => approveMember({ memberId: member.id, userId: currentUserId })}
+                              disabled={isAnyOperationPending}
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Approve
@@ -253,7 +261,7 @@ export function CompanyManagementDialog({
                               size="sm"
                               variant="outline"
                               onClick={() => declineMember(member.id)}
-                              disabled={isDeclining}
+                              disabled={isAnyOperationPending}
                             >
                               <XCircle className="h-4 w-4 mr-1" />
                               Decline

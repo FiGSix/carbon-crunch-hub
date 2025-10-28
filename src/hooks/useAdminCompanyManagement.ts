@@ -34,7 +34,7 @@ export function useAdminCompanyManagement(companyId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
         description: "Member promoted to team lead",
@@ -57,7 +57,7 @@ export function useAdminCompanyManagement(companyId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
         description: "Team lead demoted to member",
@@ -79,7 +79,7 @@ export function useAdminCompanyManagement(companyId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
         description: "Member removed from company",
@@ -102,7 +102,7 @@ export function useAdminCompanyManagement(companyId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
         description: "Member approved",
