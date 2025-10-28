@@ -225,7 +225,8 @@ export function UserManagementTable() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Company</TableHead>
+              <TableHead>Company Name</TableHead>
+              <TableHead>Company Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -248,30 +249,32 @@ export function UserManagementTable() {
                   </TableCell>
                   <TableCell>
                     {user.company_name ? (
-                      <div className="flex items-center gap-2">
-                        {user.company_id ? (
-                          <button
-                            onClick={() => {
-                              setSelectedCompanyId(user.company_id!);
-                              setCompanyDialogOpen(true);
-                            }}
-                            className="text-primary hover:underline text-sm"
-                          >
-                            {user.company_name}
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            {user.company_name}
-                          </span>
-                        )}
-                        {user.company_role === 'team_lead' && user.company_id && (
-                          <Badge variant="secondary" className="text-xs">
-                            Team Lead
-                          </Badge>
-                        )}
-                      </div>
+                      user.company_id ? (
+                        <button
+                          onClick={() => {
+                            setSelectedCompanyId(user.company_id!);
+                            setCompanyDialogOpen(true);
+                          }}
+                          className="text-primary hover:underline text-sm"
+                        >
+                          {user.company_name}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          {user.company_name}
+                        </span>
+                      )
                     ) : (
                       <Badge variant="outline" className="text-xs">No Company</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {user.company_role === 'team_lead' && user.company_id ? (
+                      <Badge variant="default" className="text-xs">Team Lead</Badge>
+                    ) : user.company_role === 'member' && user.company_id ? (
+                      <Badge variant="secondary" className="text-xs">Member</Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </TableCell>
                   <TableCell>{getStatusBadge(user.agent_status)}</TableCell>
@@ -323,7 +326,7 @@ export function UserManagementTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
