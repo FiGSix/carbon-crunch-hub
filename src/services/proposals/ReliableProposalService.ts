@@ -179,7 +179,7 @@ export class ReliableProposalService {
       {
         maxAttempts: 3,
         baseDelay: 1000,
-        timeoutMs: 45000
+        timeoutMs: 90000 // Increased from 45s to 90s for complex calculations
       }
     ).then(result => {
       if (result.success) {

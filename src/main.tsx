@@ -6,6 +6,7 @@ import App from './App.tsx'
 import './index.css'
 import { validateSecurityConfig } from './lib/security/headers'
 import { consoleOptimizer } from './lib/performance/ConsoleOptimizer'
+import { dynamicCarbonPricingService } from './lib/calculations/carbon/dynamicPricing'
 
 // Console Logging Cleanup: Immediate performance optimization
 // Eliminates 445+ console statements for 15-25% performance gain
@@ -23,6 +24,11 @@ if (import.meta.env.PROD) {
 
 // Validate security configuration in development
 validateSecurityConfig();
+
+// Pre-warm carbon pricing cache for faster proposal creation
+dynamicCarbonPricingService.getCarbonPrices().catch(() => {
+  // Silently fail if cache warming fails - not critical
+});
 
 // Register or clean up Service Worker safely
 if ('serviceWorker' in navigator) {
