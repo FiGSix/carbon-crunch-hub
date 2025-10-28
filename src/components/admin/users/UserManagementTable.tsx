@@ -322,7 +322,13 @@ export function UserManagementTable() {
       <CompanyManagementDialog
         companyId={selectedCompanyId}
         open={companyDialogOpen}
-        onOpenChange={setCompanyDialogOpen}
+        onOpenChange={(open) => {
+          setCompanyDialogOpen(open);
+          if (!open) {
+            // Refresh user table when dialog closes after operations
+            refetch();
+          }
+        }}
       />
     </div>
   );
