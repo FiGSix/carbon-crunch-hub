@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, MoreVertical, Shield, UserCog, Building2 } from 'lucide-react';
+import { Search, MoreVertical, Shield, UserCog, Building2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
@@ -31,7 +31,10 @@ import {
 import { RoleManagementDialog } from './RoleManagementDialog';
 import { CompanyManagementDialog } from '@/components/admin/companies/CompanyManagementDialog';
 import { LinkUserToCompanyDialog } from './LinkUserToCompanyDialog';
+import { DeleteUserDialog } from './DeleteUserDialog';
+import { useDeleteUser } from '@/hooks/admin/useDeleteUser';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 interface UserWithRoles {
   id: string;
@@ -48,6 +51,7 @@ interface UserWithRoles {
 }
 
 export function UserManagementTable() {
+  const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
@@ -55,7 +59,10 @@ export function UserManagementTable() {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  
+  const deleteUserMutation = useDeleteUser();
 
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ['admin-users', searchTerm, roleFilter, companyFilter],
@@ -173,6 +180,15 @@ export function UserManagementTable() {
   const handleManageRoles = (user: UserWithRoles) => {
     setSelectedUser(user);
     setRoleDialogOpen(true);
+  };
+
+  const handleDeleteUser = (user: UserWithRoles) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (userId: string) => {
+    await deleteUserMutation.mutateAsync(userId);
   };
 
   if (isLoading) {
@@ -319,6 +335,18 @@ export function UserManagementTable() {
                             Promote to Admin
                           </DropdownMenuItem>
                         )}
+                        {currentUser?.id !== user.id && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -354,6 +382,13 @@ export function UserManagementTable() {
               refetch();
               setLinkDialogOpen(false);
             }}
+          />
+          <DeleteUserDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            user={selectedUser}
+            onDelete={handleDeleteConfirm}
+            isDeleting={deleteUserMutation.isPending}
           />
         </>
       )}
