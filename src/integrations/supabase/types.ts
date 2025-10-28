@@ -1387,6 +1387,66 @@ export type Database = {
         }
         Relationships: []
       }
+      team_invitations: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          first_name: string | null
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          last_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          expires_at: string
+          first_name?: string | null
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          last_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          first_name?: string | null
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          last_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_role_audit: {
         Row: {
           action: string
@@ -1621,6 +1681,22 @@ export type Database = {
           provider: string
           site_id: string
           updated_at: string
+        }[]
+      }
+      get_pending_team_invitations: {
+        Args: { company_id_param: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          first_name: string
+          id: string
+          invitation_token: string
+          invited_by: string
+          inviter_name: string
+          last_name: string
+          status: string
         }[]
       }
       get_primary_role: { Args: { _user_id: string }; Returns: string }
