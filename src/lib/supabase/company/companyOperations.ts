@@ -274,3 +274,79 @@ export function extractCorporateDomain(email: string): string | null {
   
   return domain;
 }
+
+/**
+ * Get pending team invitations for a company
+ */
+export async function getPendingTeamInvitations(companyId: string) {
+  const { data, error } = await supabase.rpc('get_pending_team_invitations', {
+    company_id_param: companyId
+  });
+
+  return { data, error };
+}
+
+/**
+ * Cancel a team invitation
+ */
+export async function cancelTeamInvitation(invitationId: string) {
+  const { data, error } = await supabase
+    .from('team_invitations')
+    .update({ status: 'cancelled' })
+    .eq('id', invitationId)
+    .select()
+    .single();
+
+  return { data, error };
+}
+
+/**
+ * Resend a team invitation (updates expiry and sends new email)
+ */
+export async function resendTeamInvitation(invitationId: string) {
+  // Get invitation details
+  const { data: invitation, error: fetchError } = await supabase
+    .from('team_invitations')
+    .select('*')
+    .eq('id', invitationId)
+    .single();
+
+  if (fetchError || !invitation) {
+    return { data: null, error: fetchError };
+  }
+
+  // Update expiry
+  const newExpiresAt = new Date();
+  newExpiresAt.setHours(newExpiresAt.getHours() + 48);
+
+  const { data, error } = await supabase
+    .from('team_invitations')
+    .update({ 
+      expires_at: newExpiresAt.toISOString(),
+      status: 'pending'
+    })
+    .eq('id', invitationId)
+    .select()
+    .single();
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  // Resend email via edge function
+  const { error: emailError } = await supabase.functions.invoke('send-team-invitation', {
+    body: {
+      email: invitation.email,
+      firstName: invitation.first_name,
+      lastName: invitation.last_name,
+      isResend: true,
+      invitationId: invitation.id
+    }
+  });
+
+  if (emailError) {
+    console.error('Failed to resend invitation email:', emailError);
+  }
+
+  return { data, error: null };
+}

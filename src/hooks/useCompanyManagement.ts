@@ -7,9 +7,13 @@ import {
   approveMember,
   declineMember,
   inviteMember,
-  isUserTeamLead
+  isUserTeamLead,
+  getPendingTeamInvitations,
+  cancelTeamInvitation,
+  resendTeamInvitation
 } from '@/lib/supabase/company/companyOperations';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useCompanyManagement() {
   const { user } = useAuth();
@@ -36,6 +40,13 @@ export function useCompanyManagement() {
   const { data: pendingData } = useQuery({
     queryKey: ['pending-approvals', company?.id],
     queryFn: () => getPendingApprovals(company!.id),
+    enabled: !!company,
+  });
+
+  // Get pending team invitations
+  const { data: pendingInvitations } = useQuery({
+    queryKey: ['pending-team-invitations', company?.id],
+    queryFn: () => getPendingTeamInvitations(company!.id),
     enabled: !!company,
   });
 
@@ -84,17 +95,65 @@ export function useCompanyManagement() {
     },
   });
 
+  // Invite team member by email mutation
+  const inviteByEmailMutation = useMutation({
+    mutationFn: async (data: { email: string; firstName?: string; lastName?: string }) => {
+      const { data: result, error } = await supabase.functions.invoke('send-team-invitation', {
+        body: data,
+      });
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-team-invitations'] });
+      toast.success('Team invitation sent successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to send team invitation');
+    },
+  });
+
+  // Cancel team invitation mutation
+  const cancelInvitationMutation = useMutation({
+    mutationFn: (invitationId: string) => cancelTeamInvitation(invitationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-team-invitations'] });
+      toast.success('Invitation cancelled');
+    },
+    onError: () => {
+      toast.error('Failed to cancel invitation');
+    },
+  });
+
+  // Resend team invitation mutation
+  const resendInvitationMutation = useMutation({
+    mutationFn: (invitationId: string) => resendTeamInvitation(invitationId),
+    onSuccess: () => {
+      toast.success('Invitation resent successfully');
+    },
+    onError: () => {
+      toast.error('Failed to resend invitation');
+    },
+  });
+
   return {
     company,
     membershipData,
     members: membersData?.data || [],
     pendingApprovals: pendingData?.data || [],
+    pendingInvitations: pendingInvitations?.data || [],
     isTeamLead: isTeamLead || false,
     isLoading: isLoadingCompany || isLoadingMembers,
     approveMember: approveMutation.mutate,
     declineMember: declineMutation.mutate,
     inviteMember: inviteMutation.mutate,
+    inviteByEmail: inviteByEmailMutation.mutate,
+    cancelInvitation: cancelInvitationMutation.mutate,
+    resendInvitation: resendInvitationMutation.mutate,
     isApproving: approveMutation.isPending,
     isDeclining: declineMutation.isPending,
+    isInviting: inviteByEmailMutation.isPending,
+    isCancelling: cancelInvitationMutation.isPending,
+    isResending: resendInvitationMutation.isPending,
   };
 }

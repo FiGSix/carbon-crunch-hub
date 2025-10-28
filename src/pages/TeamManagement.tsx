@@ -10,12 +10,19 @@ export default function TeamManagement() {
     company,
     members,
     pendingApprovals,
+    pendingInvitations,
     isTeamLead,
     isLoading,
     approveMember,
     declineMember,
+    inviteByEmail,
+    cancelInvitation,
+    resendInvitation,
     isApproving,
     isDeclining,
+    isInviting,
+    isCancelling,
+    isResending,
   } = useCompanyManagement();
 
   return (
@@ -46,14 +53,25 @@ export default function TeamManagement() {
 
         <PendingApprovalsCard
           pendingApprovals={pendingApprovals}
+          pendingInvitations={pendingInvitations}
           isTeamLead={isTeamLead}
           onApprove={approveMember}
           onDecline={declineMember}
+          onCancelInvitation={cancelInvitation}
+          onResendInvitation={resendInvitation}
           isApproving={isApproving}
           isDeclining={isDeclining}
+          isCancelling={isCancelling}
+          isResending={isResending}
         />
 
-        <TeamMembersCard members={members} isLoading={isLoading} />
+        <TeamMembersCard
+          members={members}
+          isLoading={isLoading}
+          isTeamLead={isTeamLead}
+          onInvite={inviteByEmail}
+          isInviting={isInviting}
+        />
       </div>
     </DashboardLayout>
   );

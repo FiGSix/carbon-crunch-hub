@@ -19,6 +19,9 @@ verify_jwt = true
 [functions.send-agent-invitation]
 verify_jwt = true
 
+[functions.send-team-invitation]
+verify_jwt = true
+
 [functions.manage-user-role]
 verify_jwt = true
 

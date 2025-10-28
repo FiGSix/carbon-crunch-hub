@@ -1,15 +1,28 @@
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, Crown, UserCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Crown, UserCheck, UserPlus } from 'lucide-react';
 import { CompanyMemberWithProfile } from '@/lib/supabase/company/companyOperations';
+import { InviteTeamMemberDialog } from './InviteTeamMemberDialog';
+import { useState } from 'react';
 
 interface TeamMembersCardProps {
   members: CompanyMemberWithProfile[];
   isLoading: boolean;
+  isTeamLead: boolean;
+  onInvite: (data: { email: string; firstName?: string; lastName?: string }) => void;
+  isInviting: boolean;
 }
 
-export function TeamMembersCard({ members, isLoading }: TeamMembersCardProps) {
+export function TeamMembersCard({ members, isLoading, isTeamLead, onInvite, isInviting }: TeamMembersCardProps) {
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  const handleInvite = (data: { email: string; firstName?: string; lastName?: string }) => {
+    onInvite(data);
+    setInviteDialogOpen(false);
+  };
+
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -41,9 +54,21 @@ export function TeamMembersCard({ members, isLoading }: TeamMembersCardProps) {
           <Users className="h-5 w-5 text-muted-foreground" />
           <h3 className="font-semibold">Team Members</h3>
         </div>
-        <Badge variant="secondary">
-          {activeMembers.length} {activeMembers.length === 1 ? 'member' : 'members'}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">
+            {activeMembers.length} {activeMembers.length === 1 ? 'member' : 'members'}
+          </Badge>
+          {isTeamLead && (
+            <Button
+              size="sm"
+              onClick={() => setInviteDialogOpen(true)}
+              className="gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Invite Member
+            </Button>
+          )}
+        </div>
       </div>
 
       {activeMembers.length === 0 ? (
@@ -81,6 +106,13 @@ export function TeamMembersCard({ members, isLoading }: TeamMembersCardProps) {
           })}
         </div>
       )}
+
+      <InviteTeamMemberDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onInvite={handleInvite}
+        isInviting={isInviting}
+      />
     </Card>
   );
 }
