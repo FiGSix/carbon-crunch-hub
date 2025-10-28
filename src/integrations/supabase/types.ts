@@ -1449,6 +1449,17 @@ export type Database = {
       }
       auth_user_id: { Args: never; Returns: string }
       auth_user_role: { Args: never; Returns: string }
+      can_view_proposal: {
+        Args: {
+          proposal_agent_id: string
+          proposal_client_id: string
+          proposal_client_reference_id: string
+          proposal_deleted_at: string
+          proposal_invitation_expires_at: string
+          proposal_invitation_token: string
+        }
+        Returns: boolean
+      }
       create_agent_user: {
         Args: {
           access_level_param?: string
