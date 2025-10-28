@@ -4,7 +4,6 @@
  */
 
 import { RetryService } from '@/lib/reliability/RetryService';
-import { BackgroundTaskManager } from '@/lib/reliability/BackgroundTaskManager';
 import { ConnectionManager } from '@/lib/reliability/ConnectionManager';
 import { createProposal, searchClients } from './unifiedProposalService';
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from '@/types/proposals';
@@ -14,9 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ReliableProposalResult {
   success: boolean;
   proposalId?: string;
-  taskId?: string;
   error?: string;
-  isBackground?: boolean;
 }
 
 export interface ProposalProgress {
@@ -29,12 +26,10 @@ export interface ProposalProgress {
 export class ReliableProposalService {
   private static instance: ReliableProposalService;
   private connectionManager: ConnectionManager;
-  private taskManager: BackgroundTaskManager;
   private progressCallbacks = new Map<string, (progress: ProposalProgress) => void>();
 
   constructor() {
     this.connectionManager = ConnectionManager.getInstance();
-    this.taskManager = BackgroundTaskManager.getInstance();
   }
 
   static getInstance(): ReliableProposalService {
@@ -81,7 +76,7 @@ export class ReliableProposalService {
         throw new Error('Invalid proposal data');
       }
 
-      // Try immediate creation first (fast path)
+      // Try immediate creation with extended timeout and retries
       const immediateResult = await this.tryImmediateCreation(
         proposalTitle,
         agentId,
@@ -99,22 +94,12 @@ export class ReliableProposalService {
           message: 'Proposal created successfully!'
         });
 
-        serviceLogger.info('Proposal created via fast path', { proposalId: immediateResult.proposalId });
+        serviceLogger.info('Proposal created successfully', { proposalId: immediateResult.proposalId });
         return immediateResult;
       }
 
-      serviceLogger.warn('Fast path failed, using background processing', { error: immediateResult.error });
-
-      // Fall back to background processing
-      return await this.createProposalInBackground(
-        proposalTitle,
-        agentId,
-        eligibilityCriteria,
-        projectInfo,
-        clientInfo,
-        selectedClientId,
-        operationId
-      );
+      serviceLogger.error('Proposal creation failed', { error: immediateResult.error });
+      throw new Error(immediateResult.error || 'Failed to create proposal');
 
     } catch (error) {
       serviceLogger.error('Proposal creation failed', { error });
@@ -192,9 +177,9 @@ export class ReliableProposalService {
         };
       },
       {
-        maxAttempts: 2,
-        baseDelay: 500,
-        timeoutMs: 15000
+        maxAttempts: 3,
+        baseDelay: 1000,
+        timeoutMs: 45000
       }
     ).then(result => {
       if (result.success) {
@@ -206,76 +191,6 @@ export class ReliableProposalService {
   }
 
   /**
-   * Create proposal in background with full reliability
-   */
-  private async createProposalInBackground(
-    proposalTitle: string,
-    agentId: string,
-    eligibilityCriteria: EligibilityCriteria,
-    projectInfo: ProjectInformation,
-    clientInfo: ClientInformation,
-    selectedClientId: string | undefined,
-    operationId: string
-  ): Promise<ReliableProposalResult> {
-
-    this.updateProgress(operationId, {
-      stage: 'saving',
-      progress: 20,
-      message: 'Processing in background for reliability...'
-    });
-
-    const taskId = await this.taskManager.queueTask({
-      id: operationId,
-      priority: 'high',
-      maxRetries: 3,
-      operation: async () => {
-        await this.connectionManager.waitForHealthyConnection();
-
-        this.updateProgress(operationId, {
-          stage: 'creating_client',
-          progress: 40,
-          message: 'Creating client profile...'
-        });
-
-        const result = await createProposal(
-          proposalTitle,
-          agentId,
-          eligibilityCriteria,
-          projectInfo,
-          clientInfo,
-          selectedClientId
-        );
-
-        if (!result.success) {
-          throw new Error(result.error || 'Background creation failed');
-        }
-
-        this.updateProgress(operationId, {
-          stage: 'completed',
-          progress: 100,
-          message: 'Proposal created successfully!'
-        });
-
-        return result.proposalId;
-      },
-      onError: (error) => {
-        this.updateProgress(operationId, {
-          stage: 'failed',
-          progress: 0,
-          message: 'Failed to create proposal',
-          error: error.message
-        });
-      }
-    });
-
-    return {
-      success: true,
-      taskId,
-      isBackground: true
-    };
-  }
-
-  /**
    * Update progress for operation
    */
   private updateProgress(operationId: string, progress: ProposalProgress): void {
@@ -283,20 +198,6 @@ export class ReliableProposalService {
     if (callback) {
       callback(progress);
     }
-  }
-
-  /**
-   * Get task status
-   */
-  getTaskStatus(taskId: string) {
-    return this.taskManager.getTaskStatus(taskId);
-  }
-
-  /**
-   * Wait for background task completion
-   */
-  async waitForTask<T>(taskId: string, timeoutMs = 30000): Promise<T> {
-    return this.taskManager.waitForTask<T>(taskId, timeoutMs);
   }
 
   /**
@@ -355,20 +256,16 @@ export class ReliableProposalService {
     if (result.success) {
       serviceLogger.info('Proposal submission completed successfully with audit trail');
       
-      // Queue background notification
-      this.taskManager.queueTask({
-        id: `notify-submission-${proposalId}`,
-        operation: async () => {
-          await supabase.from('notifications').insert({
-            user_id: userId,
-            type: 'proposal_submitted',
-            title: 'Proposal Submitted',
-            message: 'Your proposal has been successfully submitted for review.',
-            related_type: 'proposal',
-            related_id: proposalId
-          });
-        },
-        priority: 'normal'
+      // Create notification (non-blocking)
+      void supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'proposal_submitted',
+        title: 'Proposal Submitted',
+        message: 'Your proposal has been successfully submitted for review.',
+        related_type: 'proposal',
+        related_id: proposalId
+      }).then(() => {
+        serviceLogger.info('Notification created for proposal submission');
       });
     } else {
       serviceLogger.error('Proposal submission failed', { error: result.error?.message });

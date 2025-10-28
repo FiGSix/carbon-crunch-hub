@@ -3,13 +3,13 @@
  * Provides seamless user experience with background processing
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { CheckCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { ReliableProposalService, ProposalProgress } from "@/services/proposals/ReliableProposalService";
@@ -38,71 +38,9 @@ export function ProposalSubmitFormReliable({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState<ProposalProgress | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [backgroundTaskId, setBackgroundTaskId] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
 
   const proposalService = ReliableProposalService.getInstance();
-
-  // Monitor background task progress
-  useEffect(() => {
-    if (!backgroundTaskId) return;
-
-    const startTime = Date.now();
-    const MAX_POLL_TIME = 60000; // 60 seconds max polling time
-
-    const checkTaskStatus = async () => {
-      // Safety check: stop polling after max time
-      if (Date.now() - startTime > MAX_POLL_TIME) {
-        setBackgroundTaskId(null);
-        setIsSubmitting(false);
-        toast({
-          title: "Processing Taking Longer Than Expected",
-          description: "Your proposal is still being created. Please check your proposals list in a moment.",
-        });
-        setTimeout(() => navigate('/proposals'), 2000);
-        return;
-      }
-
-      try {
-        const status = proposalService.getTaskStatus(backgroundTaskId);
-        
-        if (status?.status === 'completed') {
-          setIsCompleted(true);
-          setProgress({
-            stage: 'completed',
-            progress: 100,
-            message: 'Proposal created successfully!'
-          });
-          
-          toast({
-            title: "Success!",
-            description: "Your proposal has been created and is ready for review.",
-          });
-          
-          setTimeout(() => navigate('/proposals'), 1500);
-        } else if (status?.status === 'failed') {
-          // Clear background task ID to stop polling
-          setBackgroundTaskId(null);
-          setIsSubmitting(false);
-          setProgress(null);
-          setHasError(true);
-          
-          toast({
-            title: "Proposal Creation Failed",
-            description: "We encountered an issue creating your proposal. Please try again or contact support if the problem persists.",
-            variant: "destructive",
-          });
-          
-          // Don't auto-navigate on failure - let user retry
-        }
-      } catch (error) {
-        // Ignore errors in background monitoring
-      }
-    };
-
-    const interval = setInterval(checkTaskStatus, 1000);
-    return () => clearInterval(interval);
-  }, [backgroundTaskId, navigate, toast, proposalService]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +71,7 @@ export function ProposalSubmitFormReliable({
       );
       
       if (result.success && result.proposalId) {
-        // Immediate success - fast path worked
+        // Success!
         setIsCompleted(true);
         toast({
           title: "Proposal Created Successfully",
@@ -143,15 +81,6 @@ export function ProposalSubmitFormReliable({
         });
         
         setTimeout(() => navigate('/proposals'), 1000);
-        
-      } else if (result.success && result.taskId && result.isBackground) {
-        // Background processing
-        setBackgroundTaskId(result.taskId);
-        toast({
-          title: "Processing Your Proposal",
-          description: "We're creating your proposal in the background for maximum reliability. You'll be notified when it's ready.",
-        });
-        
       } else {
         throw new Error(result.error || "Failed to create proposal");
       }
@@ -172,14 +101,13 @@ export function ProposalSubmitFormReliable({
 
   const getStatusIcon = () => {
     if (isCompleted) return <CheckCircle className="h-4 w-4 text-green-600" />;
-    if (backgroundTaskId) return <Clock className="h-4 w-4 text-blue-600" />;
-    if (progress?.stage === 'failed') return <AlertTriangle className="h-4 w-4 text-red-600" />;
+    if (hasError) return <AlertTriangle className="h-4 w-4 text-red-600" />;
     return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />;
   };
 
   const getStatusMessage = () => {
     if (isCompleted) return "Proposal created successfully!";
-    if (backgroundTaskId) return "Processing in background for reliability...";
+    if (hasError) return "Failed to create proposal";
     if (progress) return progress.message;
     return "Creating proposal...";
   };
@@ -197,16 +125,16 @@ export function ProposalSubmitFormReliable({
       )}
 
       {/* Progress Display */}
-      {(isSubmitting || backgroundTaskId) && (
-        <Alert className={`border ${isCompleted ? 'border-green-200 bg-green-50' : backgroundTaskId ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+      {isSubmitting && (
+        <Alert className={`border ${isCompleted ? 'border-green-200 bg-green-50' : hasError ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
           <div className="flex items-center space-x-2">
             {getStatusIcon()}
-            <AlertDescription className={`${isCompleted ? 'text-green-800' : backgroundTaskId ? 'text-blue-800' : 'text-gray-800'}`}>
+            <AlertDescription className={`${isCompleted ? 'text-green-800' : hasError ? 'text-red-800' : 'text-gray-800'}`}>
               {getStatusMessage()}
             </AlertDescription>
           </div>
           
-          {progress && !isCompleted && (
+          {progress && !isCompleted && !hasError && (
             <div className="mt-3 space-y-2">
               <Progress 
                 value={progress.progress} 
