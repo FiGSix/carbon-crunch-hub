@@ -11,7 +11,8 @@ import {
   UserCog,
   FileSignature,
   ClipboardCheck,
-  Shield
+  Shield,
+  UserCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -65,6 +66,12 @@ export function DashboardSidebar() {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,
+      roles: ["admin", "agent"]
+    },
+    {
+      name: "Team",
+      href: "/team",
+      icon: UserCheck,
       roles: ["admin", "agent"]
     },
     {

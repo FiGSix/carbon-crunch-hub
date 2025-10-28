@@ -6,6 +6,13 @@ import { useToast } from "@/hooks/use-toast";
 import { RoleValidationService } from "@/services/auth/RoleValidationService";
 import { authLogger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  createCompany, 
+  findCompanyByDomain, 
+  extractCorporateDomain,
+  inviteMember,
+  findCompanyByName
+} from "@/lib/supabase/company/companyOperations";
 
 interface RegisterFormData {
   firstName: string;
@@ -228,6 +235,71 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         email: formData.email,
         role: formData.role 
       });
+
+      // Handle company creation for agents
+      if (formData.role === 'agent' && data?.user?.id && formData.companyName) {
+        try {
+          const emailDomain = extractCorporateDomain(formData.email);
+          
+          // Check if company already exists
+          let existingCompany = null;
+          
+          if (emailDomain) {
+            // Try to find by domain for corporate emails
+            const { data: domainCompany } = await findCompanyByDomain(emailDomain);
+            existingCompany = domainCompany;
+          } else {
+            // For personal emails, try to find by company name
+            const { data: nameCompany } = await findCompanyByName(formData.companyName);
+            existingCompany = nameCompany;
+          }
+          
+          if (existingCompany) {
+            // Company exists - create pending membership request
+            authLogger.info("Existing company found, creating pending membership", {
+              companyId: existingCompany.id,
+              userId: data.user.id
+            });
+            
+            await inviteMember(existingCompany.id, data.user.id, data.user.id);
+            
+            toast({
+              title: "Company Found",
+              description: "Your request to join the team has been sent to the team lead for approval.",
+            });
+          } else {
+            // Create new company and make user team lead
+            authLogger.info("Creating new company for agent", {
+              companyName: formData.companyName,
+              emailDomain,
+              userId: data.user.id
+            });
+            
+            const { error: companyError } = await createCompany(
+              formData.companyName,
+              emailDomain,
+              data.user.id
+            );
+            
+            if (companyError) {
+              authLogger.error("Failed to create company", {
+                error: companyError,
+                companyName: formData.companyName
+              });
+            } else {
+              authLogger.info("Company created successfully", {
+                companyName: formData.companyName
+              });
+            }
+          }
+        } catch (companyError) {
+          authLogger.error("Company setup failed during registration", {
+            error: companyError,
+            userId: data.user.id
+          });
+          // Don't fail the registration, just log the error
+        }
+      }
 
       // Mark invitation as accepted if token exists
       if (invitationToken && invitationData) {

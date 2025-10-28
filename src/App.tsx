@@ -58,6 +58,7 @@ const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/Pr
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
 const ProjectOnboardingList = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingList"), "ProjectOnboardingList");
 const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingDetail"), "ProjectOnboardingDetail");
+const TeamManagement = createOptimizedLazyComponent(() => import("./pages/TeamManagement"), "TeamManagement");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -294,6 +295,20 @@ function App() {
                           <PageErrorBoundary pageName="My Clients">
                             <Suspense fallback={<PageLoader />}>
                               <MyClients />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </AgentApprovalGuard>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/team" 
+                    element={
+                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                        <AgentApprovalGuard>
+                          <PageErrorBoundary pageName="Team Management">
+                            <Suspense fallback={<PageLoader />}>
+                              <TeamManagement />
                             </Suspense>
                           </PageErrorBoundary>
                         </AgentApprovalGuard>
