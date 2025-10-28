@@ -265,6 +265,83 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          company_name: string
+          created_at: string
+          created_by: string | null
+          email_domain: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          created_by?: string | null
+          email_domain?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          created_by?: string | null
+          email_domain?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_members: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          created_at: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_access_config: {
         Row: {
           api_key_encrypted: string | null
@@ -1401,6 +1478,10 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
+      extract_corporate_domain: {
+        Args: { email_param: string }
+        Returns: string
+      }
       format_system_size_for_display: {
         Args: { preferred_unit?: string; size_kwp: number }
         Returns: string
@@ -1586,6 +1667,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_user_company_id: { Args: { user_id_param: string }; Returns: string }
       get_user_role: { Args: never; Returns: string }
       get_user_roles: {
         Args: { _user_id: string }
@@ -1600,10 +1682,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_member: {
+        Args: { company_id_param: string; user_id_param: string }
+        Returns: boolean
+      }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_agent: { Args: never; Returns: boolean }
       is_proposal_client: {
         Args: { proposal_client_reference_id: string }
+        Returns: boolean
+      }
+      is_team_lead: {
+        Args: { company_id_param: string; user_id_param: string }
         Returns: boolean
       }
       log_client_access: {
