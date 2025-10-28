@@ -109,7 +109,9 @@ export function useCompanyManagement() {
       toast.success('Team invitation sent successfully');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to send team invitation');
+      // Extract the actual error message from the edge function response
+      const errorMessage = error?.context?.body?.error || error?.context?.error || error?.message || 'Failed to send team invitation';
+      toast.error(errorMessage);
     },
   });
 

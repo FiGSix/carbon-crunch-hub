@@ -26,7 +26,11 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("No authorization header");
+      console.error("❌ No authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -36,27 +40,59 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
-      console.error("Auth error:", userError);
-      throw new Error("Unauthorized");
+      console.error("❌ Auth error:", userError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     console.log("✅ User authenticated:", user.id);
 
-    // Check if user is an active agent with a company
+    // Get user roles from user_roles table
+    const { data: userRoles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    if (rolesError) {
+      console.error("❌ Roles fetch error:", rolesError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to verify user permissions" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const roles = userRoles?.map(r => r.role) || [];
+    const isAdmin = roles.includes("admin");
+    
+    // Get profile for agent status check
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role, agent_status")
+      .select("agent_status")
       .eq("id", user.id)
       .single();
 
     if (profileError || !profile) {
-      console.error("Profile fetch error:", profileError);
-      throw new Error("User profile not found");
+      console.error("❌ Profile fetch error:", profileError);
+      return new Response(
+        JSON.stringify({ success: false, error: "User profile not found" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    if (profile.role !== "agent" || profile.agent_status !== "active") {
-      throw new Error("Only active agents can send team invitations");
+    const isActiveAgent = roles.includes("agent") && profile.agent_status === "active";
+
+    // Check authorization: Must be admin OR active agent
+    if (!isAdmin && !isActiveAgent) {
+      console.error("❌ Authorization failed: Not admin or active agent", { roles, agent_status: profile.agent_status });
+      return new Response(
+        JSON.stringify({ success: false, error: "Only admins or active agents can send team invitations" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
+
+    console.log("✅ Authorization passed:", { isAdmin, isActiveAgent });
 
     // Get user's company
     const { data: membership, error: membershipError } = await supabase
@@ -67,13 +103,20 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (membershipError || !membership) {
-      console.error("Membership fetch error:", membershipError);
-      throw new Error("User is not part of any company");
+      console.error("❌ Membership fetch error:", membershipError);
+      return new Response(
+        JSON.stringify({ success: false, error: "User is not part of any company" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Check if user is a team lead (optional - could allow all members to invite)
     if (membership.role !== "team_lead") {
-      throw new Error("Only team leads can send invitations");
+      console.error("❌ Authorization failed: Not a team lead");
+      return new Response(
+        JSON.stringify({ success: false, error: "Only team leads can send invitations" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Get company details
@@ -94,32 +137,46 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate email
     if (!email || !email.includes("@")) {
-      throw new Error("Valid email is required");
+      console.error("❌ Invalid email:", email);
+      return new Response(
+        JSON.stringify({ success: false, error: "Valid email is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
+
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user with this email already exists
     const { data: existingUser } = await supabase
       .from("profiles")
       .select("id")
-      .eq("email", email.toLowerCase())
+      .eq("email", normalizedEmail)
       .single();
 
     if (existingUser) {
-      throw new Error("A user with this email already exists");
+      console.error("❌ User already exists:", normalizedEmail);
+      return new Response(
+        JSON.stringify({ success: false, error: "A user with this email already exists" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Check if there's already a pending invitation for this email to this company
     const { data: existingInvitation } = await supabase
       .from("team_invitations")
       .select("id")
-      .eq("email", email.toLowerCase())
+      .eq("email", normalizedEmail)
       .eq("company_id", membership.company_id)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
       .single();
 
     if (existingInvitation) {
-      throw new Error("An invitation has already been sent to this email");
+      console.error("❌ Invitation already sent:", normalizedEmail);
+      return new Response(
+        JSON.stringify({ success: false, error: "An invitation has already been sent to this email" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Generate secure invitation token
@@ -131,7 +188,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: invitation, error: invitationError } = await supabase
       .from("team_invitations")
       .insert({
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         first_name: firstName || null,
         last_name: lastName || null,
         company_id: membership.company_id,
@@ -144,8 +201,11 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (invitationError) {
-      console.error("Invitation creation error:", invitationError);
-      throw new Error("Failed to create invitation");
+      console.error("❌ Invitation creation error:", invitationError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to create invitation" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     console.log("✅ Invitation created:", invitation.id);
@@ -288,14 +348,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("❌ Error in send-team-invitation:", error);
+    console.error("❌ Unexpected error in send-team-invitation:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || "An error occurred while sending the invitation",
+        error: error.message || "An unexpected error occurred while sending the invitation",
       }),
       {
-        status: 400,
+        status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
