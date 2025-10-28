@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { RoleManagementDialog } from './RoleManagementDialog';
 import { CompanyManagementDialog } from '@/components/admin/companies/CompanyManagementDialog';
+import { LinkUserToCompanyDialog } from './LinkUserToCompanyDialog';
 import { format } from 'date-fns';
 
 interface UserWithRoles {
@@ -53,6 +54,7 @@ export function UserManagementTable() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const { data: users, isLoading, refetch } = useQuery({
@@ -258,14 +260,9 @@ export function UserManagementTable() {
                             {user.company_name}
                           </button>
                         ) : (
-                          <span className="text-muted-foreground text-sm cursor-not-allowed" title="Legacy company data - not linked to company system">
+                          <span className="text-muted-foreground text-sm">
                             {user.company_name}
                           </span>
-                        )}
-                        {user.is_legacy_company && (
-                          <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
-                            ⚠️ Not Linked
-                          </Badge>
                         )}
                         {user.company_role === 'team_lead' && user.company_id && (
                           <Badge variant="secondary" className="text-xs">
@@ -295,6 +292,15 @@ export function UserManagementTable() {
                           <UserCog className="h-4 w-4 mr-2" />
                           Manage Roles
                         </DropdownMenuItem>
+                        {!user.company_id && (
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedUser(user);
+                            setLinkDialogOpen(true);
+                          }}>
+                            <Building2 className="h-4 w-4 mr-2" />
+                            Link to Company
+                          </DropdownMenuItem>
+                        )}
                         {user.company_id && (
                           <DropdownMenuItem onClick={() => {
                             setSelectedCompanyId(user.company_id!);
@@ -327,15 +333,26 @@ export function UserManagementTable() {
       </div>
 
       {selectedUser && (
-        <RoleManagementDialog
-          open={roleDialogOpen}
-          onOpenChange={setRoleDialogOpen}
-          user={selectedUser}
-          onSuccess={() => {
-            refetch();
-            setRoleDialogOpen(false);
-          }}
-        />
+        <>
+          <RoleManagementDialog
+            open={roleDialogOpen}
+            onOpenChange={setRoleDialogOpen}
+            user={selectedUser}
+            onSuccess={() => {
+              refetch();
+              setRoleDialogOpen(false);
+            }}
+          />
+          <LinkUserToCompanyDialog
+            open={linkDialogOpen}
+            onOpenChange={setLinkDialogOpen}
+            user={selectedUser}
+            onSuccess={() => {
+              refetch();
+              setLinkDialogOpen(false);
+            }}
+          />
+        </>
       )}
 
       <CompanyManagementDialog
