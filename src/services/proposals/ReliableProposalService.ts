@@ -187,6 +187,32 @@ export class ReliableProposalService {
       } else {
         return { success: false, error: result.error?.message };
       }
+    }).catch((error: any) => {
+      console.error('Immediate proposal creation failed:', error);
+      
+      let userMessage = 'Unable to create proposal. Please try again.';
+      
+      // Map technical errors to user-friendly messages
+      if (error.message?.includes('Email cannot be empty') || error.message?.includes('email is required')) {
+        userMessage = 'Client email is required to create a proposal.';
+      } else if (error.message?.includes('agent account must be approved')) {
+        userMessage = error.message; // Pass through specific approval message
+      } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
+        userMessage = 'You do not have permission to create proposals. Please contact support.';
+      } else if (error.message?.includes('duplicate') || error.message?.includes('unique constraint')) {
+        userMessage = 'A technical issue occurred with client data. Please try again or contact support.';
+      }
+      
+      this.updateProgress(operationId, {
+        stage: 'failed',
+        progress: 100,
+        message: userMessage
+      });
+      
+      return {
+        success: false,
+        error: userMessage
+      };
     });
   }
 

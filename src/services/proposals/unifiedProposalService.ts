@@ -31,40 +31,67 @@ function calculateAgentCommissionPercentage(portfolioKWp: number, commissionOver
   return portfolioKWp < 15000 ? 4 : 7;
 }
 
-// Simple client management
-async function findOrCreateClient(clientInfo: ClientInformation, agentId: string): Promise<string> {
+/**
+ * Find or create client using secure RPC function
+ * This bypasses RLS to allow multi-agent collaboration
+ */
+async function findOrCreateClient(
+  clientInfo: ClientInformation, 
+  agentId: string
+): Promise<string> {
   const normalizedEmail = clientInfo.email.toLowerCase().trim();
+  const [firstName, ...lastNameParts] = clientInfo.name.split(' ');
+  const lastName = lastNameParts.join(' ') || null;
   
-  // Try to find existing client
-  const { data: existingClient } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('email', normalizedEmail)
-    .maybeSingle();
+  const proposalLogger = logger.withContext({
+    component: 'UnifiedProposalService',
+    method: 'findOrCreateClient'
+  });
   
-  if (existingClient) {
-    return existingClient.id;
-  }
-  
-  // Create new client
-  const { data: newClient, error } = await supabase
-    .from('clients')
-    .insert({
-      first_name: clientInfo.name.split(' ')[0] || clientInfo.name,
-      last_name: clientInfo.name.split(' ').slice(1).join(' ') || null,
+  try {
+    proposalLogger.info("Resolving client via RPC", { 
       email: normalizedEmail,
-      phone: clientInfo.phone || null,
-      company_name: clientInfo.companyName || null,
-      created_by: agentId
-    })
-    .select('id')
-    .single();
-  
-  if (error) {
-    throw new Error(`Failed to create client: ${error.message}`);
+      agentId 
+    });
+    
+    // Call secure RPC function that bypasses RLS for email lookup
+    const { data: clientId, error } = await supabase
+      .rpc('find_or_create_client_by_email', {
+        p_email: normalizedEmail,
+        p_first_name: firstName || clientInfo.name,
+        p_last_name: lastName,
+        p_phone: clientInfo.phone || null,
+        p_company_name: clientInfo.companyName || null,
+        p_created_by: agentId
+      });
+    
+    if (error) {
+      proposalLogger.error("RPC call failed", { error });
+      throw new Error(`Failed to process client: ${error.message}`);
+    }
+    
+    if (!clientId) {
+      proposalLogger.error("RPC returned no client ID");
+      throw new Error('RPC function returned no client ID');
+    }
+    
+    proposalLogger.info("Client resolved successfully", { 
+      clientId,
+      email: normalizedEmail 
+    });
+    
+    return clientId;
+    
+  } catch (error: any) {
+    proposalLogger.error("Error in findOrCreateClient", { error });
+    
+    // User-friendly error messages
+    if (error.message?.includes('Email cannot be empty')) {
+      throw new Error('Client email is required');
+    }
+    
+    throw new Error(error.message || 'Failed to create or find client');
   }
-  
-  return newClient.id;
 }
 
 // Get portfolio sizes
@@ -125,10 +152,24 @@ export async function createProposal(
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
     const carbonCredits = calculateCarbonCredits(systemSizeKWp);
     
-    // Step 4: Get portfolio sizes
+    // Step 4: Get portfolio sizes - FIXED to use correct fields and filters
     const [clientPortfolioKWp, agentPortfolioKWp] = await Promise.all([
-      getPortfolioSize(supabase.from('proposals').select('system_size_kwp').eq('client_id', clientId).not('system_size_kwp', 'is', null)),
-      getPortfolioSize(supabase.from('proposals').select('system_size_kwp').eq('agent_id', agentId).not('system_size_kwp', 'is', null))
+      getPortfolioSize(
+        supabase
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('client_reference_id', clientId)  // ✅ FIXED: Use client_reference_id, not client_id
+          .is('deleted_at', null)               // ✅ FIXED: Exclude soft-deleted proposals
+          .not('system_size_kwp', 'is', null)
+      ),
+      getPortfolioSize(
+        supabase
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('agent_id', agentId)
+          .is('deleted_at', null)               // ✅ FIXED: Exclude soft-deleted proposals
+          .not('system_size_kwp', 'is', null)
+      )
     ]);
     
     const totalClientPortfolio = clientPortfolioKWp + systemSizeKWp;
@@ -136,6 +177,19 @@ export async function createProposal(
     
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
     const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio, agentProfile?.commission_override);
+    
+    // Log portfolio calculations for debugging tier issues
+    proposalLogger.info("Portfolio tier calculations", {
+      clientId,
+      systemSizeKWp,
+      clientPortfolioKWp,
+      agentPortfolioKWp,
+      totalClientPortfolio,
+      totalAgentPortfolio,
+      clientSharePercentage,
+      agentCommissionPercentage,
+      commissionOverride: agentProfile?.commission_override
+    });
     
     // Step 5: Calculate total client revenue using UnifiedCarbonService
     const calculationSpecs: SystemSpecs = projectInfo.isMultiPhase && projectInfo.phases

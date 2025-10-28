@@ -1553,6 +1553,17 @@ export type Database = {
         Args: { email_param: string }
         Returns: string
       }
+      find_or_create_client_by_email: {
+        Args: {
+          p_company_name: string
+          p_created_by: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_phone: string
+        }
+        Returns: string
+      }
       format_system_size_for_display: {
         Args: { preferred_unit?: string; size_kwp: number }
         Returns: string
