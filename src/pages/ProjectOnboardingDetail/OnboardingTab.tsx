@@ -267,6 +267,8 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         .upsert({
           project_id: projectId,
           ...upsertData as any,
+        }, {
+          onConflict: 'project_id'
         });
 
       if (fieldsError) {
