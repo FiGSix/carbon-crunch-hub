@@ -367,12 +367,18 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       }
 
       onRefresh();
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error in handleValidateAndComplete', { error, projectId });
+
+      const isDuplicate = error?.code === '23505' ||
+        (typeof error?.message === 'string' && error.message.includes('onboarding_fields_project_id_key'));
+
       toast({
-        title: "Error",
-        description: "Failed to process request. Please try again.",
-        variant: "destructive",
+        title: isDuplicate ? "Already saved, please retry" : "Error",
+        description: isDuplicate
+          ? "Your onboarding details were already saved. Please press Submit again."
+          : "Failed to process request. Please try again.",
+        variant: isDuplicate ? "default" : "destructive",
       });
     } finally {
       setIsSaving(false);
