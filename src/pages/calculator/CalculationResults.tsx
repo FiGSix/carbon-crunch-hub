@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { CalendarDays } from "lucide-react";
@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { ResultCard } from "./ResultCard";
 import { CalculationResults as ICalculationResults, YearData, formatNumber } from "@/lib/calculations/carbon";
+import { CarbonCreditTable } from "@/components/proposals/summary/carbon/CarbonCreditTable";
+import { calculateRevenueByYear } from "@/services/calculations/carbon/pricing";
+import { logger } from "@/lib/logger";
 
 interface CalculationResultsProps {
   results: ICalculationResults;
@@ -28,6 +31,47 @@ export const CalculationResults = ({
   commissioningDate,
   onReset
 }: CalculationResultsProps) => {
+  const [revenueData, setRevenueData] = useState<Record<string, number>>({});
+  const [isLoadingRevenue, setIsLoadingRevenue] = useState(true);
+  
+  // First-time client pricing configuration
+  const portfolioSize = 0; // No existing portfolio
+  const clientSharePercentage = 60.20; // Lowest tier (0-5MWp range)
+  
+  useEffect(() => {
+    const loadRevenueData = async () => {
+      try {
+        setIsLoadingRevenue(true);
+        const revenue = await calculateRevenueByYear(
+          results.carbonCredits,
+          clientSharePercentage,
+          commissioningDate
+        );
+        setRevenueData(revenue);
+      } catch (error) {
+        logger.error("Error calculating revenue data", { error });
+        setRevenueData({});
+      } finally {
+        setIsLoadingRevenue(false);
+      }
+    };
+    
+    loadRevenueData();
+  }, [results.carbonCredits, commissioningDate]);
+  
+  // Calculate totals for the table
+  const totalMWhGenerated = results.yearsData.reduce((sum, year) => sum + (year.generation / 1000), 0);
+  const totalCarbonCredits = results.yearsData.reduce((sum, year) => sum + year.carbonCredits, 0);
+  const totalClientSpecificRevenue = Object.values(revenueData).reduce((sum, val) => sum + val, 0);
+  
+  // Prepare pre-calculated yearly data for the table
+  const preCalculatedYearlyMWh: Record<string, number> = {};
+  const preCalculatedYearlyCredits: Record<string, number> = {};
+  results.yearsData.forEach(year => {
+    preCalculatedYearlyMWh[year.year.toString()] = year.generation / 1000; // Convert to MWh
+    preCalculatedYearlyCredits[year.year.toString()] = year.carbonCredits;
+  });
+  
   return (
     <div className="meta-card p-8">
       <h2 className="text-2xl font-bold text-center mb-6 text-crunch-black">
@@ -72,33 +116,28 @@ export const CalculationResults = ({
       
       <div className="mb-8 overflow-hidden rounded-xl border border-crunch-black/10">
         <div className="bg-white/50 backdrop-blur-sm p-4">
-          <h3 className="text-sm font-medium text-crunch-black/70 mb-2">Estimated Carbon Credits</h3>
-          <p className="text-2xl font-bold text-crunch-black mb-2">
-            {formatNumber(results.carbonCredits)} <span className="text-sm font-normal">credits per year</span>
+          <h3 className="text-sm font-medium text-crunch-black/70 mb-4">Carbon Credit Revenue Projection</h3>
+          <p className="text-xs text-crunch-black/60 mb-4">
+            Based on first-time client pricing tier ({clientSharePercentage}% client share)
           </p>
           
-          <div className="relative">
-            <table className="w-full text-sm mt-4">
-              <thead className="text-crunch-black/70 text-xs">
-                <tr>
-                  <th className="text-left pb-2">Year</th>
-                  <th className="text-right pb-2">Energy (kWh)</th>
-                  <th className="text-right pb-2">Carbon Offset (tonnes)</th>
-                  <th className="text-right pb-2">Carbon Credits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.yearsData.slice(0, 4).map((year) => (
-                  <tr key={year.year} className="border-t border-crunch-black/5">
-                    <td className="py-2 text-left font-medium">{year.year}</td>
-                    <td className="py-2 text-right">{formatNumber(year.generation)}</td>
-                    <td className="py-2 text-right">{formatNumber(year.carbonOffset)}</td>
-                    <td className="py-2 text-right">{formatNumber(year.carbonCredits)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {isLoadingRevenue ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
+            </div>
+          ) : (
+            <CarbonCreditTable
+              revenue={revenueData}
+              systemSizeKWp={systemSize}
+              commissionDate={format(commissioningDate, "yyyy-MM-dd")}
+              portfolioSize={portfolioSize}
+              totalMWhGenerated={totalMWhGenerated}
+              totalCarbonCredits={totalCarbonCredits}
+              totalClientSpecificRevenue={totalClientSpecificRevenue}
+              preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+              preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+            />
+          )}
         </div>
       </div>
       
@@ -109,40 +148,37 @@ export const CalculationResults = ({
               See Full Forecast (2025-2030)
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[540px]">
+          <DialogContent className="sm:max-w-[800px]">
             <DialogHeader>
-              <DialogTitle>Your Full Carbon Credit Forecast</DialogTitle>
+              <DialogTitle>Your Full Carbon Credit Revenue Forecast</DialogTitle>
               <DialogDescription>
-                Projected credits from {format(commissioningDate, "dd MMM yyyy")} to 2030
+                Complete revenue projection from {format(commissioningDate, "dd MMM yyyy")} to 2030
               </DialogDescription>
             </DialogHeader>
             
-            <div className="max-h-[400px] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white text-crunch-black/70 text-xs">
-                  <tr>
-                    <th className="text-left p-2">Year</th>
-                    <th className="text-right p-2">Energy (kWh)</th>
-                    <th className="text-right p-2">Carbon Offset (tonnes)</th>
-                    <th className="text-right p-2">Carbon Credits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.yearsData.map((year) => (
-                    <tr key={year.year} className="border-t border-crunch-black/5">
-                      <td className="p-2 text-left font-medium">{year.year}</td>
-                      <td className="p-2 text-right">{formatNumber(year.generation)}</td>
-                      <td className="p-2 text-right">{formatNumber(year.carbonOffset)}</td>
-                      <td className="p-2 text-right">{formatNumber(year.carbonCredits)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="max-h-[500px] overflow-auto">
+              {isLoadingRevenue ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
+                </div>
+              ) : (
+                <CarbonCreditTable
+                  revenue={revenueData}
+                  systemSizeKWp={systemSize}
+                  commissionDate={format(commissioningDate, "yyyy-MM-dd")}
+                  portfolioSize={portfolioSize}
+                  totalMWhGenerated={totalMWhGenerated}
+                  totalCarbonCredits={totalCarbonCredits}
+                  totalClientSpecificRevenue={totalClientSpecificRevenue}
+                  preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+                  preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+                />
+              )}
             </div>
             
             <DialogFooter className="pt-4 border-t border-crunch-black/10">
               <p className="text-xs text-crunch-black/60 italic">
-                * Estimates are based on current carbon emission factors and may vary.
+                * Revenue projections based on first-time client pricing ({clientSharePercentage}% share). Carbon prices are dynamic and may vary.
               </p>
             </DialogFooter>
           </DialogContent>
