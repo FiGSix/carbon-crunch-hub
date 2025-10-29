@@ -50,7 +50,6 @@ const Calculator = () => {
                     systemSize={systemSize}
                     commissioningDate={commissioningDate}
                     onReset={() => setShowResults(false)}
-                    onSignUp={() => navigate("/register")}
                   />
                 </div>
               </div>

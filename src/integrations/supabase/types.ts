@@ -178,6 +178,7 @@ export type Database = {
           name: string | null
           system_size_kwp: number
           user_agent: string | null
+          user_id: string | null
         }
         Insert: {
           commissioning_date: string
@@ -192,6 +193,7 @@ export type Database = {
           name?: string | null
           system_size_kwp: number
           user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
           commissioning_date?: string
@@ -206,6 +208,7 @@ export type Database = {
           name?: string | null
           system_size_kwp?: number
           user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

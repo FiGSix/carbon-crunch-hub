@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 
-interface CalculatorResult {
+export interface CalculatorResult {
   id: string;
   email: string;
   name: string | null;
