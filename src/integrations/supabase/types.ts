@@ -164,6 +164,51 @@ export type Database = {
         }
         Relationships: []
       }
+      calculator_results: {
+        Row: {
+          commissioning_date: string
+          created_at: string | null
+          email: string
+          id: string
+          invitation_expires_at: string
+          invitation_sent_at: string | null
+          invitation_token: string
+          invitation_viewed_at: string | null
+          ip_address: unknown
+          name: string | null
+          system_size_kwp: number
+          user_agent: string | null
+        }
+        Insert: {
+          commissioning_date: string
+          created_at?: string | null
+          email: string
+          id?: string
+          invitation_expires_at: string
+          invitation_sent_at?: string | null
+          invitation_token: string
+          invitation_viewed_at?: string | null
+          ip_address?: unknown
+          name?: string | null
+          system_size_kwp: number
+          user_agent?: string | null
+        }
+        Update: {
+          commissioning_date?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          invitation_expires_at?: string
+          invitation_sent_at?: string | null
+          invitation_token?: string
+          invitation_viewed_at?: string | null
+          ip_address?: unknown
+          name?: string | null
+          system_size_kwp?: number
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       client_access_audit: {
         Row: {
           accessed_at: string

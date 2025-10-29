@@ -36,6 +36,7 @@ const ResetPassword = createOptimizedLazyComponent(() => import("./pages/ResetPa
 const About = createOptimizedLazyComponent(() => import("./pages/About"), "About");
 const Contact = createOptimizedLazyComponent(() => import("./pages/Contact"), "Contact");
 const Calculator = createOptimizedLazyComponent(() => import("./pages/Calculator"), "Calculator");
+const CalculatorResults = createOptimizedLazyComponent(() => import("./pages/CalculatorResults"), "CalculatorResults");
 const Agents = createOptimizedLazyComponent(() => import("./pages/Agents"), "Agents");
 const VerifyEmail = createOptimizedLazyComponent(() => import("./pages/VerifyEmail"), "VerifyEmail");
 const ForceLogout = createOptimizedLazyComponent(() => import("./pages/ForceLogout"), "ForceLogout");
@@ -169,6 +170,11 @@ function App() {
                   <Route path="/calculator" element={
                     <PageErrorBoundary pageName="Calculator">
                       <Suspense fallback={<PageLoader />}><Calculator /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/calculator/results/:id" element={
+                    <PageErrorBoundary pageName="Calculator Results">
+                      <Suspense fallback={<PageLoader />}><CalculatorResults /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/agents" element={
