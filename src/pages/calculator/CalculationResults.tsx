@@ -20,15 +20,13 @@ interface CalculationResultsProps {
   systemSize: number;
   commissioningDate: Date;
   onReset: () => void;
-  onSignUp: () => void;
 }
 
 export const CalculationResults = ({ 
   results, 
   systemSize,
   commissioningDate,
-  onReset,
-  onSignUp
+  onReset
 }: CalculationResultsProps) => {
   return (
     <div className="meta-card p-8">
@@ -72,8 +70,7 @@ export const CalculationResults = ({
         />
       </div>
       
-      <div className="relative mb-8 overflow-hidden rounded-xl border border-crunch-black/10">
-        <div className="absolute inset-0 z-10 bg-gradient-to-br from-transparent via-transparent to-white/70"></div>
+      <div className="mb-8 overflow-hidden rounded-xl border border-crunch-black/10">
         <div className="bg-white/50 backdrop-blur-sm p-4">
           <h3 className="text-sm font-medium text-crunch-black/70 mb-2">Estimated Carbon Credits</h3>
           <p className="text-2xl font-bold text-crunch-black mb-2">
@@ -101,20 +98,6 @@ export const CalculationResults = ({
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-        
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/90 to-transparent h-24 backdrop-blur-sm flex items-end justify-center p-4 z-20">
-          <div className="text-center">
-            <p className="font-medium text-crunch-black mb-3">
-              💰 Want to see what that's worth?
-            </p>
-            <Button 
-              onClick={onSignUp}
-              className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium px-6"
-            >
-              Sign up to reveal your potential earnings
-            </Button>
           </div>
         </div>
       </div>
@@ -158,15 +141,9 @@ export const CalculationResults = ({
             </div>
             
             <DialogFooter className="pt-4 border-t border-crunch-black/10">
-              <p className="text-xs text-crunch-black/60 italic mr-auto">
+              <p className="text-xs text-crunch-black/60 italic">
                 * Estimates are based on current carbon emission factors and may vary.
               </p>
-              <Button
-                onClick={onSignUp}
-                className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black"
-              >
-                Sign Up to Reveal Value
-              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
