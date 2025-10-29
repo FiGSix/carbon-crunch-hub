@@ -41,10 +41,9 @@ export function buildBaseProposalsQuery(
   // Apply role-based filtering
   if (userRole === 'client' && userId) {
     query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
-  } else if (userRole === 'agent' && userId) {
-    query = query.eq('agent_id', userId);
   }
-  // Admin role gets all non-deleted proposals (no additional filter needed)
+  // Agent and admin roles: RLS policy handles access control (including company membership)
+  // No client-side filtering needed - database enforces proper visibility
 
   // Apply status filter
   if (filters.status && filters.status !== 'all') {
