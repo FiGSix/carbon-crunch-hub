@@ -19,8 +19,8 @@ export function Footer({ className }: { className?: string }) {
           <div className="md:col-span-4">
             <div className="mb-4">
               <OptimizedImage 
-                src="https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png"
-                alt="CrunchCarbon Logo" 
+                src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png"
+                alt="CrunchCarbon Logo"
                 className="h-12"
                 width={141}
                 height={48}

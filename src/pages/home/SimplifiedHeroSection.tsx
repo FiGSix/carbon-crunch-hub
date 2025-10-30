@@ -60,8 +60,8 @@ export const SimplifiedHeroSection = () => {
               <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full rounded-3xl bg-gradient-to-br from-primary/30 to-primary/10"></div>
               <div className="meta-card rounded-3xl p-6">
                 <OptimizedImage
-                  src="https://uyjryuopuqgmsvayiccl.supabase.co/storage/v1/object/public/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png"
-                  alt="CrunchCarbon Pac-Man Style Logo" 
+                  src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png"
+                  alt="CrunchCarbon Pac-Man Style Logo"
                   className="w-full h-auto rounded-2xl transition-all hover:scale-105 duration-500"
                   width={488}
                   height={275}
