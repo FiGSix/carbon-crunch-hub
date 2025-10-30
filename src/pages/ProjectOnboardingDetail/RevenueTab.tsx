@@ -134,45 +134,12 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
         )}
       </div>
 
-      {/* System Information */}
+      {/* Unified Revenue Projection Table */}
       <Card>
         <CardHeader>
-          <CardTitle>System Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">System Size:</span>
-              <span className="ml-2 font-medium">{systemSize} kWp</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Annual Carbon Credits:</span>
-              <span className="ml-2 font-medium">
-                {calculationResult?.carbonCreditsPerYear.toFixed(2) || "0"} tCO2e
-              </span>
-            </div>
-            {commissionDate && (
-              <div>
-                <span className="text-muted-foreground">Commission Date:</span>
-                <span className="ml-2 font-medium">{new Date(commissionDate).toLocaleDateString()}</span>
-              </div>
-            )}
-            <div>
-              <span className="text-muted-foreground">Revenue Split:</span>
-              <span className="ml-2 font-medium">
-                Client {clientSharePercentage}% | Agent {agentCommissionPercentage}% | Platform {crunchCommissionPercentage}%
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Client Revenue Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Client Revenue Projection (2025-2030)</CardTitle>
+          <CardTitle>Revenue Projection (2025-2030)</CardTitle>
           <CardDescription>
-            Annual revenue breakdown for the client
+            Annual revenue breakdown by stakeholder
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -180,116 +147,71 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Year</TableHead>
-                <TableHead className="text-right">Client Revenue</TableHead>
+                <TableHead className="text-right">Client Revenue ({clientSharePercentage}%)</TableHead>
+                {(userRole === 'agent' || userRole === 'admin') && (
+                  <TableHead className="text-right">Agent Commission ({agentCommissionPercentage}%)</TableHead>
+                )}
+                {userRole === 'admin' && (
+                  <TableHead className="text-right">Platform Fee ({crunchCommissionPercentage}%)</TableHead>
+                )}
+                {(userRole === 'agent' || userRole === 'admin') && (
+                  <TableHead className="text-right">Total Revenue</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {years.map((year) => (
-                <TableRow key={year}>
-                  <TableCell className="font-medium">{year}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(clientSpecificRevenue[year])}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {years.map((year) => {
+                const totalRev = clientSpecificRevenue[year] / (clientSharePercentage / 100);
+                return (
+                  <TableRow key={year}>
+                    <TableCell className="font-medium">{year}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(clientSpecificRevenue[year])}
+                    </TableCell>
+                    {(userRole === 'agent' || userRole === 'admin') && (
+                      <TableCell className="text-right">
+                        {formatCurrency(agentRevenueByYear[year])}
+                      </TableCell>
+                    )}
+                    {userRole === 'admin' && (
+                      <TableCell className="text-right">
+                        {formatCurrency(platformRevenueByYear[year])}
+                      </TableCell>
+                    )}
+                    {(userRole === 'agent' || userRole === 'admin') && (
+                      <TableCell className="text-right">
+                        {formatCurrency(Math.round(totalRev))}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+              {/* Total Row */}
               <TableRow className="font-bold bg-muted/50">
-                <TableCell>Total</TableCell>
+                <TableCell>Total (6 Years)</TableCell>
                 <TableCell className="text-right">
                   {formatCurrency(totalClientRevenue)}
                 </TableCell>
+                {(userRole === 'agent' || userRole === 'admin') && (
+                  <TableCell className="text-right">
+                    {formatCurrency(totalAgentRevenue)}
+                  </TableCell>
+                )}
+                {userRole === 'admin' && (
+                  <TableCell className="text-right">
+                    {formatCurrency(totalPlatformRevenue)}
+                  </TableCell>
+                )}
+                {(userRole === 'agent' || userRole === 'admin') && (
+                  <TableCell className="text-right">
+                    {formatCurrency(Math.round(totalClientRevenue / (clientSharePercentage / 100)))}
+                  </TableCell>
+                )}
               </TableRow>
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-
-      {/* Agent Commission Table - Agent & Admin only */}
-      {(userRole === 'agent' || userRole === 'admin') && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Agent Commission Projection (2025-2030)</CardTitle>
-            <CardDescription>
-              Annual commission breakdown for the agent
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Year</TableHead>
-                  <TableHead className="text-right">Total Revenue</TableHead>
-                  <TableHead className="text-right">Agent Commission ({agentCommissionPercentage}%)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {years.map((year) => {
-                  const totalRev = clientSpecificRevenue[year] / (clientSharePercentage / 100);
-                  return (
-                    <TableRow key={year}>
-                      <TableCell className="font-medium">{year}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Math.round(totalRev))}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(agentRevenueByYear[year])}</TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="font-bold bg-muted/50">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(Math.round(totalClientRevenue / (clientSharePercentage / 100)))}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(totalAgentRevenue)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Platform Revenue Table - Admin only */}
-      {userRole === 'admin' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Platform Revenue Projection (2025-2030)</CardTitle>
-            <CardDescription>
-              Annual platform fee breakdown (Crunch Carbon)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Year</TableHead>
-                  <TableHead className="text-right">Total Revenue</TableHead>
-                  <TableHead className="text-right">Platform Fee ({crunchCommissionPercentage}%)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {years.map((year) => {
-                  const totalRev = clientSpecificRevenue[year] / (clientSharePercentage / 100);
-                  return (
-                    <TableRow key={year}>
-                      <TableCell className="font-medium">{year}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Math.round(totalRev))}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(platformRevenueByYear[year])}</TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="font-bold bg-muted/50">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(Math.round(totalClientRevenue / (clientSharePercentage / 100)))}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(totalPlatformRevenue)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
