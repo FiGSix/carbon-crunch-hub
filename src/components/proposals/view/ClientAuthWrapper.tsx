@@ -12,13 +12,15 @@ interface ClientAuthWrapperProps {
   clientEmail: string;
   onAuthComplete: () => void;
   requireAuth?: boolean;
+  context?: 'proposal' | 'calculator';
 }
 
 export function ClientAuthWrapper({ 
   proposalId, 
   clientEmail, 
   onAuthComplete,
-  requireAuth = true
+  requireAuth = true,
+  context = 'proposal'
 }: ClientAuthWrapperProps) {
   // Default to "register" tab for new users
   const [activeTab, setActiveTab] = useState<string>("register");
@@ -82,8 +84,18 @@ export function ClientAuthWrapper({
     />
   );
 
+  const isCalculator = context === 'calculator';
+  
   return (
     <div className="max-w-md mx-auto my-8">
+      {isCalculator && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-700">
+            Once signed in, your results will be saved to your dashboard and you'll be able to access them anytime.
+          </p>
+        </div>
+      )}
+      
       <AuthErrorDisplay error={error} />
       
       <AuthTabSwitcher

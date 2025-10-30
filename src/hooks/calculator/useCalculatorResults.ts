@@ -13,6 +13,7 @@ export interface CalculatorResult {
   invitation_sent_at: string;
   invitation_viewed_at: string | null;
   created_at: string;
+  user_id: string | null;
 }
 
 interface SendCalculatorResultsParams {

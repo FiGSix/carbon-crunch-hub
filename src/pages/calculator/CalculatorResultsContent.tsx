@@ -108,6 +108,7 @@ export function CalculatorResultsContent({
             clientEmail={result.email}
             onAuthComplete={handleAuthComplete}
             requireAuth={true}
+            context="calculator"
           />
         </div>
         <Footer />

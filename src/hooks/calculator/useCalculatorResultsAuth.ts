@@ -28,8 +28,8 @@ export function useCalculatorResultsAuth(
     }
   }, [result, authLogger]);
 
-  // Show sign-in prompt when: not logged in, has token, and valid result
-  const showSignInPrompt = !user && token && clientEmail && !!result;
+  // Show sign-in prompt when: not logged in, has token, valid result, and results not already linked
+  const showSignInPrompt = !user && token && clientEmail && !!result && !result.user_id;
 
   return {
     user,

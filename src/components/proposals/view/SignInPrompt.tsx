@@ -17,7 +17,7 @@ export function SignInPrompt({ onSignInClick, context = 'proposal' }: SignInProm
         {isCalculator ? (
           <>
             <Sparkles className="h-5 w-5 mr-2 text-blue-600" />
-            Ready to save your results and start earning?
+            Ready to save your results?
           </>
         ) : (
           <>
@@ -27,10 +27,7 @@ export function SignInPrompt({ onSignInClick, context = 'proposal' }: SignInProm
         )}
       </h3>
       <p className="text-blue-600 mt-3 mb-1">
-        {isCalculator 
-          ? "You're viewing as a guest. To save your results and track your projects, you'll need to either:"
-          : "You're viewing as a guest. To respond, you'll need to either:"
-        }
+        You're viewing as a guest. To {isCalculator ? 'save these results and access them later' : 'respond'}, you'll need to either:
       </p>
       <ul className="text-blue-700 mb-4 ml-5 space-y-1 list-disc">
         <li>Create your account (takes 30 seconds)</li>
@@ -46,7 +43,7 @@ export function SignInPrompt({ onSignInClick, context = 'proposal' }: SignInProm
         size="lg"
       >
         <LogIn className="mr-2 h-4 w-4" />
-        {isCalculator ? 'Continue to Save Results' : 'Continue to Respond'}
+        Continue to {isCalculator ? 'Save Results' : 'Respond'}
       </Button>
     </div>
   );
