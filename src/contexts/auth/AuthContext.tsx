@@ -115,8 +115,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const nextUser = session?.user ?? null;
         setUser(nextUser);
         if (nextUser) {
-          loadProfile(nextUser.id);
+          // Load profile with error handling to prevent blocking initialization
+          loadProfile(nextUser.id).catch((err) => {
+            console.error('[Auth] Profile load failed during initialization:', err);
+            setAuthError('Profile load failed');
+          });
         }
+        // Always set initialization state, regardless of profile load status
         setIsLoading(false);
         setIsInitialized(true);
       })
