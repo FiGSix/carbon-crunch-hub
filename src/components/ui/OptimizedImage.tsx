@@ -98,11 +98,16 @@ export function OptimizedImage({
         {...({ fetchpriority: fetchPriority } as any)}
         decoding="async"
         onLoad={() => {
-          console.log(`[OptimizedImage] Successfully loaded image: ${src}`);
+          // Removed console logging to prevent forced reflows from DOM property access
           onLoad?.();
         }}
         onError={(e) => {
-          devLogger.components.error(`Failed to load image: ${src}`, e);
+          // Log only the src to avoid stringifying circular DOM references
+          devLogger.components.error(`Failed to load image: ${src}`);
+          // Set fallback without accessing e.currentTarget properties
+          if (e?.currentTarget) {
+            e.currentTarget.src = "/placeholder.svg";
+          }
           onError?.(e);
         }}
         style={commonStyle}

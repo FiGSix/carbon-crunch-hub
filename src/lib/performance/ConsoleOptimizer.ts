@@ -133,11 +133,44 @@ class ConsoleOptimizer {
 
   /**
    * Format multiple arguments into a readable string for the logger
+   * Handles circular references and DOM elements to prevent reflows
    */
   private formatArgs(args: any[]): string {
     return args.map(arg => {
       if (typeof arg === 'string') return arg;
-      if (typeof arg === 'object') return JSON.stringify(arg, null, 2);
+      if (typeof arg === 'object' && arg !== null) {
+        // Avoid stringifying DOM elements and their properties (prevents forced reflows)
+        if (arg instanceof Element || arg instanceof Node || arg instanceof Event) {
+          return `[${arg.constructor.name}]`;
+        }
+        
+        // Use circular reference handler to prevent JSON.stringify errors
+        const seen = new WeakSet();
+        try {
+          return JSON.stringify(arg, (key, value) => {
+            // Skip React Fiber internal properties
+            if (key.startsWith('__react') || key === 'stateNode') {
+              return '[Circular]';
+            }
+            
+            if (typeof value === 'object' && value !== null) {
+              // Skip DOM elements
+              if (value instanceof Element || value instanceof Node) {
+                return `[${value.constructor.name}]`;
+              }
+              
+              // Handle circular references
+              if (seen.has(value)) {
+                return '[Circular]';
+              }
+              seen.add(value);
+            }
+            return value;
+          }, 2);
+        } catch (e) {
+          return `[Object: ${arg.constructor?.name || 'Unknown'}]`;
+        }
+      }
       return String(arg);
     }).join(' ');
   }
