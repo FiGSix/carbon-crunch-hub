@@ -35,7 +35,19 @@ export default defineConfig(({ mode }) => ({
         manualChunks: (id) => {
           // Ultra-simplified chunking to prevent all initialization issues
           if (id.includes('node_modules')) {
+            // Split heavy CSS libraries separately
+            if (id.includes('@radix-ui') || id.includes('cmdk')) {
+              return 'vendor-ui';
+            }
             return 'vendor';
+          }
+          // Split auth-related code which isn't needed on homepage
+          if (id.includes('/auth/') || id.includes('LoginForm') || id.includes('RegisterForm')) {
+            return 'auth';
+          }
+          // Split admin code which isn't needed on homepage  
+          if (id.includes('/admin/') || id.includes('Admin')) {
+            return 'admin';
           }
         },
         chunkFileNames: (chunkInfo) => {
