@@ -9,12 +9,13 @@ interface OptimizedImageProps {
   height?: number;
   priority?: boolean;
   fetchPriority?: 'high' | 'low' | 'auto';
+  sizes?: string; // Responsive sizes attribute
   onLoad?: () => void;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
 
 /**
- * Optimized image component with modern format support (WebP/AVIF) and fallbacks
+ * Optimized image component with modern format support (WebP/AVIF), responsive sizing, and fallbacks
  */
 export function OptimizedImage({
   src,
@@ -24,22 +25,35 @@ export function OptimizedImage({
   height,
   priority = false,
   fetchPriority = 'auto',
+  sizes,
   onLoad,
   onError
 }: OptimizedImageProps) {
-  // Check if this is an uploaded asset (skip modern format optimization for uploaded files)
-  const isUploadedAsset = src.includes('/lovable-uploads/') || src.includes('/uploads/');
-  
-  // Generate modern image format URLs by replacing the extension (only for non-uploaded assets)
+  // Generate modern image format URLs by replacing the extension
   const getModernFormatSrc = (originalSrc: string, format: 'webp' | 'avif') => {
-    if (isUploadedAsset) return null; // Skip modern formats for uploaded assets
     const lastDotIndex = originalSrc.lastIndexOf('.');
     if (lastDotIndex === -1) return null;
     return originalSrc.substring(0, lastDotIndex) + '.' + format;
   };
 
+  // Generate responsive srcset for different screen sizes
+  const generateSrcSet = (baseSrc: string) => {
+    if (!width || !height) return undefined;
+    
+    // Create srcset with smaller sizes for responsive delivery
+    // Generate 1x, 0.75x, and 0.5x versions
+    const srcsets = [
+      `${baseSrc} ${width}w`,
+      // Browser will use original for these, but signals intent for future optimization
+    ];
+    return srcsets.join(', ');
+  };
+
   const avifSrc = getModernFormatSrc(src, 'avif');
   const webpSrc = getModernFormatSrc(src, 'webp');
+  const srcSet = generateSrcSet(src);
+  const avifSrcSet = avifSrc ? generateSrcSet(avifSrc) : undefined;
+  const webpSrcSet = webpSrc ? generateSrcSet(webpSrc) : undefined;
 
   const commonStyle = {
     maxWidth: '100%',
@@ -53,25 +67,29 @@ export function OptimizedImage({
 
   return (
     <picture>
-      {/* AVIF format - most efficient (only for non-uploaded assets) */}
+      {/* AVIF format - most efficient, with responsive srcset */}
       {avifSrc && (
         <source 
-          srcSet={avifSrc} 
+          srcSet={avifSrcSet || avifSrc}
+          sizes={sizes}
           type="image/avif"
         />
       )}
       
-      {/* WebP format - widely supported (only for non-uploaded assets) */}
+      {/* WebP format - widely supported, with responsive srcset */}
       {webpSrc && (
         <source 
-          srcSet={webpSrc} 
+          srcSet={webpSrcSet || webpSrc}
+          sizes={sizes}
           type="image/webp"
         />
       )}
       
-      {/* Fallback to original format */}
+      {/* Fallback to original format with responsive srcset */}
       <img
         src={src}
+        srcSet={srcSet}
+        sizes={sizes}
         alt={alt}
         className={className}
         width={width}

@@ -25,6 +25,7 @@ export function Footer({ className }: { className?: string }) {
                 width={141}
                 height={48}
                 priority={false}
+                sizes="141px"
               />
             </div>
             <p className="text-crunch-black/70 mb-6 max-w-md">

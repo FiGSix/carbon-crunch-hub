@@ -84,15 +84,15 @@ export const HeroSection = () => {
             <div className="relative">
               <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full rounded-3xl bg-gradient-to-br from-primary/30 to-primary/10"></div>
               <div className="meta-card rounded-3xl p-6">
-                <img
+                <OptimizedImage
                   src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634-optimized.png" 
                   alt="CrunchCarbon Pac-Man Style Logo" 
                   className="w-full h-auto rounded-2xl transition-all hover:scale-105 duration-500"
                   width={488}
                   height={275}
-                  loading="eager"
+                  priority={true}
                   fetchPriority="high"
-                  style={{ maxWidth: '100%', height: 'auto', aspectRatio: '488 / 275', objectFit: 'contain' }}
+                  sizes="(max-width: 768px) 100vw, 488px"
                   onLoad={() => console.log("[HeroSection] Logo image loaded successfully")}
                   onError={(e) => {
                     console.error("[HeroSection] Logo image failed to load:", e);

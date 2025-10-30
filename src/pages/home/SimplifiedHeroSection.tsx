@@ -67,6 +67,7 @@ export const SimplifiedHeroSection = () => {
                   height={275}
                   priority={true}
                   fetchPriority="high"
+                  sizes="(max-width: 768px) 100vw, 488px"
                   onLoad={() => console.log("[SimplifiedHeroSection] Logo loaded")}
                   onError={(e) => {
                     console.error("[SimplifiedHeroSection] Logo failed to load");

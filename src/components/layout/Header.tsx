@@ -99,6 +99,7 @@ export function Header() {
                   height={48}
                   priority={true}
                   fetchPriority="high"
+                  sizes="(max-width: 768px) 141px, 141px"
                 />
               </a>
             </SafeMotionDiv>
