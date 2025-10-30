@@ -20,16 +20,22 @@ const DisplayDiagnostics = import.meta.env.DEV
   : null;
 import { logger } from '@/lib/logger';
 
-// Immediate load for critical public pages
-import Index from "./pages/Index";
+// Immediate load for critical public pages only
 import SimplifiedIndex from "./pages/SimplifiedIndex";
-import TestPage from "./pages/TestPage";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import EmbeddedGame from "./pages/EmbeddedGame";
+
+// Lazy load auth pages to reduce initial bundle (not needed on homepage)
+const Index = createOptimizedLazyComponent(() => import("./pages/Index"), "Index");
+const Login = createOptimizedLazyComponent(() => import("./pages/Login"), "Login");
+const Register = createOptimizedLazyComponent(() => import("./pages/Register"), "Register");
+const ForgotPassword = createOptimizedLazyComponent(() => import("./pages/ForgotPassword"), "ForgotPassword");
+const AuthCallback = createOptimizedLazyComponent(() => import("./pages/AuthCallback"), "AuthCallback");
+
+// Dev-only pages lazy loaded
+const TestPage = import.meta.env.DEV 
+  ? createOptimizedLazyComponent(() => import("./pages/TestPage"), "TestPage")
+  : null;
 
 // Optimized lazy loading with error handling and performance tracking
 const ResetPassword = createOptimizedLazyComponent(() => import("./pages/ResetPassword"), "ResetPassword");
@@ -125,13 +131,13 @@ function App() {
                     </PageErrorBoundary>
                   } />
                   {/* Development-only test route */}
-                  {import.meta.env.DEV && (
+                  {import.meta.env.DEV && TestPage && (
                   <Route 
                     path="/test" 
                       element={
                         <PrivateRoute allowedRoles={['admin']}>
                           <PageErrorBoundary pageName="Test">
-                            <TestPage />
+                            <Suspense fallback={<PageLoader />}><TestPage /></Suspense>
                           </PageErrorBoundary>
                         </PrivateRoute>
                       } 
@@ -154,7 +160,7 @@ function App() {
                 )}
                   <Route path="/original" element={
                     <PageErrorBoundary pageName="Original Index">
-                      <Index />
+                      <Suspense fallback={<PageLoader />}><Index /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/about" element={
@@ -189,27 +195,27 @@ function App() {
                   } />
                   <Route path="/login" element={
                     <PageErrorBoundary pageName="Login">
-                      <Login />
+                      <Suspense fallback={<PageLoader />}><Login /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/register" element={
                     <PageErrorBoundary pageName="Register">
-                      <Register />
+                      <Suspense fallback={<PageLoader />}><Register /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/forgot-password" element={
                     <PageErrorBoundary pageName="Forgot Password">
-                      <ForgotPassword />
+                      <Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/reset-password" element={
                     <PageErrorBoundary pageName="Reset Password">
-                      <ResetPassword />
+                      <Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/auth/callback" element={
                     <PageErrorBoundary pageName="Auth Callback">
-                      <AuthCallback />
+                      <Suspense fallback={<PageLoader />}><AuthCallback /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/verify-email" element={
