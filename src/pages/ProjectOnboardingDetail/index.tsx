@@ -10,7 +10,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { OverviewTab } from "./OverviewTab";
 import { OnboardingTab } from "./OnboardingTab";
 import { DataAccessTab } from "./DataAccessTab";
-import { AuditReadyTab } from "./AuditReadyTab";
+import { RevenueTab } from "./RevenueTab";
 import { ActivityCommentsTab } from "./ActivityCommentsTab";
 import { AgreementTab } from "./AgreementTab";
 import type { ProjectOnboarding, OnboardingFields } from "@/types/onboarding";
@@ -158,7 +158,7 @@ export default function ProjectOnboardingDetail() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="audit">Audit Ready</TabsTrigger>
+              <TabsTrigger value="revenue">Revenue</TabsTrigger>
               <TabsTrigger value="activity">Activity & Comments</TabsTrigger>
             </TabsList>
 
@@ -190,9 +190,10 @@ export default function ProjectOnboardingDetail() {
               />
             </TabsContent>
 
-            <TabsContent value="audit" className="mt-6">
-              <AuditReadyTab
+            <TabsContent value="revenue" className="mt-6">
+              <RevenueTab
                 project={project}
+                proposal={proposalData}
                 onRefresh={fetchProjectData}
               />
             </TabsContent>
