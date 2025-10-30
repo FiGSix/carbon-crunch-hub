@@ -15,6 +15,11 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+// Percentage formatter - rounds to 2 decimals and strips trailing zeros
+const formatPercentage = (percentage: number): string => {
+  return percentage.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface RevenueTabProps {
   project: ProjectOnboarding;
   proposal: any;
@@ -31,7 +36,7 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
   const isMultiPhase = proposal.content?.projectInfo?.isMultiPhase;
   const clientSharePercentage = proposal.client_share_percentage || 75;
   const agentCommissionPercentage = proposal.agent_commission_percentage || 4;
-  const crunchCommissionPercentage = 100 - clientSharePercentage - agentCommissionPercentage;
+  const crunchCommissionPercentage = parseFloat((100 - clientSharePercentage - agentCommissionPercentage).toFixed(2));
 
   // Calculate revenues using existing hook
   const { calculationResult, clientSpecificRevenue, loading } = useRevenueCalculations({
@@ -98,7 +103,7 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {clientSharePercentage}% of total revenue
+              {formatPercentage(clientSharePercentage)}% of total revenue
             </p>
           </CardContent>
         </Card>
@@ -112,7 +117,7 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {agentCommissionPercentage}% commission rate
+                {formatPercentage(agentCommissionPercentage)}% commission rate
               </p>
             </CardContent>
           </Card>
@@ -127,7 +132,7 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {crunchCommissionPercentage}% platform fee
+                {formatPercentage(crunchCommissionPercentage)}% platform fee
               </p>
             </CardContent>
           </Card>
@@ -147,12 +152,12 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Year</TableHead>
-                <TableHead className="text-right">Client Revenue ({clientSharePercentage}%)</TableHead>
+                <TableHead className="text-right">Client Revenue ({formatPercentage(clientSharePercentage)}%)</TableHead>
                 {(userRole === 'agent' || userRole === 'admin') && (
-                  <TableHead className="text-right">Agent Commission ({agentCommissionPercentage}%)</TableHead>
+                  <TableHead className="text-right">Agent Commission ({formatPercentage(agentCommissionPercentage)}%)</TableHead>
                 )}
                 {userRole === 'admin' && (
-                  <TableHead className="text-right">Platform Fee ({crunchCommissionPercentage}%)</TableHead>
+                  <TableHead className="text-right">Platform Fee ({formatPercentage(crunchCommissionPercentage)}%)</TableHead>
                 )}
                 {(userRole === 'agent' || userRole === 'admin') && (
                   <TableHead className="text-right">Total Revenue</TableHead>
