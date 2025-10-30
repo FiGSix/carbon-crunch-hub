@@ -9,22 +9,37 @@ import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjects
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
-import { useCombinedDashboardData } from "@/hooks/dashboard/useCombinedDashboardData";
+import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
-import { getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
+import { useProposals } from "@/hooks/useProposals";
 
 export default function Dashboard() {
   const { user, userRole, profile } = useAuth();
 
-  // Phase 2 Optimization: Parallel data fetching
+  // Fetch dashboard metrics by stage
   const { 
-    metrics: metricsByStage, 
-    proposals: recentProposals,
-    isLoading, 
-    isError,
-    errors,
-    refetch
-  } = useCombinedDashboardData();
+    data: metricsByStage, 
+    isLoading: metricsLoading, 
+    isError: metricsError,
+    refetch: refetchMetrics 
+  } = useDashboardMetricsByStage();
+
+  // Fetch recent proposals (limited to 10)
+  const { 
+    proposals,
+    loading: proposalsLoading,
+    error: proposalsError,
+    fetchProposals
+  } = useProposals();
+
+  const recentProposals = proposals.slice(0, 10);
+  const isLoading = metricsLoading || proposalsLoading;
+  const isError = metricsError || !!proposalsError;
+
+  const refetch = () => {
+    refetchMetrics();
+    fetchProposals();
+  };
 
   const {
     getWelcomeMessage,
@@ -53,7 +68,9 @@ export default function Dashboard() {
 
   // Error state
   if (isError && !metricsByStage && !recentProposals) {
-    const errorMessage = errors.length > 0 ? errors[0]?.message : "Failed to load dashboard data";
+    const errorMessage = metricsError 
+      ? "Failed to load dashboard metrics" 
+      : proposalsError || "Failed to load dashboard data";
     
     return (
       <DashboardLayout>
