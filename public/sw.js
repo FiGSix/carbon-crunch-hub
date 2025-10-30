@@ -2,7 +2,7 @@
    Implements Cache-First strategy with appropriate cache durations for different asset types
    This addresses PageSpeed cache lifetime recommendations */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
 const ASSET_CACHE = `assets-${CACHE_VERSION}`;
@@ -93,6 +93,27 @@ function shouldHandleRequest(request) {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  
+  // Network-First for HTML/navigation requests (app shell)
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(
+      fetch(request)
+        .then(async (response) => {
+          // Cache the fresh HTML for offline fallback
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(request, response.clone());
+          return response;
+        })
+        .catch(async () => {
+          // Fallback to cached HTML if network fails
+          const cached = await caches.match(request);
+          return cached || new Response('Offline', { status: 503 });
+        })
+    );
+    return;
+  }
+  
+  // Cache-First for static assets (JS, CSS, images, fonts)
   if (!shouldHandleRequest(request)) return;
 
   const { cache: cacheName, duration } = getCacheConfig(request.url);
