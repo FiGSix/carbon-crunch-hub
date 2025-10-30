@@ -114,5 +114,7 @@ export function useProposalSignatures() {
 
       return enriched;
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes - low volatility data
+    gcTime: 30 * 60 * 1000, // 30 minutes - garbage collection
   });
 }

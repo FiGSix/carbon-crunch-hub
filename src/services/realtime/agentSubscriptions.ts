@@ -32,7 +32,11 @@ export class AgentSubscriptions extends BaseSubscriptionManager {
             
             // Only refresh if it's a meaningful change
             if (this.isMeaningfulAgentChange(payload)) {
-              DebounceUtils.debounceUpdate(channelKey, onUpdate, payload);
+              // Optimized debounce: Status changes get faster feedback
+              const debounceTime = (payload.new as any)?.agent_status !== (payload.old as any)?.agent_status 
+                ? 300 : 1000;
+              
+              DebounceUtils.debounceUpdate(channelKey, onUpdate, payload, debounceTime);
             }
           }
         )

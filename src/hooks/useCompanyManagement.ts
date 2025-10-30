@@ -24,6 +24,8 @@ export function useCompanyManagement() {
     queryKey: ['user-company', user?.id],
     queryFn: () => getUserCompany(user!.id),
     enabled: !!user,
+    staleTime: 3 * 60 * 1000, // 3 minutes - optimized cache time
+    gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection
   });
 
   const company = companyData?.data?.companies;
@@ -31,23 +33,29 @@ export function useCompanyManagement() {
 
   // Get company members
   const { data: membersData, isLoading: isLoadingMembers } = useQuery({
-    queryKey: ['company-members', company?.id],
+    queryKey: ['company-members', company?.id, user?.id],
     queryFn: () => getCompanyMembers(company!.id),
     enabled: !!company,
+    staleTime: 3 * 60 * 1000, // 3 minutes - optimized cache time
+    gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection
   });
 
   // Get pending approvals
   const { data: pendingData } = useQuery({
-    queryKey: ['pending-approvals', company?.id],
+    queryKey: ['pending-approvals', company?.id, user?.id],
     queryFn: () => getPendingApprovals(company!.id),
     enabled: !!company,
+    staleTime: 3 * 60 * 1000, // 3 minutes - optimized cache time
+    gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection
   });
 
   // Get pending team invitations
   const { data: pendingInvitations } = useQuery({
-    queryKey: ['pending-team-invitations', company?.id],
+    queryKey: ['pending-team-invitations', company?.id, user?.id],
     queryFn: () => getPendingTeamInvitations(company!.id),
     enabled: !!company,
+    staleTime: 3 * 60 * 1000, // 3 minutes - optimized cache time
+    gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection
   });
 
   // Check if user is team lead
@@ -55,6 +63,8 @@ export function useCompanyManagement() {
     queryKey: ['is-team-lead', user?.id],
     queryFn: () => isUserTeamLead(user!.id),
     enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes - low volatility data
+    gcTime: 30 * 60 * 1000, // 30 minutes - garbage collection
   });
 
   // Approve member mutation
