@@ -365,11 +365,11 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
                     <div className="flex-1">
                       <p className="text-sm font-medium">{pdfFile.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                        {uploading ? 'Uploading...' : `${(pdfFile.size / 1024 / 1024).toFixed(2)} MB`}
                       </p>
                     </div>
                     {uploading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     ) : (
                       <Button
                         variant="ghost"
@@ -571,9 +571,18 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
           </Button>
 
           {currentStep < 3 ? (
-            <Button onClick={handleNext} disabled={uploading}>
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
+            <Button onClick={handleNext} disabled={currentStep === 2 && uploading}>
+              {currentStep === 2 && uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading PDF...
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={submitting}>
