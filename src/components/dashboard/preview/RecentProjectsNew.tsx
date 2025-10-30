@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from "react";
 import { 
   Card, 
   CardContent, 
@@ -21,6 +22,31 @@ interface RecentProjectsNewProps {
 
 export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }: RecentProjectsNewProps) {
   const navigate = useNavigate();
+  
+  // Memoize status colors configuration
+  const statusColors = useMemo(() => ({
+    draft: "bg-blue-50 text-blue-700 border-blue-100",
+    pending: "bg-yellow-50 text-yellow-700 border-yellow-100",
+    approved: "bg-green-50 text-green-700 border-green-100",
+    rejected: "bg-red-50 text-red-700 border-red-100",
+  }), []);
+
+  // Memoize view proposal handler
+  const handleViewProposal = useCallback((id: string) => {
+    navigate(`/proposals/${id}`);
+  }, [navigate]);
+
+  // Memoize recent projects filtering
+  const recentProjects = useMemo(() => {
+    return proposals.length > 0 
+      ? proposals.slice(0, 4) 
+      : [
+          { id: "1", name: "Sunnydale Solar Farm", size: 4.2, client: "Cape Town Energy", date: "2024-01-15", status: "pending", revenue: 120000 },
+          { id: "2", name: "Greenfield Energy", size: 2.8, client: "Johannesburg Power", date: "2024-02-03", status: "pending", revenue: 85000 },
+          { id: "3", name: "Eastside Power Plant", size: 3.5, client: "Durban Utilities", date: "2024-03-10", status: "approved", revenue: 110000 },
+          { id: "4", name: "Clearwater Solar", size: 2.0, client: "Pretoria Solar", date: "2024-03-22", status: "draft", revenue: 67000 },
+        ];
+  }, [proposals]);
   
   // Show skeleton loading state
   if (loading) {
@@ -46,27 +72,6 @@ export function RecentProjectsNew({ proposals = [], loading = false, onRefresh }
     );
   }
 
-  // Function to view a proposal
-  const handleViewProposal = (id: string) => {
-    navigate(`/proposals/${id}`);
-  };
-
-  // Filter to display only recent proposals (at most 4)
-  const recentProjects = proposals.length > 0 
-    ? proposals.slice(0, 4) 
-    : [
-        { id: "1", name: "Sunnydale Solar Farm", size: 4.2, client: "Cape Town Energy", date: "2024-01-15", status: "pending", revenue: 120000 },
-        { id: "2", name: "Greenfield Energy", size: 2.8, client: "Johannesburg Power", date: "2024-02-03", status: "pending", revenue: 85000 },
-        { id: "3", name: "Eastside Power Plant", size: 3.5, client: "Durban Utilities", date: "2024-03-10", status: "approved", revenue: 110000 },
-        { id: "4", name: "Clearwater Solar", size: 2.0, client: "Pretoria Solar", date: "2024-03-22", status: "draft", revenue: 67000 },
-      ];
-
-  const statusColors = {
-    draft: "bg-blue-50 text-blue-700 border-blue-100",
-    pending: "bg-yellow-50 text-yellow-700 border-yellow-100",
-    approved: "bg-green-50 text-green-700 border-green-100",
-    rejected: "bg-red-50 text-red-700 border-red-100",
-  };
 
   return (
     <motion.div

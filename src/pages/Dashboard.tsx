@@ -1,48 +1,36 @@
 
-import React, { memo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/auth";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { RefreshCw, Clock } from "lucide-react";
+import { RefreshCw, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
-import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
-import { useUnifiedDashboardData } from "@/hooks/dashboard/useUnifiedDashboardData";
-import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
+import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
+import { useCombinedDashboardData } from "@/hooks/dashboard/useCombinedDashboardData";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
-import { useAuth } from "@/contexts/auth";
-import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
+import { getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 
-const Dashboard = memo(() => {
-  const { userRole, profile } = useAuth();
-  
-  // Phase 4: Fetch dashboard metrics by stage (4 new cards)
-  const {
-    data: metrics,
-    isLoading: metricsLoading,
-    error: metricsError,
-    refetch: refetchMetrics
-  } = useDashboardMetricsByStage();
+export default function Dashboard() {
+  const { user, userRole, profile } = useAuth();
 
-  // Fetch proposals for Recent Projects section
-  const {
-    data: dashboardData,
-    isLoading: proposalsLoading,
-    error: proposalsError,
-    refetch: refetchProposals
-  } = useUnifiedDashboardData();
+  // Phase 2 Optimization: Parallel data fetching
+  const { 
+    metrics: metricsByStage, 
+    proposals: recentProposals,
+    isLoading, 
+    isError,
+    errors,
+    refetch
+  } = useCombinedDashboardData();
 
-  // Helper functions with stable references
   const {
     getWelcomeMessage,
     getUserDisplayName,
     formatUserRole
-  } = useDashboardHelpers(() => {
-    refetchMetrics();
-    refetchProposals();
-  });
+  } = useDashboardHelpers(refetch);
 
   const {
     isModalOpen,
@@ -52,10 +40,8 @@ const Dashboard = memo(() => {
     closeModal
   } = useAgentIntroVideo();
 
-  const loading = metricsLoading || proposalsLoading;
-
-  // Handle loading and error states
-  if (loading && !metrics && !dashboardData) {
+  // Loading state
+  if (isLoading && !metricsByStage && !recentProposals) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -65,18 +51,20 @@ const Dashboard = memo(() => {
     );
   }
 
-  if ((metricsError || proposalsError) && !metrics && !dashboardData) {
+  // Error state
+  if (isError && !metricsByStage && !recentProposals) {
+    const errorMessage = errors.length > 0 ? errors[0]?.message : "Failed to load dashboard data";
+    
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-muted-foreground mb-4">Failed to load dashboard data</p>
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">{errorMessage}</p>
             <Button 
-              onClick={() => {
-                refetchMetrics();
-                refetchProposals();
-              }} 
-              variant="outline"
+              variant="outline" 
+              size="sm"
+              onClick={refetch}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -86,7 +74,7 @@ const Dashboard = memo(() => {
       </DashboardLayout>
     );
   }
-  
+
   return (
     <DashboardLayout>
       <DashboardHeader 
@@ -98,13 +86,10 @@ const Dashboard = memo(() => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              refetchMetrics();
-              refetchProposals();
-            }}
-            disabled={loading}
+            onClick={refetch}
+            disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''} text-crunch-yellow`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''} text-crunch-yellow`} />
             Refresh Data
           </Button>
         }
@@ -121,24 +106,30 @@ const Dashboard = memo(() => {
         </Alert>
       )}
       
-      {/* Phase 4: New 4-Card Metrics Section */}
-      <QueryErrorBoundary>
-        <DashboardMetricsByStageCards 
-          metrics={metrics || getEmptyMetrics()}
-          loading={metricsLoading}
-        />
-      </QueryErrorBoundary>
+      {/* Dashboard Content */}
+      <DashboardMetricsByStageCards 
+        metrics={metricsByStage || getEmptyMetrics()} 
+        loading={isLoading}
+      />
       
-      {/* Recent Projects Section (unchanged) */}
-      <QueryErrorBoundary>
-        <div className="grid grid-cols-1 gap-6">
-          <RecentProjectsNew 
-            proposals={dashboardData?.proposals || []}
-            loading={proposalsLoading}
-            onRefresh={() => refetchProposals()}
-          />
-        </div>
-      </QueryErrorBoundary>
+      {/* Recent Projects */}
+      <RecentProjectsNew 
+        proposals={recentProposals || []} 
+        loading={isLoading}
+        onRefresh={refetch}
+      />
+
+      {/* Global Refresh Button */}
+      <div className="flex justify-end mt-6">
+        <Button 
+          variant="outline"
+          onClick={refetch}
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
+      </div>
 
       {/* Agent Introduction Video Modal */}
       <AgentIntroVideoModal
@@ -150,6 +141,4 @@ const Dashboard = memo(() => {
       />
     </DashboardLayout>
   );
-});
-
-export default Dashboard;
+}

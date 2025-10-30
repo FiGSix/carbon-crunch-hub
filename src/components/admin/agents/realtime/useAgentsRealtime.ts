@@ -1,14 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export function useAgentsRealtime() {
   const { toast } = useToast();
   const { invalidateAgentManagement } = useCacheInvalidation();
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
+    // Clean up previous subscription if it exists
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
       .channel('agent-management-changes')
       .on(
@@ -81,6 +89,9 @@ export function useAgentsRealtime() {
       )
       .subscribe();
 
+    // Store channel reference
+    channelRef.current = channel;
+
     // Enable realtime for the tables
     const enableRealtime = async () => {
       try {
@@ -96,7 +107,10 @@ export function useAgentsRealtime() {
     enableRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [toast, invalidateAgentManagement]);
 }
