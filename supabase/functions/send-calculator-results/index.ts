@@ -105,7 +105,7 @@ serve(async (req: Request) => {
           <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
             <tr>
               <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); box-sizing: border-box;">
                   <!-- Header -->
                   <tr>
                     <td style="background: linear-gradient(135deg, #FCEE21 0%, #FFD700 100%); padding: 40px 30px; text-align: center;">

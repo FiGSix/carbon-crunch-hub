@@ -231,97 +231,89 @@ const handler = async (req: Request): Promise<Response> => {
       subject: `You've been invited to join ${company.company_name} on CrunchCarbon`,
       html: `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
           <head>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-              }
-              .header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 30px;
-                border-radius: 8px 8px 0 0;
-                text-align: center;
-              }
-              .content {
-                background: #ffffff;
-                padding: 30px;
-                border: 1px solid #e5e7eb;
-                border-top: none;
-              }
-              .button {
-                display: inline-block;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white !important;
-                padding: 14px 32px;
-                text-decoration: none;
-                border-radius: 6px;
-                font-weight: 600;
-                margin: 20px 0;
-              }
-              .footer {
-                background: #f9fafb;
-                padding: 20px;
-                border-radius: 0 0 8px 8px;
-                border: 1px solid #e5e7eb;
-                border-top: none;
-                font-size: 14px;
-                color: #6b7280;
-              }
-              .expiry {
-                background: #fef3c7;
-                border-left: 4px solid #f59e0b;
-                padding: 12px;
-                margin: 20px 0;
-                border-radius: 4px;
-                font-size: 14px;
-              }
-            </style>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Team Invitation</title>
           </head>
-          <body>
-            <div class="header">
-              <h1 style="margin: 0;">Team Invitation</h1>
-            </div>
-            <div class="content">
-              <p>Hi${firstName ? ` ${firstName}` : ""},</p>
-              
-              <p><strong>${inviterName}</strong> has invited you to join <strong>${company.company_name}</strong> on CrunchCarbon, the platform for managing carbon credit projects.</p>
-              
-              <p>As part of the team, you'll be able to:</p>
-              <ul>
-                <li>Collaborate on carbon credit proposals</li>
-                <li>Manage client projects together</li>
-                <li>Access shared company resources</li>
-                <li>Track team performance and metrics</li>
-              </ul>
-              
-              <div style="text-align: center;">
-                <a href="${registrationUrl}" class="button">Accept Invitation & Sign Up</a>
-              </div>
-              
-              <div class="expiry">
-                ⏰ <strong>Note:</strong> This invitation expires in 48 hours
-              </div>
-              
-              <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
-                If you're unable to click the button, copy and paste this link into your browser:<br/>
-                <a href="${registrationUrl}" style="color: #667eea; word-break: break-all;">${registrationUrl}</a>
-              </p>
-            </div>
-            <div class="footer">
-              <p style="margin: 0;">
-                If you didn't expect this invitation, you can safely ignore this email.
-              </p>
-              <p style="margin: 10px 0 0 0;">
-                Questions? Contact us at support@crunchcarbon.com
-              </p>
-            </div>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+              <tr>
+                <td align="center" style="padding: 20px;">
+                  <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); box-sizing: border-box;">
+                    
+                    <!-- Header -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Team Invitation</h1>
+                      </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                      <td style="background: #ffffff; padding: 30px;">
+                        <p style="margin: 0 0 15px 0; font-size: 16px; color: #333333; line-height: 1.6;">Hi${firstName ? ` ${firstName}` : ""},</p>
+                        
+                        <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333; line-height: 1.6;"><strong>${inviterName}</strong> has invited you to join <strong>${company.company_name}</strong> on CrunchCarbon, the platform for managing carbon credit projects.</p>
+                        
+                        <p style="margin: 0 0 10px 0; font-size: 16px; color: #333333; line-height: 1.6;">As part of the team, you'll be able to:</p>
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="padding: 5px 0 5px 20px; font-size: 15px; color: #333333;">• Collaborate on carbon credit proposals</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 5px 0 5px 20px; font-size: 15px; color: #333333;">• Manage client projects together</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 5px 0 5px 20px; font-size: 15px; color: #333333;">• Access shared company resources</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 5px 0 5px 20px; font-size: 15px; color: #333333;">• Track team performance and metrics</td>
+                          </tr>
+                        </table>
+                        
+                        <!-- Button -->
+                        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
+                          <tr>
+                            <td align="center">
+                              <a href="${registrationUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">Accept Invitation & Sign Up</a>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <!-- Expiry Notice -->
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; margin: 20px 0;">
+                          <tr>
+                            <td style="padding: 12px;">
+                              <p style="margin: 0; font-size: 14px; color: #333333;">⏰ <strong>Note:</strong> This invitation expires in 48 hours</p>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0; line-height: 1.6;">
+                          If you're unable to click the button, copy and paste this link into your browser:<br/>
+                          <a href="${registrationUrl}" style="color: #667eea; word-break: break-all; text-decoration: underline;">${registrationUrl}</a>
+                        </p>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 10px 0; font-size: 14px; color: #6b7280;">
+                          If you didn't expect this invitation, you can safely ignore this email.
+                        </p>
+                        <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                          Questions? Contact us at support@crunchcarbon.com
+                        </p>
+                      </td>
+                    </tr>
+                    
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `,

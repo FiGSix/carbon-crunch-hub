@@ -27,20 +27,26 @@ export class EmailService {
         <title>Proposal Invitation - Crunch Carbon</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #F3F4F6;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF;">
-          
-          <!-- Header with Golden Gradient -->
-          <div style="background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); padding: 40px 30px; text-align: center;">
-            <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-              Crunch Carbon
-            </h1>
-            <p style="margin: 8px 0 0 0; color: #2D3748; font-size: 14px; font-weight: 500; letter-spacing: 0.5px;">
-              CARBON CREDIT PROPOSAL
-            </p>
-          </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F3F4F6; padding: 20px 0;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); box-sizing: border-box;">
+                
+                <!-- Header with Golden Gradient -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                      Crunch Carbon
+                    </h1>
+                    <p style="margin: 8px 0 0 0; color: #2D3748; font-size: 14px; font-weight: 500; letter-spacing: 0.5px;">
+                      CARBON CREDIT PROPOSAL
+                    </p>
+                  </td>
+                </tr>
 
-          <!-- Main Content -->
-          <div style="padding: 40px 30px;">
+                <!-- Main Content -->
+                <tr>
+                  <td style="padding: 40px 30px;">
             <p style="margin: 0 0 20px 0; color: #1A1A1A; font-size: 16px; line-height: 1.6;">
               Dear <strong>${data.clientName}</strong>,
             </p>
@@ -82,38 +88,51 @@ export class EmailService {
               </p>
             </div>
 
-            <p style="margin: 25px 0 0 0; color: #4A5568; font-size: 15px; line-height: 1.7;">
-              If you have any questions about this proposal, please don't hesitate to reach out to our team.
-            </p>
-          </div>
+                    <p style="margin: 25px 0 0 0; color: #4A5568; font-size: 15px; line-height: 1.7;">
+                      If you have any questions about this proposal, please don't hesitate to reach out to our team.
+                    </p>
+                  </td>
+                </tr>
 
-          <!-- Footer -->
-          <div style="background: #F8F9FA; padding: 30px; border-top: 1px solid #E2E8F0;">
-            <p style="margin: 0 0 8px 0; color: #1A1A1A; font-size: 15px; font-weight: 600;">
-              Best regards,
-            </p>
-            <p style="margin: 0 0 20px 0; color: #4A5568; font-size: 15px;">
-              The Crunch Carbon Team
-            </p>
-            
-            <div style="border-top: 1px solid #E2E8F0; padding-top: 20px; margin-top: 20px;">
-              <p style="margin: 0 0 8px 0; color: #718096; font-size: 13px; line-height: 1.6;">
-                <strong>Crunch Carbon</strong><br>
-                Carbon Credit Solutions<br>
-                proposals@crunchcarbon.app
-              </p>
-              <p style="margin: 15px 0 0 0; color: #A0AEC0; font-size: 12px; line-height: 1.5;">
-                © ${new Date().getFullYear()} Crunch Carbon. All rights reserved.
-              </p>
-            </div>
-          </div>
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #F8F9FA; padding: 30px; border-top: 1px solid #E2E8F0;">
+                    <p style="margin: 0 0 8px 0; color: #1A1A1A; font-size: 15px; font-weight: 600;">
+                      Best regards,
+                    </p>
+                    <p style="margin: 0 0 20px 0; color: #4A5568; font-size: 15px;">
+                      The Crunch Carbon Team
+                    </p>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #E2E8F0; padding-top: 20px; margin-top: 20px;">
+                      <tr>
+                        <td>
+                          <p style="margin: 0 0 8px 0; color: #718096; font-size: 13px; line-height: 1.6;">
+                            <strong>Crunch Carbon</strong><br>
+                            Carbon Credit Solutions<br>
+                            proposals@crunchcarbon.app
+                          </p>
+                          <p style="margin: 15px 0 0 0; color: #A0AEC0; font-size: 12px; line-height: 1.5;">
+                            © ${new Date().getFullYear()} Crunch Carbon. All rights reserved.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-          <!-- Debug info (hidden) -->
-          <div style="display: none;">
-            <!-- Token: ${data.tokenPreview} -->
-            <!-- Proposal: ${data.proposalId} -->
-          </div>
-        </div>
+                <!-- Debug info (hidden) -->
+                <tr>
+                  <td style="display: none;">
+                    <!-- Token: ${data.tokenPreview} -->
+                    <!-- Proposal: ${data.proposalId} -->
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;

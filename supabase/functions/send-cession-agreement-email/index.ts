@@ -111,73 +111,105 @@ serve(async (req) => {
 
     // Generate email HTML
     const emailHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
-        <!-- Header with Crunch Carbon branding -->
-        <div style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-          <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Cession Agreement Confirmed</h1>
-        </div>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cession Agreement Confirmed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); box-sizing: border-box;">
+                
+                <!-- Header with Crunch Carbon branding -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Cession Agreement Confirmed</h1>
+                  </td>
+                </tr>
 
-        <!-- Main content -->
-        <div style="background-color: #ffffff; padding: 40px 30px; border: 1px solid #E5E5E5; border-top: none;">
-          <p style="font-size: 16px; color: #1A1A1A; margin-bottom: 20px;">
-            Dear <strong>${clientName}</strong>,
-          </p>
+                <!-- Main content -->
+                <tr>
+                  <td style="background-color: #ffffff; padding: 40px 30px;">
+                    <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                      Dear <strong>${clientName}</strong>,
+                    </p>
 
-          <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin-bottom: 20px;">
-            Thank you for signing the <strong>Cession Agreement</strong> for your carbon credit project. We are delighted to confirm your acceptance and look forward to working with you.
-          </p>
+                    <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                      Thank you for signing the <strong>Cession Agreement</strong> for your carbon credit project. We are delighted to confirm your acceptance and look forward to working with you.
+                    </p>
 
-          <!-- Project Summary Box -->
-          <div style="background-color: #F8F9FA; border-left: 4px solid #F4C430; padding: 20px; margin: 30px 0; border-radius: 4px;">
-            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">Project Summary</h2>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; color: #666666; font-size: 14px;">Project Name:</td>
-                <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${projectName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666666; font-size: 14px;">System Size:</td>
-                <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${systemSize}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666666; font-size: 14px;">Est. Carbon Credits:</td>
-                <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${carbonCredits}</td>
-              </tr>
-            </table>
-          </div>
+                    <!-- Project Summary Box -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">Project Summary</h2>
+                          <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                              <td style="padding: 8px 0; color: #666666; font-size: 14px;">Project Name:</td>
+                              <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${projectName}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 8px 0; color: #666666; font-size: 14px;">System Size:</td>
+                              <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${systemSize}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 8px 0; color: #666666; font-size: 14px;">Est. Carbon Credits:</td>
+                              <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${carbonCredits}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
 
-          <div style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; padding: 15px; margin: 25px 0;">
-            <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
-              📎 <strong>Please find your complete Cession Agreement attached as a PDF.</strong> We recommend saving this document for your records.
-            </p>
-          </div>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; margin: 25px 0;">
+                      <tr>
+                        <td style="padding: 15px;">
+                          <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
+                            📎 <strong>Please find your complete Cession Agreement attached as a PDF.</strong> We recommend saving this document for your records.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
 
-          <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin-bottom: 20px;">
-            Our team will now proceed with the next steps to process your carbon credits. You will receive updates as we progress through each stage of the project.
-          </p>
+                    <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                      Our team will now proceed with the next steps to process your carbon credits. You will receive updates as we progress through each stage of the project.
+                    </p>
 
-          <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin-bottom: 30px;">
-            If you have any questions or need assistance, please don't hesitate to contact us.
-          </p>
+                    <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                      If you have any questions or need assistance, please don't hesitate to contact us.
+                    </p>
 
-          <p style="font-size: 16px; color: #1A1A1A; margin-bottom: 5px;">
-            Best regards,
-          </p>
-          <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin-top: 5px;">
-            The Crunch Carbon Team
-          </p>
-        </div>
+                    <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                      Best regards,
+                    </p>
+                    <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                      The Crunch Carbon Team
+                    </p>
+                  </td>
+                </tr>
 
-        <!-- Footer -->
-        <div style="background-color: #1A1A1A; padding: 25px 30px; border-radius: 0 0 8px 8px; text-align: center;">
-          <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
-            Crunch Carbon - Sustainable Energy Solutions
-          </p>
-          <p style="margin: 0; color: #999999; font-size: 12px;">
-            For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
-          </p>
-        </div>
-      </div>
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                    <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                      Crunch Carbon - Sustainable Energy Solutions
+                    </p>
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                    </p>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
 
     // Send email with or without attachment
