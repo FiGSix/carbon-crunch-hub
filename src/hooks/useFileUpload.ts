@@ -42,8 +42,16 @@ export function useFileUpload({
     }
 
     // Validate file type
-    if (!allowedTypes.some(type => file.type.match(type.replace('*', '.*')))) {
-      const error = `Invalid file type. Please select: ${allowedTypes.join(', ')}`;
+    const fileTypeOk = allowedTypes.some(type => {
+      if (type.startsWith('.')) {
+        return file.name.toLowerCase().endsWith(type.toLowerCase());
+      }
+      // Turn image/* into image/.* and match against file.type
+      const pattern = type.replace('*', '.*');
+      return new RegExp(`^${pattern}$`, 'i').test(file.type);
+    });
+    if (!fileTypeOk) {
+      const error = `Invalid file type (${file.type}). Allowed: ${allowedTypes.join(', ')}`;
       toast({
         title: "Invalid file type",
         description: error,

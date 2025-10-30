@@ -52,7 +52,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
   const { uploadFile, uploading } = useFileUpload({
     bucket: 'onboarding-documents',
     maxSizeInMB: 10,
-    allowedTypes: ['application/pdf'],
+    allowedTypes: ['application/pdf', 'application/x-pdf', '.pdf'],
     folderPrefix: `legacy-${Date.now()}`,
     onSuccess: (url) => {
       setStep2(prev => ({ ...prev, signed_pdf_url: url }));
@@ -99,7 +99,10 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
     setPdfFile(file);
     const result = await uploadFile(file);
     console.log('Upload result:', result);
-    if (!result) {
+    if (result) {
+      // Fallback: ensure state is set even if onSuccess callback timing changes
+      setStep2(prev => ({ ...prev, signed_pdf_url: result }));
+    } else {
       console.error('Upload failed - no URL returned');
       toast({
         title: "Upload Failed",
@@ -396,6 +399,11 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
                     )}
                   </div>
                 )}
+                {!uploading && !step2.signed_pdf_url && pdfFile && (
+                  <p className="mt-1 text-xs text-destructive">
+                    Please upload the signed agreement PDF to proceed.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -586,7 +594,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
           </Button>
 
           {currentStep < 3 ? (
-            <Button onClick={handleNext} disabled={currentStep === 2 && uploading}>
+            <Button onClick={handleNext} disabled={currentStep === 2 && (uploading || !step2.signed_pdf_url)}>
               {currentStep === 2 && uploading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
