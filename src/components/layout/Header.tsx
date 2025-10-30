@@ -1,25 +1,12 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { SafeMotionDiv } from "@/components/common/SafeMotionDiv";
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -119,59 +106,17 @@ export function Header() {
           </div>
           
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
-            {navItems.map((item) => {
-              if (item.label === "For Agents") {
-                return (
-                  <DropdownMenu key={item.href}>
-                    <DropdownMenuTrigger className="font-medium text-crunch-black relative group py-2 px-1 touch-manipulation hover:text-crunch-yellow transition-colors duration-200 flex items-center gap-1 outline-none">
-                      {item.label}
-                      <ChevronDown className="h-4 w-4" />
-                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-crunch-yellow rounded-full transition-all duration-300 group-hover:w-full"></span>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="z-[60] bg-white border border-crunch-black/10 shadow-lg min-w-[220px]">
-                      <DropdownMenuLabel className="text-crunch-black/60">For Who</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => navigate("/agents")}
-                        className="cursor-pointer hover:bg-crunch-yellow/10 focus:bg-crunch-yellow/10"
-                      >
-                        For Agents & Partners
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => navigate("/residential")}
-                        className="cursor-pointer hover:bg-crunch-yellow/10 focus:bg-crunch-yellow/10"
-                      >
-                        For Residential
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => navigate("/commercial")}
-                        className="cursor-pointer hover:bg-crunch-yellow/10 focus:bg-crunch-yellow/10"
-                      >
-                        For Commercial & Industrial
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => navigate("/farmers")}
-                        className="cursor-pointer hover:bg-crunch-yellow/10 focus:bg-crunch-yellow/10"
-                      >
-                        For Farmers
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                );
-              }
-              
-              return (
-                <a 
-                  key={item.href}
-                  href={item.href} 
-                  className="font-medium text-crunch-black relative group py-2 px-1 touch-manipulation hover:text-crunch-yellow transition-colors duration-200"
-                  title={item.description}
-                >
-                  {item.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-crunch-yellow rounded-full transition-all duration-300 group-hover:w-full"></span>
-                </a>
-              );
-            })}
+            {navItems.map((item) => (
+              <a 
+                key={item.href}
+                href={item.href} 
+                className="font-medium text-crunch-black relative group py-2 px-1 touch-manipulation hover:text-crunch-yellow transition-colors duration-200"
+                title={item.description}
+              >
+                {item.label}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-crunch-yellow rounded-full transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            ))}
           </nav>
           
           <div className="flex items-center gap-2 md:gap-3">
@@ -222,66 +167,20 @@ export function Header() {
         >
           <div className="p-6 pt-20">
             <nav className="flex flex-col gap-2">
-              {navItems.map((item) => {
-                if (item.label === "For Agents") {
-                  return (
-                    <Collapsible key={item.href}>
-                      <CollapsibleTrigger className="w-full py-4 px-4 border-b border-crunch-black/5 font-medium text-crunch-black rounded-lg hover:bg-crunch-yellow/10 transition-colors touch-manipulation flex items-center justify-between">
-                        <div className="flex flex-col items-start">
-                          <span className="text-base font-medium">{item.label}</span>
-                          <span className="text-xs text-crunch-black/60 mt-1">{item.description}</span>
-                        </div>
-                        <ChevronDown className="h-4 w-4 transition-transform" />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pl-4 space-y-1 mt-1">
-                        <a
-                          href="/agents"
-                          className="block py-3 px-4 text-sm text-crunch-black hover:bg-crunch-yellow/10 rounded-lg transition-colors touch-manipulation"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          For Agents & Partners
-                        </a>
-                        <a
-                          href="/residential"
-                          className="block py-3 px-4 text-sm text-crunch-black hover:bg-crunch-yellow/10 rounded-lg transition-colors touch-manipulation"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          For Residential
-                        </a>
-                        <a
-                          href="/commercial"
-                          className="block py-3 px-4 text-sm text-crunch-black hover:bg-crunch-yellow/10 rounded-lg transition-colors touch-manipulation"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          For Commercial & Industrial
-                        </a>
-                        <a
-                          href="/farmers"
-                          className="block py-3 px-4 text-sm text-crunch-black hover:bg-crunch-yellow/10 rounded-lg transition-colors touch-manipulation"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          For Farmers
-                        </a>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  );
-                }
-                
-                return (
-                  <a 
-                    key={item.href}
-                    href={item.href} 
-                    className="py-4 px-4 border-b border-crunch-black/5 font-medium text-crunch-black rounded-lg hover:bg-crunch-yellow/10 transition-colors touch-manipulation"
-                    onClick={() => setMenuOpen(false)}
-                    style={{ minHeight: '44px' }}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-base font-medium">{item.label}</span>
-                      <span className="text-xs text-crunch-black/60 mt-1">{item.description}</span>
-                    </div>
-                  </a>
-                );
-              })}
+              {navItems.map((item) => (
+                <a 
+                  key={item.href}
+                  href={item.href} 
+                  className="py-4 px-4 border-b border-crunch-black/5 font-medium text-crunch-black rounded-lg hover:bg-crunch-yellow/10 transition-colors touch-manipulation"
+                  onClick={() => setMenuOpen(false)}
+                  style={{ minHeight: '44px' }}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-base font-medium">{item.label}</span>
+                    <span className="text-xs text-crunch-black/60 mt-1">{item.description}</span>
+                  </div>
+                </a>
+              ))}
               
               <div className="flex flex-col gap-3 mt-6 pt-6 border-t border-crunch-black/5">
                 <Button 
