@@ -13,18 +13,6 @@ export function Header() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // CSS Loading Diagnostic
-  useEffect(() => {
-    const indicator = document.createElement('div');
-    indicator.className = 'css-loaded-indicator';
-    document.body.appendChild(indicator);
-    console.log('[Header] CSS Loading diagnostic element added');
-    
-    return () => {
-      document.body.removeChild(indicator);
-    };
-  }, []);
-  
   // Close mobile menu when switching to desktop
   useEffect(() => {
     if (!isMobile && menuOpen) {

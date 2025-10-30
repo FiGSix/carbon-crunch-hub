@@ -30,18 +30,13 @@ dynamicCarbonPricingService.getCarbonPrices().catch(() => {
   // Silently fail if cache warming fails - not critical
 });
 
-// Register or clean up Service Worker safely
-if ('serviceWorker' in navigator) {
-  if (import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(console.error);
+// Register Service Worker in production only
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Silently fail - not critical
     });
-  } else {
-    // In dev/preview, ensure no stale SW interferes with module loading
-    navigator.serviceWorker.getRegistrations?.().then((regs) => {
-      regs.forEach((r) => r.unregister());
-    }).catch(() => {});
-  }
+  });
 }
 
 createRoot(document.getElementById("root")!).render(

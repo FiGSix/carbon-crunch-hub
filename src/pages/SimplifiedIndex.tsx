@@ -21,48 +21,34 @@ const SimplifiedIndex = () => {
   
   try {
     return (
-      <>
-        <DisplayDiagnostics />
-        <CSSFallbackDiagnostics />
-        <ProgressiveErrorBoundary level="page" name="Header">
-          <Header />
-        </ProgressiveErrorBoundary>
+      <ProgressiveErrorBoundary 
+        level="page" 
+        name="SimplifiedIndex"
+        fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-primary mb-4">CrunchCarbon</h1>
+              <p className="text-xl text-muted-foreground">Carbon Made Simple</p>
+            </div>
+          </div>
+        }
+      >
+        {import.meta.env.DEV && (
+          <>
+            <DisplayDiagnostics />
+            <CSSFallbackDiagnostics />
+          </>
+        )}
+        <Header />
         <main>
-          <ProgressiveErrorBoundary 
-            level="section" 
-            name="Hero Section"
-            fallback={
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-4xl font-bold text-primary mb-4">CrunchCarbon</h1>
-                  <p className="text-xl text-muted-foreground">Carbon Made Simple</p>
-                </div>
-              </div>
-            }
-          >
-            <SimplifiedHeroSection />
-          </ProgressiveErrorBoundary>
-          
-          <ProgressiveErrorBoundary level="section" name="How It Works">
-            <HowItWorksSection />
-          </ProgressiveErrorBoundary>
-          
-          <ProgressiveErrorBoundary level="section" name="Testimonials">
-            <SimplifiedTestimonialsSection />
-          </ProgressiveErrorBoundary>
-          
-          <ProgressiveErrorBoundary level="section" name="Social Proof">
-            <SocialProofSection />
-          </ProgressiveErrorBoundary>
-          
-          <ProgressiveErrorBoundary level="section" name="CTA">
-            <CTASection />
-          </ProgressiveErrorBoundary>
+          <SimplifiedHeroSection />
+          <HowItWorksSection />
+          <SimplifiedTestimonialsSection />
+          <SocialProofSection />
+          <CTASection />
         </main>
-        <ProgressiveErrorBoundary level="section" name="Footer">
-          <Footer />
-        </ProgressiveErrorBoundary>
-      </>
+        <Footer />
+      </ProgressiveErrorBoundary>
     );
   } catch (error) {
     if (import.meta.env.DEV) {

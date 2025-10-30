@@ -7,9 +7,6 @@ import { OptimizedImage } from '@/components/ui/OptimizedImage';
 export const HeroSection = () => {
   const navigate = useNavigate();
   
-  // Diagnostic logging
-  console.log("[HeroSection] Rendering hero section");
-  
   return <section className="bg-gradient-to-br from-background to-accent py-16 md:py-24 overflow-hidden">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -93,11 +90,6 @@ export const HeroSection = () => {
                   priority={true}
                   fetchPriority="high"
                   sizes="(max-width: 768px) 100vw, 488px"
-                  onLoad={() => console.log("[HeroSection] Logo image loaded successfully")}
-                  onError={(e) => {
-                    console.error("[HeroSection] Logo image failed to load:", e);
-                    e.currentTarget.src = "/placeholder.svg";
-                  }}
                 />
               </div>
               
