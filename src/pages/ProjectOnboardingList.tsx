@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Loader2, Upload } from "lucide-react";
+import { Search, Loader2, Upload, Plus } from "lucide-react";
 import type { ProjectOnboardingListItem, ProjectStepStatus } from "@/types/onboarding";
 import { BulkLegacyProjectUpload } from "@/components/onboarding/BulkLegacyProjectUpload";
+import { AddLegacyProjectDialog } from "@/components/onboarding/AddLegacyProjectDialog";
 
 export default function ProjectOnboardingList() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function ProjectOnboardingList() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [showAddProject, setShowAddProject] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -142,10 +144,16 @@ export default function ProjectOnboardingList() {
             </div>
             
             {userRole === 'admin' && (
-              <Button onClick={() => setShowBulkUpload(true)} variant="outline">
-                <Upload className="h-5 w-5 mr-2" />
-                Import Legacy Projects
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowBulkUpload(true)} variant="outline">
+                  <Upload className="h-5 w-5 mr-2" />
+                  Import Legacy Projects
+                </Button>
+                <Button onClick={() => setShowAddProject(true)}>
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Legacy Project
+                </Button>
+              </div>
             )}
           </div>
 
@@ -255,6 +263,15 @@ export default function ProjectOnboardingList() {
         open={showBulkUpload}
         onOpenChange={setShowBulkUpload}
         onSuccess={fetchProjects}
+      />
+      
+      <AddLegacyProjectDialog
+        open={showAddProject}
+        onOpenChange={setShowAddProject}
+        onSuccess={() => {
+          setShowAddProject(false);
+          fetchProjects();
+        }}
       />
     </DashboardLayout>
   );

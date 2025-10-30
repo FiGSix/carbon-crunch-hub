@@ -7,6 +7,9 @@ enabled = true
 [functions.accept-proposal]
 verify_jwt = false
 
+[functions.create-legacy-project]
+verify_jwt = true
+
 [functions.manage-client-profile]
 verify_jwt = true
 
