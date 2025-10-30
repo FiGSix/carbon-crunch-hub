@@ -9,6 +9,7 @@ import { SocialProofSection } from "@/pages/home/SocialProofSection";
 import { CTASection } from "@/pages/home/CTASection";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/Header";
+import { LazySection } from "@/components/common/LazySection";
 
 /**
  * Simplified Index page without complex animations for debugging
@@ -43,9 +44,15 @@ const SimplifiedIndex = () => {
         <main>
           <SimplifiedHeroSection />
           <HowItWorksSection />
-          <SimplifiedTestimonialsSection />
-          <SocialProofSection />
-          <CTASection />
+          <LazySection>
+            <SimplifiedTestimonialsSection />
+          </LazySection>
+          <LazySection>
+            <SocialProofSection />
+          </LazySection>
+          <LazySection>
+            <CTASection />
+          </LazySection>
         </main>
         <Footer />
       </ProgressiveErrorBoundary>

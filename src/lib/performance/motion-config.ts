@@ -20,11 +20,13 @@ export const optimizedMotionConfig = {
   transition: {
     type: "tween",
     duration: 0.2,
-    ease: "easeOut"
+    ease: "easeOut",
+    delay: 0.05 // Small delay prevents render blocking
   },
   
   // Prevent layout animations unless explicitly needed
   layout: false,
+  layoutScroll: false, // Prevent scroll-based layout animations
   
   // GPU acceleration hints
   style: gpuAcceleratedStyle
@@ -86,7 +88,8 @@ export const fadeIn = {
   transition: {
     type: "tween",
     duration: 0.2,
-    ease: "easeOut"
+    ease: "easeOut",
+    delay: 0.05
   }
 };
 
@@ -99,6 +102,7 @@ export const slideUp = {
   transition: {
     type: "tween",
     duration: 0.3,
-    ease: "easeOut"
+    ease: "easeOut",
+    delay: 0.05
   }
 };

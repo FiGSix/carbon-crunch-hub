@@ -34,10 +34,7 @@
     </script>
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
     
-    <!-- Load non-critical CSS normally - Vite handles optimization -->
-    <link rel="stylesheet" href="/src/styles/base.css">
-    <link rel="stylesheet" href="/src/styles/components.css">
-    <link rel="stylesheet" href="/src/styles/animations.css">
+    <!-- Non-critical CSS loaded via main.tsx for optimal bundling -->
 
     
     
@@ -58,20 +55,19 @@
 </head>
 
   <body>
-    <div id="root">
-      <!-- Loading indicator shown before React hydrates -->
-      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: hsl(0, 0%, 100%);">
-        <div style="text-align: center;">
-          <div style="width: 48px; height: 48px; border: 4px solid hsl(45, 100%, 50%); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;"></div>
-          <p style="color: hsl(0, 0%, 45%); font-size: 14px;">Loading CrunchCarbon...</p>
-        </div>
-      </div>
-      <style>
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      </style>
-    </div>
+    <div id="root"></div>
+    <style>
+      /* CSS-only loading indicator - automatically disappears when React renders */
+      #root:empty::before {
+        content: "Loading...";
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        color: hsl(0, 0%, 45%);
+        font-size: 14px;
+      }
+    </style>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
