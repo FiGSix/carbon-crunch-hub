@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const body: CreateLegacyProjectRequest = await req.json();
 
     // Validate agent exists (optional)
-    let agentId = null;
+    let agentId = user.id; // Default to admin user if no agent specified
     
     if (body.agent_email) {
       const { data: agent, error: agentError } = await supabase
@@ -106,6 +106,14 @@ Deno.serve(async (req) => {
     const annualEnergyKwh = body.system_size_kwp * 1000;
     const carbonCredits = (annualEnergyKwh / 1000) * 0.95;
 
+    console.log('Creating proposal with data:', {
+      title: body.project_title,
+      agent_id: agentId,
+      client_reference_id: clientId,
+      status: 'signed',
+      system_size_kwp: body.system_size_kwp,
+    });
+
     // Create proposal
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
@@ -140,7 +148,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (proposalError || !proposal) {
-      throw new Error('Failed to create proposal');
+      console.error('Proposal creation error:', proposalError);
+      throw new Error(`Failed to create proposal: ${proposalError?.message || 'Unknown error'}`);
     }
 
     // Create proposal agreement
