@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       title: body.project_title,
       agent_id: agentId,
       client_reference_id: clientId,
-      status: 'signed',
+      status: 'pending',
       system_size_kwp: body.system_size_kwp,
     });
 
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
         title: body.project_title,
         agent_id: agentId,
         client_reference_id: clientId,
-        status: 'signed',
+        status: 'pending',
         signed_at: body.signed_date,
         system_size_kwp: body.system_size_kwp,
         annual_energy: annualEnergyKwh,
