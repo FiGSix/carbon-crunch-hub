@@ -84,27 +84,44 @@ export function useFileUpload({
           : `${user.id}/${Date.now()}.${fileExt}`
       );
 
+      console.log('Uploading to:', bucket, 'Path:', finalFileName);
+      
       const { error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(finalFileName, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from(bucket)
         .getPublicUrl(finalFileName);
 
       const publicUrl = data.publicUrl;
+      console.log('Upload successful, URL:', publicUrl);
       onSuccess?.(publicUrl, user.id);
       
       return publicUrl;
     } catch (error: any) {
+      console.error('Upload error details:', error);
       const errorMessage = error.message || 'Upload failed';
-      const isRLSError = errorMessage.includes('row-level security') || errorMessage.includes('policy');
+      const isRLSError = errorMessage.includes('row-level security') || 
+                         errorMessage.includes('policy') ||
+                         error.code === 'PGRST116' ||
+                         error.code === '42501';
+      const isBucketError = errorMessage.includes('Bucket not found') || 
+                           errorMessage.includes('bucket');
+      
       toast({
-        title: isRLSError ? "Storage upload failed - Permission denied" : "Upload failed",
+        title: isRLSError ? "Permission Denied" : 
+               isBucketError ? "Storage Not Configured" : 
+               "Upload Failed",
         description: isRLSError 
-          ? "You don't have permission to upload to this location. Please contact support."
+          ? "Storage permissions need to be configured. The bucket exists but you don't have upload access."
+          : isBucketError 
+          ? "The storage bucket is not properly set up. Please ensure the migration has been applied."
           : errorMessage,
         variant: "destructive",
       });
