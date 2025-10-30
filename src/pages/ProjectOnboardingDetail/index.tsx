@@ -12,6 +12,7 @@ import { OnboardingTab } from "./OnboardingTab";
 import { DataAccessTab } from "./DataAccessTab";
 import { AuditReadyTab } from "./AuditReadyTab";
 import { ActivityCommentsTab } from "./ActivityCommentsTab";
+import { AgreementTab } from "./AgreementTab";
 import type { ProjectOnboarding, OnboardingFields } from "@/types/onboarding";
 
 export default function ProjectOnboardingDetail() {
@@ -129,6 +130,18 @@ export default function ProjectOnboardingDetail() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="agreement">
+                Agreement
+                {proposalData?.signed_at ? (
+                  <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                    Signed
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
+                    Not Signed
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="onboarding">
                 Onboarding
                 {!project.onboarding_complete && (
@@ -151,6 +164,13 @@ export default function ProjectOnboardingDetail() {
 
             <TabsContent value="overview" className="mt-6">
               <OverviewTab project={project} proposal={proposalData} />
+            </TabsContent>
+
+            <TabsContent value="agreement" className="mt-6">
+              <AgreementTab 
+                proposalId={proposalData?.id || ""} 
+                proposalTitle={proposalData?.title || "Proposal"}
+              />
             </TabsContent>
 
             <TabsContent value="onboarding" className="mt-6">

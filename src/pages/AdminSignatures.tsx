@@ -39,7 +39,7 @@ export default function AdminSignatures() {
           <CardHeader>
             <CardTitle>Signature Audit Log</CardTitle>
             <CardDescription>
-              Complete record of all digital signatures including IP address, timestamp, and verification details
+              Search and view all digital signatures. Click "View Project" to see full agreement details in the project context.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

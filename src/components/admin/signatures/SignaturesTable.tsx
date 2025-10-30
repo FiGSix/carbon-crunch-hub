@@ -1,10 +1,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Eye } from "lucide-react";
+import { ExternalLink, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ProposalSignature } from "@/hooks/admin/useProposalSignatures";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SignaturesTableProps {
   signatures: ProposalSignature[];
@@ -12,6 +14,29 @@ interface SignaturesTableProps {
 
 export function SignaturesTable({ signatures }: SignaturesTableProps) {
   const navigate = useNavigate();
+  const [projectIds, setProjectIds] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function fetchProjectIds() {
+      const proposalIds = signatures.map(sig => sig.proposal_id);
+      if (proposalIds.length === 0) return;
+
+      const { data } = await supabase
+        .from("project_onboarding")
+        .select("id, proposal_id")
+        .in("proposal_id", proposalIds);
+
+      if (data) {
+        const mapping: Record<string, string> = {};
+        data.forEach(item => {
+          mapping[item.proposal_id] = item.id;
+        });
+        setProjectIds(mapping);
+      }
+    }
+
+    fetchProjectIds();
+  }, [signatures]);
 
   return (
     <div className="border rounded-lg">
@@ -82,12 +107,23 @@ export function SignaturesTable({ signatures }: SignaturesTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
+                    {projectIds[signature.proposal_id] && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => navigate(`/onboarding/${projectIds[signature.proposal_id]}?tab=agreement`)}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Project
+                      </Button>
+                    )}
                     <Button
-                      size="sm"
                       variant="ghost"
+                      size="sm"
                       onClick={() => navigate(`/proposals/${signature.proposal_id}`)}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-4 w-4 mr-2" />
+                      Proposal
                     </Button>
                   </div>
                 </TableCell>
