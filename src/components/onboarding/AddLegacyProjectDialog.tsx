@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { validateStep1, validateStep2, validateStep3, Step1Data, Step2Data, Step3Data } from '@/utils/validation/legacyProjectValidation';
-import { ChevronLeft, ChevronRight, Upload, FileText, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, FileText, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface AddLegacyProjectDialogProps {
@@ -95,8 +95,18 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
   };
 
   const handlePdfUpload = async (file: File) => {
+    console.log('Starting PDF upload:', file.name, file.size);
     setPdfFile(file);
-    await uploadFile(file);
+    const result = await uploadFile(file);
+    console.log('Upload result:', result);
+    if (!result) {
+      console.error('Upload failed - no URL returned');
+      toast({
+        title: "Upload Failed",
+        description: "The PDF upload did not complete. Please check console for details.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePdfRemove = () => {
@@ -370,7 +380,12 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
                     </div>
                     {uploading ? (
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    ) : step2.signed_pdf_url ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
                     ) : (
+                      <AlertCircle className="w-5 h-5 text-destructive" />
+                    )}
+                    {!uploading && (
                       <Button
                         variant="ghost"
                         size="sm"

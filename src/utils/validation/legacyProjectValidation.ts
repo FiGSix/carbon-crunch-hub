@@ -61,7 +61,9 @@ export function validateStep2(data: Step2Data): string | null {
   }
   if (!data.commissioning_date) return "Commissioning date is required";
   if (!data.signed_date) return "Signed date is required";
-  if (!data.signed_pdf_url) return "Please upload a signed agreement PDF and wait for it to finish uploading";
+  if (!data.signed_pdf_url || data.signed_pdf_url.trim() === '') {
+    return "The PDF upload did not complete successfully. Please try uploading again or check your internet connection.";
+  }
   
   const commissioningDate = new Date(data.commissioning_date);
   const signedDate = new Date(data.signed_date);
