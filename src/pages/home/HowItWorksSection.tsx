@@ -17,7 +17,7 @@ export const HowItWorksSection = () => {
         }} transition={{
           duration: 0.5
         }}>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-crunch-black">Turn Your or your Clients Energy Into Income</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-crunch-black">Turn Your or Your Clients Energy Into Income</h2>
             <p className="text-xl text-crunch-black/70 max-w-3xl mx-auto">Our platform automates everything, so you can sit back and watch your green energy create green Rands.</p>
           </motion.div>
         </div>
