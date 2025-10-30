@@ -12,7 +12,7 @@ interface CreateLegacyProjectRequest {
   client_email: string;
   client_phone?: string;
   client_company_name?: string;
-  agent_email: string;
+  agent_email?: string;
   system_address: string;
   system_size_kwp: number;
   commissioning_date: string;
@@ -69,16 +69,22 @@ Deno.serve(async (req) => {
 
     const body: CreateLegacyProjectRequest = await req.json();
 
-    // Validate agent exists
-    const { data: agent, error: agentError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', body.agent_email)
-      .eq('role', 'agent')
-      .single();
+    // Validate agent exists (optional)
+    let agentId = null;
+    
+    if (body.agent_email) {
+      const { data: agent, error: agentError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', body.agent_email)
+        .eq('role', 'agent')
+        .single();
 
-    if (agentError || !agent) {
-      throw new Error(`Agent with email ${body.agent_email} not found`);
+      if (agentError || !agent) {
+        throw new Error(`Agent with email ${body.agent_email} not found`);
+      }
+      
+      agentId = agent.id;
     }
 
     // Find or create client
@@ -89,7 +95,7 @@ Deno.serve(async (req) => {
         p_last_name: body.client_last_name,
         p_phone: body.client_phone || null,
         p_company_name: body.client_company_name || null,
-        p_created_by: agent.id
+        p_created_by: agentId || user.id
       });
 
     if (clientError || !clientId) {
@@ -105,7 +111,7 @@ Deno.serve(async (req) => {
       .from('proposals')
       .insert({
         title: body.project_title,
-        agent_id: agent.id,
+        agent_id: agentId,
         client_reference_id: clientId,
         status: 'signed',
         signed_at: body.signed_date,

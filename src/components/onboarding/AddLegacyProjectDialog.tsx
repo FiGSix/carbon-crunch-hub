@@ -30,7 +30,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
     client_email: '',
     client_phone: '',
     client_company_name: '',
-    agent_email: '',
+    agent_email: undefined,
   });
 
   // Step 2 data
@@ -184,7 +184,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
       client_email: '',
       client_phone: '',
       client_company_name: '',
-      agent_email: '',
+      agent_email: undefined,
     });
     setStep2({
       system_address: '',
@@ -272,7 +272,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
               </div>
 
               <div>
-                <Label htmlFor="agent_email">Agent Email *</Label>
+                <Label htmlFor="agent_email">Agent Email (Optional)</Label>
                 <select
                   id="agent_email"
                   value={step1.agent_email}

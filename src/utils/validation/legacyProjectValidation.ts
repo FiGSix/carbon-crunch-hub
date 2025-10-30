@@ -9,7 +9,7 @@ export interface Step1Data {
   client_email: string;
   client_phone?: string;
   client_company_name?: string;
-  agent_email: string;
+  agent_email?: string;
 }
 
 export interface Step2Data {
@@ -42,13 +42,12 @@ export function validateStep1(data: Step1Data): string | null {
   if (!data.client_first_name?.trim()) return "Client first name is required";
   if (!data.client_last_name?.trim()) return "Client last name is required";
   if (!data.client_email?.trim()) return "Client email is required";
-  if (!data.agent_email?.trim()) return "Agent email is required";
   
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(data.client_email)) {
     return "Invalid client email format";
   }
-  if (!emailRegex.test(data.agent_email)) {
+  if (data.agent_email && !emailRegex.test(data.agent_email)) {
     return "Invalid agent email format";
   }
   
