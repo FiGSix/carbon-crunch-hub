@@ -163,7 +163,7 @@ export default function ProjectOnboardingDetail() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">
-              <OverviewTab project={project} proposal={proposalData} />
+              <OverviewTab project={project} proposal={proposalData} onRefresh={fetchProjectData} />
             </TabsContent>
 
             <TabsContent value="agreement" className="mt-6">

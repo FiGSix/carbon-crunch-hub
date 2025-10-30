@@ -1,10 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, XCircle, Loader2, FileDown } from "lucide-react";
 import type { ProjectOnboarding } from "@/types/onboarding";
 import { useState } from "react";
 
@@ -87,40 +85,8 @@ export function AuditReadyTab({ project, onRefresh }: AuditReadyTabProps) {
     }
   };
 
-  const handleGenerateAuditPack = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Audit pack generation will be available soon",
-    });
-  };
-
   return (
     <div className="space-y-6">
-      {/* Checklist */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Audit Readiness Checklist</CardTitle>
-          <CardDescription>
-            All items must be complete before marking as audit ready
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {checklist.map((item, index) => (
-            <div key={index} className="flex items-start gap-3 p-3 rounded-lg border">
-              {item.status ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-              ) : (
-                <XCircle className="h-5 w-5 text-orange-600 mt-0.5" />
-              )}
-              <div className="flex-1">
-                <p className="font-medium">{item.label}</p>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
       {/* Admin Controls */}
       {isAdmin && (
         <Card>
@@ -164,22 +130,6 @@ export function AuditReadyTab({ project, onRefresh }: AuditReadyTabProps) {
           </CardContent>
         </Card>
       )}
-
-      {/* Audit Pack Generation */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Audit Pack</CardTitle>
-          <CardDescription>
-            Generate a comprehensive PDF report for auditing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={handleGenerateAuditPack} disabled={!project.audit_ready}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Generate Audit Pack PDF
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

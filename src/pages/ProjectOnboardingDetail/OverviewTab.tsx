@@ -1,17 +1,50 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, User, FileText, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, User, FileText, CheckCircle2, XCircle, FileDown } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { ProjectOnboarding } from "@/types/onboarding";
+import { useToast } from "@/hooks/use-toast";
 
 interface OverviewTabProps {
   project: ProjectOnboarding;
   proposal: any;
+  onRefresh: () => void;
 }
 
-export function OverviewTab({ project, proposal }: OverviewTabProps) {
+export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) {
+  const { toast } = useToast();
   const clientInfo = proposal.content?.clientInfo || {};
   const projectInfo = proposal.content?.projectInfo || {};
+
+  const checklist = [
+    {
+      label: 'Cession Agreement Signed',
+      status: true,
+      description: 'Agreement has been signed by the client'
+    },
+    {
+      label: 'Onboarding Fields Validated',
+      status: project.onboarding_complete,
+      description: 'All required fields have been filled and validated'
+    },
+    {
+      label: 'Required Documents Present',
+      status: project.onboarding_complete,
+      description: 'CoC and invoices have been uploaded'
+    },
+    {
+      label: 'Data Access Verified',
+      status: project.data_access_verified,
+      description: 'Connection to data source established'
+    },
+  ];
+
+  const handleGenerateAuditPack = () => {
+    toast({
+      title: "Coming Soon",
+      description: "Audit pack generation will be available soon",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -140,6 +173,47 @@ export function OverviewTab({ project, proposal }: OverviewTabProps) {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Audit Readiness Checklist */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Audit Readiness Checklist</CardTitle>
+          <CardDescription>
+            All items must be complete before marking as audit ready
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {checklist.map((item, index) => (
+            <div key={index} className="flex items-start gap-3 p-3 rounded-lg border">
+              {item.status ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+              ) : (
+                <XCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <p className="font-medium">{item.label}</p>
+                <p className="text-sm text-muted-foreground">{item.description}</p>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Audit Pack Generation */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Audit Pack</CardTitle>
+          <CardDescription>
+            Generate a comprehensive PDF report for auditing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleGenerateAuditPack} disabled={!project.audit_ready}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Generate Audit Pack PDF
+          </Button>
         </CardContent>
       </Card>
 
