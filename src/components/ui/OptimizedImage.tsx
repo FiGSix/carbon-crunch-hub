@@ -12,6 +12,7 @@ interface OptimizedImageProps {
   sizes?: string; // Responsive sizes attribute
   onLoad?: () => void;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  enableModernFormats?: boolean; // Opt-in AVIF/WebP sources
 }
 
 /**
@@ -27,7 +28,8 @@ export function OptimizedImage({
   fetchPriority = 'auto',
   sizes,
   onLoad,
-  onError
+  onError,
+  enableModernFormats = false
 }: OptimizedImageProps) {
   // Generate modern image format URLs by replacing the extension
   const getModernFormatSrc = (originalSrc: string, format: 'webp' | 'avif') => {
@@ -68,22 +70,22 @@ export function OptimizedImage({
   return (
     <picture>
       {/* AVIF format - most efficient, with responsive srcset */}
-      {avifSrc && (
-        <source 
-          srcSet={avifSrcSet || avifSrc}
-          sizes={sizes}
-          type="image/avif"
-        />
-      )}
-      
-      {/* WebP format - widely supported, with responsive srcset */}
-      {webpSrc && (
-        <source 
-          srcSet={webpSrcSet || webpSrc}
-          sizes={sizes}
-          type="image/webp"
-        />
-      )}
+        {enableModernFormats && avifSrc && (
+          <source 
+            srcSet={avifSrcSet || avifSrc}
+            sizes={sizes}
+            type="image/avif"
+          />
+        )}
+        
+        {/* WebP format - widely supported, with responsive srcset */}
+        {enableModernFormats && webpSrc && (
+          <source 
+            srcSet={webpSrcSet || webpSrc}
+            sizes={sizes}
+            type="image/webp"
+          />
+        )}
       
       {/* Fallback to original format with responsive srcset */}
       <img
@@ -104,9 +106,27 @@ export function OptimizedImage({
         onError={(e) => {
           // Log only the src to avoid stringifying circular DOM references
           devLogger.components.error(`Failed to load image: ${src}`);
-          // Set fallback without accessing e.currentTarget properties
           if (e?.currentTarget) {
-            e.currentTarget.src = "/placeholder.svg";
+            const img = e.currentTarget as HTMLImageElement;
+            const hasTriedPng = img.dataset.fallbackTried === 'png';
+
+            if (!hasTriedPng) {
+              // First, force original source and clear responsive candidates
+              img.dataset.fallbackTried = 'png';
+              try {
+                img.srcset = '';
+                img.sizes = '';
+              } catch {}
+              img.src = src;
+              return;
+            }
+
+            // Final fallback
+            try {
+              img.srcset = '';
+              img.sizes = '';
+            } catch {}
+            img.src = "/placeholder.svg";
           }
           onError?.(e);
         }}
