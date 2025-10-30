@@ -1976,7 +1976,11 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "agent" | "client"
-      signature_type: "typed_name" | "electronic_signature" | "manual"
+      signature_type:
+        | "typed_name"
+        | "electronic_signature"
+        | "manual"
+        | "legacy_import"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2105,7 +2109,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "agent", "client"],
-      signature_type: ["typed_name", "electronic_signature", "manual"],
+      signature_type: [
+        "typed_name",
+        "electronic_signature",
+        "manual",
+        "legacy_import",
+      ],
     },
   },
 } as const

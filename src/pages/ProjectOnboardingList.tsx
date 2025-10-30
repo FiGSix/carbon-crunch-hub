@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Upload } from "lucide-react";
 import type { ProjectOnboardingListItem, ProjectStepStatus } from "@/types/onboarding";
+import { BulkLegacyProjectUpload } from "@/components/onboarding/BulkLegacyProjectUpload";
 
 export default function ProjectOnboardingList() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function ProjectOnboardingList() {
   const [projects, setProjects] = useState<ProjectOnboardingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -138,6 +140,13 @@ export default function ProjectOnboardingList() {
                   : 'Complete onboarding for signed proposals'}
               </p>
             </div>
+            
+            {userRole === 'admin' && (
+              <Button onClick={() => setShowBulkUpload(true)} variant="outline">
+                <Upload className="h-5 w-5 mr-2" />
+                Import Legacy Projects
+              </Button>
+            )}
           </div>
 
           {/* Search */}
@@ -241,6 +250,12 @@ export default function ProjectOnboardingList() {
           </div>
         </div>
       </div>
+      
+      <BulkLegacyProjectUpload
+        open={showBulkUpload}
+        onOpenChange={setShowBulkUpload}
+        onSuccess={fetchProjects}
+      />
     </DashboardLayout>
   );
 }
