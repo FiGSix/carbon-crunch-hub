@@ -11,6 +11,22 @@ import { validateSecurityConfig } from './lib/security/headers'
 import { consoleOptimizer } from './lib/performance/ConsoleOptimizer'
 import { dynamicCarbonPricingService } from './lib/calculations/carbon/dynamicPricing'
 
+// Global startup error handlers - catch issues before React mounts
+window.onerror = (message, source, lineno, colno, error) => {
+  console.error('[Startup Error]', { message, source, lineno, colno, error });
+  if (import.meta.env.PROD) {
+    Sentry.captureException(error || new Error(String(message)));
+  }
+  return false;
+};
+
+window.onunhandledrejection = (event) => {
+  console.error('[Unhandled Promise]', event.reason);
+  if (import.meta.env.PROD) {
+    Sentry.captureException(event.reason);
+  }
+};
+
 // Console Logging Cleanup: Immediate performance optimization
 // Eliminates 445+ console statements for 15-25% performance gain
 consoleOptimizer.optimizeForProduction();
