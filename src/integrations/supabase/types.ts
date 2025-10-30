@@ -1666,6 +1666,26 @@ export type Database = {
           total_mwp: number
         }[]
       }
+      get_agent_clients_paginated_admin: {
+        Args: {
+          agent_id_param?: string
+          limit_param?: number
+          offset_param?: number
+        }
+        Returns: {
+          agent_company_name: string
+          agent_id: string
+          client_email: string
+          client_id: string
+          client_name: string
+          company_name: string
+          created_at: string
+          is_active: boolean
+          is_registered: boolean
+          project_count: number
+          total_mwp: number
+        }[]
+      }
       get_agent_dashboard_stats: {
         Args: { agent_id_param: string }
         Returns: {

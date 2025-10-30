@@ -11,6 +11,9 @@ export interface UnifiedClient {
   totalKwp: number;
   createdAt: string;
   createdBy?: string;
+  agentCompanyName?: string;
+  agentId?: string;
+  isActive: boolean;
 }
 
 export interface ClientSearchResult {

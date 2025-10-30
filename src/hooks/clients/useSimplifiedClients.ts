@@ -68,10 +68,13 @@ export function useSimplifiedClients(): UseSimplifiedClientsResult {
         client_id: client.id,
         client_name: client.name,
         client_email: client.email,
-        company_name: client.company,
+        company_name: client.company || '',
         project_count: client.projectCount,
         total_mwp: client.totalKwp / 1000, // Convert kWp to MWp
-        created_at: client.createdAt
+        created_at: client.createdAt,
+        agent_company_name: client.agentCompanyName,
+        agent_id: client.agentId,
+        is_active: client.isActive
       }));
       
       devLogger.clients.log('UnifiedDataService.getClients completed', { clientCount: transformedClients.length });

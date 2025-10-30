@@ -6,6 +6,9 @@ export interface ClientData {
   company_name: string;
   total_mwp: number;
   project_count: number;
+  agent_company_name?: string;
+  agent_id?: string;
+  is_active: boolean;
 }
 
 export interface UseMyClientsResult {

@@ -100,7 +100,8 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
         client_email: clientEmail,
         company_name: companyName,
         total_mwp: annualEnergy / 1000, // Convert kW to MW
-        project_count: 1
+        project_count: 1,
+        is_active: false // Default for legacy processor
       });
     }
   });

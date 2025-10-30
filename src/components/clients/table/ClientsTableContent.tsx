@@ -1,5 +1,3 @@
-
-
 import {
   Table,
   TableBody,
@@ -10,8 +8,28 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, RefreshCw, Zap, AlertTriangle } from 'lucide-react';
-import { ClientData } from '@/hooks/useMyClients';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2 } from 'lucide-react';
+import { ClientData } from '@/hooks/clients/types';
+import { useState } from 'react';
+import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientsTableContentProps {
   clients: ClientData[];
@@ -30,6 +48,40 @@ export function ClientsTableContent({
   onRefresh,
   error = null
 }: ClientsTableContentProps) {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<ClientData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleDeleteClick = (client: ClientData) => {
+    setClientToDelete(client);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
+    
+    setIsDeleting(true);
+    const result = await UnifiedClientService.deleteClient(clientToDelete.client_id);
+    
+    if (result.success) {
+      toast({
+        title: 'Client Deleted',
+        description: `${clientToDelete.client_name} and all associated projects have been permanently deleted.`,
+      });
+      setDeleteConfirmOpen(false);
+      setClientToDelete(null);
+      if (onRefresh) onRefresh();
+    } else {
+      toast({
+        title: 'Delete Failed',
+        description: result.error || 'Failed to delete client',
+        variant: 'destructive',
+      });
+    }
+    
+    setIsDeleting(false);
+  };
   
   return (
     <Card>
@@ -104,8 +156,11 @@ export function ClientsTableContent({
             <TableRow>
               <TableHead>Client Name</TableHead>
               <TableHead>Company</TableHead>
+              {isAdmin && <TableHead>Agent</TableHead>}
               <TableHead className="text-center">Projects</TableHead>
               <TableHead className="text-center">Total MWp</TableHead>
+              {isAdmin && <TableHead className="text-center">Status</TableHead>}
+              {isAdmin && <TableHead className="text-center">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -122,17 +177,72 @@ export function ClientsTableContent({
                 <TableCell>
                   {client.company_name || 'No Company'}
                 </TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    {client.agent_company_name || 'N/A'}
+                  </TableCell>
+                )}
                 <TableCell className="text-center">
                   {client.project_count}
                 </TableCell>
                 <TableCell className="text-center font-mono">
                   {client.total_mwp.toFixed(3)} MWp
                 </TableCell>
+                {isAdmin && (
+                  <TableCell className="text-center">
+                    <Badge variant={client.is_active ? 'default' : 'secondary'}>
+                      {client.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                )}
+                {isAdmin && (
+                  <TableCell className="text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleDeleteClick(client)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Client
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </CardContent>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{clientToDelete?.client_name}</strong> and 
+              all <strong>{clientToDelete?.project_count || 0} associated project(s)</strong>. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

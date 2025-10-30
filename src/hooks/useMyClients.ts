@@ -4,16 +4,10 @@ import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { logger } from '@/lib/logger';
 import { useToast } from '@/hooks/use-toast';
 import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
+import { ClientData } from '@/hooks/clients/types';
 
-export interface ClientData {
-  client_id: string;
-  client_name: string;
-  client_email: string;
-  company_name?: string;
-  project_count: number;
-  total_mwp: number;
-  created_at?: string;
-}
+// Re-export for backward compatibility
+export type { ClientData };
 
 export function useMyClients() {
   const { user, userRole } = useAuth();
@@ -57,10 +51,13 @@ export function useMyClients() {
         client_id: client.id,
         client_name: client.name,
         client_email: client.email,
-        company_name: client.company,
+        company_name: client.company || '',
         project_count: client.projectCount,
         total_mwp: client.totalKwp / 1000, // Convert kWp to MWp
-        created_at: client.createdAt
+        created_at: client.createdAt,
+        agent_company_name: client.agentCompanyName,
+        agent_id: client.agentId,
+        is_active: client.isActive
       }));
 
       setClients(transformedClients);

@@ -110,7 +110,11 @@ export class ClientFetcher {
       }
 
       // Get paginated data using the new optimized function
-      const { data, error } = await supabase.rpc('get_agent_clients_paginated', {
+      const rpcFunction = userRole === 'admin' 
+        ? 'get_agent_clients_paginated_admin' 
+        : 'get_agent_clients_paginated';
+
+      const { data, error } = await supabase.rpc(rpcFunction, {
         agent_id_param: userRole === 'admin' ? null : userId,
         limit_param: limit,
         offset_param: offset
@@ -150,7 +154,10 @@ export class ClientFetcher {
           isRegistered: client.is_registered || false,
           projectCount: client.project_count || 0,
           totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
-          createdAt: client.created_at || new Date().toISOString()
+          createdAt: client.created_at || new Date().toISOString(),
+          agentCompanyName: (client as any).agent_company_name,
+          agentId: (client as any).agent_id,
+          isActive: (client as any).is_active || false
         };
       });
 
