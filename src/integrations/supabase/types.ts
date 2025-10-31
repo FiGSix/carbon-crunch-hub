@@ -1729,6 +1729,7 @@ export type Database = {
         Returns: {
           audit_ready_mwp: number
           audit_ready_revenue: number
+          audit_review_requests: number
           onboarding_mwp: number
           pending_approval_mwp: number
         }[]

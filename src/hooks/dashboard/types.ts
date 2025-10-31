@@ -60,10 +60,13 @@ export interface DashboardMetricsByStage {
   /** Card 2: Total Revenue (Audit Ready, 2025-2030) in Rands */
   auditReadyRevenue: number;
   
-  /** Card 3: Onboarding Projects - Total MWp (3 decimals) */
+  /** Card 3: Audit Review Requests - Number of projects awaiting admin review */
+  auditReviewRequests: number;
+  
+  /** Card 4: Onboarding Projects - Total MWp (3 decimals) */
   onboardingMwp: number;
   
-  /** Card 4: Pending Approval - Total MWp (3 decimals) */
+  /** Card 5: Pending Approval - Total MWp (3 decimals) */
   pendingApprovalMwp: number;
 }
 
