@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -76,26 +76,6 @@ export default function ProjectOnboardingDetail() {
     }
   };
 
-  // Utility function to get tab status colors
-  const getTabStatusColor = (status: 'complete' | 'pending' | 'incomplete' | 'neutral') => {
-    switch (status) {
-      case 'complete':
-        return 'data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=inactive]:bg-green-100 data-[state=inactive]:text-green-800';
-      case 'pending':
-        return 'data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=inactive]:bg-orange-100 data-[state=inactive]:text-orange-800';
-      case 'incomplete':
-        return 'data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=inactive]:bg-red-100 data-[state=inactive]:text-red-800';
-      case 'neutral':
-      default:
-        return '';
-    }
-  };
-
-  // Determine status for each tab
-  const agreementStatus = proposalData?.signed_at ? 'complete' : 'incomplete';
-  const onboardingStatus = project.onboarding_complete ? 'complete' : 'incomplete';
-  const dataAccessStatus = project.data_access_verified ? 'complete' : 'pending';
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -150,23 +130,33 @@ export default function ProjectOnboardingDetail() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger 
-                value="agreement"
-                className={getTabStatusColor(agreementStatus)}
-              >
+              <TabsTrigger value="agreement">
                 Agreement
+                {proposalData?.signed_at ? (
+                  <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                    Signed
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
+                    Not Signed
+                  </Badge>
+                )}
               </TabsTrigger>
-              <TabsTrigger 
-                value="onboarding"
-                className={getTabStatusColor(onboardingStatus)}
-              >
+              <TabsTrigger value="onboarding">
                 Onboarding
+                {!project.onboarding_complete && (
+                  <Badge variant="secondary" className="ml-2">
+                    Incomplete
+                  </Badge>
+                )}
               </TabsTrigger>
-              <TabsTrigger 
-                value="data-access"
-                className={getTabStatusColor(dataAccessStatus)}
-              >
+              <TabsTrigger value="data-access">
                 Data Access
+                {!project.data_access_verified && (
+                  <Badge variant="secondary" className="ml-2">
+                    Pending
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="revenue">Revenue</TabsTrigger>
               <TabsTrigger value="activity">Activity & Comments</TabsTrigger>
