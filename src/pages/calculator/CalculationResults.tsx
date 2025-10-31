@@ -23,13 +23,15 @@ interface CalculationResultsProps {
   systemSize: number;
   commissioningDate: Date;
   onReset: () => void;
+  hideActions?: boolean;
 }
 
 export const CalculationResults = ({ 
   results, 
   systemSize,
   commissioningDate,
-  onReset
+  onReset,
+  hideActions = false
 }: CalculationResultsProps) => {
   const [revenueData, setRevenueData] = useState<Record<string, number>>({});
   const [isLoadingRevenue, setIsLoadingRevenue] = useState(true);
@@ -141,57 +143,59 @@ export const CalculationResults = ({
         </div>
       </div>
       
-      <div className="flex justify-center">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="text-crunch-black/70">
-              See Full Forecast (2025-2030)
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[800px]">
-            <DialogHeader>
-              <DialogTitle>Your Full Carbon Credit Revenue Forecast</DialogTitle>
-              <DialogDescription>
-                Complete revenue projection from {format(commissioningDate, "dd MMM yyyy")} to 2030
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="max-h-[500px] overflow-auto">
-              {isLoadingRevenue ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
-                </div>
-              ) : (
-                <CarbonCreditTable
-                  revenue={revenueData}
-                  systemSizeKWp={systemSize}
-                  commissionDate={format(commissioningDate, "yyyy-MM-dd")}
-                  portfolioSize={portfolioSize}
-                  totalMWhGenerated={totalMWhGenerated}
-                  totalCarbonCredits={totalCarbonCredits}
-                  totalClientSpecificRevenue={totalClientSpecificRevenue}
-                  preCalculatedYearlyMWh={preCalculatedYearlyMWh}
-                  preCalculatedYearlyCredits={preCalculatedYearlyCredits}
-                />
-              )}
-            </div>
-            
-            <DialogFooter className="pt-4 border-t border-crunch-black/10">
-              <p className="text-xs text-crunch-black/60 italic">
-                * Revenue projections based on first-time client pricing ({clientSharePercentage}% share). Carbon prices are dynamic and may vary.
-              </p>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        <Button 
-          variant="ghost" 
-          onClick={onReset}
-          className="ml-2 text-crunch-black/70"
-        >
-          Reset Calculator
-        </Button>
-      </div>
+      {!hideActions && (
+        <div className="flex justify-center">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="text-crunch-black/70">
+                See Full Forecast (2025-2030)
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[800px]">
+              <DialogHeader>
+                <DialogTitle>Your Full Carbon Credit Revenue Forecast</DialogTitle>
+                <DialogDescription>
+                  Complete revenue projection from {format(commissioningDate, "dd MMM yyyy")} to 2030
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="max-h-[500px] overflow-auto">
+                {isLoadingRevenue ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
+                  </div>
+                ) : (
+                  <CarbonCreditTable
+                    revenue={revenueData}
+                    systemSizeKWp={systemSize}
+                    commissionDate={format(commissioningDate, "yyyy-MM-dd")}
+                    portfolioSize={portfolioSize}
+                    totalMWhGenerated={totalMWhGenerated}
+                    totalCarbonCredits={totalCarbonCredits}
+                    totalClientSpecificRevenue={totalClientSpecificRevenue}
+                    preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+                    preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+                  />
+                )}
+              </div>
+              
+              <DialogFooter className="pt-4 border-t border-crunch-black/10">
+                <p className="text-xs text-crunch-black/60 italic">
+                  * Revenue projections based on first-time client pricing ({clientSharePercentage}% share). Carbon prices are dynamic and may vary.
+                </p>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Button 
+            variant="ghost" 
+            onClick={onReset}
+            className="ml-2 text-crunch-black/70"
+          >
+            Reset Calculator
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

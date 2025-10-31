@@ -147,6 +147,7 @@ export function CalculatorResultsContent({
             systemSize={result.system_size_kwp}
             commissioningDate={commDate}
             onReset={() => navigate("/calculator")}
+            hideActions={true}
           />
 
           {/* Sign In Prompt - Show when not logged in */}
