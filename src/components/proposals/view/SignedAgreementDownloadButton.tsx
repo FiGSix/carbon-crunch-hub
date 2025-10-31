@@ -23,6 +23,13 @@ export function SignedAgreementDownloadButton({
     feature: 'pdf-download'
   });
 
+  // Helper function to extract storage path from URL
+  const extractStoragePathFromUrl = (url: string): string | null => {
+    // Match pattern: .../storage/v1/object/[public|sign|authenticated]/bucket-name/path
+    const match = url.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/[^/]+\/(.+)$/);
+    return match ? match[1] : null;
+  };
+
   useEffect(() => {
     fetchSignedPdfUrl();
   }, [proposalId]);
@@ -69,16 +76,32 @@ export function SignedAgreementDownloadButton({
     try {
       const filename = `Signed_Agreement_${proposalTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       
-      // Fetch the PDF as a blob
-      const response = await fetch(signedPdfUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+      // Extract file path from the storage URL
+      const filePath = extractStoragePathFromUrl(signedPdfUrl);
+      
+      if (!filePath) {
+        throw new Error('Invalid storage URL format');
       }
       
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      downloadLogger.info('Downloading from storage', { filePath });
       
-      // Create a temporary anchor element to trigger download
+      // Use Supabase storage API (automatically includes auth token)
+      const { data, error } = await supabase.storage
+        .from('onboarding-documents')
+        .download(filePath);
+      
+      if (error) {
+        downloadLogger.error('Storage download error', { error });
+        throw new Error(`Failed to download: ${error.message}`);
+      }
+      
+      if (!data) {
+        throw new Error('No data received from storage');
+      }
+      
+      // Create blob URL and trigger download
+      const blobUrl = URL.createObjectURL(data);
+      
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
@@ -97,9 +120,16 @@ export function SignedAgreementDownloadButton({
       });
     } catch (error) {
       downloadLogger.error('Signed PDF download failed', { error, signedPdfUrl });
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       toast({
         title: "Download Failed",
-        description: "Could not download the signed agreement. Please try again.",
+        description: errorMessage.includes('not found') 
+          ? "The file could not be found. It may have been moved or deleted."
+          : errorMessage.includes('access denied') || errorMessage.includes('unauthorized')
+          ? "You don't have permission to download this file."
+          : "Could not download the signed agreement. Please try again.",
         variant: "destructive",
       });
     } finally {
