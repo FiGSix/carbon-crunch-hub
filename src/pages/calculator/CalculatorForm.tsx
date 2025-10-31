@@ -3,13 +3,15 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calculator as CalculatorIcon, ArrowRight, Loader2, Mail, CheckCircle2 } from "lucide-react";
+import { Calculator as CalculatorIcon, ArrowRight, Loader2, Mail, CheckCircle2, Info, Zap } from "lucide-react";
 import { IconCard } from "./IconCard";
 import { BarChart3, TreePine, CircleDollarSign } from "lucide-react";
 import { CalculationResults, calculateResults } from "@/lib/calculations/carbon";
 import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 import { useSendCalculatorResults } from "@/hooks/calculator/useCalculatorResults";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CalculatorFormProps {
   onResultsCalculated: (results: CalculationResults, systemSize: number, commissioningDate: Date) => void;
@@ -17,7 +19,11 @@ interface CalculatorFormProps {
 
 export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => {
   const today = new Date();
+  const [inputMode, setInputMode] = useState<'simple' | 'advanced'>('simple');
   const [systemSize, setSystemSize] = useState<string>("");
+  const [numberOfPanels, setNumberOfPanels] = useState<string>("");
+  const [panelWattage, setPanelWattage] = useState<string>("450");
+  const [customWattage, setCustomWattage] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [commissioningDate, setCommissioningDate] = useState<string>(
@@ -28,10 +34,28 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
   
   const sendResultsMutation = useSendCalculatorResults();
   
+  // Calculate system size from panels and wattage
+  const calculateSystemSize = (panels: string, wattage: string): number => {
+    const numPanels = parseFloat(panels);
+    const watts = parseFloat(wattage);
+    
+    if (isNaN(numPanels) || isNaN(watts) || numPanels <= 0 || watts <= 0) {
+      return 0;
+    }
+    
+    // panels × wattage ÷ 1000 = kWp
+    return (numPanels * watts) / 1000;
+  };
+  
+  // Get calculated system size for simple mode
+  const calculatedSystemSize = inputMode === 'simple' 
+    ? calculateSystemSize(numberOfPanels, panelWattage === 'custom' ? customWattage : panelWattage)
+    : 0;
+  
   const handleCalculate = async () => {
-    // Validate inputs
-    if (!systemSize || !commissioningDate || !email) {
-      toast.error("Please fill in all required fields");
+    // Validate email
+    if (!email) {
+      toast.error("Please enter your email address");
       return;
     }
     
@@ -42,10 +66,48 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
       return;
     }
     
-    // Normalize the system size to kWp
-    const sizeInKWp = normalizeToKWp(systemSize);
-    if (isNaN(sizeInKWp) || sizeInKWp <= 0) {
-      toast.error("Please enter a valid system size");
+    // Validate and calculate system size based on mode
+    let sizeInKWp = 0;
+    
+    if (inputMode === 'simple') {
+      if (!numberOfPanels) {
+        toast.error("Please enter the number of solar panels");
+        return;
+      }
+      
+      const wattageToUse = panelWattage === 'custom' ? customWattage : panelWattage;
+      if (!wattageToUse) {
+        toast.error("Please select or enter panel wattage");
+        return;
+      }
+      
+      sizeInKWp = calculateSystemSize(numberOfPanels, wattageToUse);
+      
+      if (sizeInKWp <= 0) {
+        toast.error("Please enter valid panel count and wattage");
+        return;
+      }
+      
+      if (sizeInKWp > 15000) {
+        toast.error("Calculated system size cannot exceed 15,000 kWp (15 MWp)");
+        return;
+      }
+    } else {
+      // Advanced mode
+      if (!systemSize) {
+        toast.error("Please enter system size");
+        return;
+      }
+      
+      sizeInKWp = normalizeToKWp(systemSize);
+      if (isNaN(sizeInKWp) || sizeInKWp <= 0) {
+        toast.error("Please enter a valid system size");
+        return;
+      }
+    }
+    
+    if (!commissioningDate) {
+      toast.error("Please select a commissioning date");
       return;
     }
     
@@ -82,8 +144,22 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
   const handleReset = () => {
     setEmailSent(false);
     setSystemSize("");
+    setNumberOfPanels("");
+    setPanelWattage("450");
+    setCustomWattage("");
     setEmail("");
     setName("");
+  };
+  
+  const handleModeToggle = () => {
+    setInputMode(inputMode === 'simple' ? 'advanced' : 'simple');
+    // Clear inputs when switching modes
+    if (inputMode === 'simple') {
+      setNumberOfPanels("");
+      setCustomWattage("");
+    } else {
+      setSystemSize("");
+    }
   };
   
   if (emailSent) {
@@ -144,23 +220,125 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
             Tell Us About Your Solar System
           </h2>
           
+          {/* Mode Toggle */}
+          <div className="flex justify-center mb-6">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleModeToggle}
+              className="text-xs border-crunch-black/20 text-crunch-black/70 hover:bg-crunch-black/5"
+            >
+              {inputMode === 'simple' ? "I know my system size in kWp" : "Calculate from panel count"}
+            </Button>
+          </div>
+          
           <div className="space-y-6">
-            <div>
-              <label htmlFor="systemSize" className="block text-sm font-medium text-crunch-black/70 mb-1">
-                System Size (kWp or MWp) <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="systemSize"
-                type="text"
-                placeholder="e.g. 100 kWp or 1.5 MWp"
-                value={systemSize}
-                onChange={(e) => setSystemSize(e.target.value)}
-                className="retro-input text-lg"
-              />
-              <p className="text-xs text-crunch-black/60 mt-1">
-                Enter with unit (kWp/MWp) or value will default to kWp
-              </p>
-            </div>
+            {inputMode === 'simple' ? (
+              /* Simple Mode - Panel Count & Wattage */
+              <>
+                <div>
+                  <label htmlFor="numberOfPanels" className="block text-sm font-medium text-crunch-black/70 mb-1">
+                    How many solar panels do you have? <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="numberOfPanels"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 250"
+                    value={numberOfPanels}
+                    onChange={(e) => setNumberOfPanels(e.target.value)}
+                    className="retro-input text-lg"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="panelWattage" className="block text-sm font-medium text-crunch-black/70 mb-1">
+                    What's the wattage of each panel? <span className="text-red-500">*</span>
+                  </label>
+                  <Select value={panelWattage} onValueChange={setPanelWattage}>
+                    <SelectTrigger className="retro-input text-lg">
+                      <SelectValue placeholder="Select panel wattage" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-2 border-crunch-black z-50">
+                      <SelectItem value="350">350W</SelectItem>
+                      <SelectItem value="400">400W</SelectItem>
+                      <SelectItem value="450">450W (Most Common)</SelectItem>
+                      <SelectItem value="500">500W</SelectItem>
+                      <SelectItem value="550">550W</SelectItem>
+                      <SelectItem value="600">600W</SelectItem>
+                      <SelectItem value="custom">Custom Wattage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {panelWattage === 'custom' && (
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Enter custom wattage (W)"
+                      value={customWattage}
+                      onChange={(e) => setCustomWattage(e.target.value)}
+                      className="retro-input text-lg mt-2"
+                    />
+                  )}
+                  
+                  <p className="text-xs text-crunch-black/60 mt-1 flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    Most panel wattages are printed on the back of the panel or in installation docs
+                  </p>
+                </div>
+                
+                {/* Live Calculation Preview */}
+                {calculatedSystemSize > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-crunch-yellow/20 border-2 border-crunch-yellow rounded-lg p-4"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="h-5 w-5 text-crunch-black" />
+                      <span className="text-sm font-medium text-crunch-black">Your System Size:</span>
+                    </div>
+                    <p className="text-2xl font-bold text-crunch-black">
+                      {calculatedSystemSize.toFixed(2)} kWp
+                    </p>
+                    <p className="text-xs text-crunch-black/60 mt-1">
+                      {numberOfPanels} panels × {panelWattage === 'custom' ? customWattage : panelWattage}W each
+                    </p>
+                  </motion.div>
+                )}
+              </>
+            ) : (
+              /* Advanced Mode - Direct System Size Input */
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <label htmlFor="systemSize" className="block text-sm font-medium text-crunch-black/70">
+                    System Size (kWp or MWp) <span className="text-red-500">*</span>
+                  </label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-crunch-black/40 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-white border-2 border-crunch-black">
+                        <p className="text-sm">kWp = kilowatt-peak (your system's rated capacity)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Input
+                  id="systemSize"
+                  type="text"
+                  placeholder="e.g. 100 kWp or 1.5 MWp"
+                  value={systemSize}
+                  onChange={(e) => setSystemSize(e.target.value)}
+                  className="retro-input text-lg"
+                />
+                <p className="text-xs text-crunch-black/60 mt-1">
+                  Enter with unit (kWp/MWp) or value will default to kWp
+                </p>
+              </div>
+            )}
             
             <div>
               <label htmlFor="commissioningDate" className="block text-sm font-medium text-crunch-black/70 mb-1">
@@ -212,7 +390,12 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
             
             <Button 
               onClick={handleCalculate}
-              disabled={isCalculating || !systemSize || !email || normalizeToKWp(systemSize) <= 0}
+              disabled={
+                isCalculating || 
+                !email || 
+                (inputMode === 'simple' && (!numberOfPanels || calculatedSystemSize <= 0)) ||
+                (inputMode === 'advanced' && (!systemSize || normalizeToKWp(systemSize) <= 0))
+              }
               className="w-full bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium text-lg py-6 rounded-xl group transition-all hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               {isCalculating ? (
