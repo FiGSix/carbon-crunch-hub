@@ -27,6 +27,7 @@ export interface AgentData {
   total_commission: number;
   join_date: string | null;
   onboarding_completed: boolean;
+  portfolio_size_kwp: number;
 }
 
 export function AgentsManagementTable() {

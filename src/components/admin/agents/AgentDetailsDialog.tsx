@@ -8,7 +8,14 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AgentData } from './AgentsManagementTable';
+import { getAgentDisplayCommission, getDefaultCommissionDescription } from '@/utils/admin/commissionHelpers';
 import { 
   User, 
   Mail, 
@@ -17,7 +24,8 @@ import {
   TrendingUp, 
   DollarSign,
   CheckCircle,
-  Clock 
+  Clock,
+  Info
 } from 'lucide-react';
 
 interface AgentDetailsDialogProps {
@@ -194,7 +202,25 @@ export function AgentDetailsDialog({
                       {agent.commission_override}% (Override)
                     </Badge>
                   ) : (
-                    <Badge variant="secondary">5.0% (Default)</Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            <Badge variant="secondary">
+                              {getAgentDisplayCommission(agent.portfolio_size_kwp, agent.commission_override)}
+                            </Badge>
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-xs font-medium mb-1">Tier-based Commission:</p>
+                          <p className="text-xs">{getDefaultCommissionDescription()}</p>
+                          <p className="text-xs mt-1 text-muted-foreground">
+                            Current portfolio: {(agent.portfolio_size_kwp / 1000).toFixed(2)} MWp
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
               </div>

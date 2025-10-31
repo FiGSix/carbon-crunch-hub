@@ -1716,6 +1716,7 @@ export type Database = {
           join_date: string
           last_active_at: string
           onboarding_completed: boolean
+          portfolio_size_kwp: number
           signed_proposals: number
           total_commission: number
           total_proposals: number
