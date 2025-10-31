@@ -373,14 +373,14 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                 Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-crunch-black/40" />
+                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-crunch-black/40" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your.email@example.com"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="retro-input text-lg pl-11"
+                  className="retro-input text-lg pl-12"
                 />
               </div>
               <p className="text-xs text-crunch-black/60 mt-1">
