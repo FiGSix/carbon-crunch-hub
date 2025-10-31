@@ -176,6 +176,7 @@ export type Database = {
           invitation_viewed_at: string | null
           ip_address: unknown
           name: string | null
+          proposal_id: string | null
           system_size_kwp: number
           user_agent: string | null
           user_id: string | null
@@ -191,6 +192,7 @@ export type Database = {
           invitation_viewed_at?: string | null
           ip_address?: unknown
           name?: string | null
+          proposal_id?: string | null
           system_size_kwp: number
           user_agent?: string | null
           user_id?: string | null
@@ -206,11 +208,20 @@ export type Database = {
           invitation_viewed_at?: string | null
           ip_address?: unknown
           name?: string | null
+          proposal_id?: string | null
           system_size_kwp?: number
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "calculator_results_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_access_audit: {
         Row: {
@@ -1578,6 +1589,10 @@ export type Database = {
           phone_param?: string
           territory_param?: string
         }
+        Returns: string
+      }
+      create_proposal_from_calculator_result: {
+        Args: { calculator_result_id: string }
         Returns: string
       }
       create_test_user_profile: {

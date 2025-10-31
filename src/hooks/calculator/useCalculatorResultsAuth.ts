@@ -6,7 +6,8 @@ import { CalculatorResult } from "./useCalculatorResults";
 export function useCalculatorResultsAuth(
   result: CalculatorResult | null, 
   clientEmail: string | null, 
-  token: string | null
+  token: string | null,
+  refetchResult: () => void
 ) {
   const { user } = useAuth();
   const [showAuthForm, setShowAuthForm] = useState(false);
@@ -16,10 +17,13 @@ export function useCalculatorResultsAuth(
     feature: 'calculator-results' 
   });
 
-  const handleAuthComplete = useCallback(() => {
+  const handleAuthComplete = useCallback(async () => {
     authLogger.info("Authentication completed, refreshing view", { action: 'authComplete' });
     setShowAuthForm(false);
-  }, [authLogger]);
+    
+    // Refetch the calculator result to get the proposal_id
+    refetchResult();
+  }, [authLogger, refetchResult]);
 
   const handleSignInClick = useCallback(() => {
     if (result) {
