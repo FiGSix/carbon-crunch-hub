@@ -405,7 +405,6 @@ export type Database = {
           portal_url: string | null
           project_id: string
           provider: string
-          readonly_username: string | null
           site_id: string | null
           updated_at: string
         }
@@ -423,7 +422,6 @@ export type Database = {
           portal_url?: string | null
           project_id: string
           provider: string
-          readonly_username?: string | null
           site_id?: string | null
           updated_at?: string
         }
@@ -441,7 +439,6 @@ export type Database = {
           portal_url?: string | null
           project_id?: string
           provider?: string
-          readonly_username?: string | null
           site_id?: string | null
           updated_at?: string
         }

@@ -99,10 +99,9 @@ export interface DataAccessConfig {
   provider: string;
   site_id: string | null;
   portal_url: string | null;
-  credential_method: 'delegated_account' | 'api_key' | 'readonly_user';
+  credential_method: 'delegated_account' | 'api_key';
   delegated_email: string | null;
   api_key_encrypted: string | null;
-  readonly_username: string | null;
   last_test_status: 'success' | 'failed' | 'pending' | null;
   last_test_at: string | null;
   last_test_error: string | null;
