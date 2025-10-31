@@ -1592,7 +1592,7 @@ export type Database = {
         Returns: string
       }
       create_proposal_from_calculator_result: {
-        Args: { calculator_result_id: string }
+        Args: { p_calculator_result_id: string }
         Returns: string
       }
       create_test_user_profile: {
