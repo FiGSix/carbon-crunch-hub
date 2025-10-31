@@ -1853,6 +1853,10 @@ export type Database = {
       }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_agent: { Args: never; Returns: boolean }
+      is_project_stakeholder: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
       is_proposal_client: {
         Args: { proposal_client_reference_id: string }
         Returns: boolean
