@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DataAccessConfig } from "@/types/onboarding";
+import { getErrorMessage } from "@/lib/utils";
 
 interface DataAccessTabProps {
   projectId: string;
@@ -21,11 +22,36 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   const [config, setConfig] = useState<Partial<DataAccessConfig>>({
     credential_method: 'delegated_account',
   });
-  const [isSaving, setIsSaving] = useState(false);
+const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    fetchConfig();
-  }, [projectId]);
+// Simple client-side validation
+const getValidationErrors = (cfg: Partial<DataAccessConfig>): string[] => {
+  const errors: string[] = [];
+  if (!cfg.provider || String(cfg.provider).trim() === '') {
+    errors.push('Provider is required');
+  }
+  const method = (cfg.credential_method ?? 'delegated_account') as 'delegated_account' | 'api_key';
+  if (!method) {
+    errors.push('Credential method is required');
+  }
+  if (method === 'delegated_account') {
+    const email = cfg.delegated_email && String(cfg.delegated_email).trim() !== '' ? cfg.delegated_email : 'data@crunchcarbon.com';
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      errors.push('Delegated email is invalid');
+    }
+  }
+  if (method === 'api_key') {
+    if (!cfg.api_key_encrypted || String(cfg.api_key_encrypted).trim() === '') {
+      errors.push('API key is required for API Key method');
+    }
+  }
+  return errors;
+};
+
+useEffect(() => {
+  fetchConfig();
+}, [projectId]);
 
   const fetchConfig = async () => {
     try {
@@ -72,37 +98,63 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
+const handleSave = async () => {
+  try {
+    setIsSaving(true);
 
-      const { id, created_at, updated_at, ...configData } = config as any;
-      const { error } = await supabase
-        .from('data_access_config')
-        .upsert({
-          project_id: projectId,
-          ...configData,
-        });
-
-      if (error) throw error;
-
+    // Validate client-side
+    const validationErrors = getValidationErrors(config);
+    if (validationErrors.length > 0) {
       toast({
-        title: "Success",
-        description: "Configuration saved successfully",
-      });
-
-      onRefresh();
-    } catch (error) {
-      console.error('Error saving config:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save configuration",
+        title: "Please fix the following",
+        description: validationErrors[0],
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
+      return;
     }
-  };
+
+    const { id, created_at, updated_at, ...configData } = config as any;
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const method = (configData.credential_method ?? 'delegated_account') as 'delegated_account' | 'api_key';
+
+    const payload: any = {
+      project_id: projectId,
+      ...configData,
+      credential_method: method,
+      configured_by: user?.id ?? null,
+    };
+
+    if (method === 'delegated_account') {
+      payload.delegated_email = payload.delegated_email && String(payload.delegated_email).trim() !== ''
+        ? payload.delegated_email
+        : 'data@crunchcarbon.com';
+      payload.api_key_encrypted = null;
+    }
+
+    const { error } = await supabase
+      .from('data_access_config')
+      .upsert(payload, { onConflict: 'project_id' });
+
+    if (error) throw error;
+
+    toast({
+      title: "Success",
+      description: "Configuration saved successfully",
+    });
+
+    onRefresh();
+  } catch (error) {
+    console.error('Error saving config:', error);
+    toast({
+      title: "Error",
+      description: getErrorMessage(error) || "Failed to save configuration",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSaving(false);
+  }
+};
 
 
   return (
@@ -118,7 +170,7 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
           {/* Provider */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor="provider">Data Access Provider</Label>
+              <Label htmlFor="provider">Data Access Provider (required)</Label>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -234,7 +286,7 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button onClick={handleSave} disabled={isSaving} variant="outline">
+            <Button onClick={handleSave} disabled={isSaving || getValidationErrors(config).length > 0} variant="outline">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Configuration
             </Button>
