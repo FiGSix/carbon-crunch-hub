@@ -51,6 +51,3 @@ verify_jwt = true
 
 [functions.delete-user]
 verify_jwt = true
-
-[functions.backfill-calculator-proposals]
-verify_jwt = true
