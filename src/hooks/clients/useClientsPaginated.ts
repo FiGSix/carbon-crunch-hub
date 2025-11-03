@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 import { UnifiedDataService } from '@/services/unified/UnifiedDataService';
 import { ClientData } from '@/hooks/useMyClients';
 import { logger } from '@/lib/logger';
-import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
 export interface UseClientsPaginatedResult {
@@ -30,11 +29,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   const [offset, setOffset] = useState(0);
   
   const mountedRef = useRef(true);
+  const isFetchingRef = useRef(false);
   const { user, userRole } = useAuth();
   const { toast } = useToast();
-  
-  // Memoize the error handler to prevent unnecessary re-renders
-  const handleFetchError = useMemo(() => createFetchErrorHandler(toast), [toast]);
 
   const fetchClients = useCallback(async (currentOffset = 0, isLoadMore = false, forceRefresh = false) => {
     if (!user?.id || !userRole) {
@@ -44,16 +41,23 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       
       // Show toast for initial fetch authentication errors
       if (currentOffset === 0 && !isLoadMore) {
-        handleFetchError(new Error(errorMessage), {
-          isInitialFetch: true,
-          toastTitle: 'Authentication Required',
-          context: 'clients'
+        toast({
+          title: 'Authentication Required',
+          description: errorMessage,
+          variant: "destructive",
         });
       }
       return;
     }
 
+    // Prevent overlapping fetches
+    if (isFetchingRef.current) {
+      logger.info('Fetch already in progress, skipping duplicate request');
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
       if (isLoadMore) {
         setIsLoadingMore(true);
       } else {
@@ -113,12 +117,22 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       logger.error('Error fetching clients', { error: err });
       
       if (mountedRef.current) {
-        const errorMessage = handleFetchError(err, {
-          isInitialFetch: currentOffset === 0 && !isLoadMore,
-          isRefresh: forceRefresh && !isLoadMore,
-          context: 'clients',
-          showToast: true // Always show toast for load more failures and initial/refresh errors
-        });
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clients';
+        
+        // Show toast for initial fetch errors and refresh errors
+        if (currentOffset === 0 && !isLoadMore) {
+          toast({
+            title: forceRefresh ? 'Refresh Failed' : 'Failed to Load Clients',
+            description: errorMessage,
+            variant: "destructive",
+          });
+        } else if (isLoadMore) {
+          toast({
+            title: 'Failed to Load More',
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
         
         setError(errorMessage);
       }
@@ -126,9 +140,10 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       if (mountedRef.current) {
         setIsLoading(false);
         setIsLoadingMore(false);
+        isFetchingRef.current = false;
       }
     }
-  }, [user?.id, userRole, handleFetchError]);
+  }, [user?.id, userRole, toast]);
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
