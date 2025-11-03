@@ -6,12 +6,14 @@ import { useAuth } from "@/contexts/auth";
 import { StepPill } from "@/components/onboarding/StepPill";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Search, Loader2, Upload, Plus } from "lucide-react";
 import type { ProjectOnboardingListItem, ProjectStepStatus } from "@/types/onboarding";
 import { BulkLegacyProjectUpload } from "@/components/onboarding/BulkLegacyProjectUpload";
 import { AddLegacyProjectDialog } from "@/components/onboarding/AddLegacyProjectDialog";
+import { cn } from "@/lib/utils";
 
 export default function ProjectOnboardingList() {
   const navigate = useNavigate();
@@ -126,6 +128,48 @@ export default function ProjectOnboardingList() {
     navigate(`/onboarding/${projectId}?tab=${section}`);
   };
 
+  const calculateProjectStatus = (project: ProjectOnboardingListItem): {
+    label: string;
+    color: string;
+    icon: string;
+  } => {
+    const { onboarding_status, data_access_status, audit_ready_status } = project.step_status;
+    
+    // 🟢 Audit Ready
+    if (audit_ready_status === 'green') {
+      return {
+        label: 'Audit Ready',
+        color: 'bg-green-100 text-green-800 border-green-300',
+        icon: '✓'
+      };
+    }
+    
+    // 🟠 Under Review (all steps done but not audit-ready yet)
+    if (onboarding_status === 'green' && data_access_status === 'green') {
+      return {
+        label: 'Under Review',
+        color: 'bg-orange-100 text-orange-800 border-orange-300',
+        icon: '🔍'
+      };
+    }
+    
+    // 🟡 In Progress (at least one step complete)
+    if (onboarding_status === 'green' || data_access_status === 'green') {
+      return {
+        label: 'In Progress',
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+        icon: '⏳'
+      };
+    }
+    
+    // 🔴 Not Started (nothing done)
+    return {
+      label: 'Not Started',
+      color: 'bg-red-100 text-red-800 border-red-300',
+      icon: '○'
+    };
+  };
+
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
@@ -190,7 +234,7 @@ export default function ProjectOnboardingList() {
                   <tr>
                     <th className="text-left p-4 font-medium">Project Name</th>
                     <th className="text-left p-4 font-medium">Client</th>
-                    <th className="text-left p-4 font-medium">Site Address</th>
+                    <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">Last Updated</th>
                     <th className="text-left p-4 font-medium">Steps</th>
                   </tr>
@@ -204,8 +248,21 @@ export default function ProjectOnboardingList() {
                     >
                       <td className="p-4 font-medium">{project.proposal_title}</td>
                       <td className="p-4 text-muted-foreground">{project.client_name}</td>
-                      <td className="p-4 text-muted-foreground">
-                        {project.site_address || '—'}
+                      <td className="p-4">
+                        {(() => {
+                          const status = calculateProjectStatus(project);
+                          return (
+                            <Badge 
+                              className={cn(
+                                "font-medium border",
+                                status.color
+                              )}
+                            >
+                              <span className="mr-1.5">{status.icon}</span>
+                              {status.label}
+                            </Badge>
+                          );
+                        })()}
                       </td>
                       <td className="p-4 text-muted-foreground">
                         {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
@@ -246,14 +303,22 @@ export default function ProjectOnboardingList() {
           )}
 
           {/* Legend */}
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
             <span className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-green-500" />
-              Complete
+              <div className="h-3 w-3 rounded-full bg-red-500" />
+              Not Started
+            </span>
+            <span className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-yellow-500" />
+              In Progress
             </span>
             <span className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-orange-500" />
-              In Progress
+              Under Review
+            </span>
+            <span className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-green-500" />
+              Audit Ready
             </span>
           </div>
         </div>
