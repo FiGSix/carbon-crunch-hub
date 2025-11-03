@@ -50,6 +50,15 @@ serve(async (req: Request) => {
       );
     }
 
+    // Parse name into first and last name
+    const nameParts = name?.trim().split(' ') || [];
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Calculate carbon credits and annual energy
+    const annualEnergy = Math.round(systemSizeKwp * 1300);
+    const carbonCredits = parseFloat(((annualEnergy / 1000) * 0.93).toFixed(2));
+
     // Generate secure token (48 char random string)
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
     
@@ -57,18 +66,42 @@ serve(async (req: Request) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 48);
 
-    // Insert calculator result
-    const { data: calculatorResult, error: insertError } = await supabase
-      .from("calculator_results")
-      .insert({
+    // Create proposal content
+    const proposalContent = {
+      client_information: {
         email: email.toLowerCase().trim(),
-        name: name?.trim() || null,
+        first_name: firstName,
+        last_name: lastName,
+      },
+      project_information: {
         system_size_kwp: systemSizeKwp,
         commissioning_date: commissioningDate,
+        annual_energy_kwh: annualEnergy,
+      },
+      financial_information: {
+        carbon_credits: carbonCredits,
+      }
+    };
+
+    // Insert proposal directly
+    const { data: proposal, error: insertError } = await supabase
+      .from("proposals")
+      .insert({
+        title: `Solar Project - ${systemSizeKwp} kWp`,
+        content: proposalContent,
+        project_info: {
+          system_size_kwp: systemSizeKwp,
+          commissioning_date: commissioningDate
+        },
+        eligibility_criteria: {},
+        status: 'sent',
+        carbon_credits: carbonCredits,
+        annual_energy: annualEnergy,
+        system_size_kwp: systemSizeKwp,
         invitation_token: token,
         invitation_expires_at: expiresAt.toISOString(),
-        ip_address: ipAddress || null,
-        user_agent: userAgent || null,
+        invitation_sent_at: new Date().toISOString(),
+        agent_id: null, // No agent for calculator-generated proposals
       })
       .select()
       .single();
@@ -76,18 +109,14 @@ serve(async (req: Request) => {
     if (insertError) {
       console.error("Insert error:", insertError);
       return new Response(
-        JSON.stringify({ error: "Failed to save calculator results" }),
+        JSON.stringify({ error: "Failed to create proposal" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Calculate preview stats for email
-    const annualEnergy = Math.round(systemSizeKwp * 1300);
-    const carbonOffset = ((annualEnergy / 1000) * 0.93).toFixed(2);
-
-    // Build results URL
+    // Build proposal URL
     const siteUrl = Deno.env.get("SITE_URL") || "https://crunchcarbon.app";
-    const resultsUrl = `${siteUrl}/calculator/results/${calculatorResult.id}?token=${token}`;
+    const resultsUrl = `${siteUrl}/proposals/${proposal.id}/view?token=${token}`;
 
     // Send email
     const emailResponse = await resend.emails.send({
@@ -136,8 +165,8 @@ serve(async (req: Request) => {
                             <p style="margin: 0 0 10px; color: #333333; font-size: 15px;">
                               ✅ <strong>Annual Energy:</strong> ~${annualEnergy.toLocaleString()} kWh
                             </p>
-                            <p style="margin: 0 0 10px; color: #333333; font-size: 15px;">
-                              ✅ <strong>Carbon Offset:</strong> ~${carbonOffset} tonnes CO₂
+                             <p style="margin: 0 0 10px; color: #333333; font-size: 15px;">
+                              ✅ <strong>Carbon Offset:</strong> ~${carbonCredits} tonnes CO₂
                             </p>
                             <p style="margin: 0; color: #333333; font-size: 15px;">
                               ✅ <strong>Potential Value:</strong> Click below to reveal!
@@ -189,8 +218,8 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        resultId: calculatorResult.id,
-        message: "Calculator results sent successfully" 
+        proposalId: proposal.id,
+        message: "Proposal created successfully" 
       }),
       {
         status: 200,
