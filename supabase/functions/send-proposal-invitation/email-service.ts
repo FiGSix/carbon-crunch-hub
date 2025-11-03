@@ -141,13 +141,21 @@ export class EmailService {
   async sendInvitationEmail(
     clientEmail: string,
     projectName: string,
-    emailTemplate: string
+    emailTemplate: string,
+    ccEmail?: string
   ) {
-    return await this.resend.emails.send({
+    const emailPayload: any = {
       from: "Crunch Carbon <proposals@crunchcarbon.app>",
       to: [clientEmail],
       subject: `Carbon Credit Proposal - ${projectName}`,
       html: emailTemplate,
-    });
+    };
+
+    // Add CC if agent email is provided
+    if (ccEmail) {
+      emailPayload.cc = [ccEmail];
+    }
+
+    return await this.resend.emails.send(emailPayload);
   }
 }

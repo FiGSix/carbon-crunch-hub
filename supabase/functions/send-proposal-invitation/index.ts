@@ -94,6 +94,27 @@ const handler = async (req: Request): Promise<Response> => {
     // CRITICAL: Verify the token from the request matches what's stored in the database
     const verifiedToken = await verifyTokenConsistency(proposalId, invitationToken, supabase);
     
+    // Fetch agent email to CC them on the invitation
+    const { data: proposalData } = await supabase
+      .from('proposals')
+      .select('agent_id')
+      .eq('id', proposalId)
+      .single();
+    
+    let agentEmail: string | undefined;
+    if (proposalData?.agent_id) {
+      const { data: agentProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', proposalData.agent_id)
+        .single();
+      
+      agentEmail = agentProfile?.email;
+      if (agentEmail) {
+        console.log(`Agent will be CC'd: ${agentEmail}`);
+      }
+    }
+    
     // Get site URL from environment variable, with fallback
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
 
@@ -122,7 +143,8 @@ const handler = async (req: Request): Promise<Response> => {
       const emailResponse = await emailService.sendInvitationEmail(
         clientEmail,
         projectName,
-        emailTemplate
+        emailTemplate,
+        agentEmail
       );
 
       // Create a notification for the client if we have their ID
