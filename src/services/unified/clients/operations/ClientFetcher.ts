@@ -57,34 +57,6 @@ export class ClientFetcher {
     try {
       if (import.meta.env.DEV) {
         devLogger.clients.debug('=== Database Operations ===');
-        
-        // Debug current session state before making database calls
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        devLogger.clients.debug('Current session state:', {
-          hasSession: !!session,
-          sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
-          sessionError: sessionError?.message,
-          userId: session?.user?.id
-        });
-
-        // Test auth.uid() function directly
-        const { data: authTest, error: authTestError } = await supabase.rpc('auth_user_id');
-        devLogger.clients.debug('auth.uid() test result:', { authTest, authTestError });
-
-        if (authTestError || !authTest) {
-          devLogger.clients.error('❌ auth.uid() is returning null - authentication not properly synchronized');
-        }
-      }
-
-      // Check for auth issues and handle gracefully
-      const { data: authTest, error: authTestError } = await supabase.rpc('auth_user_id');
-      if (authTestError || !authTest) {
-        // Try to refresh session to fix auth.uid() issue
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          throw new Error('Authentication session invalid. Please sign out and sign in again.');
-        }
       }
       
       // Get total count efficiently using the new function

@@ -6,6 +6,16 @@ import { ClientData } from '@/hooks/useMyClients';
 import { logger } from '@/lib/logger';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 
+// Timeout wrapper to prevent hung requests
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+}
+
 export interface UseClientsPaginatedResult {
   clients: ClientData[];
   isLoading: boolean;
@@ -32,6 +42,12 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   const isFetchingRef = useRef(false);
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  
+  // Stabilize toast to prevent fetchClients from recreating
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
 
   const fetchClients = useCallback(async (currentOffset = 0, isLoadMore = false, forceRefresh = false) => {
     if (!user?.id || !userRole) {
@@ -41,7 +57,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       
       // Show toast for initial fetch authentication errors
       if (currentOffset === 0 && !isLoadMore) {
-        toast({
+        toastRef.current({
           title: 'Authentication Required',
           description: errorMessage,
           variant: "destructive",
@@ -52,12 +68,13 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
 
     // Prevent overlapping fetches
     if (isFetchingRef.current) {
-      logger.info('Fetch already in progress, skipping duplicate request');
+      devLogger.clients.log('⏸️ Fetch already in progress, skipping duplicate request');
       return;
     }
 
     try {
       isFetchingRef.current = true;
+      devLogger.clients.log('🚀 Starting fetch', { currentOffset, isLoadMore, forceRefresh });
       if (isLoadMore) {
         setIsLoadingMore(true);
       } else {
@@ -65,7 +82,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       }
       setError(null);
 
-      devLogger.clients.log('Fetching clients', { 
+      devLogger.clients.log('📞 Calling UnifiedDataService.getClients', { 
         userId: user.id, 
         userRole, 
         forceRefresh, 
@@ -73,13 +90,19 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         currentOffset 
       });
       
-      const result = await UnifiedDataService.getClients(
-        user.id, 
-        userRole, 
-        forceRefresh,
-        PAGE_SIZE,
-        currentOffset
+      // Add timeout to prevent hung requests
+      const result = await withTimeout(
+        UnifiedDataService.getClients(
+          user.id, 
+          userRole, 
+          forceRefresh,
+          PAGE_SIZE,
+          currentOffset
+        ),
+        10000 // 10 second timeout
       );
+      
+      devLogger.clients.log('✅ Data received', { count: result.clients.length, totalCount: result.totalCount });
       
       if (!mountedRef.current) return;
 
@@ -114,6 +137,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       });
 
     } catch (err) {
+      devLogger.clients.error('❌ Fetch error', err);
       logger.error('Error fetching clients', { error: err });
       
       if (mountedRef.current) {
@@ -121,13 +145,13 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         
         // Show toast for initial fetch errors and refresh errors
         if (currentOffset === 0 && !isLoadMore) {
-          toast({
+          toastRef.current({
             title: forceRefresh ? 'Refresh Failed' : 'Failed to Load Clients',
             description: errorMessage,
             variant: "destructive",
           });
         } else if (isLoadMore) {
-          toast({
+          toastRef.current({
             title: 'Failed to Load More',
             description: errorMessage,
             variant: "destructive",
@@ -137,13 +161,15 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         setError(errorMessage);
       }
     } finally {
+      devLogger.clients.log('🏁 Fetch complete (finally block)');
       if (mountedRef.current) {
         setIsLoading(false);
         setIsLoadingMore(false);
-        isFetchingRef.current = false;
       }
+      // Always reset the fetching flag
+      isFetchingRef.current = false;
     }
-  }, [user?.id, userRole, toast]);
+  }, [user?.id, userRole]);
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
@@ -157,13 +183,16 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   }, [fetchClients]);
 
   // Initial fetch - wait for both user and userRole
+  // Don't include fetchClients in deps to prevent re-trigger loops
   useEffect(() => {
     if (user?.id && userRole) {
+      devLogger.clients.log('🎬 Initial fetch triggered by auth ready');
       fetchClients(0, false, false);
     } else {
       setIsLoading(false);
     }
-  }, [user?.id, userRole, fetchClients]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, userRole]);
 
   // Cleanup on unmount
   useEffect(() => {
