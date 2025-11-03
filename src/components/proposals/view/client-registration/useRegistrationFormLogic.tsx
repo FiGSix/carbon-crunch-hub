@@ -92,6 +92,7 @@ export function useRegistrationFormLogic(
             last_name: lastName,
             role: 'client',
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         },
       });
 
@@ -123,8 +124,12 @@ export function useRegistrationFormLogic(
         onComplete();
       }
     } catch (error: any) {
+      // Log detailed error information for diagnostics
       registrationLogger.error("Registration error", { 
-        error: error.message,
+        message: error.message,
+        name: error.name,
+        status: error.status,
+        code: error.code,
         email: clientEmail
       });
       
@@ -135,6 +140,13 @@ export function useRegistrationFormLogic(
         toast({
           title: "Account exists",
           description: "This email is already registered. Please use the login option instead.",
+          variant: "destructive"
+        });
+      } else if (error.message === "Database error saving new user") {
+        errorMessage = "We couldn't create your account due to a temporary issue. Please try again. If you've tried before, tap 'Returning User' to sign in.";
+        toast({
+          title: "Registration Error",
+          description: errorMessage,
           variant: "destructive"
         });
       } else {
