@@ -164,65 +164,6 @@ export type Database = {
         }
         Relationships: []
       }
-      calculator_results: {
-        Row: {
-          commissioning_date: string
-          created_at: string | null
-          email: string
-          id: string
-          invitation_expires_at: string
-          invitation_sent_at: string | null
-          invitation_token: string
-          invitation_viewed_at: string | null
-          ip_address: unknown
-          name: string | null
-          proposal_id: string | null
-          system_size_kwp: number
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          commissioning_date: string
-          created_at?: string | null
-          email: string
-          id?: string
-          invitation_expires_at: string
-          invitation_sent_at?: string | null
-          invitation_token: string
-          invitation_viewed_at?: string | null
-          ip_address?: unknown
-          name?: string | null
-          proposal_id?: string | null
-          system_size_kwp: number
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          commissioning_date?: string
-          created_at?: string | null
-          email?: string
-          id?: string
-          invitation_expires_at?: string
-          invitation_sent_at?: string | null
-          invitation_token?: string
-          invitation_viewed_at?: string | null
-          ip_address?: unknown
-          name?: string | null
-          proposal_id?: string | null
-          system_size_kwp?: number
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calculator_results_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       client_access_audit: {
         Row: {
           accessed_at: string
@@ -1589,10 +1530,6 @@ export type Database = {
           phone_param?: string
           territory_param?: string
         }
-        Returns: string
-      }
-      create_proposal_from_calculator_result: {
-        Args: { p_calculator_result_id: string }
         Returns: string
       }
       create_test_user_profile: {
