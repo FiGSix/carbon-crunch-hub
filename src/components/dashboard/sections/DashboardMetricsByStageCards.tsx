@@ -83,7 +83,7 @@ function DashboardMetricsByStageCardsComponent({
         value={formatCount(metrics.auditReviewRequests)} 
         icon={<ClipboardCheck className="h-5 w-5" />}
         color="orange"
-        onClick={() => navigate('/project-onboarding')}
+        onClick={() => navigate('/onboarding')}
       />
       
       {/* Card 4: Onboarding Projects */}

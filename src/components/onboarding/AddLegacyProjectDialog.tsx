@@ -167,7 +167,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
         
         // Redirect to project onboarding detail page
         setTimeout(() => {
-          window.location.href = `/project-onboarding/${data.project_id}`;
+          window.location.href = `/onboarding/${data.project_id}`;
         }, 500);
       } else {
         throw new Error(data?.error || 'Failed to create project');
