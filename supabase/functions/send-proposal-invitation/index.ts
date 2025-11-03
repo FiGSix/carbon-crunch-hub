@@ -102,14 +102,22 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
     
     let agentEmail: string | undefined;
+    let agentFirstName: string | undefined;
+    let agentLastName: string | undefined;
+    let agentCompanyName: string | undefined;
+    
     if (proposalData?.agent_id) {
       const { data: agentProfile } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, first_name, last_name, company_name')
         .eq('id', proposalData.agent_id)
         .single();
       
       agentEmail = agentProfile?.email;
+      agentFirstName = agentProfile?.first_name;
+      agentLastName = agentProfile?.last_name;
+      agentCompanyName = agentProfile?.company_name;
+      
       if (agentEmail) {
         console.log(`Agent will be CC'd: ${agentEmail}`);
       }
@@ -134,7 +142,11 @@ const handler = async (req: Request): Promise<Response> => {
       projectName,
       invitationLink,
       tokenPreview: verifiedToken.substring(0, 8) + "...",
-      proposalId
+      proposalId,
+      agentFirstName,
+      agentLastName,
+      agentCompanyName,
+      agentEmail
     };
     
     const emailTemplate = emailService.generateEmailTemplate(emailTemplateData);

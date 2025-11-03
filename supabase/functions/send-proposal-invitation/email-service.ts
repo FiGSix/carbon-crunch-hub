@@ -81,6 +81,19 @@ export class EmailService {
               </ul>
             </div>
 
+            <!-- Why Am I Receiving This -->
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 20px; margin: 30px 0;">
+              <h3 style="margin: 0 0 12px 0; color: #1A1A1A; font-size: 14px; font-weight: 600;">
+                Why am I receiving this?
+              </h3>
+              <p style="margin: 0; color: #4A5568; font-size: 14px; line-height: 1.6;">
+                ${data.agentFirstName && data.agentLastName 
+                  ? `${data.agentFirstName} ${data.agentLastName}${data.agentCompanyName ? ` from ${data.agentCompanyName}` : ''} has prepared a personalized carbon credit proposal for your project. If you have questions or didn't expect this, please contact ${data.agentFirstName} directly at ${data.agentEmail || 'proposals@crunchcarbon.app'}.`
+                  : `A carbon credit proposal has been prepared for your project. If you have questions or didn't expect this, please contact us at proposals@crunchcarbon.app.`
+                }
+              </p>
+            </div>
+
             <!-- Important Notice -->
             <div style="background: #FFF8E1; border: 1px solid #FFE082; border-radius: 8px; padding: 16px; margin: 30px 0;">
               <p style="margin: 0; color: #F57C00; font-size: 14px; line-height: 1.6;">

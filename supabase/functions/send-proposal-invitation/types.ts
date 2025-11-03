@@ -17,4 +17,8 @@ export interface EmailTemplateData {
   proposalId: string;
   systemSize?: string;
   carbonCredits?: number;
+  agentFirstName?: string;
+  agentLastName?: string;
+  agentCompanyName?: string;
+  agentEmail?: string;
 }
