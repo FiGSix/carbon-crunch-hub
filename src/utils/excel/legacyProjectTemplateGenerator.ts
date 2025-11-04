@@ -29,9 +29,7 @@ export function generateLegacyProjectTemplate(): void {
     'battery_capacity_kwh',
     'battery_brand',
     'battery_model',
-    'total_capex',
-    'client_share_percentage',
-    'agent_commission_percentage'
+    'total_capex'
   ];
   
   const descriptions = [
@@ -57,9 +55,7 @@ export function generateLegacyProjectTemplate(): void {
     'Battery capacity in kWh (optional)',
     'Battery brand (optional)',
     'Battery model (optional)',
-    'Total CAPEX in ZAR (optional)',
-    'Client share % (optional, default 75)',
-    'Agent commission % (optional, default 4)'
+    'Total CAPEX in ZAR (optional)'
   ];
   
   const exampleData = [
@@ -86,9 +82,7 @@ export function generateLegacyProjectTemplate(): void {
       '',
       '',
       '',
-      2500000,
-      75,
-      4
+      2500000
     ],
     [
       'Ground Mount Solar Farm',
@@ -113,9 +107,7 @@ export function generateLegacyProjectTemplate(): void {
       200,
       'BYD',
       'BYD B-Box Premium HVS 10.2',
-      18000000,
-      '',
-      ''
+      18000000
     ]
   ];
   
@@ -150,9 +142,7 @@ export function generateLegacyProjectTemplate(): void {
     { wch: 20 }, // battery_capacity_kwh
     { wch: 18 }, // battery_brand
     { wch: 25 }, // battery_model
-    { wch: 16 }, // total_capex
-    { wch: 22 }, // client_share_percentage
-    { wch: 26 }  // agent_commission_percentage
+    { wch: 16 }  // total_capex
   ];
   
   const headerStyle = {

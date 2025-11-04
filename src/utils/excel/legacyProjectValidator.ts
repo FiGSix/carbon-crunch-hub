@@ -66,19 +66,6 @@ export function validateLegacyProjectRows(rows: LegacyProjectRow[]): ValidationE
       errors.push({ row: rowNum, field: 'client_email', message: 'Duplicate client email in upload' });
     }
     emailSet.add(row.client_email);
-    
-    // Optional field validation
-    if (row.client_share_percentage !== undefined) {
-      if (row.client_share_percentage < 0 || row.client_share_percentage > 100) {
-        errors.push({ row: rowNum, field: 'client_share_percentage', message: 'Client share must be between 0 and 100' });
-      }
-    }
-    
-    if (row.agent_commission_percentage !== undefined) {
-      if (row.agent_commission_percentage < 0 || row.agent_commission_percentage > 100) {
-        errors.push({ row: rowNum, field: 'agent_commission_percentage', message: 'Agent commission must be between 0 and 100' });
-      }
-    }
   });
   
   return errors;

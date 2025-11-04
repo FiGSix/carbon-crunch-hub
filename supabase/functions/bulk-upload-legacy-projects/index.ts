@@ -30,8 +30,6 @@ interface LegacyProjectRow {
   battery_brand?: string;
   battery_model?: string;
   total_capex?: number;
-  client_share_percentage?: number;
-  agent_commission_percentage?: number;
 }
 
 serve(async (req) => {
@@ -121,9 +119,51 @@ serve(async (req) => {
         const annualEnergy = systemSizeKwp * 1500; // kWh per year
         const carbonCredits = (annualEnergy * 0.95) / 1000; // tCO2e
 
-        // 4. Set revenue percentages
-        const clientSharePercentage = row.client_share_percentage || 75;
-        const agentCommissionPercentage = row.agent_commission_percentage || 4;
+        // 4. Calculate revenue percentages based on agent's current portfolio
+        console.log(`Calculating revenue percentages for agent ${row.agent_email}...`);
+
+        // Get agent's current signed portfolio (excluding deleted/archived)
+        const { data: agentProposals } = await supabase
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('agent_id', agent.id)
+          .eq('status', 'signed')
+          .is('deleted_at', null)
+          .is('archived_at', null);
+
+        const currentPortfolioKwp = (agentProposals || []).reduce(
+          (sum, p) => sum + (p.system_size_kwp || 0), 
+          0
+        );
+
+        // Add this project to portfolio for tier calculation
+        const totalPortfolioKwp = currentPortfolioKwp + systemSizeKwp;
+
+        console.log(`Agent portfolio: ${currentPortfolioKwp.toFixed(2)} kWp current + ${systemSizeKwp} kWp (this project) = ${totalPortfolioKwp.toFixed(2)} kWp total`);
+
+        // Calculate client share based on portfolio tiers
+        let clientSharePercentage: number;
+        if (totalPortfolioKwp < 5000) {
+          clientSharePercentage = 60.20; // 0-5 MWp
+        } else if (totalPortfolioKwp < 10000) {
+          clientSharePercentage = 63; // 5-10 MWp
+        } else if (totalPortfolioKwp < 20000) {
+          clientSharePercentage = 66.5; // 10-20 MWp
+        } else if (totalPortfolioKwp < 30000) {
+          clientSharePercentage = 68.25; // 20-30 MWp
+        } else {
+          clientSharePercentage = 70; // 30+ MWp
+        }
+
+        // Calculate agent commission based on portfolio tiers
+        let agentCommissionPercentage: number;
+        if (totalPortfolioKwp < 15000) {
+          agentCommissionPercentage = 5; // Below 15 MWp: 5% commission
+        } else {
+          agentCommissionPercentage = 4; // 15 MWp and above: 4% commission
+        }
+
+        console.log(`Calculated: ${clientSharePercentage}% client share, ${agentCommissionPercentage}% agent commission (tier: ${(totalPortfolioKwp / 1000).toFixed(2)} MWp)`);
 
         // 5. Create proposal with signed status
         const { data: proposal, error: proposalError } = await supabase
@@ -191,7 +231,9 @@ serve(async (req) => {
               signed_via: 'legacy_import',
               imported_by: user.id,
               imported_at: new Date().toISOString(),
-              original_signed_date: row.signed_date
+              original_signed_date: row.signed_date,
+              portfolio_calculated: true,
+              portfolio_size_at_import: totalPortfolioKwp
             }
           });
 

@@ -56,9 +56,7 @@ export function parseLegacyProjectFile(file: File): Promise<LegacyProjectRow[]> 
             battery_capacity_kwh: project.battery_capacity_kwh ? parseFloat(String(project.battery_capacity_kwh)) : undefined,
             battery_brand: project.battery_brand ? String(project.battery_brand).trim() : undefined,
             battery_model: project.battery_model ? String(project.battery_model).trim() : undefined,
-            total_capex: project.total_capex ? parseFloat(String(project.total_capex)) : undefined,
-            client_share_percentage: project.client_share_percentage ? parseFloat(String(project.client_share_percentage)) : undefined,
-            agent_commission_percentage: project.agent_commission_percentage ? parseFloat(String(project.agent_commission_percentage)) : undefined
+            total_capex: project.total_capex ? parseFloat(String(project.total_capex)) : undefined
           };
           
           rows.push(parsed);

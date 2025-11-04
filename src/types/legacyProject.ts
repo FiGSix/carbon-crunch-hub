@@ -31,10 +31,6 @@ export interface LegacyProjectRow {
   battery_brand?: string;
   battery_model?: string;
   total_capex?: number;
-  
-  // Optional revenue overrides
-  client_share_percentage?: number;
-  agent_commission_percentage?: number;
 }
 
 export interface LegacyProjectUploadResult {
