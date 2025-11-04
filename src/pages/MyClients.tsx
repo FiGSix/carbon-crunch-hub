@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { useClientsPaginated } from '@/hooks/clients/useClientsPaginated';
+import { useEffect } from 'react';
 
 const MyClients = () => {
   const { userRole } = useAuth();
@@ -19,6 +20,19 @@ const MyClients = () => {
   } = useClientsPaginated();
   
   const isAdmin = userRole === 'admin';
+
+  // Fix 3: Enhanced loading state debugging
+  useEffect(() => {
+    console.log('⏰ Loading state changed:', {
+      isLoading,
+      isLoadingMore,
+      clientsCount: clients.length,
+      totalCount,
+      hasError: !!error,
+      hasMore,
+      timestamp: new Date().toISOString()
+    });
+  }, [isLoading, isLoadingMore, clients.length, totalCount, error, hasMore]);
 
   console.log('=== MyClients Page Render ===');
   console.log('User Role:', userRole, 'Is Admin:', isAdmin);

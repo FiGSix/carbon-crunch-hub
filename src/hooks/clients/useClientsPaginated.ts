@@ -250,6 +250,46 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, userRole]);
 
+  // Fix 4: Reset state on auth changes for clean slate
+  useEffect(() => {
+    if (user?.id && userRole) {
+      try {
+        devLogger.clients.log('🔄 Auth state changed, resetting client data');
+      } catch {}
+      setClients([]);
+      setOffset(0);
+      setHasMore(false);
+      setTotalCount(0);
+      setError(null);
+      isFetchingRef.current = false;
+    }
+  }, [user?.id, userRole]);
+
+  // Fix 1: Failsafe - force reset if stuck loading for >15s
+  useEffect(() => {
+    if (isLoading && user?.id && userRole) {
+      const failsafeTimer = setTimeout(() => {
+        if (isLoading && mountedRef.current) {
+          try {
+            devLogger.clients.error('🚨 FAILSAFE: Loading stuck for 15s, force resetting');
+          } catch {}
+          setIsLoading(false);
+          isFetchingRef.current = false;
+          if (clients.length === 0) {
+            setError('Failed to load clients - please refresh the page');
+            toastRef.current({
+              title: 'Loading Timeout',
+              description: 'Page took too long to load. Please refresh.',
+              variant: 'destructive',
+            });
+          }
+        }
+      }, 15000);
+      
+      return () => clearTimeout(failsafeTimer);
+    }
+  }, [isLoading, user?.id, userRole, clients.length]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
