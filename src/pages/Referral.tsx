@@ -41,7 +41,7 @@ export default function Referral() {
   };
 
   const handleWhatsAppShare = () => {
-    const text = `Howzit 😎 I've been using a company called Crunch Carbon to turn my solar energy I use into carbon credits and then cash — it's free, easy, and actually pays you for going green. Thought you'd want in too ☀️💰 ${referralLink}`;
+    const text = `Howzit! I've been using a company called Crunch Carbon to turn my solar energy I use into carbon credits and then cash — it's free, easy, and actually pays you for going green. Thought you'd want in too! ${referralLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, "_blank");
   };
