@@ -31,7 +31,11 @@ export const CTASection = ({ navigate }: CTASectionProps) => {
             className="inline-block"
           >
             <Button 
-              onClick={() => navigate("/register")}
+              onClick={() => {
+                const referralCode = localStorage.getItem('referralCode');
+                const path = referralCode ? `/register?ref=${referralCode}` : '/register';
+                navigate(path);
+              }}
               className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black px-8 py-6 text-lg rounded-xl group"
               size="lg"
             >

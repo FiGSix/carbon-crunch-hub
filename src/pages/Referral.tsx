@@ -20,7 +20,7 @@ export default function Referral() {
   const [message, setMessage] = useState("");
 
   // Generate referral link with user ID
-  const referralLink = `${window.location.origin}/register?ref=${profile?.id}`;
+  const referralLink = `${window.location.origin}/calculator?ref=${profile?.id}`;
 
   const handleCopyLink = async () => {
     try {
@@ -41,7 +41,7 @@ export default function Referral() {
   };
 
   const handleWhatsAppShare = () => {
-    const text = `Hey! I've been using Crunch Carbon for my solar energy needs and thought you might be interested. Check them out here: ${referralLink}`;
+    const text = `Howzit 😎 I've been using a company called Crunch Carbon to turn my solar energy I use into carbon credits and then cash — it's free, easy, and actually pays you for going green. Thought you'd want in too ☀️💰 ${referralLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, "_blank");
   };

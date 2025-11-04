@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 // Import refactored components
 import { HeroSection } from "./calculator/HeroSection";
@@ -13,10 +13,19 @@ import { CalculationResults as ICalculationResults } from "@/lib/calculations/ca
 
 const Calculator = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState<ICalculationResults | null>(null);
   const [systemSize, setSystemSize] = useState<number>(0);
   const [commissioningDate, setCommissioningDate] = useState<Date>(new Date());
+  
+  // Capture referral code from URL and store in localStorage
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      localStorage.setItem('referralCode', refCode);
+    }
+  }, [searchParams]);
   
   const handleResultsCalculated = (
     calculationResults: ICalculationResults, 
