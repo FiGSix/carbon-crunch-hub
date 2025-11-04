@@ -25,12 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
 import { useState } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
 import { useToast } from '@/hooks/use-toast';
 import { EditClientDialog } from '@/components/clients/EditClientDialog';
+import { EditAssignedAgentDialog } from '@/components/clients/EditAssignedAgentDialog';
+import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 interface ClientsTableContentProps {
   clients: ClientData[];
@@ -54,6 +56,8 @@ export function ClientsTableContent({
   const [isDeleting, setIsDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null);
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [clientToReassign, setClientToReassign] = useState<ClientData | null>(null);
   const { toast } = useToast();
 
   const handleDeleteClick = (client: ClientData) => {
@@ -64,6 +68,11 @@ export function ClientsTableContent({
   const handleEditClick = (client: ClientData) => {
     setClientToEdit(client);
     setEditDialogOpen(true);
+  };
+
+  const handleReassignClick = (client: ClientData) => {
+    setClientToReassign(client);
+    setReassignDialogOpen(true);
   };
 
   const confirmDelete = async () => {
@@ -216,13 +225,20 @@ export function ClientsTableContent({
                         Edit Client Info
                       </DropdownMenuItem>
                       {isAdmin && (
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => handleDeleteClick(client)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Client
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem onClick={() => handleReassignClick(client)}>
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Edit Assigned Agent
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteClick(client)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Client
+                          </DropdownMenuItem>
+                        </>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -260,6 +276,15 @@ export function ClientsTableContent({
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         client={clientToEdit}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+        }}
+      />
+
+      <EditAssignedAgentDialog
+        open={reassignDialogOpen}
+        onOpenChange={setReassignDialogOpen}
+        client={clientToReassign}
         onSuccess={() => {
           if (onRefresh) onRefresh();
         }}

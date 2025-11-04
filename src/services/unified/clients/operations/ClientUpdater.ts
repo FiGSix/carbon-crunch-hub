@@ -9,6 +9,7 @@ export interface UpdateClientData {
   companyName?: string;
   registrationNumber?: string;
   notes?: string;
+  createdBy?: string;
 }
 
 export class ClientUpdater {
@@ -38,6 +39,7 @@ export class ClientUpdater {
       if (updates.companyName !== undefined) clientUpdate.company_name = updates.companyName;
       if (updates.registrationNumber !== undefined) clientUpdate.registration_number = updates.registrationNumber;
       if (updates.notes !== undefined) clientUpdate.notes = updates.notes;
+      if (updates.createdBy !== undefined) clientUpdate.created_by = updates.createdBy;
 
       const { error: updateError } = await supabase
         .from('clients')
