@@ -91,24 +91,128 @@ serve(async (req) => {
       );
     }
 
+    console.log('Target profile found:', { 
+      userId, 
+      email: targetProfile.email, 
+      role: targetProfile.role 
+    });
+
     // Log deletion attempt before execution
-    await supabaseAdmin.from('user_role_audit').insert({
+    console.log('Inserting audit log...');
+    const { error: auditError } = await supabaseAdmin.from('user_role_audit').insert({
       user_id: userId,
       role: targetProfile.role,
       action: 'deleted',
       performed_by: user.id
     });
 
+    if (auditError) {
+      console.error('Audit log insertion failed:', auditError);
+      // Continue anyway - audit failure shouldn't block deletion
+    }
+    console.log('Audit log inserted successfully');
+
     // Preserve business records - update proposals to nullify agent_id
-    await supabaseAdmin
+    console.log('Updating proposals where user is agent...');
+    const { data: agentProposals, error: agentProposalsError } = await supabaseAdmin
       .from('proposals')
       .update({ 
         agent_id: null,
         last_modified_by: user.id
       })
-      .eq('agent_id', userId);
+      .eq('agent_id', userId)
+      .select('id');
+
+    if (agentProposalsError) {
+      console.error('Agent proposals update failed:', agentProposalsError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to update agent proposals: ${agentProposalsError.message}` 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log(`Successfully nullified agent_id in ${agentProposals?.length || 0} proposals`);
+
+    // Also handle client_id references
+    console.log('Updating proposals where user is client...');
+    const { data: clientProposals, error: clientProposalsError } = await supabaseAdmin
+      .from('proposals')
+      .update({ 
+        client_id: null,
+        last_modified_by: user.id
+      })
+      .eq('client_id', userId)
+      .select('id');
+
+    if (clientProposalsError) {
+      console.error('Client proposals update failed:', clientProposalsError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to update client proposals: ${clientProposalsError.message}` 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log(`Successfully nullified client_id in ${clientProposals?.length || 0} proposals`);
+
+    // Handle company memberships
+    console.log('Checking company memberships...');
+    const { data: companyMemberships, error: companyError } = await supabaseAdmin
+      .from('company_members')
+      .delete()
+      .eq('user_id', userId)
+      .select('id');
+
+    if (companyError) {
+      console.error('Company members deletion failed:', companyError);
+    }
+    console.log(`Removed ${companyMemberships?.length || 0} company memberships`);
+
+    // Handle onboarding documents
+    console.log('Handling onboarding documents...');
+    const { data: docs, error: docsError } = await supabaseAdmin
+      .from('onboarding_documents')
+      .update({ uploaded_by: null })
+      .eq('uploaded_by', userId)
+      .select('id');
+
+    if (docsError) {
+      console.error('Onboarding documents update failed:', docsError);
+    }
+    console.log(`Nullified uploaded_by in ${docs?.length || 0} documents`);
+
+    // Handle notifications - delete them
+    console.log('Checking notifications...');
+    const { data: notifications, error: notificationsError } = await supabaseAdmin
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .select('id');
+
+    if (notificationsError) {
+      console.error('Notifications deletion failed:', notificationsError);
+      // May be OK if CASCADE is set up
+    }
+    console.log(`Deleted ${notifications?.length || 0} notifications`);
+
+    // Handle user_roles - delete explicitly
+    console.log('Deleting user roles...');
+    const { data: roles, error: rolesError } = await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId)
+      .select('role');
+
+    if (rolesError) {
+      console.error('User roles deletion failed:', rolesError);
+    }
+    console.log(`Deleted ${roles?.length || 0} user roles`);
 
     // Delete user from auth.users (cascades to profiles, user_roles, etc.)
+    console.log('Attempting to delete user from auth.users...');
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     
     if (deleteError) {
@@ -121,6 +225,8 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('User successfully deleted from auth.users');
 
     return new Response(
       JSON.stringify({ 
