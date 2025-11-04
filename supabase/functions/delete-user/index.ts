@@ -117,8 +117,7 @@ serve(async (req) => {
     const { data: agentProposals, error: agentProposalsError } = await supabaseAdmin
       .from('proposals')
       .update({ 
-        agent_id: null,
-        last_modified_by: user.id
+        agent_id: null
       })
       .eq('agent_id', userId)
       .select('id');
@@ -140,8 +139,7 @@ serve(async (req) => {
     const { data: clientProposals, error: clientProposalsError } = await supabaseAdmin
       .from('proposals')
       .update({ 
-        client_id: null,
-        last_modified_by: user.id
+        client_id: null
       })
       .eq('client_id', userId)
       .select('id');
