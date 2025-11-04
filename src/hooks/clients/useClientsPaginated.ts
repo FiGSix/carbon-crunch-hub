@@ -50,6 +50,10 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   }, [toast]);
 
   const fetchClients = useCallback(async (currentOffset = 0, isLoadMore = false, forceRefresh = false) => {
+    try {
+      devLogger.clients.log('📥 fetchClients called', { currentOffset, isLoadMore, forceRefresh, currentClientsCount: clients.length });
+    } catch {}
+    
     if (!user?.id || !userRole) {
       const errorMessage = 'User not authenticated or role not determined';
       setError(errorMessage);
@@ -69,7 +73,7 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
     // Prevent overlapping fetches
     if (isFetchingRef.current) {
       try {
-        devLogger.clients.log('⏸️ Fetch already in progress, skipping duplicate request');
+        devLogger.clients.log('⏸️ Fetch already in progress, skipping duplicate request', { isLoadMore });
       } catch {}
       return;
     }
@@ -130,7 +134,17 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       }));
 
       if (isLoadMore) {
-        setClients(prev => [...prev, ...transformedClients]);
+        setClients(prev => {
+          const newClients = [...prev, ...transformedClients];
+          try {
+            devLogger.clients.log('📊 Appending clients', { 
+              previousCount: prev.length, 
+              newCount: transformedClients.length, 
+              totalCount: newClients.length 
+            });
+          } catch {}
+          return newClients;
+        });
       } else {
         setClients(transformedClients);
       }
@@ -185,10 +199,21 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   }, [user?.id, userRole]);
 
   const loadMore = useCallback(() => {
+    try {
+      devLogger.clients.log('🔽 Load More clicked', { offset, isLoadingMore, hasMore });
+    } catch {}
+    
     if (!isLoadingMore && hasMore) {
+      try {
+        devLogger.clients.log('✅ Calling fetchClients for load more', { offset });
+      } catch {}
       fetchClients(offset, true);
+    } else {
+      try {
+        devLogger.clients.warn('⚠️ Load More blocked', { isLoadingMore, hasMore });
+      } catch {}
     }
-  }, [fetchClients, offset, isLoadingMore, hasMore]);
+  }, [offset, isLoadingMore, hasMore]);
 
   const refresh = useCallback(() => {
     setOffset(0);
