@@ -1,5 +1,3 @@
-
-export { useClientsPaginated } from './useClientsPaginated';
-export { useSimplifiedClients } from './useSimplifiedClients';
+export { useClients } from './useClients';
 export { useRealtimeSubscription } from './useRealtimeSubscription';
 export * from './types';

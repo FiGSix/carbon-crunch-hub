@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
-import { useClientsPaginatedOptimized } from '@/hooks/clients/useClientsPaginatedOptimized';
+import { useClients } from '@/hooks/clients';
 
 const MyClientsOptimized = () => {
   const { userRole } = useAuth();
@@ -16,7 +16,7 @@ const MyClientsOptimized = () => {
     error, 
     loadMore,
     refresh
-  } = useClientsPaginatedOptimized();
+  } = useClients({ paginated: true });
   
   const isAdmin = userRole === 'admin';
 

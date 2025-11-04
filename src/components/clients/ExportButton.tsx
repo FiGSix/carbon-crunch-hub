@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import { ClientData } from '@/hooks/useMyClients';
+import { ClientData } from '@/hooks/clients/types';
 
 interface ExportButtonProps {
   clients: ClientData[];

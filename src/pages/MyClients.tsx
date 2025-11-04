@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientsTable } from '@/components/clients/ClientsTable';
-import { useClientsPaginated } from '@/hooks/clients/useClientsPaginated';
+import { useClients } from '@/hooks/clients';
 import { useEffect } from 'react';
 
 const MyClients = () => {
@@ -17,7 +17,7 @@ const MyClients = () => {
     error, 
     loadMore,
     refresh
-  } = useClientsPaginated();
+  } = useClients({ paginated: true });
   
   const isAdmin = userRole === 'admin';
 

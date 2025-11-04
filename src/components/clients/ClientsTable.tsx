@@ -1,6 +1,6 @@
 
 
-import { ClientData } from '@/hooks/useMyClients';
+import { ClientData } from '@/hooks/clients/types';
 import { ClientsTableLoading } from './table/ClientsTableLoading';
 import { ClientsTableError } from './table/ClientsTableError';
 import { ClientsTableEmpty } from './table/ClientsTableEmpty';
