@@ -25,11 +25,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2 } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
 import { useState } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
 import { useToast } from '@/hooks/use-toast';
+import { EditClientDialog } from '@/components/clients/EditClientDialog';
 
 interface ClientsTableContentProps {
   clients: ClientData[];
@@ -51,11 +52,18 @@ export function ClientsTableContent({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null);
   const { toast } = useToast();
 
   const handleDeleteClick = (client: ClientData) => {
     setClientToDelete(client);
     setDeleteConfirmOpen(true);
+  };
+
+  const handleEditClick = (client: ClientData) => {
+    setClientToEdit(client);
+    setEditDialogOpen(true);
   };
 
   const confirmDelete = async () => {
@@ -160,7 +168,7 @@ export function ClientsTableContent({
               <TableHead className="text-center">Projects</TableHead>
               <TableHead className="text-center">Total MWp</TableHead>
               {isAdmin && <TableHead className="text-center">Status</TableHead>}
-              {isAdmin && <TableHead className="text-center">Actions</TableHead>}
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -195,15 +203,19 @@ export function ClientsTableContent({
                     </Badge>
                   </TableCell>
                 )}
-                {isAdmin && (
-                  <TableCell className="text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                <TableCell className="text-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditClick(client)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Client Info
+                      </DropdownMenuItem>
+                      {isAdmin && (
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteClick(client)}
@@ -211,10 +223,10 @@ export function ClientsTableContent({
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete Client
                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                )}
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -243,6 +255,15 @@ export function ClientsTableContent({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditClientDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        client={clientToEdit}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+        }}
+      />
     </Card>
   );
 }

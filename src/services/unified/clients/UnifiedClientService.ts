@@ -54,6 +54,14 @@ export class UnifiedClientService {
   }
 
   /**
+   * Update client information (agents can update own clients, admins can update all)
+   */
+  static async updateClient(clientId: string, updates: any) {
+    const { ClientUpdater } = await import('./operations/ClientUpdater');
+    return ClientUpdater.updateClient(clientId, updates);
+  }
+
+  /**
    * Delete a client and all associated proposals (ADMIN ONLY)
    */
   static async deleteClient(clientId: string) {
