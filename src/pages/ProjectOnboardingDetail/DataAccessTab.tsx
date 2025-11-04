@@ -97,11 +97,18 @@ useEffect(() => {
           credential_method: data.credential_method as 'delegated_account' | 'api_key',
           last_test_status: data.last_test_status as 'success' | 'failed' | 'pending' | null
         });
-        
-        // Check if already submitted for audit
-        const isVerified = data.data_access_verified === true;
-        setIsSubmitted(isVerified);
-        setSubmittedAt(data.data_access_verified_at || null);
+      }
+
+      // Check submission status from project_onboarding table
+      const { data: onboardingData } = await supabase
+        .from('project_onboarding')
+        .select('data_access_verified, data_access_verified_at')
+        .eq('id', projectId)
+        .single();
+
+      if (onboardingData) {
+        setIsSubmitted(onboardingData.data_access_verified === true);
+        setSubmittedAt(onboardingData.data_access_verified_at || null);
       }
     } catch (error) {
       console.error('Error fetching config:', error);
@@ -182,8 +189,6 @@ useEffect(() => {
         ...configData,
         credential_method: method,
         configured_by: user.id,
-        data_access_verified: true,
-        data_access_verified_at: new Date().toISOString(),
       };
 
       if (method === 'delegated_account') {
@@ -193,12 +198,29 @@ useEffect(() => {
         payload.api_key_encrypted = null;
       }
 
-      // Save configuration
+      // Step 1: Save configuration to data_access_config
       const { error: configError } = await supabase
         .from('data_access_config')
         .upsert(payload, { onConflict: 'project_id' });
 
-      if (configError) throw configError;
+      if (configError) {
+        console.error('Failed to save configuration:', configError);
+        throw new Error('Failed to save configuration');
+      }
+
+      // Step 2: Update verification status in project_onboarding
+      const { error: verificationError } = await supabase
+        .from('project_onboarding')
+        .update({
+          data_access_verified: true,
+          data_access_verified_at: new Date().toISOString(),
+        })
+        .eq('id', projectId);
+
+      if (verificationError) {
+        console.error('Failed to update verification status:', verificationError);
+        throw new Error('Failed to submit for audit');
+      }
 
       // Log activity
       const { error: activityError } = await supabase
