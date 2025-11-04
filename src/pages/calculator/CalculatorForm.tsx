@@ -210,7 +210,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
       >
         <div className="meta-card pt-8 px-4 pb-4 md:p-6 lg:p-8 relative">
           <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-crunch-yellow/90 text-crunch-black font-medium px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md">
-            <span className="flex items-center text-sm md:text-base">
+            <span className="flex items-center justify-center text-sm md:text-base">
               <CalculatorIcon className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" /> 
               Crunch the Numbers
             </span>
