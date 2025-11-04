@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Info } from "lucide-react";
+import { Loader2, Info, CheckCircle2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DataAccessConfig } from "@/types/onboarding";
 import { getErrorMessage } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface DataAccessTabProps {
   projectId: string;
@@ -22,7 +24,10 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   const [config, setConfig] = useState<Partial<DataAccessConfig>>({
     credential_method: 'delegated_account',
   });
-const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
 // Simple client-side validation
 const getValidationErrors = (cfg: Partial<DataAccessConfig>): string[] => {
@@ -92,81 +97,199 @@ useEffect(() => {
           credential_method: data.credential_method as 'delegated_account' | 'api_key',
           last_test_status: data.last_test_status as 'success' | 'failed' | 'pending' | null
         });
+        
+        // Check if already submitted for audit
+        const isVerified = data.data_access_verified === true;
+        setIsSubmitted(isVerified);
+        setSubmittedAt(data.data_access_verified_at || null);
       }
     } catch (error) {
       console.error('Error fetching config:', error);
     }
   };
 
-const handleSave = async () => {
-  try {
-    setIsSaving(true);
+  const handleSaveDraft = async () => {
+    try {
+      setIsSavingDraft(true);
 
-    // Validate client-side
-    const validationErrors = getValidationErrors(config);
-    if (validationErrors.length > 0) {
+      const { id, created_at, updated_at, data_access_verified, data_access_verified_at, ...configData } = config as any;
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const method = (configData.credential_method ?? 'delegated_account') as 'delegated_account' | 'api_key';
+
+      const payload: any = {
+        project_id: projectId,
+        ...configData,
+        credential_method: method,
+        configured_by: user?.id ?? null,
+      };
+
+      if (method === 'delegated_account') {
+        payload.delegated_email = payload.delegated_email && String(payload.delegated_email).trim() !== ''
+          ? payload.delegated_email
+          : 'data@crunchcarbon.com';
+        payload.api_key_encrypted = null;
+      }
+
+      const { error } = await supabase
+        .from('data_access_config')
+        .upsert(payload, { onConflict: 'project_id' });
+
+      if (error) throw error;
+
       toast({
-        title: "Please fix the following",
-        description: validationErrors[0],
+        title: "Draft saved",
+        description: "Configuration saved as draft successfully",
+      });
+
+      fetchConfig();
+      onRefresh();
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: "Error",
+        description: getErrorMessage(error) || "Failed to save draft",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsSavingDraft(false);
     }
+  };
 
-    const { id, created_at, updated_at, ...configData } = config as any;
-    const { data: { user } } = await supabase.auth.getUser();
+  const handleSubmitForAudit = async () => {
+    try {
+      setIsSubmitting(true);
 
-    const method = (configData.credential_method ?? 'delegated_account') as 'delegated_account' | 'api_key';
+      // Validate client-side
+      const validationErrors = getValidationErrors(config);
+      if (validationErrors.length > 0) {
+        toast({
+          title: "Please fix the following",
+          description: validationErrors[0],
+          variant: "destructive",
+        });
+        return;
+      }
 
-    const payload: any = {
-      project_id: projectId,
-      ...configData,
-      credential_method: method,
-      configured_by: user?.id ?? null,
-    };
+      const { id, created_at, updated_at, ...configData } = config as any;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
 
-    if (method === 'delegated_account') {
-      payload.delegated_email = payload.delegated_email && String(payload.delegated_email).trim() !== ''
-        ? payload.delegated_email
-        : 'data@crunchcarbon.com';
-      payload.api_key_encrypted = null;
+      const method = (configData.credential_method ?? 'delegated_account') as 'delegated_account' | 'api_key';
+
+      const payload: any = {
+        project_id: projectId,
+        ...configData,
+        credential_method: method,
+        configured_by: user.id,
+        data_access_verified: true,
+        data_access_verified_at: new Date().toISOString(),
+      };
+
+      if (method === 'delegated_account') {
+        payload.delegated_email = payload.delegated_email && String(payload.delegated_email).trim() !== ''
+          ? payload.delegated_email
+          : 'data@crunchcarbon.com';
+        payload.api_key_encrypted = null;
+      }
+
+      // Save configuration
+      const { error: configError } = await supabase
+        .from('data_access_config')
+        .upsert(payload, { onConflict: 'project_id' });
+
+      if (configError) throw configError;
+
+      // Log activity
+      const { error: activityError } = await supabase
+        .from('onboarding_activity_log')
+        .insert({
+          project_id: projectId,
+          actor_id: user.id,
+          action: 'data_access_submitted',
+          entity_type: 'data_access_config',
+          details: {
+            provider: config.provider,
+            credential_method: config.credential_method,
+          }
+        });
+
+      if (activityError) console.error('Failed to log activity:', activityError);
+
+      // Notify all admins
+      const { data: adminProfiles, error: adminError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin');
+
+      if (!adminError && adminProfiles) {
+        const notifications = adminProfiles.map(admin => ({
+          user_id: admin.id,
+          type: 'info',
+          title: 'Data Access Config Submitted',
+          message: `Project has submitted data access configuration for audit review`,
+          related_type: 'project_onboarding',
+          related_id: projectId,
+        }));
+
+        await supabase.from('notifications').insert(notifications);
+      }
+
+      setIsSubmitted(true);
+      setSubmittedAt(new Date().toISOString());
+
+      toast({
+        title: "Submitted for audit",
+        description: "Configuration submitted successfully. Admins will review it shortly.",
+      });
+
+      fetchConfig();
+      onRefresh();
+    } catch (error) {
+      console.error('Error submitting for audit:', error);
+      toast({
+        title: "Error",
+        description: getErrorMessage(error) || "Failed to submit for audit",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const { error } = await supabase
-      .from('data_access_config')
-      .upsert(payload, { onConflict: 'project_id' });
-
-    if (error) throw error;
-
-    toast({
-      title: "Success",
-      description: "Configuration saved successfully",
-    });
-
-    onRefresh();
-  } catch (error) {
-    console.error('Error saving config:', error);
-    toast({
-      title: "Error",
-      description: getErrorMessage(error) || "Failed to save configuration",
-      variant: "destructive",
-    });
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Data Access Configuration</CardTitle>
-          <CardDescription>
-            Configure access to inverter or meter data for monitoring
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle>Data Access Configuration</CardTitle>
+              <CardDescription>
+                Configure access to inverter or meter data for monitoring
+              </CardDescription>
+            </div>
+            {isSubmitted && submittedAt && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Submitted {format(new Date(submittedAt), 'MMM d, yyyy')}
+              </Badge>
+            )}
+            {!isSubmitted && (
+              <Badge variant="outline">Draft</Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {isSubmitted && (
+            <div className="rounded-lg bg-muted p-4 text-sm">
+              <p className="font-medium mb-1">Awaiting Admin Review</p>
+              <p className="text-muted-foreground">
+                This configuration has been submitted for audit. You can still save updates as a draft. 
+                Contact an admin if you need to resubmit after making changes.
+              </p>
+            </div>
+          )}
           {/* Provider */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -286,9 +409,20 @@ const handleSave = async () => {
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button onClick={handleSave} disabled={isSaving || getValidationErrors(config).length > 0} variant="outline">
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Configuration
+            <Button 
+              onClick={handleSaveDraft} 
+              disabled={isSavingDraft || isSubmitting} 
+              variant="outline"
+            >
+              {isSavingDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Draft
+            </Button>
+            <Button 
+              onClick={handleSubmitForAudit} 
+              disabled={isSubmitting || isSavingDraft || getValidationErrors(config).length > 0 || isSubmitted}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit for Audit
             </Button>
           </div>
         </CardContent>
