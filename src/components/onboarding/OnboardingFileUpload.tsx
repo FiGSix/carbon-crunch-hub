@@ -204,7 +204,45 @@ export function OnboardingFileUpload({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(doc.file_url, '_blank')}
+                  onClick={async () => {
+                    try {
+                      // Extract the file path from the URL
+                      const urlParts = doc.file_url.split('/onboarding-documents/');
+                      if (urlParts.length < 2) {
+                        throw new Error('Invalid file URL');
+                      }
+                      const filePath = urlParts[1].split('?')[0]; // Remove query params
+                      
+                      // Download using Supabase storage API (includes auth automatically)
+                      const { data, error } = await supabase.storage
+                        .from('onboarding-documents')
+                        .download(filePath);
+                      
+                      if (error) throw error;
+                      
+                      // Create blob URL and trigger download
+                      const blobUrl = URL.createObjectURL(data);
+                      const link = document.createElement('a');
+                      link.href = blobUrl;
+                      link.download = doc.file_name;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(blobUrl);
+                      
+                      toast({
+                        title: "Success",
+                        description: "Document downloaded successfully",
+                      });
+                    } catch (error) {
+                      console.error('Download error:', error);
+                      toast({
+                        title: "Download Failed",
+                        description: "Could not download the document",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

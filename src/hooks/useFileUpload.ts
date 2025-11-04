@@ -95,15 +95,21 @@ export function useFileUpload({
         throw uploadError;
       }
 
-      const { data } = supabase.storage
+      // For private buckets, generate a signed URL valid for 1 year
+      const { data: urlData, error: urlError } = await supabase.storage
         .from(bucket)
-        .getPublicUrl(finalFileName);
+        .createSignedUrl(finalFileName, 31536000); // 365 days in seconds
 
-      const publicUrl = data.publicUrl;
-      console.log('Upload successful, URL:', publicUrl);
-      onSuccess?.(publicUrl, user.id);
+      if (urlError) {
+        console.error('Signed URL generation error:', urlError);
+        throw urlError;
+      }
+
+      const signedUrl = urlData.signedUrl;
+      console.log('Upload successful, URL:', signedUrl);
+      onSuccess?.(signedUrl, user.id);
       
-      return publicUrl;
+      return signedUrl;
     } catch (error: any) {
       console.error('Upload error details:', error);
       const errorMessage = error.message || 'Upload failed';
