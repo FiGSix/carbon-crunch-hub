@@ -75,8 +75,8 @@ export const CalculationResults = ({
   });
   
   return (
-    <div className="meta-card p-8">
-      <h2 className="text-2xl font-bold text-center mb-6 text-crunch-black">
+    <div className="meta-card p-4 md:p-6 lg:p-8">
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6 text-crunch-black">
         Your Solar Impact
       </h2>
       
@@ -93,7 +93,7 @@ export const CalculationResults = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 md:mb-8">
         <ResultCard 
           title="Annual Energy" 
           value={formatNumber(results.annualGeneration)} 

@@ -171,7 +171,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
           transition={{ duration: 0.5 }}
           className="col-span-full"
         >
-          <div className="meta-card p-12 text-center max-w-2xl mx-auto">
+          <div className="meta-card p-6 md:p-12 text-center max-w-2xl mx-auto">
             <CheckCircle2 className="h-20 w-20 text-green-600 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-crunch-black mb-4">
               Check Your Email! 📧
@@ -208,20 +208,20 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
         transition={{ duration: 0.5 }}
         className="order-2 lg:order-1"
       >
-        <div className="meta-card p-8 relative">
-          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-crunch-yellow/90 text-crunch-black font-medium px-4 py-2 rounded-full shadow-md">
-            <span className="flex items-center">
-              <CalculatorIcon className="mr-2 h-4 w-4" /> 
+        <div className="meta-card p-4 md:p-6 lg:p-8 relative">
+          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-crunch-yellow/90 text-crunch-black font-medium px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md">
+            <span className="flex items-center text-sm md:text-base">
+              <CalculatorIcon className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" /> 
               Crunch the Numbers
             </span>
           </div>
           
-          <h2 className="text-2xl font-bold text-center mb-6 text-crunch-black mt-2">
+          <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6 text-crunch-black mt-2">
             Tell Us About Your Solar System
           </h2>
           
           {/* Mode Toggle */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-4 md:mb-6">
             <Button
               type="button"
               variant="outline"
@@ -229,11 +229,16 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
               onClick={handleModeToggle}
               className="text-xs border-crunch-black/20 text-crunch-black/70 hover:bg-crunch-black/5"
             >
-              {inputMode === 'simple' ? "I know my system size in kWp" : "Calculate from panel count"}
+              <span className="hidden sm:inline">
+                {inputMode === 'simple' ? "I know my system size in kWp" : "Calculate from panel count"}
+              </span>
+              <span className="sm:hidden">
+                {inputMode === 'simple' ? "Enter kWp" : "Enter panels"}
+              </span>
             </Button>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {inputMode === 'simple' ? (
               /* Simple Mode - Panel Count & Wattage */
               <>
@@ -248,7 +253,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                     placeholder="e.g. 250"
                     value={numberOfPanels}
                     onChange={(e) => setNumberOfPanels(e.target.value)}
-                    className="retro-input text-lg"
+                    className="retro-input text-base md:text-lg"
                   />
                 </div>
                 
@@ -257,7 +262,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                     What's the wattage of each panel? <span className="text-red-500">*</span>
                   </label>
                   <Select value={panelWattage} onValueChange={setPanelWattage}>
-                    <SelectTrigger className="retro-input text-lg">
+                    <SelectTrigger className="retro-input text-base md:text-lg min-h-[44px]">
                       <SelectValue placeholder="Select panel wattage" />
                     </SelectTrigger>
                     <SelectContent className="bg-white border-2 border-crunch-black z-50">
@@ -278,13 +283,13 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                       placeholder="Enter custom wattage (W)"
                       value={customWattage}
                       onChange={(e) => setCustomWattage(e.target.value)}
-                      className="retro-input text-lg mt-2"
+                      className="retro-input text-base md:text-lg mt-2"
                     />
                   )}
                   
-                  <p className="text-xs text-crunch-black/60 mt-1 flex items-center gap-1">
-                    <Info className="h-3 w-3" />
-                    Most panel wattages are printed on the back of the panel or in installation docs
+                  <p className="text-xs text-crunch-black/60 mt-1">
+                    <Info className="h-3 w-3 inline mr-1" />
+                    Check panel back or installation docs for wattage
                   </p>
                 </div>
                 
@@ -332,7 +337,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                   placeholder="e.g. 100 kWp or 1.5 MWp"
                   value={systemSize}
                   onChange={(e) => setSystemSize(e.target.value)}
-                  className="retro-input text-lg"
+                  className="retro-input text-base md:text-lg"
                 />
                 <p className="text-xs text-crunch-black/60 mt-1">
                   Enter with unit (kWp/MWp) or value will default to kWp
@@ -350,7 +355,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                 value={commissioningDate}
                 min="2025-01-01"
                 onChange={(e) => setCommissioningDate(e.target.value)}
-                className="retro-input text-lg"
+                className="retro-input text-base md:text-lg"
               />
             </div>
             
@@ -364,7 +369,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                 placeholder="e.g. John Smith"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="retro-input text-lg"
+                className="retro-input text-base md:text-lg"
               />
             </div>
             
@@ -373,14 +378,14 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                 Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-crunch-black/40" />
+                <Mail className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-crunch-black/40" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="retro-input text-lg pl-12"
+                  className="retro-input text-base md:text-lg pl-10 md:pl-12"
                 />
               </div>
               <p className="text-xs text-crunch-black/60 mt-1">
@@ -396,7 +401,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                 (inputMode === 'simple' && (!numberOfPanels || calculatedSystemSize <= 0)) ||
                 (inputMode === 'advanced' && (!systemSize || normalizeToKWp(systemSize) <= 0))
               }
-              className="w-full bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium text-lg py-6 rounded-xl group transition-all hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              className="w-full bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium text-base md:text-lg py-4 md:py-6 rounded-xl group transition-all hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none min-h-[44px]"
             >
               {isCalculating ? (
                 <span className="flex items-center">
@@ -418,7 +423,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="order-1 lg:order-2"
+        className="order-1 lg:order-2 hidden lg:block"
       >
         <div className="meta-card p-8 flex flex-col items-center justify-center min-h-[400px]">
           <div className="text-center">
@@ -429,7 +434,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
               Enter your system details and email to receive a comprehensive report showing your solar system's potential carbon credits and revenue.
             </p>
             
-            <div className="grid grid-cols-3 gap-4 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
               <IconCard 
                 icon={BarChart3}
                 title="Energy" 
