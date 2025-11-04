@@ -12,7 +12,8 @@ import {
   FileSignature,
   ClipboardCheck,
   Shield,
-  UserCheck
+  UserCheck,
+  Database
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -120,6 +121,12 @@ export function DashboardSidebar() {
       name: "System Diagnostics",
       href: "/system-diagnostics",
       icon: Settings,
+      roles: ["admin"]
+    },
+    {
+      name: "Data Diagnostics",
+      href: "/admin/data-diagnostics",
+      icon: Database,
       roles: ["admin"]
     }
   ];
