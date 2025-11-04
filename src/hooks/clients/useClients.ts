@@ -6,6 +6,7 @@ import { ClientData } from './types';
 import { logger } from '@/lib/logger';
 import { createFetchErrorHandler } from '@/lib/errors/fetchErrorHandler';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { withTimeout } from '@/services/unified/utils/withTimeout';
 
 export interface UseClientsOptions {
   /** Enable pagination. If false, loads all clients at once */
@@ -101,15 +102,18 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
       
       setError(null);
 
-      devLogger.clients.log('🚀 Calling UnifiedDataService', { userId: user.id, userRole, pageSize, currentOffset });
+      console.info('🚀 useClients: Calling UnifiedDataService', { userId: user.id, userRole, pageSize, currentOffset });
       
-      // Fetch data
-      const result = await UnifiedDataService.getClients(
-        user.id, 
-        userRole, 
-        forceRefresh,
-        paginated ? pageSize : 1000, // Load all if not paginated
-        currentOffset
+      // Fetch data with timeout protection
+      const result = await withTimeout(
+        UnifiedDataService.getClients(
+          user.id, 
+          userRole, 
+          forceRefresh,
+          paginated ? pageSize : 1000,
+          currentOffset
+        ),
+        12000
       );
       
       if (!mountedRef.current) return;
@@ -148,18 +152,29 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
       });
 
     } catch (err) {
-      devLogger.clients.error('❌ Fetch error', err);
+      console.error('❌ useClients fetch error:', err);
       logger.error('Error fetching clients', { error: err });
       
       if (mountedRef.current) {
-        const errorMessage = handleFetchError(err, {
-          isInitialFetch: currentOffset === 0 && !isLoadMore,
-          isRefresh: forceRefresh,
-          context: 'clients',
-          showToast: true
-        });
+        const isTimeout = err instanceof Error && err.message.includes('timed out');
+        const errorMessage = isTimeout 
+          ? 'Request timed out - please try again'
+          : handleFetchError(err, {
+              isInitialFetch: currentOffset === 0 && !isLoadMore,
+              isRefresh: forceRefresh,
+              context: 'clients',
+              showToast: true
+            });
         
         setError(errorMessage);
+        
+        if (isTimeout) {
+          toast({
+            title: 'Request Timeout',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+        }
       }
     } finally {
       devLogger.clients.log('🏁 Fetch complete');
@@ -188,7 +203,8 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
    * Refresh from beginning
    */
   const refresh = useCallback(() => {
-    devLogger.clients.log('🔄 Refreshing clients');
+    console.info('🔄 Refreshing clients');
+    UnifiedDataService.clearCachePattern('unified_clients');
     setOffset(0);
     fetchClients(0, false, true);
   }, [fetchClients]);

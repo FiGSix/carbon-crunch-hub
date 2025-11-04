@@ -5,6 +5,7 @@ import { RoleValidator } from '../../utils/RoleValidator';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 import type { UnifiedClient, PaginatedClientsResult } from '../types';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { withTimeout } from '../../utils/withTimeout';
 
 /**
  * Handles fetching clients with pagination and role-based access control
@@ -55,48 +56,102 @@ export class ClientFetcher {
     }
 
     try {
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('=== Database Operations ===');
-      }
+      console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset });
       
-      // Parallelize count and paginated data RPCs for faster loading
-      const rpcFunction = userRole === 'admin' 
-        ? 'get_agent_clients_paginated_admin' 
-        : 'get_agent_clients_paginated';
+      // Build RPC calls with correct params (avoid null for admin)
+      const countCall = userRole === 'admin'
+        ? supabase.rpc('get_agent_clients_count', {})
+        : supabase.rpc('get_agent_clients_count', { agent_id_param: userId });
 
-      const [countResult, dataResult] = await Promise.allSettled([
-        supabase.rpc('get_agent_clients_count', {
-          agent_id_param: userRole === 'admin' ? null : userId
-        }),
-        supabase.rpc(rpcFunction, {
-          agent_id_param: userRole === 'admin' ? null : userId,
-          limit_param: limit,
-          offset_param: offset
-        })
-      ]);
+      const dataCall = userRole === 'admin'
+        ? supabase.rpc('get_agent_clients_paginated_admin', { 
+            limit_param: limit, 
+            offset_param: offset 
+          })
+        : supabase.rpc('get_agent_clients_paginated', { 
+            agent_id_param: userId,
+            limit_param: limit,
+            offset_param: offset
+          });
 
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Parallel RPC results:', { countResult, dataResult });
-      }
+      // Wrap with timeout to prevent hanging
+      const [countResult, dataResult] = await withTimeout(
+        Promise.allSettled([countCall, dataCall]),
+        12000
+      );
 
-      // Extract count (non-critical - we can estimate if it fails)
+      console.info('✅ RPC calls completed', { 
+        countStatus: countResult.status, 
+        dataStatus: dataResult.status 
+      });
+
+      // Extract count (non-critical)
       let totalCount = 0;
       if (countResult.status === 'fulfilled' && !countResult.value.error) {
         totalCount = countResult.value.data || 0;
-      } else if (import.meta.env.DEV) {
-        devLogger.clients.warn('Count RPC failed, will estimate from data');
       }
 
       // Extract paginated data (critical)
-      if (dataResult.status === 'rejected' || (dataResult.status === 'fulfilled' && dataResult.value.error)) {
-        const error = dataResult.status === 'rejected' ? dataResult.reason : dataResult.value.error;
-        if (import.meta.env.DEV) {
-          devLogger.clients.error('Paginated data error:', error);
+      let data: any[] | null = null;
+      
+      if (dataResult.status === 'fulfilled' && !dataResult.value.error) {
+        data = dataResult.value.data;
+      } else {
+        // RPC failed - use fallback query
+        console.info('⚠️ RPC failed, using fallback query');
+        
+        try {
+          let fallbackQueryBuilder = supabase
+            .from('profiles')
+            .select('id, first_name, last_name, email, company_name, created_at, agent_status')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+          if (userRole !== 'admin') {
+            fallbackQueryBuilder = fallbackQueryBuilder.eq('id', userId);
+          }
+
+          // Execute query with timeout
+          const fallbackResult = await Promise.race([
+            fallbackQueryBuilder,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Fallback query timed out')), 8000)
+            )
+          ]) as Awaited<typeof fallbackQueryBuilder>;
+          
+          if (fallbackResult.error) throw fallbackResult.error;
+          
+          console.info('✅ Fallback query succeeded', { count: fallbackResult.data?.length });
+          
+          // Map fallback data to expected format
+          data = (fallbackResult.data || []).map(row => ({
+            client_id: row.id,
+            client_name: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || row.company_name || 'Unknown',
+            client_email: row.email,
+            company_name: row.company_name || '',
+            is_registered: true,
+            project_count: 0,
+            total_mwp: 0,
+            created_at: row.created_at,
+            agent_id: row.id,
+            is_active: row.agent_status === 'active'
+          }));
+          
+          if (totalCount === 0) {
+            totalCount = data.length;
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback query also failed:', fallbackError);
+          return {
+            clients: [],
+            hasMore: false,
+            totalCount: 0,
+            nextOffset: 0
+          };
         }
-        const errorResult = ErrorHandler.handleRLSError(error, 'unified clients fetch');
-        if (errorResult.requiresReauth) {
-          window.dispatchEvent(new CustomEvent('auth-required'));
-        }
+      }
+
+      if (!data) {
         return {
           clients: [],
           hasMore: false,
@@ -105,39 +160,22 @@ export class ClientFetcher {
         };
       }
 
-      const data = dataResult.value.data;
+      console.info('📊 Processing client data', { count: data.length });
 
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Data array length:', data?.length);
-        devLogger.clients.debug('Sample data item:', data?.[0]);
-      }
+      const clients: UnifiedClient[] = data.map(client => ({
+        id: client.client_id,
+        name: client.client_name || 'Unknown Client',
+        email: client.client_email,
+        company: client.company_name,
+        isRegistered: client.is_registered || false,
+        projectCount: client.project_count || 0,
+        totalKwp: (client.total_mwp || 0) * 1000,
+        createdAt: client.created_at || new Date().toISOString(),
+        agentCompanyName: (client as any).agent_company_name,
+        agentId: (client as any).agent_id,
+        isActive: (client as any).is_active || false
+      }));
 
-      const clients: UnifiedClient[] = (data || []).map(client => {
-        if (import.meta.env.DEV) {
-          devLogger.clients.debug('Mapping client:', client);
-        }
-        return {
-          id: client.client_id,
-          name: client.client_name || 'Unknown Client',
-          email: client.client_email,
-          company: client.company_name,
-          isRegistered: client.is_registered || false,
-          projectCount: client.project_count || 0,
-          totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
-          createdAt: client.created_at || new Date().toISOString(),
-          agentCompanyName: (client as any).agent_company_name,
-          agentId: (client as any).agent_id,
-          isActive: (client as any).is_active || false
-        };
-      });
-
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('=== Final mapped clients ===');
-        devLogger.clients.debug('Mapped clients:', clients);
-        devLogger.clients.debug('Mapped clients count:', clients.length);
-      }
-
-      // If count failed, estimate hasMore from data length
       const hasMore = totalCount > 0 ? offset + limit < totalCount : clients.length >= limit;
       const nextOffset = hasMore ? offset + limit : (totalCount > 0 ? totalCount : offset + clients.length);
 
@@ -148,15 +186,12 @@ export class ClientFetcher {
         nextOffset
       };
 
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('=== Final result ===');
-        devLogger.clients.debug('Result:', result);
-      }
+      console.info('🏁 Fetch complete', { clientCount: clients.length, hasMore });
 
       CacheManager.setCache(cacheKey, result);
       return result;
     } catch (error) {
-      devLogger.clients.error('Error fetching unified clients:', error);
+      console.error('❌ ClientFetcher error:', error);
       ErrorHandler.logSecurityEvent({
         type: 'access_denied',
         userId,
