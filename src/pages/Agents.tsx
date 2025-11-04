@@ -1,13 +1,25 @@
+import { useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Briefcase, CheckCircle2, DollarSign, Handshake, Rocket, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 
 const Agents = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Capture referral code from URL
+  useEffect(() => {
+    const referralCode = searchParams.get('ref');
+    if (referralCode) {
+      // Store in localStorage for later use during agent registration
+      localStorage.setItem('agent_referral_code', referralCode);
+      console.log('Agent referral code captured:', referralCode);
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen flex flex-col">

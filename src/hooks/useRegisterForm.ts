@@ -338,6 +338,36 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
           });
         }
       }
+
+      // Track referring agent for agent registrations
+      if (formData.role === 'agent' && data?.user?.id) {
+        const referralCode = localStorage.getItem('agent_referral_code');
+        if (referralCode) {
+          try {
+            // Store the referring agent in the profiles table notes field
+            await supabase
+              .from('profiles')
+              .update({ 
+                notes: `Referred by agent: ${referralCode}` 
+              })
+              .eq('id', data.user.id);
+            
+            // Clear the referral code
+            localStorage.removeItem('agent_referral_code');
+            
+            authLogger.info('Referring agent tracked', { 
+              newAgentId: data.user.id,
+              referringAgentId: referralCode 
+            });
+          } catch (error) {
+            authLogger.error('Failed to track referring agent', { 
+              error,
+              newAgentId: data.user.id 
+            });
+            // Don't block registration if tracking fails
+          }
+        }
+      }
       
       toast({
         title: "Registration successful!",

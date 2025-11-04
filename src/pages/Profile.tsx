@@ -2,11 +2,13 @@
 
 import { useAuth } from '@/contexts/auth';
 import { ProfileForm } from '@/components/profile/ProfileForm';
+import { AgentReferralSection } from '@/components/profile/AgentReferralSection';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const Profile = () => {
   const { profile, userRole, refreshUser } = useAuth();
   const isAgent = userRole === 'agent';
+  const isAdmin = userRole === 'admin';
 
   return (
     <DashboardLayout>
@@ -24,6 +26,11 @@ const Profile = () => {
             refreshUser={refreshUser}
             isAgent={isAgent}
           />
+
+          {/* Agent Referral Section - Only for agents and admins */}
+          {(isAgent || isAdmin) && (
+            <AgentReferralSection />
+          )}
         </div>
       </div>
     </DashboardLayout>
