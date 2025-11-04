@@ -109,7 +109,8 @@
 .retro-input {
   width: 100%;
   padding-block: 0.75rem;
-  padding-inline: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   background: hsl(var(--background));
