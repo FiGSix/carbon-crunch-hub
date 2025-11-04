@@ -49,5 +49,8 @@ verify_jwt = true
 [functions.bulk-upload-legacy-projects]
 verify_jwt = true
 
+[functions.backfill-client-names]
+verify_jwt = true
+
 [functions.delete-user]
 verify_jwt = true

@@ -20,7 +20,18 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
   const { userRole } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const isAdmin = userRole === 'admin';
-  const clientInfo = proposal.content?.clientInfo || {};
+  
+  // Enhanced client info with fallback to clients table
+  const clientInfo = {
+    ...(proposal.content?.clientInfo || {}),
+    // Fallback to clients table if name is missing from content
+    name: proposal.content?.clientInfo?.name || 
+          (proposal.clients?.first_name && proposal.clients?.last_name
+            ? `${proposal.clients.first_name} ${proposal.clients.last_name}`.trim()
+            : proposal.content?.clientInfo?.name || '—'),
+    email: proposal.content?.clientInfo?.email || proposal.clients?.email || '—',
+  };
+  
   const projectInfo = proposal.content?.projectInfo || {};
 
   const checklist = [

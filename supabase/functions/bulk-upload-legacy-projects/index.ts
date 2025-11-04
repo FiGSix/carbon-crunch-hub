@@ -89,6 +89,7 @@ serve(async (req) => {
       const rowNum = i + 3; // Account for header and description rows
 
       try {
+        console.log(`Processing row ${rowNum}: ${row.client_first_name} ${row.client_last_name}`);
         // 1. Find agent by email
         const { data: agent } = await supabase
           .from('profiles')
@@ -216,6 +217,14 @@ serve(async (req) => {
           .single();
 
         if (proposalError) throw proposalError;
+
+        // Verify the content was stored correctly
+        const clientNameStored = proposal.content?.clientInfo?.name;
+        if (!clientNameStored || clientNameStored.trim().length === 0) {
+          console.error(`❌ Client name missing in proposal ${proposal.id} for ${row.client_email}`);
+          throw new Error(`Failed to store client name for ${row.client_email}. Expected: "${row.client_first_name} ${row.client_last_name}", Got: "${clientNameStored}"`);
+        }
+        console.log(`✓ Verified client name stored: "${clientNameStored}"`);
 
         // 6. Create proposal agreement
         const { error: agreementError } = await supabase

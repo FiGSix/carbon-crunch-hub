@@ -40,7 +40,17 @@ export default function ProjectOnboardingDetail() {
       // Fetch project onboarding
       const { data: projectData, error: projectError } = await supabase
         .from('project_onboarding')
-        .select('*, proposals!inner(*)')
+        .select(`
+          *, 
+          proposals!inner(
+            *,
+            clients:client_reference_id (
+              first_name,
+              last_name,
+              email
+            )
+          )
+        `)
         .eq('id', projectId)
         .single();
 

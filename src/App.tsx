@@ -62,6 +62,7 @@ const AdminUserManagement = createOptimizedLazyComponent(() => import("./pages/A
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
+const DataDiagnostics = createOptimizedLazyComponent(() => import("./pages/admin/DataDiagnostics"), "DataDiagnostics");
 const ProjectOnboardingList = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingList"), "ProjectOnboardingList");
 const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingDetail"), "ProjectOnboardingDetail");
 const TeamManagement = createOptimizedLazyComponent(() => import("./pages/TeamManagement"), "TeamManagement");
@@ -383,8 +384,20 @@ function App() {
                       </PrivateRoute>
                     } 
                   />
+                  <Route 
+                    path="/admin/data-diagnostics" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Data Diagnostics">
+                          <Suspense fallback={<PageLoader />}>
+                            <DataDiagnostics />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
                   <Route
-                    path="/notifications" 
+                    path="/notifications"
                     element={
                       <PrivateRoute>
                         <PageErrorBoundary pageName="Notifications">

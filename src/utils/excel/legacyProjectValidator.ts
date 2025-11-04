@@ -27,12 +27,12 @@ export function validateLegacyProjectRows(rows: LegacyProjectRow[]): ValidationE
       errors.push({ row: rowNum, field: 'client_email', message: 'Invalid email format' });
     }
     
-    if (!row.client_first_name || row.client_first_name.length === 0) {
-      errors.push({ row: rowNum, field: 'client_first_name', message: 'Client first name is required' });
+    if (!row.client_first_name || row.client_first_name.trim().length === 0) {
+      errors.push({ row: rowNum, field: 'client_first_name', message: 'Client first name is required and cannot be empty or whitespace only' });
     }
     
-    if (!row.client_last_name || row.client_last_name.length === 0) {
-      errors.push({ row: rowNum, field: 'client_last_name', message: 'Client last name is required' });
+    if (!row.client_last_name || row.client_last_name.trim().length === 0) {
+      errors.push({ row: rowNum, field: 'client_last_name', message: 'Client last name is required and cannot be empty or whitespace only' });
     }
     
     if (!row.system_address || row.system_address.length === 0) {
