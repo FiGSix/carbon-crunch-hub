@@ -65,6 +65,7 @@ const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/Admin
 const ProjectOnboardingList = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingList"), "ProjectOnboardingList");
 const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingDetail"), "ProjectOnboardingDetail");
 const TeamManagement = createOptimizedLazyComponent(() => import("./pages/TeamManagement"), "TeamManagement");
+const Referral = createOptimizedLazyComponent(() => import("./pages/Referral"), "Referral");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -395,7 +396,19 @@ function App() {
                     } 
                   />
                   <Route 
-                    path="/onboarding" 
+                    path="/referral" 
+                    element={
+                      <PrivateRoute allowedRoles={['client']}>
+                        <PageErrorBoundary pageName="Referral">
+                          <Suspense fallback={<PageLoader />}>
+                            <Referral />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/onboarding"
                     element={
                       <PrivateRoute>
                         <PageErrorBoundary pageName="Project Onboarding">

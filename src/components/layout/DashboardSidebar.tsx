@@ -51,6 +51,12 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Team",
+      href: "/team",
+      icon: UserCheck,
+      roles: ["admin", "agent"]
+    },
+    {
       name: "Proposals",
       href: "/proposals",
       icon: FileText,
@@ -63,22 +69,28 @@ export function DashboardSidebar() {
       roles: ["admin", "agent"]
     },
     {
+      name: "Project Onboarding",
+      href: "/onboarding",
+      icon: ClipboardCheck,
+      roles: ["admin", "agent", "client"]
+    },
+    {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,
       roles: ["admin", "agent"]
     },
     {
-      name: "Team",
-      href: "/team",
-      icon: UserCheck,
-      roles: ["admin", "agent"]
+      name: "Notifications",
+      href: "/notifications",
+      icon: Bell,
+      roles: ["admin", "agent", "client"]
     },
     {
-      name: "Project Onboarding",
-      href: "/onboarding",
-      icon: ClipboardCheck,
-      roles: ["admin", "agent", "client"]
+      name: "Refer a Friend",
+      href: "/referral",
+      icon: UserPlus,
+      roles: ["client"]
     },
     {
       name: "Agent Management",
@@ -97,12 +109,6 @@ export function DashboardSidebar() {
       href: "/admin/signatures",
       icon: FileSignature,
       roles: ["admin"]
-    },
-    {
-      name: "Notifications",
-      href: "/notifications",
-      icon: Bell,
-      roles: ["admin", "agent", "client"]
     },
     {
       name: "System Settings",
