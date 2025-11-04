@@ -241,7 +241,7 @@ export function UserManagementTable() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Company Name</TableHead>
+              <TableHead className="text-left">Company Name</TableHead>
               <TableHead>Company Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
@@ -263,7 +263,7 @@ export function UserManagementTable() {
                       {user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-left">
                     {user.company_name ? (
                       user.company_id ? (
                         <button
