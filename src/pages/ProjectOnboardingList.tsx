@@ -131,7 +131,6 @@ export default function ProjectOnboardingList() {
   const calculateProjectStatus = (project: ProjectOnboardingListItem): {
     label: string;
     color: string;
-    icon: string;
   } => {
     const { onboarding_status, data_access_status, audit_ready_status } = project.step_status;
     
@@ -139,8 +138,7 @@ export default function ProjectOnboardingList() {
     if (audit_ready_status === 'green') {
       return {
         label: 'Audit Ready',
-        color: 'bg-green-100 text-green-800 border-green-300',
-        icon: '✓'
+        color: 'bg-green-100 text-green-800 border-green-300'
       };
     }
     
@@ -148,8 +146,7 @@ export default function ProjectOnboardingList() {
     if (onboarding_status === 'green' && data_access_status === 'green') {
       return {
         label: 'Under Review',
-        color: 'bg-orange-100 text-orange-800 border-orange-300',
-        icon: '🔍'
+        color: 'bg-orange-100 text-orange-800 border-orange-300'
       };
     }
     
@@ -157,16 +154,14 @@ export default function ProjectOnboardingList() {
     if (onboarding_status === 'green' || data_access_status === 'green') {
       return {
         label: 'In Progress',
-        color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-        icon: '⏳'
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-300'
       };
     }
     
     // 🔴 Not Started (nothing done)
     return {
       label: 'Not Started',
-      color: 'bg-red-100 text-red-800 border-red-300',
-      icon: '○'
+      color: 'bg-red-100 text-red-800 border-red-300'
     };
   };
 
@@ -258,7 +253,6 @@ export default function ProjectOnboardingList() {
                                 status.color
                               )}
                             >
-                              <span className="mr-1.5">{status.icon}</span>
                               {status.label}
                             </Badge>
                           );
