@@ -59,46 +59,37 @@ export class ClientFetcher {
         devLogger.clients.debug('=== Database Operations ===');
       }
       
-      // Get total count efficiently using the new function
-      const { data: countData, error: countError } = await supabase.rpc('get_agent_clients_count', {
-        agent_id_param: userRole === 'admin' ? null : userId
-      });
-
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Count RPC result:', { countData, countError });
-      }
-
-      if (countError) {
-        if (import.meta.env.DEV) {
-          devLogger.clients.error('Count error:', countError);
-        }
-        throw countError;
-      }
-
-      const totalCount = countData || 0;
-      
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Total count:', totalCount);
-      }
-
-      // Get paginated data using the new optimized function
+      // Parallelize count and paginated data RPCs for faster loading
       const rpcFunction = userRole === 'admin' 
         ? 'get_agent_clients_paginated_admin' 
         : 'get_agent_clients_paginated';
 
-      const { data, error } = await supabase.rpc(rpcFunction, {
-        agent_id_param: userRole === 'admin' ? null : userId,
-        limit_param: limit,
-        offset_param: offset
-      });
+      const [countResult, dataResult] = await Promise.allSettled([
+        supabase.rpc('get_agent_clients_count', {
+          agent_id_param: userRole === 'admin' ? null : userId
+        }),
+        supabase.rpc(rpcFunction, {
+          agent_id_param: userRole === 'admin' ? null : userId,
+          limit_param: limit,
+          offset_param: offset
+        })
+      ]);
 
       if (import.meta.env.DEV) {
-        devLogger.clients.debug('Paginated RPC result:', { data, error });
-        devLogger.clients.debug('Data array length:', data?.length);
-        devLogger.clients.debug('Sample data item:', data?.[0]);
+        devLogger.clients.debug('Parallel RPC results:', { countResult, dataResult });
       }
 
-      if (error) {
+      // Extract count (non-critical - we can estimate if it fails)
+      let totalCount = 0;
+      if (countResult.status === 'fulfilled' && !countResult.value.error) {
+        totalCount = countResult.value.data || 0;
+      } else if (import.meta.env.DEV) {
+        devLogger.clients.warn('Count RPC failed, will estimate from data');
+      }
+
+      // Extract paginated data (critical)
+      if (dataResult.status === 'rejected' || (dataResult.status === 'fulfilled' && dataResult.value.error)) {
+        const error = dataResult.status === 'rejected' ? dataResult.reason : dataResult.value.error;
         if (import.meta.env.DEV) {
           devLogger.clients.error('Paginated data error:', error);
         }
@@ -112,6 +103,13 @@ export class ClientFetcher {
           totalCount: 0,
           nextOffset: 0
         };
+      }
+
+      const data = dataResult.value.data;
+
+      if (import.meta.env.DEV) {
+        devLogger.clients.debug('Data array length:', data?.length);
+        devLogger.clients.debug('Sample data item:', data?.[0]);
       }
 
       const clients: UnifiedClient[] = (data || []).map(client => {
@@ -139,8 +137,9 @@ export class ClientFetcher {
         devLogger.clients.debug('Mapped clients count:', clients.length);
       }
 
-      const hasMore = offset + limit < totalCount;
-      const nextOffset = hasMore ? offset + limit : totalCount;
+      // If count failed, estimate hasMore from data length
+      const hasMore = totalCount > 0 ? offset + limit < totalCount : clients.length >= limit;
+      const nextOffset = hasMore ? offset + limit : (totalCount > 0 ? totalCount : offset + clients.length);
 
       const result: PaginatedClientsResult = {
         clients,

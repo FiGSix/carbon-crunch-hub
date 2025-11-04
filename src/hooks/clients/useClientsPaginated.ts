@@ -68,13 +68,18 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
 
     // Prevent overlapping fetches
     if (isFetchingRef.current) {
-      devLogger.clients.log('⏸️ Fetch already in progress, skipping duplicate request');
+      try {
+        devLogger.clients.log('⏸️ Fetch already in progress, skipping duplicate request');
+      } catch {}
       return;
     }
 
     try {
       isFetchingRef.current = true;
-      devLogger.clients.log('🚀 Starting fetch', { currentOffset, isLoadMore, forceRefresh });
+      try {
+        devLogger.clients.log('🚀 Starting fetch', { currentOffset, isLoadMore, forceRefresh });
+      } catch {}
+      
       if (isLoadMore) {
         setIsLoadingMore(true);
       } else {
@@ -82,13 +87,15 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       }
       setError(null);
 
-      devLogger.clients.log('📞 Calling UnifiedDataService.getClients', { 
-        userId: user.id, 
-        userRole, 
-        forceRefresh, 
-        pageSize: PAGE_SIZE, 
-        currentOffset 
-      });
+      try {
+        devLogger.clients.log('📞 Calling UnifiedDataService.getClients', { 
+          userId: user.id, 
+          userRole, 
+          forceRefresh, 
+          pageSize: PAGE_SIZE, 
+          currentOffset 
+        });
+      } catch {}
       
       // Add timeout to prevent hung requests
       const result = await withTimeout(
@@ -102,7 +109,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         10000 // 10 second timeout
       );
       
-      devLogger.clients.log('✅ Data received', { count: result.clients.length, totalCount: result.totalCount });
+      try {
+        devLogger.clients.log('✅ Data received', { count: result.clients.length, totalCount: result.totalCount });
+      } catch {}
       
       if (!mountedRef.current) return;
 
@@ -137,7 +146,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
       });
 
     } catch (err) {
-      devLogger.clients.error('❌ Fetch error', err);
+      try {
+        devLogger.clients.error('❌ Fetch error', err);
+      } catch {}
       logger.error('Error fetching clients', { error: err });
       
       if (mountedRef.current) {
@@ -161,7 +172,9 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
         setError(errorMessage);
       }
     } finally {
-      devLogger.clients.log('🏁 Fetch complete (finally block)');
+      try {
+        devLogger.clients.log('🏁 Fetch complete (finally block)');
+      } catch {}
       if (mountedRef.current) {
         setIsLoading(false);
         setIsLoadingMore(false);
@@ -186,8 +199,26 @@ export function useClientsPaginated(): UseClientsPaginatedResult {
   // Don't include fetchClients in deps to prevent re-trigger loops
   useEffect(() => {
     if (user?.id && userRole) {
-      devLogger.clients.log('🎬 Initial fetch triggered by auth ready');
+      try {
+        devLogger.clients.log('🎬 Initial fetch triggered by auth ready');
+      } catch {}
+      
+      // Watchdog timer: if fetch doesn't complete in 12s, force exit loading state
+      const watchdogTimer = setTimeout(() => {
+        if (mountedRef.current && isFetchingRef.current) {
+          try {
+            devLogger.clients.error('⏱️ Watchdog timeout: fetch took >12s, forcing exit');
+          } catch {}
+          setError('Request timed out - please refresh');
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          isFetchingRef.current = false;
+        }
+      }, 12000);
+      
       fetchClients(0, false, false);
+      
+      return () => clearTimeout(watchdogTimer);
     } else {
       setIsLoading(false);
     }
