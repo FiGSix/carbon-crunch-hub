@@ -377,17 +377,14 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
               <label htmlFor="email" className="block text-sm font-medium text-crunch-black/70 mb-1">
                 Email Address <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-crunch-black/40" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="retro-input text-base md:text-lg pl-10 md:pl-12"
-                />
-              </div>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="retro-input text-base md:text-lg"
+              />
               <p className="text-xs text-crunch-black/60 mt-1">
                 We'll send your complete solar impact report to this email
               </p>
