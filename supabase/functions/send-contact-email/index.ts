@@ -44,7 +44,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get IP address and user agent for tracking
-    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    const ipAddressRaw = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || null;
+    const ipAddress = ipAddressRaw ? ipAddressRaw.split(',')[0].trim() : null;
     const userAgent = req.headers.get("user-agent") || "unknown";
 
     console.log(`Processing contact form from ${name} (${email})`);
