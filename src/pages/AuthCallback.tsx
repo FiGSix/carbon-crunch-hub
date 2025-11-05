@@ -46,7 +46,8 @@ const AuthCallback = () => {
 
         // Get auth type and tokens
         const type = params.get('type');
-        const tokenHash = params.get('token_hash');
+        const tokenHash = params.get('token_hash'); // PKCE format (new)
+        const confirmationToken = params.get('confirmation_token'); // Magic Link format (old)
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
 
@@ -75,7 +76,17 @@ const AuthCallback = () => {
             return;
           }
         } else if (type === 'email' || type === 'signup') {
-          // Email confirmation
+          // Email confirmation - support both PKCE (new) and Magic Link (old)
+          
+          console.log('Email verification attempt:', {
+            type,
+            hasTokenHash: !!tokenHash,
+            hasConfirmationToken: !!confirmationToken,
+            tokenHashPrefix: tokenHash?.substring(0, 8),
+            confirmationTokenPrefix: confirmationToken?.substring(0, 8)
+          });
+          
+          // Try PKCE method first (newer, recommended)
           if (tokenHash) {
             const { error: verifyError } = await supabase.auth.verifyOtp({
               token_hash: tokenHash,
@@ -83,6 +94,7 @@ const AuthCallback = () => {
             });
 
             if (verifyError) {
+              console.error('PKCE verification failed:', verifyError);
               setError('Failed to verify email. The link may have expired or already been used.');
               setIsProcessing(false);
               return;
@@ -103,8 +115,41 @@ const AuthCallback = () => {
               navigate('/dashboard');
             }, 2000);
             return;
-          } else if (accessToken && refreshToken) {
-            // Alternative: Direct session setup
+          }
+          
+          // Fall back to old Magic Link method
+          if (confirmationToken) {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+              token_hash: confirmationToken,
+              type: 'magiclink'
+            });
+
+            if (verifyError) {
+              console.error('Magic link verification failed:', verifyError);
+              setError('Failed to verify email. The link may have expired or already been used.');
+              setIsProcessing(false);
+              return;
+            }
+
+            // Success - email verified
+            setSuccess(true);
+            setIsProcessing(false);
+            
+            toast({
+              title: 'Email verified',
+              description: 'Your email has been successfully verified. Redirecting to dashboard...',
+            });
+
+            // Clear URL and redirect after a short delay
+            window.history.replaceState(null, '', window.location.pathname);
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 2000);
+            return;
+          }
+          
+          // Alternative: Direct session setup
+          if (accessToken && refreshToken) {
             const { error: sessionError } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
