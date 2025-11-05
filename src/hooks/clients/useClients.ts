@@ -35,7 +35,7 @@ const DEFAULT_PAGE_SIZE = 20;
  * No race conditions, stable dependencies, proper cleanup
  */
 export function useClients(options: UseClientsOptions = {}): UseClientsResult {
-  const { paginated = true, pageSize = DEFAULT_PAGE_SIZE } = options;
+  const { paginated = false, pageSize = DEFAULT_PAGE_SIZE } = options;
   
   // State
   const [clients, setClients] = useState<ClientData[]>([]);

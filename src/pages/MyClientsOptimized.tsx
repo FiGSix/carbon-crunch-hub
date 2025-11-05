@@ -10,20 +10,17 @@ const MyClientsOptimized = () => {
   const { 
     clients, 
     isLoading, 
-    isLoadingMore,
-    hasMore,
     totalCount,
     error, 
-    loadMore,
     refresh
-  } = useClients({ paginated: true });
+  } = useClients({ paginated: false });
   
   const isAdmin = userRole === 'admin';
 
   if (import.meta.env.DEV) {
     console.log('=== MyClientsOptimized Page Render ===');
     console.log('User Role:', userRole, 'Is Admin:', isAdmin);
-    console.log('Loading:', isLoading, 'LoadingMore:', isLoadingMore, 'HasMore:', hasMore);
+    console.log('Loading:', isLoading);
     console.log('Error:', error, 'Clients:', clients.length, 'Total:', totalCount);
   }
 
@@ -49,11 +46,7 @@ const MyClientsOptimized = () => {
                   <span>•</span>
                   <span>Loading: {isLoading ? 'Yes' : 'No'}</span>
                   <span>•</span>
-                  <span>LoadingMore: {isLoadingMore ? 'Yes' : 'No'}</span>
-                  <span>•</span>
                   <span>Clients: {clients.length}/{totalCount}</span>
-                  <span>•</span>
-                  <span>HasMore: {hasMore ? 'Yes' : 'No'}</span>
                 </div>
               )}
             </div>
@@ -62,13 +55,10 @@ const MyClientsOptimized = () => {
           <ClientsTable 
             clients={clients}
             isLoading={isLoading}
-            isLoadingMore={isLoadingMore}
-            hasMore={hasMore}
             totalCount={totalCount}
             error={error}
             isAdmin={isAdmin}
             onRefresh={refresh}
-            onLoadMore={loadMore}
           />
         </div>
       </div>

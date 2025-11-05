@@ -11,13 +11,10 @@ const MyClients = () => {
   const { 
     clients, 
     isLoading, 
-    isLoadingMore,
-    hasMore,
-    totalCount,
     error, 
-    loadMore,
+    totalCount,
     refresh
-  } = useClients({ paginated: true });
+  } = useClients({ paginated: false });
   
   const isAdmin = userRole === 'admin';
 
@@ -25,18 +22,16 @@ const MyClients = () => {
   useEffect(() => {
     console.log('⏰ Loading state changed:', {
       isLoading,
-      isLoadingMore,
       clientsCount: clients.length,
       totalCount,
       hasError: !!error,
-      hasMore,
       timestamp: new Date().toISOString()
     });
-  }, [isLoading, isLoadingMore, clients.length, totalCount, error, hasMore]);
+  }, [isLoading, clients.length, totalCount, error]);
 
   console.log('=== MyClients Page Render ===');
   console.log('User Role:', userRole, 'Is Admin:', isAdmin);
-  console.log('Loading:', isLoading, 'LoadingMore:', isLoadingMore, 'HasMore:', hasMore);
+  console.log('Loading:', isLoading);
   console.log('Error:', error, 'Clients:', clients.length, 'Total:', totalCount);
   console.log('Raw clients data:', clients);
   
@@ -45,13 +40,10 @@ const MyClients = () => {
   console.log('ClientsTable props being passed:', {
     clients,
     isLoading,
-    isLoadingMore,
-    hasMore,
     totalCount,
     error,
     isAdmin,
-    onRefresh: !!refresh,
-    onLoadMore: !!loadMore
+    onRefresh: !!refresh
   });
 
   return (
@@ -75,11 +67,7 @@ const MyClients = () => {
                 <span>•</span>
                 <span>Loading: {isLoading ? 'Yes' : 'No'}</span>
                 <span>•</span>
-                <span>LoadingMore: {isLoadingMore ? 'Yes' : 'No'}</span>
-                <span>•</span>
                 <span>Clients: {clients.length}/{totalCount}</span>
-                <span>•</span>
-                <span>HasMore: {hasMore ? 'Yes' : 'No'}</span>
               </div>
             </div>
           </div>
@@ -87,13 +75,10 @@ const MyClients = () => {
           <ClientsTable 
             clients={clients}
             isLoading={isLoading}
-            isLoadingMore={isLoadingMore}
-            hasMore={hasMore}
             totalCount={totalCount}
             error={error}
             isAdmin={isAdmin}
             onRefresh={refresh}
-            onLoadMore={loadMore}
           />
         </div>
       </div>
