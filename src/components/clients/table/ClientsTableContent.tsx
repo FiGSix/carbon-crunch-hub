@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, Search, X } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
 import { useToast } from '@/hooks/use-toast';
 import { EditClientDialog } from '@/components/clients/EditClientDialog';
@@ -60,19 +60,29 @@ export function ClientsTableContent({
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [clientToReassign, setClientToReassign] = useState<ClientData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { toast } = useToast();
 
-  // Filter clients based on search term
-  const filteredClients = useMemo(() => {
-    if (!searchTerm.trim()) return clients;
+  // Debounce search term to prevent excessive filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
     
-    const lowerSearch = searchTerm.toLowerCase();
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Filter clients based on debounced search term
+  const filteredClients = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return clients;
+    
+    const lowerSearch = debouncedSearchTerm.toLowerCase();
     return clients.filter(client => 
       client.client_name.toLowerCase().includes(lowerSearch) ||
       client.client_email?.toLowerCase().includes(lowerSearch) ||
       client.company_name?.toLowerCase().includes(lowerSearch)
     );
-  }, [clients, searchTerm]);
+  }, [clients, debouncedSearchTerm]);
 
   const handleDeleteClick = (client: ClientData) => {
     setClientToDelete(client);
@@ -168,9 +178,9 @@ export function ClientsTableContent({
               </button>
             )}
           </div>
-          {searchTerm && (
+          {debouncedSearchTerm && (
             <p className="text-sm text-muted-foreground mt-2">
-              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{searchTerm}"
+              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{debouncedSearchTerm}"
             </p>
           )}
         </div>
@@ -225,7 +235,7 @@ export function ClientsTableContent({
             {filteredClients.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? `No clients found matching "${searchTerm}"` : 'No clients found'}
+                  {debouncedSearchTerm ? `No clients found matching "${debouncedSearchTerm}"` : 'No clients found'}
                 </TableCell>
               </TableRow>
             ) : (
