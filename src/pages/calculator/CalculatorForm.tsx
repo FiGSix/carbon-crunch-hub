@@ -346,14 +346,28 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
             )}
             
             <div>
-              <label htmlFor="commissioningDate" className="block text-sm font-medium text-crunch-black/70 mb-1">
-                Commissioning Date <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center gap-2 mb-1">
+                <label htmlFor="commissioningDate" className="block text-sm font-medium text-crunch-black/70">
+                  Commissioning Date <span className="text-red-500">*</span>
+                </label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-crunch-black/40 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-white border-2 border-crunch-black max-w-xs">
+                      <p className="text-sm">
+                        We are sorry but projects which was commissioned or installed prior to 15 September 2022 can not participate on the Crunch Carbon Carbon Credit program due to the commissioning date rules with our Verra registered project. We're sorry about that.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="commissioningDate"
                 type="date"
                 value={commissioningDate}
-                min="2025-01-01"
+                min="2022-09-15"
                 onChange={(e) => setCommissioningDate(e.target.value)}
                 className="retro-input text-base md:text-lg"
               />
