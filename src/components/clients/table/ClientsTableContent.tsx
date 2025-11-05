@@ -25,15 +25,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, Search, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback, useDeferredValue, memo } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
 import { useToast } from '@/hooks/use-toast';
 import { EditClientDialog } from '@/components/clients/EditClientDialog';
 import { EditAssignedAgentDialog } from '@/components/clients/EditAssignedAgentDialog';
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { ClientsTableSearch } from './ClientsTableSearch';
 
 interface ClientsTableContentProps {
   clients: ClientData[];
@@ -59,31 +59,34 @@ export function ClientsTableContent({
   const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [clientToReassign, setClientToReassign] = useState<ClientData | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof ClientData | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
 
-  // Debounce search term to prevent excessive filtering
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
-    
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Use deferred value for smoother rendering during search
+  const deferredQuery = useDeferredValue(searchQuery);
+
+  // Create search index for faster filtering
+  const searchIndex = useMemo(() => {
+    const index = new Map<string, string>();
+    for (const client of clients) {
+      index.set(
+        client.client_id,
+        `${client.client_name || ''} ${client.client_email || ''} ${client.company_name || ''}`.toLowerCase()
+      );
+    }
+    return index;
+  }, [clients]);
 
   // Filter and sort clients
   const filteredClients = useMemo(() => {
-    // First, filter based on search term
+    // First, filter based on search term using the search index
     let filtered = clients;
-    if (debouncedSearchTerm.trim()) {
-      const lowerSearch = debouncedSearchTerm.toLowerCase();
+    if (deferredQuery.trim()) {
+      const lowerSearch = deferredQuery.toLowerCase();
       filtered = clients.filter(client => 
-        client.client_name.toLowerCase().includes(lowerSearch) ||
-        client.client_email?.toLowerCase().includes(lowerSearch) ||
-        client.company_name?.toLowerCase().includes(lowerSearch)
+        searchIndex.get(client.client_id)?.includes(lowerSearch)
       );
     }
 
@@ -118,22 +121,23 @@ export function ClientsTableContent({
     }
 
     return filtered;
-  }, [clients, debouncedSearchTerm, sortColumn, sortDirection]);
+  }, [clients, deferredQuery, sortColumn, sortDirection, searchIndex]);
 
-  const handleDeleteClick = (client: ClientData) => {
+  // Stable callbacks to prevent unnecessary re-renders
+  const handleDeleteClick = useCallback((client: ClientData) => {
     setClientToDelete(client);
     setDeleteConfirmOpen(true);
-  };
+  }, []);
 
-  const handleEditClick = (client: ClientData) => {
+  const handleEditClick = useCallback((client: ClientData) => {
     setClientToEdit(client);
     setEditDialogOpen(true);
-  };
+  }, []);
 
-  const handleReassignClick = (client: ClientData) => {
+  const handleReassignClick = useCallback((client: ClientData) => {
     setClientToReassign(client);
     setReassignDialogOpen(true);
-  };
+  }, []);
 
   const handleSort = (column: keyof ClientData) => {
     if (sortColumn === column) {
@@ -154,6 +158,104 @@ export function ClientsTableContent({
       ? <ArrowUp className="h-3 w-3 ml-1 inline" />
       : <ArrowDown className="h-3 w-3 ml-1 inline" />;
   };
+
+  // Memoized table rows component to prevent unnecessary re-renders
+  const ClientsTableRows = memo(function ClientsTableRows({
+    rows,
+    isAdmin,
+    isRefreshing,
+    searchQuery,
+    onEdit,
+    onReassign,
+    onDelete
+  }: {
+    rows: ClientData[];
+    isAdmin: boolean;
+    isRefreshing: boolean;
+    searchQuery: string;
+    onEdit: (client: ClientData) => void;
+    onReassign: (client: ClientData) => void;
+    onDelete: (client: ClientData) => void;
+  }) {
+    if (rows.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
+            {searchQuery ? `No clients found matching "${searchQuery}"` : 'No clients found'}
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    return (
+      <>
+        {rows.map((client) => (
+          <TableRow key={client.client_id} className={isRefreshing ? 'opacity-70' : ''}>
+            <TableCell className="font-medium">
+              <div>
+                <p className="font-semibold">{client.client_name}</p>
+                {client.client_email && (
+                  <p className="text-sm text-gray-500">{client.client_email}</p>
+                )}
+              </div>
+            </TableCell>
+            <TableCell>
+              {client.company_name || 'No Company'}
+            </TableCell>
+            {isAdmin && (
+              <TableCell>
+                {client.agent_company_name || 'N/A'}
+              </TableCell>
+            )}
+            <TableCell className="text-center">
+              {client.project_count}
+            </TableCell>
+            <TableCell className="text-center font-mono">
+              {client.total_mwp.toFixed(3)} MWp
+            </TableCell>
+            {isAdmin && (
+              <TableCell className="text-center">
+                <Badge variant={client.is_active ? 'default' : 'secondary'}>
+                  {client.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+              </TableCell>
+            )}
+            <TableCell className="text-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEdit(client)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Client Info
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuItem onClick={() => onReassign(client)}>
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Edit Assigned Agent
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => onDelete(client)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Client
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))}
+      </>
+    );
+  });
 
   const confirmDelete = async () => {
     if (!clientToDelete) return;
@@ -187,7 +289,7 @@ export function ClientsTableContent({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Clients ({filteredClients.length}{searchTerm && ` of ${clients.length}`})
+              Clients ({filteredClients.length}{searchQuery && ` of ${clients.length}`})
               {autoRefreshEnabled && (
                 <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                   <Zap className="h-3 w-3" />
@@ -216,27 +318,10 @@ export function ClientsTableContent({
       <CardContent>
         {/* Search Box */}
         <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search clients by name, email, or company..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          {debouncedSearchTerm && (
+          <ClientsTableSearch onDebouncedChange={setSearchQuery} />
+          {deferredQuery && (
             <p className="text-sm text-muted-foreground mt-2">
-              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{debouncedSearchTerm}"
+              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{deferredQuery}"
             </p>
           )}
         </div>
@@ -322,78 +407,15 @@ export function ClientsTableContent({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredClients.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
-                  {debouncedSearchTerm ? `No clients found matching "${debouncedSearchTerm}"` : 'No clients found'}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredClients.map((client) => (
-              <TableRow key={client.client_id} className={isRefreshing ? 'opacity-70' : ''}>
-                <TableCell className="font-medium">
-                  <div>
-                    <p className="font-semibold">{client.client_name}</p>
-                    {client.client_email && (
-                      <p className="text-sm text-gray-500">{client.client_email}</p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {client.company_name || 'No Company'}
-                </TableCell>
-                {isAdmin && (
-                  <TableCell>
-                    {client.agent_company_name || 'N/A'}
-                  </TableCell>
-                )}
-                <TableCell className="text-center">
-                  {client.project_count}
-                </TableCell>
-                <TableCell className="text-center font-mono">
-                  {client.total_mwp.toFixed(3)} MWp
-                </TableCell>
-                {isAdmin && (
-                  <TableCell className="text-center">
-                    <Badge variant={client.is_active ? 'default' : 'secondary'}>
-                      {client.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                )}
-                <TableCell className="text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditClick(client)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Client Info
-                      </DropdownMenuItem>
-                      {isAdmin && (
-                        <>
-                          <DropdownMenuItem onClick={() => handleReassignClick(client)}>
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Edit Assigned Agent
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDeleteClick(client)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Client
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-              ))
-            )}
+            <ClientsTableRows
+              rows={filteredClients}
+              isAdmin={isAdmin}
+              isRefreshing={isRefreshing}
+              searchQuery={deferredQuery}
+              onEdit={handleEditClick}
+              onReassign={handleReassignClick}
+              onDelete={handleDeleteClick}
+            />
           </TableBody>
         </Table>
       </CardContent>
