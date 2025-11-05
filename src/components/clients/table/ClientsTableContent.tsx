@@ -25,14 +25,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, Search, X } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
 import { useToast } from '@/hooks/use-toast';
 import { EditClientDialog } from '@/components/clients/EditClientDialog';
 import { EditAssignedAgentDialog } from '@/components/clients/EditAssignedAgentDialog';
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 
 interface ClientsTableContentProps {
   clients: ClientData[];
@@ -58,7 +59,20 @@ export function ClientsTableContent({
   const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [clientToReassign, setClientToReassign] = useState<ClientData | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+
+  // Filter clients based on search term
+  const filteredClients = useMemo(() => {
+    if (!searchTerm.trim()) return clients;
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    return clients.filter(client => 
+      client.client_name.toLowerCase().includes(lowerSearch) ||
+      client.client_email?.toLowerCase().includes(lowerSearch) ||
+      client.company_name?.toLowerCase().includes(lowerSearch)
+    );
+  }, [clients, searchTerm]);
 
   const handleDeleteClick = (client: ClientData) => {
     setClientToDelete(client);
@@ -107,7 +121,7 @@ export function ClientsTableContent({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Clients ({clients.length})
+              Clients ({filteredClients.length}{searchTerm && ` of ${clients.length}`})
               {autoRefreshEnabled && (
                 <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                   <Zap className="h-3 w-3" />
@@ -134,6 +148,33 @@ export function ClientsTableContent({
         </div>
       </CardHeader>
       <CardContent>
+        {/* Search Box */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search clients by name, email, or company..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {searchTerm && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{searchTerm}"
+            </p>
+          )}
+        </div>
+
         {/* Show inline error notification if there's an error but we have cached data */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -181,7 +222,14 @@ export function ClientsTableContent({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {clients.map((client) => (
+            {filteredClients.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? `No clients found matching "${searchTerm}"` : 'No clients found'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredClients.map((client) => (
               <TableRow key={client.client_id} className={isRefreshing ? 'opacity-70' : ''}>
                 <TableCell className="font-medium">
                   <div>
@@ -244,7 +292,8 @@ export function ClientsTableContent({
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>
