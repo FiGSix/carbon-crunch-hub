@@ -22,16 +22,11 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase client with user's token
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://uyjryuopuqgmsvayiccl.supabase.co';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5anJ5dW9wdXFnbXN2YXlpY2NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyNzU2MzgsImV4cCI6MjA1OTg1MTYzOH0.M828t6sJxh4lZAVACqpRosoRvW_VibHDAMSXV-3WrLo';
+    // Extract JWT token from "Bearer <token>"
+    const token = authHeader.replace('Bearer ', '');
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false }
-    });
-
     // Create admin client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://uyjryuopuqgmsvayiccl.supabase.co';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!supabaseServiceKey) {
       console.error('SUPABASE_SERVICE_ROLE_KEY is not configured');
@@ -45,8 +40,8 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Verify JWT token using admin client (more reliable in edge functions)
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError) {
       console.error('JWT verification failed:', userError);
       return new Response(
@@ -74,7 +69,7 @@ serve(async (req) => {
     }
 
     // Check if requesting user is admin
-    const { data: adminCheck } = await supabase
+    const { data: adminCheck } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
