@@ -96,9 +96,9 @@ export function useDashboardMetricsByStage() {
     },
     // Only enable query if user is authenticated
     enabled: !!user?.id && !!userRole,
-    // Cache for 3 minutes (metrics don't change frequently)
-    staleTime: 3 * 60 * 1000, // 3 minutes - optimized cache time
-    gcTime: 10 * 60 * 1000, // 10 minutes - optimized garbage collection
+    // Cache for 5 minutes (metrics don't change frequently)
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     // Don't refetch on window focus to reduce unnecessary API calls
     refetchOnWindowFocus: false,
     // Retry failed requests up to 2 times

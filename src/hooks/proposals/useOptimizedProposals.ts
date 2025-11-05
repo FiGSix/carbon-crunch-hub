@@ -75,23 +75,24 @@ export function useOptimizedProposals(): UseProposalsResult {
     }
   }, [user?.id, userRole, filters, toast, refreshUser, proposalsLogger]);
 
-  // Set up optimized real-time subscription
+  // Set up optimized real-time subscription - FIXED DEPENDENCIES
   useEffect(() => {
     if (!user?.id || !userRole) return;
+
+    const handleUpdate = () => {
+      fetchProposals(true);
+    };
 
     const channel = OptimizedRealtimeService.subscribeToProposalChanges(
       user.id,
       userRole,
-      (payload) => {
-        proposalsLogger.info("Optimized real-time update received", { payload });
-        fetchProposals(true);
-      }
+      handleUpdate
     );
 
     return () => {
       OptimizedRealtimeService.unsubscribe(`proposals-${user.id}-${userRole}`);
     };
-  }, [user?.id, userRole, fetchProposals, proposalsLogger]);
+  }, [user?.id, userRole]);
 
   // Initial fetch
   useEffect(() => {

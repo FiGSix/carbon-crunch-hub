@@ -173,29 +173,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     new Date(session.expires_at * 1000) > new Date()
   );
 
-  // Reduced logging frequency to prevent console spam
-  if (import.meta.env.DEV && isInitialized && !isLoading) {
-    const currentState = {
-      hasUser: !!user,
-      hasSession: !!session,
-      hasProfile: !!profile,
-      userRole,
-      isAuthenticated,
-      sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
-    };
-
-    if (!lastLoggedState || JSON.stringify(lastLoggedState) !== JSON.stringify(currentState)) {
-      console.log('🔄 AuthContext state update:', {
-        ...currentState,
-        isInitialized,
-        isLoading,
-        authError,
-        sessionExpiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none',
-        profileId: profile?.id || 'none'
-      });
-      lastLoggedState = currentState;
-    }
-  }
 
   const contextValue: AuthContextType = {
     user,

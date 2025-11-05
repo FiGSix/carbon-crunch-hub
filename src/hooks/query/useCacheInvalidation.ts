@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { queryKeys, queryKeyUtils } from '@/lib/queryKeys';
 import { cacheUtils } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/auth';
@@ -14,11 +14,12 @@ import { logger } from '@/lib/logger';
 export function useCacheInvalidation() {
   const queryClient = useQueryClient();
   const { user, userRole } = useAuth();
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
-  const invalidationLogger = logger.withContext({ 
+  const invalidationLogger = useMemo(() => logger.withContext({ 
     component: 'CacheInvalidation',
     feature: 'cache-management' 
-  });
+  }), []);
 
   /**
    * Invalidate dashboard related data
@@ -69,15 +70,28 @@ export function useCacheInvalidation() {
   }, [queryClient, user?.id, userRole, invalidationLogger]);
 
   /**
-   * Invalidate agent management data
+   * Invalidate agent management data - DEBOUNCED
    */
   const invalidateAgentManagement = useCallback(async () => {
-    const keys = queryKeyUtils.getAgentManagementKeys();
-    await cacheUtils.invalidateQueries(queryClient, keys as any);
+    const debounceKey = 'agent-management';
     
-    invalidationLogger.info('Agent management cache invalidated', { 
-      keyCount: keys.length 
-    });
+    // Clear existing timer
+    if (debounceTimers.current.has(debounceKey)) {
+      clearTimeout(debounceTimers.current.get(debounceKey)!);
+    }
+    
+    // Set new timer
+    const timer = setTimeout(async () => {
+      const keys = queryKeyUtils.getAgentManagementKeys();
+      await cacheUtils.invalidateQueries(queryClient, keys as any);
+      
+      invalidationLogger.info('Agent management cache invalidated', { 
+        keyCount: keys.length 
+      });
+      debounceTimers.current.delete(debounceKey);
+    }, 1000);
+    
+    debounceTimers.current.set(debounceKey, timer);
   }, [queryClient, invalidationLogger]);
 
   /**

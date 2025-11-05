@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useProposals } from './useProposals';
 import { useAuth } from '@/contexts/auth';
 import { useDashboardMetricsByStage } from './dashboard/useDashboardMetricsByStage';
@@ -19,12 +19,22 @@ export function useDashboardData(): DashboardData {
   // Get helper functions using the new hook
   const helpers = useDashboardHelpers(fetchProposals);
 
+  // Stable filter predicates
+  const isPending = useCallback((p: any) => p.status === 'pending', []);
+  const isSigned = useCallback((p: any) => p.status === 'signed', []);
+
   // Calculate recent proposals (last 5)
   const recentProposals = useMemo(() => {
     return proposals
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5);
   }, [proposals]);
+
+  // Memoize filtered proposal counts
+  const proposalCounts = useMemo(() => ({
+    pending: proposals.filter(isPending).length,
+    signed: proposals.filter(isSigned).length,
+  }), [proposals, isPending, isSigned]);
 
   // Memoize the final result to prevent unnecessary re-renders
   const result = useMemo((): DashboardData => ({
@@ -42,8 +52,8 @@ export function useDashboardData(): DashboardData {
     // Legacy computed data (maintained for backwards compatibility)
     stats: {
       totalProposals: proposals.length,
-      pendingProposals: proposals.filter(p => p.status === 'pending').length,
-      approvedProposals: proposals.filter(p => p.status === 'signed').length,
+      pendingProposals: proposalCounts.pending,
+      approvedProposals: proposalCounts.signed,
       totalRevenue: 0,
       totalEnergyOffset: 0
     },
@@ -62,7 +72,8 @@ export function useDashboardData(): DashboardData {
     loading,
     metricsLoading,
     error,
-    helpers
+    helpers,
+    proposalCounts
   ]);
 
   return result;

@@ -14,12 +14,9 @@ const proposalLogger = logger.withContext({
  */
 export async function fetchProposalByToken(invitationToken: string): Promise<{ proposal: ProposalData; clientEmail: string | null }> {
   try {
-    proposalLogger.info("🎫 Fetching proposal by token directly via database", { 
+    proposalLogger.info("Fetching proposal by token directly via database", { 
       tokenPrefix: invitationToken.substring(0, 8)
     });
-    
-    console.log("🎫 === FETCHING PROPOSAL BY TOKEN DIRECTLY (BYPASSING EDGE FUNCTION) ===");
-    console.log(`🎫 Token: ${invitationToken.substring(0, 8)}...`);
     
     // Use the direct database function to get proposal by token
     const { data, error: fetchError } = await supabase.rpc(
@@ -28,15 +25,10 @@ export async function fetchProposalByToken(invitationToken: string): Promise<{ p
     );
     
     if (fetchError) {
-      proposalLogger.error("❌ Error fetching proposal by token", { 
+      proposalLogger.error("Error fetching proposal by token", { 
         error: fetchError,
         errorCode: fetchError.code,
         errorMessage: fetchError.message
-      });
-      
-      console.error("❌ === PROPOSAL FETCH BY TOKEN ERROR ===", {
-        error: fetchError,
-        errorCode: fetchError.code
       });
       
       if (fetchError.code === 'PGRST116') {
@@ -58,16 +50,10 @@ export async function fetchProposalByToken(invitationToken: string): Promise<{ p
     const typedProposal = transformToProposalData(proposalData);
     const clientEmail = proposalData.client_email || null;
     
-    proposalLogger.info("✅ Proposal fetched via direct database call", { 
+    proposalLogger.info("Proposal fetched via direct database call", { 
       proposalId: typedProposal.id,
       status: typedProposal.status,
       clientEmail: proposalData.client_email
-    });
-    
-    console.log("✅ === PROPOSAL SUCCESSFULLY LOADED BY TOKEN ===", {
-      id: typedProposal.id,
-      status: typedProposal.status,
-      title: typedProposal.title
     });
     
     // Mark the invitation as viewed in a separate call (non-blocking)
@@ -92,8 +78,7 @@ export async function fetchProposalByToken(invitationToken: string): Promise<{ p
  */
 export async function fetchProposalById(proposalId: string): Promise<ProposalData> {
   try {
-    proposalLogger.info("🔄 Fetching proposal by ID", { proposalId });
-    console.log("🔄 === FETCHING PROPOSAL BY ID ===", proposalId);
+    proposalLogger.info("Fetching proposal by ID", { proposalId });
     
     // Add validation for proposalId format
     if (!proposalId || typeof proposalId !== 'string' || proposalId.trim() === '') {
@@ -108,19 +93,11 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
       .single();
     
     if (fetchError) {
-      proposalLogger.error("❌ Error fetching proposal by ID", { 
+      proposalLogger.error("Error fetching proposal by ID", { 
         error: fetchError,
         proposalId,
         errorCode: fetchError.code,
         errorMessage: fetchError.message
-      });
-      
-      console.error("❌ === PROPOSAL FETCH BY ID ERROR ===", {
-        error: fetchError,
-        proposalId,
-        errorCode: fetchError.code,
-        errorDetails: fetchError.details,
-        errorHint: fetchError.hint
       });
       
       if (fetchError.code === 'PGRST116') {
@@ -133,20 +110,13 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
     }
     
     if (!data) {
-      console.error("❌ No data returned from query for ID:", proposalId);
       throw new Error("No proposal found with this ID. It may have been deleted or you may not have permission to view it.");
     }
     
     const typedProposal = transformToProposalData(data);
-    proposalLogger.info("✅ Proposal fetched successfully", { 
+    proposalLogger.info("Proposal fetched successfully", { 
       proposalId,
       status: typedProposal.status
-    });
-    
-    console.log("✅ === PROPOSAL LOADED BY ID ===", {
-      id: typedProposal.id,
-      status: typedProposal.status,
-      title: typedProposal.title
     });
     
     return typedProposal;

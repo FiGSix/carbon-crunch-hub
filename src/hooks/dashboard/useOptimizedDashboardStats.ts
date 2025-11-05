@@ -15,8 +15,6 @@ import { DashboardStats } from './types';
  */
 export function useOptimizedDashboardStats(proposals: ProposalListItem[], userRole: string | null): DashboardStats {
   return useMemo(() => {
-    console.log("Optimized: Recalculating dashboard stats for", proposals.length, "proposals");
-    
     // Single loop to calculate all stats at once
     const stats = proposals.reduce((acc, proposal) => {
       // Count totals

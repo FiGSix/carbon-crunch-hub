@@ -71,8 +71,6 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
     }
 
     try {
-      console.log(`🔍 Fetching predictions for: "${input}" (attempt ${retryCount + 1})`);
-      
       // Clear previous error state
       if (error && error !== lastError) {
         clearError();
@@ -89,8 +87,6 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
       setPredictions(results);
       setIsOpen(results.length > 0);
       
-      console.log(`✅ Successfully fetched ${results.length} predictions`);
-      
     } catch (err) {
       devLogger.maps.error('Prediction fetch failed', err);
       
@@ -100,13 +96,12 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
       
       // Implement retry logic for transient errors
       if (retryCount < maxRetries && shouldRetry(rawError)) {
-        console.log(`🔄 Retrying prediction fetch (${retryCount + 1}/${maxRetries})`);
         setIsRetrying(true);
         setRetryCount(prev => prev + 1);
         
         setTimeout(() => {
           fetchPredictions(input);
-        }, 1000 * (retryCount + 1)); // Exponential backoff
+        }, 1000 * (retryCount + 1));
       } else {
         setIsRetrying(false);
         setPredictions([]);
@@ -139,8 +134,6 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    
-    
     setInputValue(newValue);
     onChange(newValue);
     
@@ -155,20 +148,15 @@ export function useAddressAutocomplete({ value, onChange, onError }: UseAddressA
   }, [onChange, debounce, handleDebouncedSearch]);
 
   const handleSelectPrediction = useCallback(async (prediction: any) => {
-    
-    
     setIsOpen(false);
     
     // Get detailed address information
     const details = await getPlaceDetails(prediction.place_id);
     
     if (details?.formatted_address) {
-      
       setInputValue(details.formatted_address);
       onChange(details.formatted_address);
     } else {
-      // Fallback to prediction description
-      
       setInputValue(prediction.description);
       onChange(prediction.description);
     }
