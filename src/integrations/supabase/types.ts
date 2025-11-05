@@ -342,6 +342,51 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_address: unknown
+          name: string
+          phone: string | null
+          question: string
+          status: string
+          subject: string
+          submitted_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: unknown
+          name: string
+          phone?: string | null
+          question: string
+          status?: string
+          subject: string
+          submitted_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: unknown
+          name?: string
+          phone?: string | null
+          question?: string
+          status?: string
+          subject?: string
+          submitted_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       data_access_config: {
         Row: {
           api_key_encrypted: string | null
