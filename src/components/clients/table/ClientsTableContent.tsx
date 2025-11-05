@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, Search, X } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, Search, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
 import { useState, useMemo, useEffect } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
@@ -61,6 +61,8 @@ export function ClientsTableContent({
   const [clientToReassign, setClientToReassign] = useState<ClientData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [sortColumn, setSortColumn] = useState<keyof ClientData | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
 
   // Debounce search term to prevent excessive filtering
@@ -72,17 +74,51 @@ export function ClientsTableContent({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Filter clients based on debounced search term
+  // Filter and sort clients
   const filteredClients = useMemo(() => {
-    if (!debouncedSearchTerm.trim()) return clients;
-    
-    const lowerSearch = debouncedSearchTerm.toLowerCase();
-    return clients.filter(client => 
-      client.client_name.toLowerCase().includes(lowerSearch) ||
-      client.client_email?.toLowerCase().includes(lowerSearch) ||
-      client.company_name?.toLowerCase().includes(lowerSearch)
-    );
-  }, [clients, debouncedSearchTerm]);
+    // First, filter based on search term
+    let filtered = clients;
+    if (debouncedSearchTerm.trim()) {
+      const lowerSearch = debouncedSearchTerm.toLowerCase();
+      filtered = clients.filter(client => 
+        client.client_name.toLowerCase().includes(lowerSearch) ||
+        client.client_email?.toLowerCase().includes(lowerSearch) ||
+        client.company_name?.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    // Then, sort if a column is selected
+    if (sortColumn) {
+      filtered = [...filtered].sort((a, b) => {
+        const aValue = a[sortColumn];
+        const bValue = b[sortColumn];
+
+        // Handle null/undefined values
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+
+        // Sort based on type
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+          const comparison = aValue === bValue ? 0 : aValue ? 1 : -1;
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [clients, debouncedSearchTerm, sortColumn, sortDirection]);
 
   const handleDeleteClick = (client: ClientData) => {
     setClientToDelete(client);
@@ -97,6 +133,26 @@ export function ClientsTableContent({
   const handleReassignClick = (client: ClientData) => {
     setClientToReassign(client);
     setReassignDialogOpen(true);
+  };
+
+  const handleSort = (column: keyof ClientData) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIcon = (column: keyof ClientData) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1 inline" />
+      : <ArrowDown className="h-3 w-3 ml-1 inline" />;
   };
 
   const confirmDelete = async () => {
@@ -222,12 +278,46 @@ export function ClientsTableContent({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Client Name</TableHead>
-              <TableHead>Company</TableHead>
-              {isAdmin && <TableHead>Agent</TableHead>}
-              <TableHead className="text-center">Projects</TableHead>
-              <TableHead className="text-center">Total MWp</TableHead>
-              {isAdmin && <TableHead className="text-center">Status</TableHead>}
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('client_name')}
+              >
+                Client Name {renderSortIcon('client_name')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('company_name')}
+              >
+                Company {renderSortIcon('company_name')}
+              </TableHead>
+              {isAdmin && (
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('agent_company_name')}
+                >
+                  Agent {renderSortIcon('agent_company_name')}
+                </TableHead>
+              )}
+              <TableHead 
+                className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('project_count')}
+              >
+                Projects {renderSortIcon('project_count')}
+              </TableHead>
+              <TableHead 
+                className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('total_mwp')}
+              >
+                Total MWp {renderSortIcon('total_mwp')}
+              </TableHead>
+              {isAdmin && (
+                <TableHead 
+                  className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('is_active')}
+                >
+                  Status {renderSortIcon('is_active')}
+                </TableHead>
+              )}
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
