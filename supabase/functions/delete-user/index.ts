@@ -223,6 +223,26 @@ serve(async (req) => {
     }
     console.log(`Deleted ${roles?.length || 0} user roles`);
 
+    // Handle user_role_audit - delete all historical audit logs before deleting user
+    console.log('Deleting user role audit logs...');
+    const { data: auditLogs, error: auditDeleteError } = await supabaseAdmin
+      .from('user_role_audit')
+      .delete()
+      .eq('user_id', userId)
+      .select('id');
+
+    if (auditDeleteError) {
+      console.error('User role audit deletion failed:', auditDeleteError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to delete user audit logs: ${auditDeleteError.message}` 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log(`Deleted ${auditLogs?.length || 0} audit log entries`);
+
     // Delete user from auth.users (cascades to profiles, user_roles, etc.)
     console.log('Attempting to delete user from auth.users...');
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
