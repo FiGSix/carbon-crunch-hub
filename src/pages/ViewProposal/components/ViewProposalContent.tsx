@@ -1,5 +1,5 @@
 
-
+import { useEffect } from 'react';
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalContent } from "@/components/proposals/view/ProposalContent";
@@ -56,6 +56,22 @@ export function ViewProposalContent({
   handleRetry,
   onProposalUpdate
 }: ViewProposalContentProps) {
+  
+  // Phase 4: Add effect to detect when user becomes authenticated
+  useEffect(() => {
+    if (user && !showAuthForm && proposal) {
+      // User just became authenticated, ensure we're showing the proposal
+      console.log("=== User Authenticated Post-Registration ===", {
+        userId: user.id,
+        proposalId: proposal?.id
+      });
+      
+      // Trigger a proposal refresh if we have the handler
+      if (onProposalUpdate) {
+        onProposalUpdate();
+      }
+    }
+  }, [user, showAuthForm, proposal?.id, onProposalUpdate]);
   
   if (loading) {
     console.log("=== Showing Loading State ===");

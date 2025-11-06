@@ -8,6 +8,16 @@ import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { LoginLayout } from '@/components/auth/LoginLayout';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Helper function to enforce minimum processing time for smooth UX
+ */
+async function enforceMinimumProcessingTime(startTime: number, minimumMs: number) {
+  const elapsedTime = Date.now() - startTime;
+  if (elapsedTime < minimumMs) {
+    await new Promise(resolve => setTimeout(resolve, minimumMs - elapsedTime));
+  }
+}
+
 const AuthCallback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -17,10 +27,18 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      // Phase 3: Add minimum processing time for smooth UX
+      const minimumProcessingTime = 1500; // 1.5 seconds
+      const startTime = Date.now();
+      
       try {
         // Parse URL hash parameters
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
+        
+        // Phase 5: Extract redirect_to from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirect_to');
 
         // Check for errors in the URL
         const errorParam = params.get('error');
@@ -50,6 +68,17 @@ const AuthCallback = () => {
         const confirmationToken = params.get('confirmation_token'); // Magic Link format (old)
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
+        
+        // Phase 3: Improved logging
+        console.log('🔐 Auth callback processing:', {
+          type,
+          hasTokenHash: !!tokenHash,
+          hasConfirmationToken: !!confirmationToken,
+          hasAccessToken: !!accessToken,
+          redirectTo,
+          hasProposalContext: redirectTo?.includes('view-proposal'),
+          timestamp: new Date().toISOString()
+        });
 
         // Handle different auth types
         if (type === 'recovery') {
@@ -76,9 +105,10 @@ const AuthCallback = () => {
             return;
           }
         } else if (type === 'email' || type === 'signup') {
-          // Email confirmation - support both PKCE (new) and Magic Link (old)
+          // Phase 3 & 5: Email confirmation with deferred error handling and redirect support
+          let verificationError: any = null;
           
-          console.log('Email verification attempt:', {
+          console.log('📧 Email verification attempt:', {
             type,
             hasTokenHash: !!tokenHash,
             hasConfirmationToken: !!confirmationToken,
@@ -94,27 +124,32 @@ const AuthCallback = () => {
             });
 
             if (verifyError) {
-              console.error('PKCE verification failed:', verifyError);
-              setError('Failed to verify email. The link may have expired or already been used.');
+              console.warn('⚠️ PKCE verification failed, trying alternatives:', verifyError);
+              verificationError = verifyError; // Store but don't show yet
+            } else {
+              // Success - ensure minimum time has passed
+              await enforceMinimumProcessingTime(startTime, minimumProcessingTime);
+              setSuccess(true);
               setIsProcessing(false);
+              
+              // Phase 5: Smart redirect based on context
+              const destination = redirectTo && redirectTo.startsWith('/') 
+                ? redirectTo 
+                : '/dashboard';
+              
+              toast({
+                title: 'Email verified',
+                description: redirectTo 
+                  ? 'Your email has been verified. Returning to your proposal...'
+                  : 'Your email has been verified. Redirecting to dashboard...',
+              });
+
+              window.history.replaceState(null, '', window.location.pathname);
+              setTimeout(() => {
+                navigate(destination);
+              }, 2000);
               return;
             }
-
-            // Success - email verified
-            setSuccess(true);
-            setIsProcessing(false);
-            
-            toast({
-              title: 'Email verified',
-              description: 'Your email has been successfully verified. Redirecting to dashboard...',
-            });
-
-            // Clear URL and redirect after a short delay
-            window.history.replaceState(null, '', window.location.pathname);
-            setTimeout(() => {
-              navigate('/dashboard');
-            }, 2000);
-            return;
           }
           
           // Fall back to old Magic Link method
@@ -125,27 +160,31 @@ const AuthCallback = () => {
             });
 
             if (verifyError) {
-              console.error('Magic link verification failed:', verifyError);
-              setError('Failed to verify email. The link may have expired or already been used.');
+              console.warn('⚠️ Magic link verification failed:', verifyError);
+            } else {
+              // Success - ensure minimum time has passed
+              await enforceMinimumProcessingTime(startTime, minimumProcessingTime);
+              setSuccess(true);
               setIsProcessing(false);
+              
+              // Phase 5: Smart redirect based on context
+              const destination = redirectTo && redirectTo.startsWith('/') 
+                ? redirectTo 
+                : '/dashboard';
+              
+              toast({
+                title: 'Email verified',
+                description: redirectTo 
+                  ? 'Your email has been verified. Returning to your proposal...'
+                  : 'Your email has been verified. Redirecting to dashboard...',
+              });
+
+              window.history.replaceState(null, '', window.location.pathname);
+              setTimeout(() => {
+                navigate(destination);
+              }, 2000);
               return;
             }
-
-            // Success - email verified
-            setSuccess(true);
-            setIsProcessing(false);
-            
-            toast({
-              title: 'Email verified',
-              description: 'Your email has been successfully verified. Redirecting to dashboard...',
-            });
-
-            // Clear URL and redirect after a short delay
-            window.history.replaceState(null, '', window.location.pathname);
-            setTimeout(() => {
-              navigate('/dashboard');
-            }, 2000);
-            return;
           }
           
           // Alternative: Direct session setup
@@ -156,25 +195,38 @@ const AuthCallback = () => {
             });
 
             if (sessionError) {
-              setError('Failed to verify email. Please try again.');
+              console.warn('⚠️ Session setup failed:', sessionError);
+            } else {
+              // Success - ensure minimum time has passed
+              await enforceMinimumProcessingTime(startTime, minimumProcessingTime);
+              setSuccess(true);
               setIsProcessing(false);
+              
+              // Phase 5: Smart redirect based on context
+              const destination = redirectTo && redirectTo.startsWith('/') 
+                ? redirectTo 
+                : '/dashboard';
+              
+              toast({
+                title: 'Email verified',
+                description: redirectTo 
+                  ? 'Your email has been verified. Returning to your proposal...'
+                  : 'Your email has been verified. Redirecting to dashboard...',
+              });
+
+              window.history.replaceState(null, '', window.location.pathname);
+              setTimeout(() => {
+                navigate(destination);
+              }, 2000);
               return;
             }
-
-            setSuccess(true);
-            setIsProcessing(false);
-            
-            toast({
-              title: 'Email verified',
-              description: 'Your email has been successfully verified. Redirecting to dashboard...',
-            });
-
-            window.history.replaceState(null, '', window.location.pathname);
-            setTimeout(() => {
-              navigate('/dashboard');
-            }, 2000);
-            return;
           }
+          
+          // Phase 3: Only show error after ALL methods have been tried
+          await enforceMinimumProcessingTime(startTime, minimumProcessingTime);
+          setError('Failed to verify email. The link may have expired or already been used.');
+          setIsProcessing(false);
+          return;
         } else if (type === 'invite') {
           // Team invitation (future use)
           if (tokenHash) {

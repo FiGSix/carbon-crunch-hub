@@ -1,4 +1,4 @@
-
+import { useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/auth";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -12,9 +12,11 @@ import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/Da
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useProposals } from "@/hooks/useProposals";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { user, userRole, profile } = useAuth();
+  const { toast } = useToast();
 
   // Fetch dashboard metrics by stage
   const { 
@@ -54,6 +56,23 @@ export default function Dashboard() {
     skipVideo,
     closeModal
   } = useAgentIntroVideo();
+  
+  // Phase 4: Add success message handler for post-registration redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authSuccess = params.get('auth');
+    const proposalId = params.get('proposal');
+    
+    if (authSuccess === 'success' && proposalId) {
+      toast({
+        title: "Registration successful!",
+        description: "Your account has been created. You can now view and respond to your proposal.",
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [toast]);
 
   // Loading state
   if (isLoading && !metricsByStage && !recentProposals) {

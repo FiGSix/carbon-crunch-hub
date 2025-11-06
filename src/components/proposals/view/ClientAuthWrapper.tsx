@@ -33,15 +33,20 @@ export function ClientAuthWrapper({
     feature: 'client-auth'
   });
   
-  // Effect to handle auth completion
+  // Phase 4: Effect to handle auth completion with delay for database sync
   useEffect(() => {
-    if (user) {
-      // User is authenticated, complete the auth process
+    if (user && requireAuth) {
       authLogger.info("User authenticated, completing auth flow", {
         userId: user.id,
         proposalId
       });
-      onAuthComplete();
+      
+      // Add a small delay to ensure database sync
+      const timer = setTimeout(() => {
+        onAuthComplete();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [user, requireAuth, onAuthComplete, proposalId, authLogger]);
   

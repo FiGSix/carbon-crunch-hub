@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/auth";
 import { logger } from "@/lib/logger";
 import { ProposalData } from "@/types/proposals";
@@ -8,17 +8,48 @@ export function useViewProposalAuth(proposal: ProposalData | null, clientEmail: 
   const { user } = useAuth();
   const [showAuthForm, setShowAuthForm] = useState(false);
   
+  // Phase 4: Add auth state context to track post-auth flow
+  const [authContext, setAuthContext] = useState<{
+    justCompleted: boolean;
+    proposalId: string | null;
+  }>({
+    justCompleted: false,
+    proposalId: null
+  });
+  
   // Create a contextualized logger
   const authLogger = logger.withContext({ 
     component: 'ViewProposalAuth', 
     feature: 'proposals' 
   });
 
-  // Handler for when auth is complete
+  // Phase 4: Handler for when auth is complete - capture context
   const handleAuthComplete = useCallback(() => {
-    authLogger.info("Authentication completed, refreshing view", { action: 'authComplete' });
+    authLogger.info("Authentication completed, preparing redirect", { 
+      action: 'authComplete',
+      proposalId: proposal?.id 
+    });
+    
+    setAuthContext({
+      justCompleted: true,
+      proposalId: proposal?.id || null
+    });
+    
     setShowAuthForm(false);
-  }, [authLogger]);
+  }, [authLogger, proposal?.id]);
+  
+  // Phase 4: Effect to handle post-auth redirect
+  useEffect(() => {
+    if (user && authContext.justCompleted && authContext.proposalId) {
+      authLogger.info("Post-auth redirect triggered", {
+        userId: user.id,
+        proposalId: authContext.proposalId
+      });
+      
+      // Redirect to dashboard with success message
+      window.location.href = `/dashboard?auth=success&proposal=${authContext.proposalId}`;
+    }
+  }, [user, authContext, authLogger]);
 
   // Handler for when user wants to sign in (to take actions)
   const handleSignInClick = useCallback(() => {
@@ -37,6 +68,7 @@ export function useViewProposalAuth(proposal: ProposalData | null, clientEmail: 
     showAuthForm,
     handleAuthComplete,
     handleSignInClick,
-    showSignInPrompt
+    showSignInPrompt,
+    authContext // Expose for debugging
   };
 }

@@ -82,7 +82,7 @@ export function useRegistrationFormLogic(
         proposalId
       });
       
-      // Create a new user with Supabase Auth
+      // Phase 5: Create a new user with Supabase Auth, including proposal context
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: clientEmail,
         password,
@@ -91,8 +91,12 @@ export function useRegistrationFormLogic(
             first_name: firstName,
             last_name: lastName,
             role: 'client',
+            // Phase 5: Store proposal context in user metadata
+            proposal_id: proposalId,
+            registration_source: 'proposal_invitation'
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          // Phase 5: Set redirect URL to return to proposal after email confirmation
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=email&redirect_to=${encodeURIComponent(`/view-proposal/${proposalId}?source=email_verification`)}`
         },
       });
 
