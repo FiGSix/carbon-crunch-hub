@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 
 // Import refactored components
 import { HeroSection } from "./calculator/HeroSection";
@@ -18,6 +19,13 @@ const Calculator = () => {
   const [results, setResults] = useState<ICalculationResults | null>(null);
   const [systemSize, setSystemSize] = useState<number>(0);
   const [commissioningDate, setCommissioningDate] = useState<Date>(new Date());
+  
+  // Lazy load carbon prices on mount
+  useEffect(() => {
+    dynamicCarbonPricingService.getCarbonPrices().catch(() => {
+      // Silently fail - fallback constants will be used
+    });
+  }, []);
   
   // Capture referral code from URL and store in localStorage
   useEffect(() => {

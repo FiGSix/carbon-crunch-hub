@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
 import { ProposalStepper } from "@/components/proposals/ProposalStepper";
@@ -9,6 +9,7 @@ import { ProjectInfoStep } from "@/components/proposals/ProjectInfoStep";
 import { SummaryStep } from "@/components/proposals/SummaryStep";
 import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 
 const CreateProposal = () => {
   const navigate = useNavigate();
@@ -46,6 +47,13 @@ const CreateProposal = () => {
   });
   
   const isEligible = Object.values(eligibility).every(value => value === true);
+  
+  // Lazy load carbon prices on mount
+  useEffect(() => {
+    dynamicCarbonPricingService.getCarbonPrices().catch(() => {
+      // Silently fail - fallback constants will be used
+    });
+  }, []);
   
   const nextStep = () => {
     switch (step) {

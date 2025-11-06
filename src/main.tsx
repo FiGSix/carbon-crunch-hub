@@ -9,7 +9,6 @@ import './styles/components.css'
 import './styles/animations.css'
 import { validateSecurityConfig } from './lib/security/headers'
 import { consoleOptimizer } from './lib/performance/ConsoleOptimizer'
-import { dynamicCarbonPricingService } from './lib/calculations/carbon/dynamicPricing'
 
 // Global startup error handlers - catch issues before React mounts
 window.onerror = (message, source, lineno, colno, error) => {
@@ -43,11 +42,6 @@ if (import.meta.env.PROD) {
 
 // Validate security configuration in development
 validateSecurityConfig();
-
-// Pre-warm carbon pricing cache for faster proposal creation
-dynamicCarbonPricingService.getCarbonPrices().catch(() => {
-  // Silently fail if cache warming fails - not critical
-});
 
 // Register Service Worker in production only
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

@@ -14,6 +14,7 @@ import type { ProjectOnboardingListItem, ProjectStepStatus } from "@/types/onboa
 import { BulkLegacyProjectUpload } from "@/components/onboarding/BulkLegacyProjectUpload";
 import { AddLegacyProjectDialog } from "@/components/onboarding/AddLegacyProjectDialog";
 import { cn } from "@/lib/utils";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 
 export default function ProjectOnboardingList() {
   const navigate = useNavigate();
@@ -24,6 +25,13 @@ export default function ProjectOnboardingList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
+
+  // Lazy load carbon prices on mount
+  useEffect(() => {
+    dynamicCarbonPricingService.getCarbonPrices().catch(() => {
+      // Silently fail - fallback constants will be used
+    });
+  }, []);
 
   useEffect(() => {
     if (user) {
