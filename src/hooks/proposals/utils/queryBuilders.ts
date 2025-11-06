@@ -39,11 +39,10 @@ export function buildBaseProposalsQuery(
     .is('deleted_at', null); // Exclude soft-deleted proposals
 
   // Apply role-based filtering
-  if (userRole === 'client' && userId) {
-    query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
-  }
+  // For clients: RLS policy handles access via is_proposal_client() function
+  // which properly checks both client_id and client_reference_id linkage
+  // No additional client-side filtering needed - database enforces proper visibility
   // Agent and admin roles: RLS policy handles access control (including company membership)
-  // No client-side filtering needed - database enforces proper visibility
 
   // Apply status filter
   if (filters.status && filters.status !== 'all') {

@@ -107,18 +107,35 @@ export function useRegistrationFormLogic(
           proposalId
         });
         
+        // Wait for proposal update to complete
         const updateSuccess = await updateProposalClientId({
           proposalId,
           userId: data.user.id
         });
         
-        if (updateSuccess) {
-          toast({
-            title: "Registration successful!",
-            description: "Your account has been created and linked to this proposal.",
-            variant: "default"
+        if (!updateSuccess) {
+          registrationLogger.error("Failed to link proposal to user account", {
+            userId: data.user.id,
+            proposalId
           });
+          // Continue anyway - user can still access via client_reference_id
         }
+
+        // Wait for database sync to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        registrationLogger.info("Registration flow complete", {
+          step: "proposal_linked",
+          success: updateSuccess,
+          proposalId,
+          userId: data.user.id
+        });
+        
+        toast({
+          title: "Registration successful!",
+          description: "Your account has been created. Please check your email to confirm.",
+          variant: "default"
+        });
 
         // Notify the parent component that registration is complete
         onComplete();
