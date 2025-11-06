@@ -1225,6 +1225,7 @@ export type Database = {
           client_share_override_set_at: string | null
           client_share_override_set_by: string | null
           client_share_percentage: number | null
+          company_id: string | null
           content: Json
           created_at: string
           deleted_at: string | null
@@ -1262,6 +1263,7 @@ export type Database = {
           client_share_override_set_at?: string | null
           client_share_override_set_by?: string | null
           client_share_percentage?: number | null
+          company_id?: string | null
           content?: Json
           created_at?: string
           deleted_at?: string | null
@@ -1299,6 +1301,7 @@ export type Database = {
           client_share_override_set_at?: string | null
           client_share_override_set_by?: string | null
           client_share_percentage?: number | null
+          company_id?: string | null
           content?: Json
           created_at?: string
           deleted_at?: string | null
@@ -1349,6 +1352,13 @@ export type Database = {
             columns: ["client_share_override_set_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {

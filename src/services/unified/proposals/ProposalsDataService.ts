@@ -64,7 +64,30 @@ export class ProposalsDataService {
       if (userRole === 'client') {
         query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
       } else if (userRole === 'agent') {
-        query = query.eq('agent_id', userId);
+        // Get user's company members to show all team proposals
+        const { data: companyMembers } = await supabase
+          .from('company_members')
+          .select('company_id, user_id')
+          .eq('status', 'active');
+
+        // Find user's companies
+        const userCompanyIds = companyMembers
+          ?.filter(cm => cm.user_id === userId)
+          .map(cm => cm.company_id) || [];
+
+        if (userCompanyIds.length > 0) {
+          // Get all agent IDs from user's companies
+          const teamAgentIds = companyMembers
+            ?.filter(cm => userCompanyIds.includes(cm.company_id))
+            .map(cm => cm.user_id) || [];
+
+          // Include user's own ID even if not in a company
+          const allAgentIds = [...new Set([...teamAgentIds, userId])];
+          query = query.in('agent_id', allAgentIds);
+        } else {
+          // No company membership - show only own proposals
+          query = query.eq('agent_id', userId);
+        }
       }
       // Admin role gets all non-deleted proposals (no additional filter needed)
 
