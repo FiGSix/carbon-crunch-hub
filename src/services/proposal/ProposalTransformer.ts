@@ -52,7 +52,11 @@ export class ProposalTransformer {
       invitation_sent_at: rawProposal.invitation_sent_at,
       invitation_viewed_at: rawProposal.invitation_viewed_at,
       invitation_expires_at: rawProposal.invitation_expires_at,
-      content: rawProposal.content
+      content: rawProposal.content,
+      onboarding_complete: rawProposal.onboarding_complete,
+      submitted_for_review: rawProposal.submitted_for_review,
+      admin_validated: rawProposal.admin_validated,
+      audit_ready: rawProposal.audit_ready,
     };
   }
 

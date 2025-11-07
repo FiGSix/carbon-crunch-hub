@@ -38,7 +38,13 @@ export function buildBaseProposalsQuery(
       last_email_event_type,
       last_email_sent_at,
       engagement_count,
-      last_engagement_at
+      last_engagement_at,
+      project_onboarding (
+        onboarding_complete,
+        submitted_for_review,
+        admin_validated,
+        audit_ready
+      )
     `)
     .is('deleted_at', null); // Exclude soft-deleted proposals
 

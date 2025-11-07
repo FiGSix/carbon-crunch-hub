@@ -35,6 +35,10 @@ export interface RawProposalData {
   last_email_sent_at?: string | null;
   engagement_count?: number | null;
   last_engagement_at?: string | null;
+  onboarding_complete?: boolean | null;
+  submitted_for_review?: boolean | null;
+  admin_validated?: boolean | null;
+  audit_ready?: boolean | null;
 }
 
 export interface ProfileData {

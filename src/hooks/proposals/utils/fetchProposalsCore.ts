@@ -46,31 +46,41 @@ export async function fetchProposalsCore(
   fetchLogger.info("Raw proposals fetched", { count: proposalsData.length });
   
   // Transform ProposalRow[] to RawProposalData[]
-  return (proposalsData as ProposalRow[]).map(proposal => ({
-    id: proposal.id,
-    title: proposal.title || 'Untitled Proposal',
-    status: proposal.status || 'draft',
-    created_at: proposal.created_at,
-    signed_at: proposal.signed_at,
-    archived_at: proposal.archived_at,
-    deleted_at: proposal.deleted_at,
-    review_later_until: proposal.review_later_until,
-    client_id: proposal.client_id,
-    client_reference_id: proposal.client_reference_id,
-    agent_id: proposal.agent_id,
-    content: proposal.content,
-    annual_energy: proposal.annual_energy,
-    carbon_credits: proposal.carbon_credits,
-    client_share_percentage: proposal.client_share_percentage,
-    agent_commission_percentage: proposal.agent_commission_percentage,
-    system_size_kwp: proposal.system_size_kwp,
-    unit_standard: proposal.unit_standard,
-    invitation_sent_at: proposal.invitation_sent_at,
-    invitation_viewed_at: proposal.invitation_viewed_at,
-    invitation_expires_at: proposal.invitation_expires_at,
-    last_email_event_type: proposal.last_email_event_type,
-    last_email_sent_at: proposal.last_email_sent_at,
-    engagement_count: proposal.engagement_count,
-    last_engagement_at: proposal.last_engagement_at
-  }));
+  return (proposalsData as any[]).map((proposal: any) => {
+    const onboarding = Array.isArray(proposal.project_onboarding) && proposal.project_onboarding.length > 0
+      ? proposal.project_onboarding[0]
+      : null;
+
+    return {
+      id: proposal.id,
+      title: proposal.title || 'Untitled Proposal',
+      status: proposal.status || 'draft',
+      created_at: proposal.created_at,
+      signed_at: proposal.signed_at,
+      archived_at: proposal.archived_at,
+      deleted_at: proposal.deleted_at,
+      review_later_until: proposal.review_later_until,
+      client_id: proposal.client_id,
+      client_reference_id: proposal.client_reference_id,
+      agent_id: proposal.agent_id,
+      content: proposal.content,
+      annual_energy: proposal.annual_energy,
+      carbon_credits: proposal.carbon_credits,
+      client_share_percentage: proposal.client_share_percentage,
+      agent_commission_percentage: proposal.agent_commission_percentage,
+      system_size_kwp: proposal.system_size_kwp,
+      unit_standard: proposal.unit_standard,
+      invitation_sent_at: proposal.invitation_sent_at,
+      invitation_viewed_at: proposal.invitation_viewed_at,
+      invitation_expires_at: proposal.invitation_expires_at,
+      last_email_event_type: proposal.last_email_event_type,
+      last_email_sent_at: proposal.last_email_sent_at,
+      engagement_count: proposal.engagement_count,
+      last_engagement_at: proposal.last_engagement_at,
+      onboarding_complete: onboarding?.onboarding_complete || false,
+      submitted_for_review: onboarding?.submitted_for_review || false,
+      admin_validated: onboarding?.admin_validated || false,
+      audit_ready: onboarding?.audit_ready || false,
+    };
+  });
 }

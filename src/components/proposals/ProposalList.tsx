@@ -61,10 +61,22 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
         <div className="flex flex-col gap-1.5">
-          {/* Status hierarchy: Draft → Email tracking → Decision → Post-approval */}
+          {/* Status hierarchy: Draft → Sent → Delivered/Opened/Clicked → Approved/Rejected → Signed → Onboarding → Review → Audit */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Signed status (highest priority after approval) */}
-            {proposal.signed_at ? (
+            {/* Audit Ready (highest priority) */}
+            {proposal.audit_ready ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+                Audit
+              </Badge>
+            ) : proposal.submitted_for_review ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-violet-50 text-violet-700 border-violet-200">
+                Review
+              </Badge>
+            ) : proposal.onboarding_complete ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-cyan-50 text-cyan-700 border-cyan-200">
+                Onboarding
+              </Badge>
+            ) : proposal.signed_at ? (
               <Badge variant="outline" className="gap-1 text-xs bg-purple-50 text-purple-700 border-purple-200">
                 <CheckCircle2 className="h-3 w-3" />
                 Signed
