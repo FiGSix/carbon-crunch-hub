@@ -1,0 +1,258 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, resend-signature',
+};
+
+interface ResendWebhookEvent {
+  type: string;
+  created_at: string;
+  data: {
+    created_at: string;
+    email_id: string;
+    from: string;
+    to: string[];
+    subject: string;
+    click?: {
+      ipAddress: string;
+      link: string;
+      timestamp: string;
+      userAgent: string;
+    };
+    bounce?: {
+      bouncedAt: string;
+      reason: string;
+    };
+  };
+}
+
+serve(async (req) => {
+  console.log("=== 📧 RESEND WEBHOOK INVOKED ===");
+  console.log("Timestamp:", new Date().toISOString());
+  console.log("Method:", req.method);
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Parse webhook payload
+    const event: ResendWebhookEvent = await req.json();
+    console.log('📨 Received Resend webhook:', {
+      type: event.type,
+      email_id: event.data.email_id,
+      to: event.data.to[0]
+    });
+
+    // Extract proposal_id from email metadata
+    const proposalId = await extractProposalIdFromEmail(
+      supabaseAdmin,
+      event.data.email_id,
+      event.data.to[0]
+    );
+
+    if (!proposalId) {
+      console.warn('⚠️  Could not find proposal for email:', event.data.email_id);
+      return new Response(JSON.stringify({ received: true, warning: 'proposal_not_found' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('✅ Found proposal:', proposalId);
+
+    // Store email event
+    const { data: emailEvent, error: eventError } = await supabaseAdmin
+      .from('email_events')
+      .insert({
+        proposal_id: proposalId,
+        event_type: event.type,
+        message_id: event.data.email_id,
+        recipient_email: event.data.to[0],
+        subject: event.data.subject,
+        occurred_at: event.created_at,
+        user_agent: event.data.click?.userAgent,
+        click_url: event.data.click?.link,
+        bounce_reason: event.data.bounce?.reason,
+        raw_payload: event
+      })
+      .select()
+      .single();
+
+    if (eventError) {
+      console.error('❌ Failed to store email event:', eventError);
+      throw eventError;
+    }
+
+    console.log('✅ Email event stored:', emailEvent.id);
+
+    // Update proposal engagement tracking
+    await updateProposalEngagement(supabaseAdmin, proposalId, event.type);
+
+    // Trigger status update if needed
+    const statusUpdated = await processStatusUpdate(supabaseAdmin, proposalId, event.type);
+
+    // Mark event as processed
+    await supabaseAdmin
+      .from('email_events')
+      .update({ 
+        processed_at: new Date().toISOString(),
+        status_update_triggered: statusUpdated 
+      })
+      .eq('id', emailEvent.id);
+
+    console.log('✅ Webhook processed successfully');
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        proposal_id: proposalId,
+        event_type: event.type,
+        status_updated: statusUpdated
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+
+  } catch (error: any) {
+    console.error('❌ Webhook processing error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+});
+
+async function extractProposalIdFromEmail(
+  supabase: any,
+  emailId: string,
+  recipientEmail: string
+): Promise<string | null> {
+  // First try: Check automation log for recently sent emails
+  const { data: logEntry } = await supabase
+    .from('proposal_automation_log')
+    .select('proposal_id')
+    .eq('email_message_id', emailId)
+    .single();
+
+  if (logEntry) {
+    console.log('📋 Found proposal from automation log');
+    return logEntry.proposal_id;
+  }
+
+  // Fallback: Find by client email in proposal content
+  const { data: proposals } = await supabase
+    .from('proposals')
+    .select('id, content, created_at')
+    .or(`content->clientInfo->>email.eq.${recipientEmail}`)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (proposals && proposals.length > 0) {
+    console.log('📋 Found proposal from client email match');
+    return proposals[0].id;
+  }
+
+  return null;
+}
+
+async function updateProposalEngagement(
+  supabase: any,
+  proposalId: string,
+  eventType: string
+) {
+  const isEngagement = ['email.opened', 'email.clicked'].includes(eventType);
+
+  if (isEngagement) {
+    console.log('📊 Incrementing engagement count');
+    await supabase.rpc('increment_proposal_engagement', {
+      proposal_id: proposalId,
+      event_type: eventType
+    });
+  }
+
+  // Update last email event type for all events
+  await supabase
+    .from('proposals')
+    .update({
+      last_email_event_type: eventType
+    })
+    .eq('id', proposalId);
+}
+
+async function processStatusUpdate(
+  supabase: any,
+  proposalId: string,
+  eventType: string
+): Promise<boolean> {
+  const { data: proposal } = await supabase
+    .from('proposals')
+    .select('status, automation_paused')
+    .eq('id', proposalId)
+    .single();
+
+  if (!proposal) {
+    console.warn('⚠️  Proposal not found for status update');
+    return false;
+  }
+
+  if (proposal.automation_paused) {
+    console.log('⏸️  Automation paused for this proposal');
+    return false;
+  }
+
+  let newStatus: string | null = null;
+
+  // Status transition rules based on email events
+  switch (eventType) {
+    case 'email.delivered':
+      if (['sent', 'pending'].includes(proposal.status)) {
+        newStatus = 'delivered';
+      }
+      break;
+    case 'email.opened':
+      if (['sent', 'delivered', 'pending'].includes(proposal.status)) {
+        newStatus = 'opened';
+      }
+      break;
+    case 'email.clicked':
+      if (['sent', 'delivered', 'opened', 'pending'].includes(proposal.status)) {
+        newStatus = 'viewed'; // Clicking email link = viewing proposal
+      }
+      break;
+    case 'email.bounced':
+      newStatus = 'bounced';
+      break;
+  }
+
+  if (newStatus && newStatus !== proposal.status) {
+    console.log(`🔄 Updating status: ${proposal.status} → ${newStatus}`);
+    
+    const { error } = await supabase.rpc('update_proposal_status_with_log', {
+      proposal_id: proposalId,
+      new_status: newStatus,
+      trigger_event: eventType,
+      is_automated: true
+    });
+
+    if (error) {
+      console.error('❌ Failed to update status:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+}

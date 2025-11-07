@@ -159,6 +159,35 @@ const handler = async (req: Request): Promise<Response> => {
         agentEmail
       );
 
+      // Store the Resend message_id for webhook tracking
+      if (emailResponse.id) {
+        console.log(`📧 Storing message_id for webhook tracking: ${emailResponse.id}`);
+        
+        await supabase
+          .from('proposal_automation_log')
+          .insert({
+            proposal_id: proposalId,
+            automation_type: 'email_sent',
+            email_type: 'initial_invite',
+            email_message_id: emailResponse.id,
+            details: {
+              recipient: clientEmail,
+              subject: `Carbon Credit Proposal: ${projectName}`,
+              agent_email: agentEmail
+            }
+          });
+
+        // Update proposal status to 'sent' and track email send time
+        await supabase
+          .from('proposals')
+          .update({
+            status: 'sent',
+            last_email_sent_at: new Date().toISOString(),
+            invitation_sent_at: new Date().toISOString()
+          })
+          .eq('id', proposalId);
+      }
+
       // Create a notification for the client if we have their ID
       if (clientId) {
         await createClientNotification(clientId, projectName, proposalId, supabase);

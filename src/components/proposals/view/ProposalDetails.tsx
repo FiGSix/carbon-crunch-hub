@@ -9,6 +9,7 @@ import { RevenueDistributionSection } from "@/components/proposals/summary/Reven
 import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
+import { EmailActivityTimeline } from "@/components/proposals/email/EmailActivityTimeline";
 import { useAuth } from "@/contexts/auth";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -83,6 +84,14 @@ export function ProposalDetails({
                 )}
               </AlertDescription>
             </Alert>
+          )}
+          
+          {/* Email Activity Timeline - Only visible to agents */}
+          {userRole === 'agent' && (
+            <div className="border rounded-lg p-4 bg-muted/50">
+              <h3 className="text-sm font-semibold mb-4">Email Activity</h3>
+              <EmailActivityTimeline proposalId={proposal.id} />
+            </div>
           )}
           
           <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
