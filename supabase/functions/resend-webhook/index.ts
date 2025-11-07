@@ -93,7 +93,7 @@ serve(async (req) => {
     console.log('✅ Email event stored:', emailEvent.id);
 
     // Update proposal engagement tracking
-    await updateProposalEngagement(supabaseAdmin, proposalId, event.type);
+    await updateProposalEngagement(supabaseAdmin, proposalId, event.type, event.created_at);
 
     // Trigger status update if needed
     const statusUpdated = await processStatusUpdate(supabaseAdmin, proposalId, event.type);
@@ -170,7 +170,8 @@ async function extractProposalIdFromEmail(
 async function updateProposalEngagement(
   supabase: any,
   proposalId: string,
-  eventType: string
+  eventType: string,
+  eventTimestamp: string
 ) {
   const isEngagement = ['email.opened', 'email.clicked'].includes(eventType);
 
@@ -182,11 +183,12 @@ async function updateProposalEngagement(
     });
   }
 
-  // Update last email event type for all events
+  // Update last email event type and timestamp for all events
   await supabase
     .from('proposals')
     .update({
-      last_email_event_type: eventType
+      last_email_event_type: eventType,
+      last_email_sent_at: eventTimestamp
     })
     .eq('id', proposalId);
 }
