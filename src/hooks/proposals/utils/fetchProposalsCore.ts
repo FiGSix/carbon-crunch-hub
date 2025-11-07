@@ -67,6 +67,10 @@ export async function fetchProposalsCore(
     unit_standard: proposal.unit_standard,
     invitation_sent_at: proposal.invitation_sent_at,
     invitation_viewed_at: proposal.invitation_viewed_at,
-    invitation_expires_at: proposal.invitation_expires_at
+    invitation_expires_at: proposal.invitation_expires_at,
+    last_email_event_type: proposal.last_email_event_type,
+    last_email_sent_at: proposal.last_email_sent_at,
+    engagement_count: proposal.engagement_count,
+    last_engagement_at: proposal.last_engagement_at
   }));
 }

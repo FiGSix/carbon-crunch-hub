@@ -178,6 +178,8 @@ export interface ProposalListItem {
   // Email engagement tracking
   last_email_event_type?: string | null;
   last_email_sent_at?: string | null;
+  engagement_count?: number | null;
+  last_engagement_at?: string | null;
 }
 
 /**

@@ -6,6 +6,7 @@ import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ClientShareCell } from "./components/ClientShareCell";
 import { EmailEngagementBadge } from "./components/EmailEngagementBadge";
+import { ProposalEngagementBadge } from "./list/ProposalEngagementBadge";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -59,18 +60,26 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       </TableCell>
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
+        <ProposalStatusDropdown 
+          proposalId={proposal.id} 
+          currentStatus={proposal.status} 
+          onStatusUpdate={onProposalUpdate} 
+        />
+      </TableCell>
+      <TableCell>
         <div className="flex items-center gap-2">
-          <ProposalStatusDropdown 
-            proposalId={proposal.id} 
-            currentStatus={proposal.status} 
-            onStatusUpdate={onProposalUpdate} 
-          />
-          {proposal.status !== 'draft' && proposal.last_email_event_type && (
+          {proposal.last_email_event_type ? (
             <EmailEngagementBadge 
               eventType={proposal.last_email_event_type} 
               sentAt={proposal.last_email_sent_at}
             />
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
           )}
+          <ProposalEngagementBadge 
+            engagementCount={proposal.engagement_count || 0}
+            last_engagement_at={proposal.last_engagement_at}
+          />
         </div>
       </TableCell>
       {userRole === "admin" && (
@@ -171,6 +180,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Date</TableHead>
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Engagement</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
             {userRole === "admin" && <TableHead>Client Share</TableHead>}
             <TableHead className="text-center">First Yr Est. Revenue</TableHead>
