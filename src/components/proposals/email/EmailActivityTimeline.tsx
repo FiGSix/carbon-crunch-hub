@@ -27,7 +27,7 @@ export function EmailActivityTimeline({ proposalId }: EmailActivityTimelineProps
         .order('occurred_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []) as EmailEvent[];
+      return (data || []) as unknown as EmailEvent[];
     }
   });
 

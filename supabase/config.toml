@@ -57,3 +57,6 @@ verify_jwt = true
 
 [functions.delete-user]
 verify_jwt = true
+
+[functions.resend-webhook]
+verify_jwt = false

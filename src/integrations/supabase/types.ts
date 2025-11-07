@@ -456,6 +456,68 @@ export type Database = {
           },
         ]
       }
+      email_events: {
+        Row: {
+          bounce_reason: string | null
+          click_url: string | null
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: unknown
+          message_id: string
+          occurred_at: string
+          processed_at: string | null
+          proposal_id: string
+          raw_payload: Json
+          recipient_email: string
+          status_update_triggered: boolean | null
+          subject: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          bounce_reason?: string | null
+          click_url?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: unknown
+          message_id: string
+          occurred_at: string
+          processed_at?: string | null
+          proposal_id: string
+          raw_payload?: Json
+          recipient_email: string
+          status_update_triggered?: boolean | null
+          subject?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          bounce_reason?: string | null
+          click_url?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: unknown
+          message_id?: string
+          occurred_at?: string
+          processed_at?: string | null
+          proposal_id?: string
+          raw_payload?: Json
+          recipient_email?: string
+          status_update_triggered?: boolean | null
+          subject?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1210,6 +1272,56 @@ export type Database = {
           },
         ]
       }
+      proposal_automation_log: {
+        Row: {
+          automation_type: string
+          created_at: string
+          created_by: string | null
+          details: Json | null
+          email_message_id: string | null
+          email_type: string | null
+          id: string
+          new_status: string | null
+          old_status: string | null
+          proposal_id: string
+          trigger_event: string | null
+        }
+        Insert: {
+          automation_type: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json | null
+          email_message_id?: string | null
+          email_type?: string | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          proposal_id: string
+          trigger_event?: string | null
+        }
+        Update: {
+          automation_type?: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json | null
+          email_message_id?: string | null
+          email_type?: string | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          proposal_id?: string
+          trigger_event?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_automation_log_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           agent_commission_percentage: number | null
@@ -1218,6 +1330,8 @@ export type Database = {
           annual_energy: number | null
           archived_at: string | null
           archived_by: string | null
+          automation_pause_reason: string | null
+          automation_paused: boolean | null
           carbon_credits: number | null
           client_id: string | null
           client_reference_id: string | null
@@ -1231,11 +1345,15 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           eligibility_criteria: Json
+          engagement_count: number | null
           id: string
           invitation_expires_at: string | null
           invitation_sent_at: string | null
           invitation_token: string | null
           invitation_viewed_at: string | null
+          last_email_event_type: string | null
+          last_email_sent_at: string | null
+          last_engagement_at: string | null
           last_modified_by: string | null
           pdf_generated_at: string | null
           pdf_url: string | null
@@ -1256,6 +1374,8 @@ export type Database = {
           annual_energy?: number | null
           archived_at?: string | null
           archived_by?: string | null
+          automation_pause_reason?: string | null
+          automation_paused?: boolean | null
           carbon_credits?: number | null
           client_id?: string | null
           client_reference_id?: string | null
@@ -1269,11 +1389,15 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           eligibility_criteria?: Json
+          engagement_count?: number | null
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
+          last_email_event_type?: string | null
+          last_email_sent_at?: string | null
+          last_engagement_at?: string | null
           last_modified_by?: string | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
@@ -1294,6 +1418,8 @@ export type Database = {
           annual_energy?: number | null
           archived_at?: string | null
           archived_by?: string | null
+          automation_pause_reason?: string | null
+          automation_paused?: boolean | null
           carbon_credits?: number | null
           client_id?: string | null
           client_reference_id?: string | null
@@ -1307,11 +1433,15 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           eligibility_criteria?: Json
+          engagement_count?: number | null
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
           invitation_token?: string | null
           invitation_viewed_at?: string | null
+          last_email_event_type?: string | null
+          last_email_sent_at?: string | null
+          last_engagement_at?: string | null
           last_modified_by?: string | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
@@ -1561,6 +1691,14 @@ export type Database = {
       }
       auth_user_id: { Args: never; Returns: string }
       auth_user_role: { Args: never; Returns: string }
+      can_transition_proposal_status: {
+        Args: {
+          current_status: string
+          is_automated?: boolean
+          new_status: string
+        }
+        Returns: boolean
+      }
       can_view_proposal: {
         Args: {
           proposal_agent_id: string
@@ -1864,6 +2002,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_proposal_engagement: {
+        Args: { event_type: string; proposal_id: string }
+        Returns: undefined
+      }
       is_company_member: {
         Args: { company_id_param: string; user_id_param: string }
         Returns: boolean
@@ -1963,6 +2105,15 @@ export type Database = {
           table_name: string
           test_name: string
         }[]
+      }
+      update_proposal_status_with_log: {
+        Args: {
+          is_automated?: boolean
+          new_status: string
+          proposal_id: string
+          trigger_event?: string
+        }
+        Returns: boolean
       }
       user_company_ids: {
         Args: { user_id_param: string }
