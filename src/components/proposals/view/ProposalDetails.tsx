@@ -10,6 +10,7 @@ import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
 import { EmailActivityTimeline } from "@/components/proposals/email/EmailActivityTimeline";
+import { AutomationToggle } from "@/components/proposals/automation/AutomationToggle";
 import { useAuth } from "@/contexts/auth";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -88,8 +89,15 @@ export function ProposalDetails({
           
           {/* Email Activity Timeline - Only visible to agents */}
           {userRole === 'agent' && (
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <h3 className="text-sm font-semibold mb-4">Email Activity</h3>
+            <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Email Activity & Automation</h3>
+                <AutomationToggle 
+                  proposalId={proposal.id}
+                  automationPaused={proposal.automation_paused || false}
+                  pauseReason={proposal.automation_pause_reason}
+                />
+              </div>
               <EmailActivityTimeline proposalId={proposal.id} />
             </div>
           )}

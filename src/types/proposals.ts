@@ -129,6 +129,12 @@ export interface ProposalData {
   invitation_expires_at?: string | null;
   invitation_sent_at?: string | null;
   invitation_viewed_at?: string | null;
+  engagement_count?: number | null;
+  last_engagement_at?: string | null;
+  last_email_event_type?: string | null;
+  last_email_sent_at?: string | null;
+  automation_paused?: boolean | null;
+  automation_pause_reason?: string | null;
 }
 
 /**
