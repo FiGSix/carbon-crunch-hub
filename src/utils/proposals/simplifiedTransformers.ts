@@ -107,7 +107,9 @@ export function transformToProposalListItems(
       invitation_expires_at: proposal.invitation_expires_at,
       content: proposal.content,
       isMultiPhase: proposal.content?.projectInfo?.isMultiPhase || proposal.project_info?.isMultiPhase || false,
-      phases: proposal.content?.projectInfo?.phases || proposal.project_info?.phases || undefined
+      phases: proposal.content?.projectInfo?.phases || proposal.project_info?.phases || undefined,
+      last_email_event_type: proposal.last_email_event_type,
+      last_email_sent_at: proposal.last_email_sent_at
     };
   });
 }

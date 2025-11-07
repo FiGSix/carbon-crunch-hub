@@ -174,6 +174,10 @@ export interface ProposalListItem {
   content?: ProposalContent;
   isMultiPhase?: boolean;
   phases?: ProjectPhase[];
+  
+  // Email engagement tracking
+  last_email_event_type?: string | null;
+  last_email_sent_at?: string | null;
 }
 
 /**

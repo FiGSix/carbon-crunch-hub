@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ClientShareCell } from "./components/ClientShareCell";
+import { EmailEngagementBadge } from "./components/EmailEngagementBadge";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -58,11 +59,19 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       </TableCell>
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
-        <ProposalStatusDropdown 
-          proposalId={proposal.id} 
-          currentStatus={proposal.status} 
-          onStatusUpdate={onProposalUpdate} 
-        />
+        <div className="flex items-center gap-2">
+          <ProposalStatusDropdown 
+            proposalId={proposal.id} 
+            currentStatus={proposal.status} 
+            onStatusUpdate={onProposalUpdate} 
+          />
+          {proposal.status !== 'draft' && proposal.last_email_event_type && (
+            <EmailEngagementBadge 
+              eventType={proposal.last_email_event_type} 
+              sentAt={proposal.last_email_sent_at}
+            />
+          )}
+        </div>
       </TableCell>
       {userRole === "admin" && (
         <TableCell>{proposal.agent || "Unassigned"}</TableCell>
@@ -87,6 +96,7 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
     prevProps.proposal.id === nextProps.proposal.id &&
     prevProps.proposal.status === nextProps.proposal.status &&
     prevProps.proposal.revenue === nextProps.proposal.revenue &&
+    prevProps.proposal.last_email_event_type === nextProps.proposal.last_email_event_type &&
     prevProps.userRole === nextProps.userRole &&
     prevProps.isCurrentUser === nextProps.isCurrentUser
   );
