@@ -2,7 +2,6 @@
 import { useEffect, memo, useMemo, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ClientShareCell } from "./components/ClientShareCell";
 import { EmailEngagementBadge } from "./components/EmailEngagementBadge";
@@ -13,6 +12,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
@@ -61,33 +61,44 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
         <div className="flex flex-col gap-1.5">
-          <ProposalStatusDropdown 
-            proposalId={proposal.id} 
-            currentStatus={proposal.status} 
-            onStatusUpdate={onProposalUpdate} 
-          />
+          {/* Email and view engagement tracking */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {proposal.last_email_event_type ? (
+              <EmailEngagementBadge 
+                eventType={proposal.last_email_event_type} 
+                sentAt={proposal.last_email_sent_at}
+              />
+            ) : proposal.invitation_sent_at ? (
+              <EmailEngagementBadge 
+                eventType="email.sent" 
+                sentAt={proposal.invitation_sent_at}
+              />
+            ) : proposal.status === 'draft' ? (
+              <Badge variant="secondary" className="text-xs">
+                Draft
+              </Badge>
+            ) : null}
+            
+            {proposal.engagement_count && proposal.engagement_count > 0 && (
+              <ProposalEngagementBadge 
+                engagementCount={proposal.engagement_count}
+                last_engagement_at={proposal.last_engagement_at}
+              />
+            )}
+          </div>
           
-          {(proposal.last_email_event_type || proposal.invitation_sent_at || (proposal.engagement_count && proposal.engagement_count > 0)) && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {proposal.last_email_event_type ? (
-                <EmailEngagementBadge 
-                  eventType={proposal.last_email_event_type} 
-                  sentAt={proposal.last_email_sent_at}
-                />
-              ) : proposal.invitation_sent_at ? (
-                <EmailEngagementBadge 
-                  eventType="email.sent" 
-                  sentAt={proposal.invitation_sent_at}
-                />
-              ) : null}
-              
-              {proposal.engagement_count && proposal.engagement_count > 0 && (
-                <ProposalEngagementBadge 
-                  engagementCount={proposal.engagement_count}
-                  last_engagement_at={proposal.last_engagement_at}
-                />
-              )}
-            </div>
+          {/* Final outcome badges */}
+          {proposal.status === 'approved' && (
+            <Badge variant="outline" className="gap-1 text-xs bg-green-50 text-green-700 border-green-200">
+              <CheckCircle2 className="h-3 w-3" />
+              Accepted
+            </Badge>
+          )}
+          {proposal.status === 'rejected' && (
+            <Badge variant="outline" className="gap-1 text-xs bg-red-50 text-red-700 border-red-200">
+              <XCircle className="h-3 w-3" />
+              Declined
+            </Badge>
           )}
         </div>
       </TableCell>
