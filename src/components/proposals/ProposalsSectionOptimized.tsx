@@ -103,15 +103,15 @@ export function ProposalsSectionOptimized() {
   
   return (
     <div className="space-y-6">
-      {/* Engagement Dashboard - Agents only */}
-      {userRole === 'agent' && (
+      {/* Engagement Dashboard - Agents and Admins */}
+      {(userRole === 'agent' || userRole === 'admin') && (
         <div className="space-y-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowDashboard(!showDashboard)}
           >
-            {showDashboard ? '📊 Hide' : '📈 Show'} Engagement Dashboard
+            {showDashboard ? 'Hide' : 'Show'} Engagement Dashboard
           </Button>
           {showDashboard && <EngagementDashboard />}
         </div>
@@ -143,16 +143,6 @@ export function ProposalsSectionOptimized() {
             onStatusChange={(value) => handleFilterChange('status', value)}
             onSortChange={(value) => handleFilterChange('sort', value)}
           />
-          
-          {/* Advanced Filters - Agents only */}
-          {userRole === 'agent' && (
-            <div className="my-4">
-              <AdvancedProposalFilters 
-                filters={advancedFilters}
-                onFiltersChange={setAdvancedFilters}
-              />
-            </div>
-          )}
           
           {error && (
             <Alert variant="destructive" className="my-4">
