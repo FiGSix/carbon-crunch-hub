@@ -62,9 +62,9 @@ serve(async (req: Request) => {
     // Generate secure token (48 char random string)
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
     
-    // Set expiration to 48 hours from now
+    // Set expiration to 10 days from now
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 48);
+    expiresAt.setHours(expiresAt.getHours() + 240);
 
     // Create proposal content
     const proposalContent = {
@@ -187,7 +187,7 @@ serve(async (req: Request) => {
                       </table>
                       
                       <p style="margin: 0 0 10px; color: #666666; font-size: 14px; text-align: center;">
-                        This link expires in 48 hours
+                        This link expires in 10 days
                       </p>
                       
                       <p style="margin: 30px 0 0; color: #666666; font-size: 14px; line-height: 1.6; border-top: 1px solid #e0e0e0; padding-top: 20px;">

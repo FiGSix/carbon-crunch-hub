@@ -97,7 +97,7 @@ export class EmailService {
             <!-- Important Notice -->
             <div style="background: #FFF8E1; border: 1px solid #FFE082; border-radius: 8px; padding: 16px; margin: 30px 0;">
               <p style="margin: 0; color: #F57C00; font-size: 14px; line-height: 1.6;">
-                ⏱️ <strong>Important:</strong> This invitation is valid for 48 hours. If you did not expect this invitation, please disregard this email.
+                ⏱️ <strong>Important:</strong> This invitation is valid for 10 days. If you did not expect this invitation, please disregard this email.
               </p>
             </div>
 

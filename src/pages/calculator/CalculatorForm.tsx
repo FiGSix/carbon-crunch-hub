@@ -183,7 +183,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
               {email}
             </p>
             <p className="text-crunch-black/60 mb-8">
-              The link will be valid for 48 hours. Check your spam folder if you don't see it in a few minutes.
+              The link will be valid for 10 days. Check your spam folder if you don't see it in a few minutes.
             </p>
             <div className="flex gap-4 justify-center">
               <Button

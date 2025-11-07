@@ -80,7 +80,7 @@ serve(async (req) => {
         console.log('[PDF] Generating new invitation token for pending proposal')
         
         const newToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
-        const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000) // 48 hours
+        const expiresAt = new Date(now.getTime() + 240 * 60 * 60 * 1000) // 10 days
         
         const { error: updateError } = await supabaseAdmin
           .from('proposals')

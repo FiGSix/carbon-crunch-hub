@@ -27,15 +27,15 @@ export async function verifyInvitationSent(proposalId: string): Promise<{success
       return { success: false, error: 'Invitation data is incomplete' };
     }
     
-    // Verify expiration date is properly set (48 hours in the future)
+    // Verify expiration date is properly set (10 days in the future)
     const expirationDate = new Date(data.invitation_expires_at);
     const now = new Date();
     const hoursUntilExpiration = (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60);
     
-    if (hoursUntilExpiration < 47 || hoursUntilExpiration > 49) {
+    if (hoursUntilExpiration < 239 || hoursUntilExpiration > 241) {
       return { 
         success: false, 
-        error: `Expiration time is incorrect: ${hoursUntilExpiration.toFixed(1)} hours (should be ~48)` 
+        error: `Expiration time is incorrect: ${hoursUntilExpiration.toFixed(1)} hours (should be ~240)` 
       };
     }
     

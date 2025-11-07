@@ -61,9 +61,9 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       if (!tokenToUse) {
         logger.debug("No existing token found, generating new one");
         
-        // Generate token and set expiration date (48 hours from now)
+        // Generate token and set expiration date (10 days from now)
         expirationDate = new Date();
-        expirationDate.setHours(expirationDate.getHours() + 48);
+        expirationDate.setHours(expirationDate.getHours() + 240);
         
         const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
         
