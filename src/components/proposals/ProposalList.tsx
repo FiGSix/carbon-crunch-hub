@@ -60,26 +60,35 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
       </TableCell>
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
-        <ProposalStatusDropdown 
-          proposalId={proposal.id} 
-          currentStatus={proposal.status} 
-          onStatusUpdate={onProposalUpdate} 
-        />
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          {proposal.last_email_event_type ? (
-            <EmailEngagementBadge 
-              eventType={proposal.last_email_event_type} 
-              sentAt={proposal.last_email_sent_at}
-            />
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
-          <ProposalEngagementBadge 
-            engagementCount={proposal.engagement_count || 0}
-            last_engagement_at={proposal.last_engagement_at}
+        <div className="flex flex-col gap-1.5">
+          <ProposalStatusDropdown 
+            proposalId={proposal.id} 
+            currentStatus={proposal.status} 
+            onStatusUpdate={onProposalUpdate} 
           />
+          
+          {(proposal.last_email_event_type || proposal.invitation_sent_at || (proposal.engagement_count && proposal.engagement_count > 0)) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {proposal.last_email_event_type ? (
+                <EmailEngagementBadge 
+                  eventType={proposal.last_email_event_type} 
+                  sentAt={proposal.last_email_sent_at}
+                />
+              ) : proposal.invitation_sent_at ? (
+                <EmailEngagementBadge 
+                  eventType="email.sent" 
+                  sentAt={proposal.invitation_sent_at}
+                />
+              ) : null}
+              
+              {proposal.engagement_count && proposal.engagement_count > 0 && (
+                <ProposalEngagementBadge 
+                  engagementCount={proposal.engagement_count}
+                  last_engagement_at={proposal.last_engagement_at}
+                />
+              )}
+            </div>
+          )}
         </div>
       </TableCell>
       {userRole === "admin" && (
@@ -106,6 +115,7 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
     prevProps.proposal.status === nextProps.proposal.status &&
     prevProps.proposal.revenue === nextProps.proposal.revenue &&
     prevProps.proposal.last_email_event_type === nextProps.proposal.last_email_event_type &&
+    prevProps.proposal.engagement_count === nextProps.proposal.engagement_count &&
     prevProps.userRole === nextProps.userRole &&
     prevProps.isCurrentUser === nextProps.isCurrentUser
   );
@@ -180,7 +190,6 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Date</TableHead>
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Engagement</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
             {userRole === "admin" && <TableHead>Client Share</TableHead>}
             <TableHead className="text-center">First Yr Est. Revenue</TableHead>
