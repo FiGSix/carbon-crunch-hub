@@ -60,3 +60,6 @@ verify_jwt = true
 
 [functions.resend-webhook]
 verify_jwt = false
+
+[functions.proposal-automation]
+verify_jwt = false
