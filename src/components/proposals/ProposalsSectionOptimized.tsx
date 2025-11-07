@@ -1,11 +1,13 @@
 
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, RefreshCw } from "lucide-react";
 import { ProposalList } from "@/components/proposals/ProposalList";
 import { ProposalFilters } from "@/components/proposals/ProposalFilters";
 import { ProposalActions } from "@/components/proposals/ProposalActions";
 import { ProposalLoadingState } from "@/components/proposals/ProposalLoadingState";
+import { EngagementDashboard } from "@/components/proposals/engagement/EngagementDashboard";
+import { AdvancedProposalFilters, applyAdvancedFilters } from "@/components/proposals/filters/AdvancedProposalFilters";
 
 import { useProposals } from "@/hooks/useProposals";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -21,11 +23,19 @@ export function ProposalsSectionOptimized() {
     loading, 
     error,
     handleFilterChange, 
-    fetchProposals 
+    fetchProposals,
+    advancedFilters,
+    setAdvancedFilters
   } = useProposals();
   
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  const [showDashboard, setShowDashboard] = useState(false);
+  
+  // Apply advanced filters to proposals
+  const filteredProposals = useMemo(() => {
+    return applyAdvancedFilters(proposals, advancedFilters);
+  }, [proposals, advancedFilters]);
   
   // Optimized auth state logging - only on significant changes
   useEffect(() => {
@@ -92,7 +102,22 @@ export function ProposalsSectionOptimized() {
   }, [toast]); // Only toast as dependency - handleProposalUpdate removed as it's handled in useProposals
   
   return (
-    <Card className="retro-card mb-8">
+    <div className="space-y-6">
+      {/* Engagement Dashboard - Agents only */}
+      {userRole === 'agent' && (
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDashboard(!showDashboard)}
+          >
+            {showDashboard ? '📊 Hide' : '📈 Show'} Engagement Dashboard
+          </Button>
+          {showDashboard && <EngagementDashboard />}
+        </div>
+      )}
+
+      <Card className="retro-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center">
@@ -119,6 +144,16 @@ export function ProposalsSectionOptimized() {
             onSortChange={(value) => handleFilterChange('sort', value)}
           />
           
+          {/* Advanced Filters - Agents only */}
+          {userRole === 'agent' && (
+            <div className="my-4">
+              <AdvancedProposalFilters 
+                filters={advancedFilters}
+                onFiltersChange={setAdvancedFilters}
+              />
+            </div>
+          )}
+          
           {error && (
             <Alert variant="destructive" className="my-4">
               <AlertTitle>Error Loading Proposals</AlertTitle>
@@ -139,16 +174,25 @@ export function ProposalsSectionOptimized() {
           
           <ProposalLoadingState 
             loading={loading} 
-            hasProposals={proposals.length > 0} 
+            hasProposals={filteredProposals.length > 0} 
           />
           
-          {!loading && proposals.length > 0 && (
+          {!loading && filteredProposals.length > 0 && (
             <ProposalList 
-              proposals={proposals} 
+              proposals={filteredProposals} 
               onProposalUpdate={handleProposalUpdate}
             />
           )}
+          
+          {!loading && proposals.length > 0 && filteredProposals.length === 0 && (
+            <Alert className="my-4">
+              <AlertDescription>
+                No proposals match the selected filters. Try adjusting your filter criteria.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
+    </div>
   );
 }

@@ -140,6 +140,12 @@ export function useOptimizedProposals(): UseProposalsResult {
     loading,
     error,
     handleFilterChange,
-    fetchProposals
+    fetchProposals,
+    advancedFilters: {
+      engagementLevel: 'all',
+      automationStatus: 'all',
+      emailStatus: 'all'
+    },
+    setAdvancedFilters: () => {} // No-op for this hook
   };
 }

@@ -65,4 +65,6 @@ export interface UseProposalsResult {
   error: string | null;
   handleFilterChange: (filterType: string, value: string) => void;
   fetchProposals: (forceRefresh?: boolean) => Promise<void>;
+  advancedFilters: import("@/components/proposals/filters/AdvancedProposalFilters").AdvancedFilters;
+  setAdvancedFilters: (filters: import("@/components/proposals/filters/AdvancedProposalFilters").AdvancedFilters) => void;
 }

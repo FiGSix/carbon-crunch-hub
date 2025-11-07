@@ -8,6 +8,7 @@ import { useProposalFilters } from "./proposals/useProposalFilters";
 import { getCachedProposals, isCacheValid, updateProposalsCache, clearProposalsCache } from "./proposals/utils/proposalCache";
 import { UseProposalsResult } from "./proposals/types";
 import { logger } from "@/lib/logger";
+import { AdvancedFilters } from "@/components/proposals/filters/AdvancedProposalFilters";
 
 export function useProposals(): UseProposalsResult {
   const { user, userRole, refreshUser } = useAuth();
@@ -17,6 +18,11 @@ export function useProposals(): UseProposalsResult {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
+    engagementLevel: 'all',
+    automationStatus: 'all',
+    emailStatus: 'all'
+  });
 
   const proposalsLogger = useMemo(() => logger.withContext({
     component: 'UseProposals',
@@ -84,6 +90,8 @@ export function useProposals(): UseProposalsResult {
     loading,
     error,
     handleFilterChange,
-    fetchProposals
+    fetchProposals,
+    advancedFilters,
+    setAdvancedFilters
   };
 }
