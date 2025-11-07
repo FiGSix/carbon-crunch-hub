@@ -1727,6 +1727,16 @@ export type Database = {
         }[]
       }
       get_client_email: { Args: never; Returns: string }
+      get_company_member_profiles: {
+        Args: { _company_id: string; _requesting_user_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          first_name: string
+          last_name: string
+          user_id: string
+        }[]
+      }
       get_current_user_role: { Args: never; Returns: string }
       get_dashboard_metrics_by_stage: {
         Args: { user_id_param: string; user_role_param: string }

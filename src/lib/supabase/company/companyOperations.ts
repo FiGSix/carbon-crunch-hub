@@ -50,9 +50,20 @@ export async function getUserCompany(userId: string) {
 }
 
 /**
- * Get all members of a company
+ * Get all members of a company with their basic profile info
+ * Uses a secure database function to ensure proper authorization
  */
 export async function getCompanyMembers(companyId: string) {
+  if (!companyId) {
+    return { data: null, error: new Error('Company ID is required') };
+  }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   // First get company members
   const { data: members, error: membersError } = await supabase
     .from('company_members')
@@ -65,21 +76,22 @@ export async function getCompanyMembers(companyId: string) {
     return { data: null, error: membersError };
   }
 
-  // Then get profiles for all user IDs
-  const userIds = members.map(m => m.user_id);
+  // Use the secure RPC function to get profile data
   const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, email, avatar_url')
-    .in('id', userIds);
+    .rpc('get_company_member_profiles', {
+      _company_id: companyId,
+      _requesting_user_id: user.id
+    });
 
-  if (profilesError || !profiles) {
+  if (profilesError) {
+    console.error('Error fetching member profiles:', profilesError);
     return { data: null, error: profilesError };
   }
 
   // Combine the data
   const combined = members.map(member => ({
     ...member,
-    profile: profiles.find(p => p.id === member.user_id) || null
+    profile: profiles?.find((p: any) => p.user_id === member.user_id) || null
   })) as CompanyMemberWithProfile[];
 
   return { data: combined, error: null };
