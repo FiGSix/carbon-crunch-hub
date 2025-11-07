@@ -34,7 +34,11 @@ export function buildBaseProposalsQuery(
       unit_standard,
       invitation_sent_at,
       invitation_viewed_at,
-      invitation_expires_at
+      invitation_expires_at,
+      last_email_event_type,
+      last_email_sent_at,
+      engagement_count,
+      last_engagement_at
     `)
     .is('deleted_at', null); // Exclude soft-deleted proposals
 

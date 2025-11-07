@@ -182,6 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
           .from('proposals')
           .update({
             status: 'sent',
+            last_email_event_type: 'email.sent',
             last_email_sent_at: new Date().toISOString(),
             invitation_sent_at: new Date().toISOString()
           })
