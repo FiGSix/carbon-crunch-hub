@@ -13,7 +13,8 @@ import {
   ClipboardCheck,
   Shield,
   UserCheck,
-  Database
+  Database,
+  Mail
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -109,6 +110,12 @@ export function DashboardSidebar() {
       name: "Digital Signatures",
       href: "/admin/signatures",
       icon: FileSignature,
+      roles: ["admin"]
+    },
+    {
+      name: "Email Automation",
+      href: "/admin/email-automation",
+      icon: Mail,
       roles: ["admin"]
     },
     {
