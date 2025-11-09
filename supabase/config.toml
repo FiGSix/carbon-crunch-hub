@@ -64,5 +64,8 @@ verify_jwt = false
 [functions.proposal-automation]
 verify_jwt = false
 
+[functions.post-signature-automation]
+verify_jwt = false
+
 [functions.test-proposal-emails]
 verify_jwt = true

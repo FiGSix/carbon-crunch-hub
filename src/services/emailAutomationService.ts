@@ -5,10 +5,15 @@ export interface TimingConfig {
   sent_not_delivered_repeat_days: number;
   delivered_not_opened_days: number;
   delivered_not_opened_repeat_days: number;
-  opened_not_viewed_days: number;
-  opened_not_viewed_repeat_days: number;
+  opened_not_clicked_days: number;
+  opened_not_clicked_repeat_days: number;
+  clicked_not_signed_days: number;
+  clicked_not_signed_repeat_days: number;
   mark_stale_days: number;
   proposal_validity_hours: number;
+  accepted_thank_you_delay_hours: number;
+  cession_reminder_days: number;
+  onboarding_idle_days: number;
 }
 
 export interface EmailTemplate {
@@ -19,7 +24,12 @@ export interface EmailTemplate {
 export interface EmailTemplates {
   sent_not_delivered: EmailTemplate;
   delivered_not_opened: EmailTemplate;
-  opened_not_viewed: EmailTemplate;
+  opened_not_clicked: EmailTemplate;
+  clicked_not_signed: EmailTemplate;
+  graceful_exit: EmailTemplate;
+  accepted_thank_you: EmailTemplate;
+  cession_reminder: EmailTemplate;
+  onboarding_idle_help: EmailTemplate;
 }
 
 export class EmailAutomationService {

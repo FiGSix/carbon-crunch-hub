@@ -1110,6 +1110,7 @@ export type Database = {
           data_access_verified: boolean
           data_access_verified_at: string | null
           id: string
+          last_activity_at: string | null
           last_modified_by: string | null
           onboarding_complete: boolean
           onboarding_completed_at: string | null
@@ -1131,6 +1132,7 @@ export type Database = {
           data_access_verified?: boolean
           data_access_verified_at?: string | null
           id?: string
+          last_activity_at?: string | null
           last_modified_by?: string | null
           onboarding_complete?: boolean
           onboarding_completed_at?: string | null
@@ -1152,6 +1154,7 @@ export type Database = {
           data_access_verified?: boolean
           data_access_verified_at?: string | null
           id?: string
+          last_activity_at?: string | null
           last_modified_by?: string | null
           onboarding_complete?: boolean
           onboarding_completed_at?: string | null

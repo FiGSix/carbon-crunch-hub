@@ -60,7 +60,7 @@ serve(async (req: Request) => {
 
     console.log("📝 Using timing config:", timingConfig);
 
-    // Fetch proposals that need automation
+    // Fetch proposals that need automation (including 'clicked' status)
     const { data: proposals, error: fetchError } = await supabase
       .from('proposals')
       .select(`
@@ -72,7 +72,7 @@ serve(async (req: Request) => {
         content
       `)
       .eq('automation_paused', false)
-      .in('status', ['sent', 'delivered', 'opened'])
+      .in('status', ['sent', 'delivered', 'opened', 'clicked'])
       .is('deleted_at', null)
       .is('archived_at', null);
 
@@ -131,27 +131,64 @@ serve(async (req: Request) => {
           ? Math.floor((now.getTime() - new Date(recentLog.created_at).getTime()) / (1000 * 60 * 60 * 24))
           : 999;
 
-        // Rule 1: Mark as stale after configured days with no engagement
-        const staleDays = timingConfig.mark_stale_days || 14;
+        // Rule 1: Send graceful exit email before marking as stale
+        const staleDays = timingConfig.mark_stale_days || 10;
         if (daysSinceLastSent >= staleDays && daysSinceLastEngagement >= staleDays) {
-          console.log(`⏰ Marking proposal ${proposal.id} as stale (${daysSinceLastSent} days inactive)`);
+          // Check if we already sent the graceful exit email
+          const { data: exitEmailLog } = await supabase
+            .from('proposal_automation_log')
+            .select('id')
+            .eq('proposal_id', proposal.id)
+            .eq('email_type', 'graceful_exit')
+            .single();
           
-          await supabase.rpc('update_proposal_status_with_log', {
-            proposal_id: proposal.id,
-            new_status: 'stale',
-            trigger_event: `auto_stale_after_${staleDays}_days`,
-            is_automated: true
-          });
+          if (!exitEmailLog) {
+            console.log(`👋 Sending graceful exit email for proposal ${proposal.id}`);
+            
+            await sendFollowUpEmail(
+              clientEmail,
+              clientName,
+              proposal.title,
+              proposal.invitation_token,
+              agentEmail,
+              'graceful_exit',
+              emailTemplates
+            );
 
-          actions.marked_stale++;
+            await supabase
+              .from('proposal_automation_log')
+              .insert({
+                proposal_id: proposal.id,
+                automation_type: 'follow_up_email',
+                trigger_event: 'graceful_exit_before_stale',
+                email_type: 'graceful_exit',
+                old_status: proposal.status,
+                new_status: 'stale'
+              });
+
+            // Then mark as stale
+            await supabase.rpc('update_proposal_status_with_log', {
+              proposal_id: proposal.id,
+              new_status: 'stale',
+              trigger_event: `auto_stale_after_${staleDays}_days_with_exit_email`,
+              is_automated: true
+            });
+
+            await supabase
+              .from('proposals')
+              .update({ last_email_sent_at: now.toISOString() })
+              .eq('id', proposal.id);
+
+            actions.marked_stale++;
+          }
           continue;
         }
 
-        // Rule 2: Send follow-up for opened but not viewed
-        const openedNotViewedInitial = timingConfig.opened_not_viewed_days || 2;
-        const openedNotViewedRepeat = timingConfig.opened_not_viewed_repeat_days || 2;
-        if (proposal.status === 'opened' && daysSinceLastSent >= openedNotViewedInitial && daysSinceLastFollowup >= openedNotViewedRepeat) {
-          console.log(`📧 Sending follow-up for opened proposal ${proposal.id}`);
+        // Rule 2: Send follow-up for clicked but not signed
+        const clickedNotSignedInitial = timingConfig.clicked_not_signed_days || 6;
+        const clickedNotSignedRepeat = timingConfig.clicked_not_signed_repeat_days || 6;
+        if (proposal.status === 'clicked' && daysSinceLastSent >= clickedNotSignedInitial && daysSinceLastFollowup >= clickedNotSignedRepeat) {
+          console.log(`📧 Sending follow-up for clicked proposal ${proposal.id}`);
           
           await sendFollowUpEmail(
             clientEmail,
@@ -159,7 +196,7 @@ serve(async (req: Request) => {
             proposal.title,
             proposal.invitation_token,
             agentEmail,
-            'opened_not_viewed',
+            'clicked_not_signed',
             emailTemplates
           );
 
@@ -168,7 +205,8 @@ serve(async (req: Request) => {
             .insert({
               proposal_id: proposal.id,
               automation_type: 'follow_up_email',
-              trigger_event: 'opened_not_viewed_2_days',
+              trigger_event: 'clicked_not_signed_6_days',
+              email_type: 'clicked_not_signed',
               old_status: proposal.status,
               new_status: proposal.status
             });
@@ -182,8 +220,44 @@ serve(async (req: Request) => {
           continue;
         }
 
-        // Rule 3: Send reminder for delivered but not opened
-        const deliveredNotOpenedInitial = timingConfig.delivered_not_opened_days || 3;
+        // Rule 3: Send follow-up for opened but not clicked
+        const openedNotClickedInitial = timingConfig.opened_not_clicked_days || 4;
+        const openedNotClickedRepeat = timingConfig.opened_not_clicked_repeat_days || 4;
+        if (proposal.status === 'opened' && daysSinceLastSent >= openedNotClickedInitial && daysSinceLastFollowup >= openedNotClickedRepeat) {
+          console.log(`📧 Sending follow-up for opened proposal ${proposal.id}`);
+          
+          await sendFollowUpEmail(
+            clientEmail,
+            clientName,
+            proposal.title,
+            proposal.invitation_token,
+            agentEmail,
+            'opened_not_clicked',
+            emailTemplates
+          );
+
+          await supabase
+            .from('proposal_automation_log')
+            .insert({
+              proposal_id: proposal.id,
+              automation_type: 'follow_up_email',
+              trigger_event: 'opened_not_clicked_4_days',
+              email_type: 'opened_not_clicked',
+              old_status: proposal.status,
+              new_status: proposal.status
+            });
+
+          await supabase
+            .from('proposals')
+            .update({ last_email_sent_at: now.toISOString() })
+            .eq('id', proposal.id);
+
+          actions.followups_sent++;
+          continue;
+        }
+
+        // Rule 4: Send reminder for delivered but not opened
+        const deliveredNotOpenedInitial = timingConfig.delivered_not_opened_days || 2;
         const deliveredNotOpenedRepeat = timingConfig.delivered_not_opened_repeat_days || 3;
         if (proposal.status === 'delivered' && daysSinceLastSent >= deliveredNotOpenedInitial && daysSinceLastFollowup >= deliveredNotOpenedRepeat) {
           console.log(`📧 Sending reminder for delivered proposal ${proposal.id}`);
@@ -203,7 +277,8 @@ serve(async (req: Request) => {
             .insert({
               proposal_id: proposal.id,
               automation_type: 'follow_up_email',
-              trigger_event: 'delivered_not_opened_3_days',
+              trigger_event: 'delivered_not_opened_2_days',
+              email_type: 'delivered_not_opened',
               old_status: proposal.status,
               new_status: proposal.status
             });
@@ -217,7 +292,7 @@ serve(async (req: Request) => {
           continue;
         }
 
-        // Rule 4: Send reminder for sent but not delivered
+        // Rule 5: Send reminder for sent but not delivered
         const sentNotDeliveredInitial = timingConfig.sent_not_delivered_days || 3;
         const sentNotDeliveredRepeat = timingConfig.sent_not_delivered_repeat_days || 3;
         if (proposal.status === 'sent' && daysSinceLastSent >= sentNotDeliveredInitial && daysSinceLastFollowup >= sentNotDeliveredRepeat) {
@@ -239,6 +314,7 @@ serve(async (req: Request) => {
               proposal_id: proposal.id,
               automation_type: 'follow_up_email',
               trigger_event: 'sent_not_delivered_3_days',
+              email_type: 'sent_not_delivered',
               old_status: proposal.status,
               new_status: proposal.status
             });
@@ -295,7 +371,7 @@ async function sendFollowUpEmail(
   proposalTitle: string,
   invitationToken: string,
   agentEmail: string,
-  followUpType: 'delivered_not_opened' | 'opened_not_viewed' | 'sent_not_delivered',
+  followUpType: 'delivered_not_opened' | 'opened_not_clicked' | 'clicked_not_signed' | 'sent_not_delivered' | 'graceful_exit',
   emailTemplates: any
 ) {
   const proposalUrl = `https://crunchcarbon.app/proposals/${invitationToken}?token=${invitationToken}`;

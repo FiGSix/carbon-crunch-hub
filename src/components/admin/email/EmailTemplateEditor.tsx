@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function EmailTemplateEditor() {
   const [templates, setTemplates] = useState<EmailTemplates | null>(null);
-  const [selectedType, setSelectedType] = useState<keyof EmailTemplates>("sent_not_delivered");
+  const [selectedType, setSelectedType] = useState<keyof EmailTemplates>("delivered_not_opened");
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -34,8 +34,8 @@ export function EmailTemplateEditor() {
     try {
       const data = await emailAutomationService.getEmailTemplates();
       setTemplates(data);
-      setSubject(data.sent_not_delivered.subject);
-      setHtml(data.sent_not_delivered.html);
+      setSubject(data.delivered_not_opened.subject);
+      setHtml(data.delivered_not_opened.html);
     } catch (error) {
       toast({
         title: "Failed to load templates",
@@ -100,9 +100,13 @@ export function EmailTemplateEditor() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="sent_not_delivered">Sent but Not Delivered</SelectItem>
               <SelectItem value="delivered_not_opened">Delivered but Not Opened</SelectItem>
-              <SelectItem value="opened_not_viewed">Opened but Not Viewed</SelectItem>
+              <SelectItem value="opened_not_clicked">Opened but Not Clicked</SelectItem>
+              <SelectItem value="clicked_not_signed">Clicked but Not Signed</SelectItem>
+              <SelectItem value="graceful_exit">Graceful Exit</SelectItem>
+              <SelectItem value="accepted_thank_you">Accepted Thank-You</SelectItem>
+              <SelectItem value="cession_reminder">Cession Reminder</SelectItem>
+              <SelectItem value="onboarding_idle_help">Onboarding Idle Help</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -110,7 +114,8 @@ export function EmailTemplateEditor() {
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Available placeholders:</strong> {'{{clientName}}'}, {'{{proposalTitle}}'}, {'{{systemSize}}'}, {'{{annualEnergy}}'}, {'{{proposalUrl}}'}, {'{{agentName}}'}, {'{{agentEmail}}'}
+            <strong>Pre-signature placeholders:</strong> {'{{clientName}}'}, {'{{proposalTitle}}'}, {'{{proposalUrl}}'}, {'{{agentName}}'}, {'{{agentEmail}}'}<br />
+            <strong>Post-signature placeholders:</strong> {'{{clientName}}'}, {'{{proposalTitle}}'}, {'{{onboardingUrl}}'}, {'{{agentName}}'}, {'{{agentEmail}}'}
           </AlertDescription>
         </Alert>
 

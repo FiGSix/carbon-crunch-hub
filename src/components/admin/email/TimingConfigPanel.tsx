@@ -130,7 +130,7 @@ export function TimingConfigPanel() {
           </div>
 
           <div className="p-4 border rounded-lg space-y-3">
-            <h3 className="font-semibold">Opened but Not Viewed</h3>
+            <h3 className="font-semibold">Opened but Not Clicked</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="opened-initial">Initial delay (days)</Label>
@@ -138,8 +138,8 @@ export function TimingConfigPanel() {
                   id="opened-initial"
                   type="number"
                   min="0"
-                  value={config.opened_not_viewed_days}
-                  onChange={(e) => updateConfig("opened_not_viewed_days", Number(e.target.value))}
+                  value={config.opened_not_clicked_days}
+                  onChange={(e) => updateConfig("opened_not_clicked_days", Number(e.target.value))}
                 />
               </div>
               <div className="space-y-2">
@@ -148,15 +148,41 @@ export function TimingConfigPanel() {
                   id="opened-repeat"
                   type="number"
                   min="0"
-                  value={config.opened_not_viewed_repeat_days}
-                  onChange={(e) => updateConfig("opened_not_viewed_repeat_days", Number(e.target.value))}
+                  value={config.opened_not_clicked_repeat_days}
+                  onChange={(e) => updateConfig("opened_not_clicked_repeat_days", Number(e.target.value))}
                 />
               </div>
             </div>
           </div>
 
           <div className="p-4 border rounded-lg space-y-3">
-            <h3 className="font-semibold">Mark as Stale</h3>
+            <h3 className="font-semibold">Clicked but Not Signed</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="clicked-initial">Initial delay (days)</Label>
+                <Input
+                  id="clicked-initial"
+                  type="number"
+                  min="0"
+                  value={config.clicked_not_signed_days}
+                  onChange={(e) => updateConfig("clicked_not_signed_days", Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clicked-repeat">Repeat interval (days)</Label>
+                <Input
+                  id="clicked-repeat"
+                  type="number"
+                  min="0"
+                  value={config.clicked_not_signed_repeat_days}
+                  onChange={(e) => updateConfig("clicked_not_signed_repeat_days", Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 border rounded-lg space-y-3">
+            <h3 className="font-semibold">Mark as Stale (with Graceful Exit Email)</h3>
             <div className="space-y-2">
               <Label htmlFor="stale-days">Days without engagement</Label>
               <Input
@@ -165,6 +191,44 @@ export function TimingConfigPanel() {
                 min="1"
                 value={config.mark_stale_days}
                 onChange={(e) => updateConfig("mark_stale_days", Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <div className="p-4 bg-muted rounded-lg space-y-3">
+            <h3 className="font-semibold text-lg">Post-Signature Automations</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="thank-you-hours">Accepted Thank-You Delay (hours)</Label>
+              <Input
+                id="thank-you-hours"
+                type="number"
+                min="0"
+                value={config.accepted_thank_you_delay_hours}
+                onChange={(e) => updateConfig("accepted_thank_you_delay_hours", Number(e.target.value))}
+              />
+              <p className="text-xs text-muted-foreground">Set to 0 for immediate send</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cession-days">Cession Reminder (days after signing)</Label>
+              <Input
+                id="cession-days"
+                type="number"
+                min="0"
+                value={config.cession_reminder_days}
+                onChange={(e) => updateConfig("cession_reminder_days", Number(e.target.value))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="onboarding-idle">Onboarding Idle Help (days without activity)</Label>
+              <Input
+                id="onboarding-idle"
+                type="number"
+                min="1"
+                value={config.onboarding_idle_days}
+                onChange={(e) => updateConfig("onboarding_idle_days", Number(e.target.value))}
               />
             </div>
           </div>

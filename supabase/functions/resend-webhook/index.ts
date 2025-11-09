@@ -235,6 +235,24 @@ async function processStatusUpdate(
       break;
     case 'email.bounced':
       newStatus = 'bounced';
+      
+      // Create admin notification for manual follow-up
+      const { data: bouncedProposal } = await supabase
+        .from('proposals')
+        .select('agent_id, title')
+        .eq('id', proposalId)
+        .single();
+      
+      if (bouncedProposal) {
+        await supabase.from('notifications').insert({
+          user_id: bouncedProposal.agent_id,
+          type: 'error',
+          title: 'Email Bounced - Manual Follow-Up Required',
+          message: `Proposal "${bouncedProposal.title}" email bounced. Consider SMS/WhatsApp follow-up.`,
+          related_type: 'proposal',
+          related_id: proposalId
+        });
+      }
       break;
   }
 
