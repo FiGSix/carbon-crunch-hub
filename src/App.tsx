@@ -63,6 +63,7 @@ const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/View
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
 const DataDiagnostics = createOptimizedLazyComponent(() => import("./pages/admin/DataDiagnostics"), "DataDiagnostics");
+const EmailAutomation = createOptimizedLazyComponent(() => import("./pages/admin/EmailAutomation"), "EmailAutomation");
 const ProjectOnboardingList = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingList"), "ProjectOnboardingList");
 const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingDetail"), "ProjectOnboardingDetail");
 const TeamManagement = createOptimizedLazyComponent(() => import("./pages/TeamManagement"), "TeamManagement");
@@ -391,6 +392,18 @@ function App() {
                         <PageErrorBoundary pageName="Data Diagnostics">
                           <Suspense fallback={<PageLoader />}>
                             <DataDiagnostics />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/email-automation" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Email Automation">
+                          <Suspense fallback={<PageLoader />}>
+                            <EmailAutomation />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>

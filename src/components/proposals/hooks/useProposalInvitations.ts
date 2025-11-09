@@ -61,9 +61,18 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       if (!tokenToUse) {
         logger.debug("No existing token found, generating new one");
         
-        // Generate token and set expiration date (10 days from now)
+        // Fetch validity period from system_settings
+        const { data: timingData } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'email_automation_timing')
+          .single();
+
+        const validityHours = (timingData?.setting_value as any)?.proposal_validity_hours || 240;
+        
+        // Generate token and set expiration date
         expirationDate = new Date();
-        expirationDate.setHours(expirationDate.getHours() + 240);
+        expirationDate.setHours(expirationDate.getHours() + validityHours);
         
         const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
         
