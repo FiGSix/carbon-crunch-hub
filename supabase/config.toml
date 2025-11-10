@@ -7,6 +7,9 @@ enabled = true
 [functions.send-contact-email]
 verify_jwt = false
 
+[functions.update-email-templates]
+verify_jwt = true
+
 [functions.accept-proposal]
 verify_jwt = false
 
