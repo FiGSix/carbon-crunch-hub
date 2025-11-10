@@ -35,7 +35,7 @@ serve(async (req: Request) => {
       await req.json();
 
     // Validate inputs
-    if (!email || !systemSizeKwp || !commissioningDate) {
+    if (!email || !name || !systemSizeKwp || !commissioningDate) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -47,6 +47,14 @@ serve(async (req: Request) => {
     if (!emailRegex.test(email)) {
       return new Response(
         JSON.stringify({ error: "Invalid email address" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Name validation
+    if (!name.trim()) {
+      return new Response(
+        JSON.stringify({ error: "Name is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -66,6 +66,12 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
       return;
     }
     
+    // Validate name
+    if (!name || !name.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
+    
     // Validate and calculate system size based on mode
     let sizeInKWp = 0;
     
@@ -379,12 +385,12 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
             
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-crunch-black/70 mb-1">
-                Your Name (Optional)
+                Your Name <span className="text-red-500">*</span>
               </label>
               <Input
                 id="name"
                 type="text"
-                placeholder="e.g. John Smith"
+                placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="retro-input text-base md:text-lg"
@@ -413,6 +419,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
               disabled={
                 isCalculating || 
                 !email || 
+                !name ||
                 (inputMode === 'simple' && (!numberOfPanels || calculatedSystemSize <= 0)) ||
                 (inputMode === 'advanced' && (!systemSize || normalizeToKWp(systemSize) <= 0))
               }
