@@ -152,7 +152,7 @@ serve(async (req: Request) => {
 
     // Build proposal URL
     const siteUrl = Deno.env.get("SITE_URL") || "https://crunchcarbon.app";
-    const resultsUrl = `${siteUrl}/proposals/${proposal.id}/view?token=${token}`;
+    const resultsUrl = `${siteUrl}/proposals/${proposal.id}?token=${token}`;
 
     // Send email
     const emailResponse = await resend.emails.send({
