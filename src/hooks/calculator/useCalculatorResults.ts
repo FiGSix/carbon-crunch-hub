@@ -6,6 +6,7 @@ interface SendCalculatorResultsParams {
   name?: string;
   systemSizeKwp: number;
   commissioningDate: string;
+  referralCode?: string;
 }
 
 export const useSendCalculatorResults = () => {
@@ -17,6 +18,7 @@ export const useSendCalculatorResults = () => {
           name: params.name,
           systemSizeKwp: params.systemSizeKwp,
           commissioningDate: params.commissioningDate,
+          referralCode: params.referralCode,
           ipAddress: null,
           userAgent: navigator.userAgent,
         },

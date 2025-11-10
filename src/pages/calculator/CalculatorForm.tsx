@@ -124,11 +124,15 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
     setIsCalculating(true);
     
     try {
+      // Retrieve referral code from localStorage if present
+      const referralCode = localStorage.getItem('referralCode');
+      
       await sendResultsMutation.mutateAsync({
         email: email.trim(),
         name: name.trim() || undefined,
         systemSizeKwp: sizeInKWp,
         commissioningDate: commDate.toISOString().split('T')[0],
+        referralCode: referralCode || undefined,
       });
       
       setEmailSent(true);

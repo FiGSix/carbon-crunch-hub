@@ -12,6 +12,7 @@ interface CalculatorRequest {
   name?: string;
   systemSizeKwp: number;
   commissioningDate: string;
+  referralCode?: string;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -30,7 +31,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, name, systemSizeKwp, commissioningDate, ipAddress, userAgent }: CalculatorRequest =
+    const { email, name, systemSizeKwp, commissioningDate, referralCode, ipAddress, userAgent }: CalculatorRequest =
       await req.json();
 
     // Validate inputs
@@ -54,6 +55,33 @@ serve(async (req: Request) => {
     const nameParts = name?.trim().split(' ') || [];
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Determine agent_id: referral agent or default Crunch Carbon admin
+    let agentId: string | null = null;
+    const DEFAULT_CRUNCH_CARBON_AGENT = '6538aa1a-c0dc-4ce4-ab6f-bb4368d9fce1'; // Shaun from Crunch Carbon
+
+    if (referralCode) {
+      // Validate referral code is a valid active agent
+      const { data: agent, error: agentError } = await supabase
+        .from('profiles')
+        .select('id, role, agent_status, first_name, last_name')
+        .eq('id', referralCode)
+        .eq('role', 'agent')
+        .eq('agent_status', 'active')
+        .single();
+
+      if (!agentError && agent) {
+        agentId = agent.id;
+        console.log(`Calculator lead assigned to agent: ${agent.first_name} ${agent.last_name} (${agent.id})`);
+      } else {
+        console.log(`Invalid or inactive referral code: ${referralCode}, defaulting to Crunch Carbon`);
+        agentId = DEFAULT_CRUNCH_CARBON_AGENT;
+      }
+    } else {
+      // No referral code - assign to Crunch Carbon default
+      agentId = DEFAULT_CRUNCH_CARBON_AGENT;
+      console.log('No referral code - calculator lead assigned to Crunch Carbon default agent');
+    }
 
     // Calculate carbon credits and annual energy
     const annualEnergy = Math.round(systemSizeKwp * 1300);
@@ -101,7 +129,7 @@ serve(async (req: Request) => {
         invitation_token: token,
         invitation_expires_at: expiresAt.toISOString(),
         invitation_sent_at: new Date().toISOString(),
-        agent_id: null, // No agent for calculator-generated proposals
+        agent_id: agentId, // Assigned to referral agent or default Crunch Carbon
       })
       .select()
       .single();
