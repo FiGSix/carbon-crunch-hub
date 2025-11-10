@@ -104,33 +104,25 @@ export class EmailService {
                     <p style="margin: 25px 0 0 0; color: #4A5568; font-size: 15px; line-height: 1.7;">
                       If you have any questions about this proposal, please don't hesitate to reach out to our team.
                     </p>
+
+                    <p style="margin: 30px 0 8px 0; color: #1A1A1A; font-size: 15px; font-weight: 600;">
+                      Best regards,
+                    </p>
+                    <p style="margin: 0; color: #4A5568; font-size: 15px;">
+                      The Crunch Carbon Team
+                    </p>
                   </td>
                 </tr>
 
                 <!-- Footer -->
                 <tr>
-                  <td style="background: #F8F9FA; padding: 30px; border-top: 1px solid #E2E8F0;">
-                    <p style="margin: 0 0 8px 0; color: #1A1A1A; font-size: 15px; font-weight: 600;">
-                      Best regards,
+                  <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                    <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                      Crunch Carbon - Sustainable Energy Solutions
                     </p>
-                    <p style="margin: 0 0 20px 0; color: #4A5568; font-size: 15px;">
-                      The Crunch Carbon Team
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
                     </p>
-                    
-                    <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #E2E8F0; padding-top: 20px; margin-top: 20px;">
-                      <tr>
-                        <td>
-                          <p style="margin: 0 0 8px 0; color: #718096; font-size: 13px; line-height: 1.6;">
-                            <strong>Crunch Carbon</strong><br>
-                            Carbon Credit Solutions<br>
-                            proposals@crunchcarbon.app
-                          </p>
-                          <p style="margin: 15px 0 0 0; color: #A0AEC0; font-size: 12px; line-height: 1.5;">
-                            © ${new Date().getFullYear()} Crunch Carbon. All rights reserved.
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
                   </td>
                 </tr>
 
