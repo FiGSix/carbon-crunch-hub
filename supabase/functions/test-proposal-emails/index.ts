@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
+// Helper to avoid Resend rate limits (2 req/sec max)
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -139,6 +142,8 @@ serve(async (req: Request) => {
       results.push({ template: "delivered_not_opened", success: false, error: error.message });
     }
 
+    await delay(600); // Avoid rate limit
+
     // Template 2: Opened but Not Clicked
     try {
       const template2 = `
@@ -209,6 +214,8 @@ serve(async (req: Request) => {
     } catch (error) {
       results.push({ template: "opened_not_clicked", success: false, error: error.message });
     }
+
+    await delay(600); // Avoid rate limit
 
     // Template 3: Clicked but Not Signed
     try {
@@ -286,6 +293,8 @@ serve(async (req: Request) => {
       results.push({ template: "clicked_not_signed", success: false, error: error.message });
     }
 
+    await delay(600); // Avoid rate limit
+
     // Template 4: Graceful Exit
     try {
       const template4 = `
@@ -345,6 +354,8 @@ serve(async (req: Request) => {
     } catch (error) {
       results.push({ template: "graceful_exit", success: false, error: error.message });
     }
+
+    await delay(600); // Avoid rate limit
 
     // Template 5: Accepted Thank-You
     try {
@@ -406,6 +417,8 @@ serve(async (req: Request) => {
       results.push({ template: "accepted_thank_you", success: false, error: error.message });
     }
 
+    await delay(600); // Avoid rate limit
+
     // Template 6: Cession Reminder
     try {
       const template6 = `
@@ -465,6 +478,8 @@ serve(async (req: Request) => {
     } catch (error) {
       results.push({ template: "cession_reminder", success: false, error: error.message });
     }
+
+    await delay(600); // Avoid rate limit
 
     // Template 7: Onboarding Idle Help
     try {
