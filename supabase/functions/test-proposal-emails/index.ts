@@ -48,7 +48,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const { testEmail = "shaun@radiant.africa" } = await req.json();
+    const { testEmail = "shaun@radiant.africa", templateType = "all" } = await req.json();
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
@@ -85,8 +85,9 @@ serve(async (req: Request) => {
     const onboardingUrl = `${baseUrl}/onboarding/${sampleProposal.id}`;
 
     // Template 1: Delivered but Not Opened
-    try {
-      const template1 = `
+    if (templateType === "all" || templateType === "delivered_not_opened") {
+      try {
+        const template1 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -176,18 +177,20 @@ serve(async (req: Request) => {
         subject: "Your Carbon Credit Proposal is Waiting - Action Required",
         html: template1,
       });
-      console.log("Template 1 sent:", result1);
-      results.push({ template: "delivered_not_opened", success: true, emailId: result1.id });
-    } catch (error) {
-      console.error("Error sending template 1:", error);
-      results.push({ template: "delivered_not_opened", success: false, error: error.message });
+        console.log("Template 1 sent:", result1);
+        results.push({ template: "delivered_not_opened", success: true, emailId: result1.id });
+      } catch (error) {
+        console.error("Error sending template 1:", error);
+        results.push({ template: "delivered_not_opened", success: false, error: error.message });
+      }
+
+      if (templateType === "all") await delay(600); // Avoid rate limit
     }
 
-    await delay(600); // Avoid rate limit
-
     // Template 2: Opened but Not Clicked
-    try {
-      const template2 = `
+    if (templateType === "all" || templateType === "opened_not_clicked") {
+      try {
+        const template2 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -289,17 +292,19 @@ serve(async (req: Request) => {
         subject: "Unlock Your Carbon Credit Benefits - Let's Get Started",
         html: template2,
       });
-      console.log("Template 2 sent:", result2);
-      results.push({ template: "opened_not_clicked", success: true, emailId: result2.id });
-    } catch (error) {
-      results.push({ template: "opened_not_clicked", success: false, error: error.message });
+        console.log("Template 2 sent:", result2);
+        results.push({ template: "opened_not_clicked", success: true, emailId: result2.id });
+      } catch (error) {
+        results.push({ template: "opened_not_clicked", success: false, error: error.message });
+      }
+
+      if (templateType === "all") await delay(600); // Avoid rate limit
     }
 
-    await delay(600); // Avoid rate limit
-
     // Template 3: Clicked but Not Signed
-    try {
-      const template3 = `
+    if (templateType === "all" || templateType === "clicked_not_signed") {
+      try {
+        const template3 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -402,17 +407,19 @@ serve(async (req: Request) => {
         subject: "Just One Step Left - Sign Your Carbon Credit Agreement",
         html: template3,
       });
-      console.log("Template 3 sent:", result3);
-      results.push({ template: "clicked_not_signed", success: true, emailId: result3.id });
-    } catch (error) {
-      results.push({ template: "clicked_not_signed", success: false, error: error.message });
+        console.log("Template 3 sent:", result3);
+        results.push({ template: "clicked_not_signed", success: true, emailId: result3.id });
+      } catch (error) {
+        results.push({ template: "clicked_not_signed", success: false, error: error.message });
+      }
+
+      if (templateType === "all") await delay(600); // Avoid rate limit
     }
 
-    await delay(600); // Avoid rate limit
-
     // Template 4: Graceful Exit
-    try {
-      const template4 = `
+    if (templateType === "all" || templateType === "graceful_exit") {
+      try {
+        const template4 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -495,17 +502,19 @@ serve(async (req: Request) => {
         subject: "Thanks for Considering Crunch Carbon",
         html: template4,
       });
-      console.log("Template 4 sent:", result4);
-      results.push({ template: "graceful_exit", success: true, emailId: result4.id });
-    } catch (error) {
-      results.push({ template: "graceful_exit", success: false, error: error.message });
+        console.log("Template 4 sent:", result4);
+        results.push({ template: "graceful_exit", success: true, emailId: result4.id });
+      } catch (error) {
+        results.push({ template: "graceful_exit", success: false, error: error.message });
+      }
+
+      if (templateType === "all") await delay(600); // Avoid rate limit
     }
 
-    await delay(600); // Avoid rate limit
-
     // Template 5: Accepted Thank-You
-    try {
-      const template5 = `
+    if (templateType === "all" || templateType === "accepted_thank_you") {
+      try {
+        const template5 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -601,17 +610,19 @@ serve(async (req: Request) => {
         subject: "🎉 Welcome to Crunch Carbon - Let's Get Started!",
         html: template5,
       });
-      console.log("Template 5 sent:", result5);
-      results.push({ template: "accepted_thank_you", success: true, emailId: result5.id });
-    } catch (error) {
-      results.push({ template: "accepted_thank_you", success: false, error: error.message });
+        console.log("Template 5 sent:", result5);
+        results.push({ template: "accepted_thank_you", success: true, emailId: result5.id });
+      } catch (error) {
+        results.push({ template: "accepted_thank_you", success: false, error: error.message });
+      }
+
+      if (templateType === "all") await delay(600); // Avoid rate limit
     }
 
-    await delay(600); // Avoid rate limit
-
     // Template 6: Cession Reminder
-    try {
-      const template6 = `
+    if (templateType === "all" || templateType === "cession_reminder") {
+      try {
+        const template6 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -710,17 +721,19 @@ serve(async (req: Request) => {
         subject: "Complete Your Onboarding - Action Required",
         html: template6,
       });
-      console.log("Template 6 sent:", result6);
-      results.push({ template: "cession_reminder", success: true, emailId: result6.id });
-    } catch (error) {
-      results.push({ template: "cession_reminder", success: false, error: error.message });
+        console.log("Template 6 sent:", result6);
+        results.push({ template: "cession_reminder", success: true, emailId: result6.id });
+      } catch (error) {
+        results.push({ template: "cession_reminder", success: false, error: error.message });
+      }
+
+      if (templateType === "all") await delay(600); // Avoid rate limit
     }
 
-    await delay(600); // Avoid rate limit
-
     // Template 7: Onboarding Idle Help
-    try {
-      const template7 = `
+    if (templateType === "all" || templateType === "onboarding_idle_help") {
+      try {
+        const template7 = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -836,19 +849,24 @@ serve(async (req: Request) => {
         subject: "Need Help Completing Your Onboarding?",
         html: template7,
       });
-      console.log("Template 7 sent:", result7);
-      results.push({ template: "onboarding_idle_help", success: true, emailId: result7.id });
-    } catch (error) {
-      console.error("Error sending template 7:", error);
-      results.push({ template: "onboarding_idle_help", success: false, error: error.message });
+        console.log("Template 7 sent:", result7);
+        results.push({ template: "onboarding_idle_help", success: true, emailId: result7.id });
+      } catch (error) {
+        console.error("Error sending template 7:", error);
+        results.push({ template: "onboarding_idle_help", success: false, error: error.message });
+      }
     }
 
     console.log("Test emails sent successfully:", results);
 
+    const message = templateType === "all" 
+      ? `All 7 test emails sent to ${testEmail}`
+      : `Template '${templateType}' sent to ${testEmail}`;
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: `All 7 test emails sent to ${testEmail}`,
+        message,
         results,
       }),
       {

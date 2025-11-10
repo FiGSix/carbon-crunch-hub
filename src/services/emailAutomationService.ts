@@ -93,6 +93,21 @@ export class EmailAutomationService {
     if (error) throw error;
     return data;
   }
+
+  async testSingleEmailTemplate(
+    emailAddress: string, 
+    templateType: keyof EmailTemplates
+  ): Promise<void> {
+    const { data, error } = await supabase.functions.invoke('test-proposal-emails', {
+      body: { 
+        testEmail: emailAddress,
+        templateType: templateType 
+      }
+    });
+
+    if (error) throw error;
+    return data;
+  }
 }
 
 export const emailAutomationService = new EmailAutomationService();
