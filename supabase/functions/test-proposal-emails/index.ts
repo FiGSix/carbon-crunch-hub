@@ -82,63 +82,98 @@ serve(async (req: Request) => {
     try {
       const template1 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Proposal Reminder</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Proposal Reminder</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📧 TEST: Delivered but Not Opened</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Just checking if you got our carbon credit proposal for <strong>${sampleProposal.title}</strong>.
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                Sometimes emails end up in spam. Click below to review:
-              </p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${invitationUrl}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  View Proposal
-                </a>
-              </div>
-              
-              <div style="background: #FFF8E1; border-left: 4px solid #FFB74D; padding: 15px; margin: 20px 0;">
-                <p style="margin: 0; color: #F57C00; font-size: 14px;">
-                  ⏱️ This proposal expires in 10 days
-                </p>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Questions? Reply to this email or contact ${sampleProposal.agent_name} directly.
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Proposal Reminder</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Dear <strong>${sampleProposal.client_name}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        Just checking in to see if you received your carbon credit proposal. We're excited to share the potential savings and environmental impact your project could generate.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; margin: 25px 0;">
+                        <tr>
+                          <td style="padding: 15px;">
+                            <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
+                              ⏰ <strong>Your proposal expires in 10 days.</strong> Review it soon to secure these benefits.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                        Click the button below to view your personalized proposal and see how you can start earning carbon credits today.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 10px 0;">
+                            <a href="${invitationUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">View Your Proposal</a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 30px 0 20px 0;">
+                        If you have any questions, feel free to reach out. We're here to help!
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Best regards,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agent_name}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result1 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        cc: [sampleProposal.agent_email],
-        subject: "Just checking if you got this",
+        subject: "Your Carbon Credit Proposal is Waiting - Action Required",
         html: template1,
       });
-
-      results.push({ template: "delivered_not_opened", success: true, result: result1 });
+      console.log("Template 1 sent:", result1);
+      results.push({ template: "delivered_not_opened", success: true, emailId: result1.id });
     } catch (error) {
+      console.error("Error sending template 1:", error);
       results.push({ template: "delivered_not_opened", success: false, error: error.message });
     }
 
@@ -148,69 +183,108 @@ serve(async (req: Request) => {
     try {
       const template2 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Ready to Take the Next Step?</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Don't Miss Out</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">❓ TEST: Opened but Not Clicked</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                I see you opened the proposal for <strong>${sampleProposal.title}</strong>. Need any clarity?
-              </p>
-              
-              <div style="background: #E8F5E9; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0 0 10px; color: #2E7D32; font-weight: bold;">💰 Potential Annual Revenue:</p>
-                <p style="margin: 0; color: #1B5E20; font-size: 24px; font-weight: bold;">
-                  Estimated Value from Carbon Credits
-                </p>
-              </div>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                Take a moment to review your personalized proposal:
-              </p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${invitationUrl}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  Review My Proposal
-                </a>
-              </div>
-              
-              <div style="background: #FFF8E1; border-left: 4px solid #FFB74D; padding: 15px; margin: 20px 0;">
-                <p style="margin: 0; color: #F57C00; font-size: 14px;">
-                  ⏱️ Act soon - this proposal expires in 10 days
-                </p>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Have questions? Contact ${sampleProposal.agent_name} at ${sampleProposal.agent_email}
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Ready to Take the Next Step?</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Hi <strong>${sampleProposal.clientName}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        I noticed you opened your carbon credit proposal. That's great! I wanted to highlight some key benefits you'll unlock by moving forward:
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">Your Project Highlights</h2>
+                            <table style="width: 100%; border-collapse: collapse;">
+                              <tr>
+                                <td style="padding: 8px 0; color: #666666; font-size: 14px;">System Size:</td>
+                                <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${sampleProposal.systemSize}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 8px 0; color: #666666; font-size: 14px;">Est. Carbon Credits:</td>
+                                <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">${sampleProposal.carbonCredits} credits</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 8px 0; color: #666666; font-size: 14px;">Potential Value:</td>
+                                <td style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600; text-align: right;">R ${sampleProposal.creditValue.toLocaleString()}</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                        This is a limited-time opportunity to maximize your return on investment while contributing to a sustainable future. Review the full details and take action today.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 10px 0;">
+                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Review Full Proposal</a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 30px 0 20px 0;">
+                        Have questions? I'm here to help guide you through every step.
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Best regards,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agentName}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result2 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        cc: [sampleProposal.agent_email],
-        subject: `Need any clarity on ${sampleProposal.title}?`,
+        subject: "Unlock Your Carbon Credit Benefits - Let's Get Started",
         html: template2,
       });
-
-      results.push({ template: "opened_not_clicked", success: true, result: result2 });
+      console.log("Template 2 sent:", result2);
+      results.push({ template: "opened_not_clicked", success: true, emailId: result2.id });
     } catch (error) {
       results.push({ template: "opened_not_clicked", success: false, error: error.message });
     }
@@ -221,74 +295,109 @@ serve(async (req: Request) => {
     try {
       const template3 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Complete Your Carbon Credit Agreement</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Complete Your Review</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📞 TEST: Clicked but Not Signed</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                I see you've reviewed <strong>${sampleProposal.title}</strong>. Want to schedule a quick call to discuss?
-              </p>
-              
-              <div style="background: #E3F2FD; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0 0 10px; color: #1565C0; font-weight: bold;">🎯 Quick Summary:</p>
-                <ul style="margin: 10px 0; padding-left: 20px; color: #0D47A1;">
-                  <li>System Size: ${sampleProposal.system_size_kwp}kWp</li>
-                  <li>Est. Annual Energy: ${(sampleProposal.annual_energy / 1000).toFixed(0)} MWh</li>
-                  <li>Carbon Credit Potential: High Value</li>
-                </ul>
-              </div>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                I'm here to answer any questions and help you move forward:
-              </p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="mailto:${sampleProposal.agent_email}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  Schedule a Call
-                </a>
-              </div>
-              
-              <div style="background: #FFEBEE; border-left: 4px solid #EF5350; padding: 15px; margin: 20px 0;">
-                <p style="margin: 0; color: #C62828; font-size: 14px;">
-                  ⚠️ Urgent: This proposal expires soon (10 days validity)
-                </p>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Or reply to this email - I'm happy to help!<br>
-                ${sampleProposal.agent_name}<br>
-                ${sampleProposal.agent_phone}<br>
-                ${sampleProposal.agent_email}
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Complete Your Agreement</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Dear <strong>${sampleProposal.clientName}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        You're just one step away from securing your carbon credit agreement! I see you've reviewed the proposal in detail - that's fantastic.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">What Happens Next</h2>
+                            <ul style="margin: 0; padding-left: 20px; color: #666666; font-size: 14px; line-height: 1.8;">
+                              <li><strong style="color: #1A1A1A;">Sign the agreement</strong> - Takes less than 2 minutes</li>
+                              <li><strong style="color: #1A1A1A;">We process your application</strong> - Usually within 24 hours</li>
+                              <li><strong style="color: #1A1A1A;">Start earning credits</strong> - Your project begins generating value</li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; margin: 25px 0;">
+                        <tr>
+                          <td style="padding: 15px;">
+                            <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
+                              💡 <strong>Quick Tip:</strong> The sooner you sign, the sooner we can start processing your carbon credits and maximizing your returns.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                        All the terms are clearly outlined in the proposal. If you have any questions or concerns, I'm here to help clarify everything before you sign.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 10px 0;">
+                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Sign Agreement Now</a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 30px 0 20px 0;">
+                        Looking forward to working with you!
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Best regards,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agentName}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result3 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        cc: [sampleProposal.agent_email],
-        subject: "Want to schedule a quick call?",
+        subject: "Just One Step Left - Sign Your Carbon Credit Agreement",
         html: template3,
       });
-
-      results.push({ template: "clicked_not_signed", success: true, result: result3 });
+      console.log("Template 3 sent:", result3);
+      results.push({ template: "clicked_not_signed", success: true, emailId: result3.id });
     } catch (error) {
       results.push({ template: "clicked_not_signed", success: false, error: error.message });
     }
@@ -299,58 +408,89 @@ serve(async (req: Request) => {
     try {
       const template4 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>We'll Keep Your Proposal on File</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">We'll Close This For Now</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">👋 TEST: Graceful Exit</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                We haven't heard back about the carbon credit proposal for <strong>${sampleProposal.title}</strong>, so we'll close it for now.
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                No worries at all - you're always welcome back whenever you're ready. Just reach out!
-              </p>
-              
-              <div style="background: #F3F4F6; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0; color: #374151; font-size: 14px;">
-                  💚 Thank you for considering Crunch Carbon. We're here if you need us in the future.
-                </p>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Best regards,<br>
-                ${sampleProposal.agent_name}<br>
-                ${sampleProposal.agent_email}
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">We're Here When You're Ready</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Dear <strong>${sampleProposal.clientName}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        I understand that now might not be the right time for your carbon credit project. That's completely okay - these decisions should be made when the timing is right for you.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">Your Proposal Stays Active</h2>
+                            <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                              We'll keep your proposal on file. If you'd like to revisit this opportunity in the future, simply reach out to me directly. I'll be happy to walk you through everything again or answer any new questions.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        In the meantime, feel free to contact me anytime if you have questions or if your circumstances change. The door is always open.
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                        Thank you for considering Crunch Carbon. I wish you all the best with your energy projects!
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Warm regards,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agentName}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result4 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        cc: [sampleProposal.agent_email],
-        subject: "We'll close this for now — you're always welcome back",
+        subject: "Thanks for Considering Crunch Carbon",
         html: template4,
       });
-
-      results.push({ template: "graceful_exit", success: true, result: result4 });
+      console.log("Template 4 sent:", result4);
+      results.push({ template: "graceful_exit", success: true, emailId: result4.id });
     } catch (error) {
       results.push({ template: "graceful_exit", success: false, error: error.message });
     }
@@ -361,58 +501,102 @@ serve(async (req: Request) => {
     try {
       const template5 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Welcome to Crunch Carbon!</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🎉 Welcome Aboard!</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">✅ TEST: Accepted Thank-You</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Thank you for accepting the proposal for <strong>${sampleProposal.title}</strong>! We're excited to work with you.
-              </p>
-              
-              <div style="background: #E8F5E9; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0 0 10px; color: #2E7D32; font-weight: bold;">📋 Next Steps:</p>
-                <p style="margin: 0; color: #1B5E20; font-size: 14px;">
-                  Complete your onboarding form to get started with carbon credit generation.
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${onboardingUrl}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  Start Onboarding
-                </a>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Questions? Contact ${sampleProposal.agent_name} at ${sampleProposal.agent_email}
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Welcome to Crunch Carbon! 🎉</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Dear <strong>${sampleProposal.clientName}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        Congratulations! Thank you for accepting your carbon credit proposal. We're thrilled to have you join the Crunch Carbon family and embark on this sustainable journey together.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">What Happens Next</h2>
+                            <ol style="margin: 0; padding-left: 20px; color: #666666; font-size: 14px; line-height: 1.8;">
+                              <li><strong style="color: #1A1A1A;">Complete Onboarding</strong> - We'll guide you through setting up your account</li>
+                              <li><strong style="color: #1A1A1A;">Documentation Review</strong> - Our team will process your agreement</li>
+                              <li><strong style="color: #1A1A1A;">Project Activation</strong> - Your carbon credit tracking begins</li>
+                              <li><strong style="color: #1A1A1A;">Regular Updates</strong> - You'll receive progress reports and insights</li>
+                            </ol>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; margin: 25px 0;">
+                        <tr>
+                          <td style="padding: 15px;">
+                            <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
+                              📋 <strong>Next Step:</strong> Check your email for onboarding instructions. Complete your setup within the next 7 days to ensure a smooth start.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        Our team is here to support you every step of the way. If you have any questions during onboarding or anytime after, don't hesitate to reach out.
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                        Together, we're making a real difference for the environment while creating value for your business!
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Excited to work with you,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agentName}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result5 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        subject: "Welcome aboard! Your onboarding next steps",
+        subject: "🎉 Welcome to Crunch Carbon - Let's Get Started!",
         html: template5,
       });
-
-      results.push({ template: "accepted_thank_you", success: true, result: result5 });
+      console.log("Template 5 sent:", result5);
+      results.push({ template: "accepted_thank_you", success: true, emailId: result5.id });
     } catch (error) {
       results.push({ template: "accepted_thank_you", success: false, error: error.message });
     }
@@ -423,58 +607,105 @@ serve(async (req: Request) => {
     try {
       const template6 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Complete Your Onboarding</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">⚡ Action Required</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📝 TEST: Cession Reminder</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                This is a friendly reminder to complete the onboarding form for <strong>${sampleProposal.title}</strong>.
-              </p>
-              
-              <div style="background: #FFF8E1; border-left: 4px solid #FFB74D; padding: 15px; margin: 20px 0;">
-                <p style="margin: 0; color: #F57C00; font-size: 14px;">
-                  ⏱️ Complete your form to start generating carbon credits
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${onboardingUrl}" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  Complete Onboarding
-                </a>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Need help? Contact ${sampleProposal.agent_name} at ${sampleProposal.agent_email}
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Complete Your Onboarding</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Hi <strong>${sampleProposal.clientName}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        I noticed that your onboarding process hasn't been completed yet. To activate your carbon credit benefits and start tracking your project's impact, we need you to finish the final steps.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; margin: 25px 0;">
+                        <tr>
+                          <td style="padding: 15px;">
+                            <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
+                              ⚠️ <strong>Action Required:</strong> Please complete your onboarding within the next few days to ensure we can process your agreement and start your project on schedule.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">What's Left to Do</h2>
+                            <ul style="margin: 0; padding-left: 20px; color: #666666; font-size: 14px; line-height: 1.8;">
+                              <li><strong style="color: #1A1A1A;">Verify your account details</strong></li>
+                              <li><strong style="color: #1A1A1A;">Submit required documentation</strong></li>
+                              <li><strong style="color: #1A1A1A;">Confirm your project timeline</strong></li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 10px 0;">
+                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Continue Onboarding</a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 30px 0 20px 0;">
+                        If you're experiencing any issues or have questions about the onboarding process, I'm here to help. Just reply to this email or give me a call.
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Looking forward to getting you set up,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agentName}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result6 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        cc: [sampleProposal.agent_email],
-        subject: "Action Required: Complete onboarding form",
+        subject: "Complete Your Onboarding - Action Required",
         html: template6,
       });
-
-      results.push({ template: "cession_reminder", success: true, result: result6 });
+      console.log("Template 6 sent:", result6);
+      results.push({ template: "cession_reminder", success: true, emailId: result6.id });
     } catch (error) {
       results.push({ template: "cession_reminder", success: false, error: error.message });
     }
@@ -485,64 +716,124 @@ serve(async (req: Request) => {
     try {
       const template7 = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Need Help with Onboarding?</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🤝 We're Here to Help</h1>
-            </div>
-            
-            <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">💬 TEST: Onboarding Idle Help</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                Hi ${sampleProposal.client_name},
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                I noticed you haven't completed the onboarding for <strong>${sampleProposal.title}</strong> yet.
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                Need any help completing the form? I'm here to assist!
-              </p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${onboardingUrl}" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  Continue Onboarding
-                </a>
-              </div>
-              
-              <div style="background: #EFF6FF; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0; color: #1e40af; font-size: 14px;">
-                  💡 Stuck on something? Reply to this email or call me directly - happy to walk you through it!
-                </p>
-              </div>
-              
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                ${sampleProposal.agent_name}<br>
-                ${sampleProposal.agent_phone}<br>
-                ${sampleProposal.agent_email}
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; padding: 20px 0;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700;">Need Help with Onboarding?</h1>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 40px 30px;">
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 20px 0;">
+                        Hi <strong>${sampleProposal.client_name}</strong>,
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        I wanted to check in and see how your onboarding is going. I noticed there hasn't been much activity recently, and I'm here to help if you've run into any challenges or have questions.
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-left: 4px solid #F4C430; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">Common Questions We Can Help With</h2>
+                            <ul style="margin: 0; padding-left: 20px; color: #666666; font-size: 14px; line-height: 1.8;">
+                              <li><strong style="color: #1A1A1A;">Technical difficulties</strong> accessing your account</li>
+                              <li><strong style="color: #1A1A1A;">Questions about required documentation</strong></li>
+                              <li><strong style="color: #1A1A1A;">Clarification on next steps</strong> in the process</li>
+                              <li><strong style="color: #1A1A1A;">Timeline concerns</strong> or scheduling issues</li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF9E6; border: 1px solid #F4C430; border-radius: 4px; margin: 25px 0;">
+                        <tr>
+                          <td style="padding: 15px;">
+                            <p style="margin: 0; color: #1A1A1A; font-size: 14px; line-height: 1.5;">
+                              💬 <strong>We're Here to Help:</strong> Don't hesitate to reach out - no question is too small! Our team is dedicated to making your onboarding as smooth as possible.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 20px 0;">
+                        You can reply directly to this email, give me a call, or use the button below to resume your onboarding. Whatever works best for you!
+                      </p>
+
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 10px 0;">
+                            <a href="${onboardingUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Resume Onboarding</a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FA; border-radius: 4px; margin: 30px 0;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h2 style="margin: 0 0 10px 0; color: #1A1A1A; font-size: 16px; font-weight: 600;">Contact Information</h2>
+                            <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                              <strong style="color: #1A1A1A;">Email:</strong> support@crunchcarbon.app<br>
+                              <strong style="color: #1A1A1A;">Available:</strong> Monday - Friday, 9 AM - 5 PM
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="font-size: 16px; color: #1A1A1A; line-height: 1.6; margin: 0 0 30px 0;">
+                        Looking forward to helping you complete your setup!
+                      </p>
+
+                      <p style="font-size: 16px; color: #1A1A1A; margin: 0 0 5px 0;">
+                        Best regards,
+                      </p>
+                      <p style="font-size: 16px; color: #1A1A1A; font-weight: 600; margin: 5px 0 0 0;">
+                        ${sampleProposal.agent_name}
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                      <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                        Crunch Carbon - Sustainable Energy Solutions
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;
 
       const result7 = await resend.emails.send({
-        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        from: "Crunch Carbon <proposals@crunchcarbon.app>",
         to: [testEmail],
-        subject: "Need any help completing onboarding?",
+        subject: "Need Help Completing Your Onboarding?",
         html: template7,
       });
-
-      results.push({ template: "onboarding_idle_help", success: true, result: result7 });
+      console.log("Template 7 sent:", result7);
+      results.push({ template: "onboarding_idle_help", success: true, emailId: result7.id });
     } catch (error) {
+      console.error("Error sending template 7:", error);
       results.push({ template: "onboarding_idle_help", success: false, error: error.message });
     }
 
