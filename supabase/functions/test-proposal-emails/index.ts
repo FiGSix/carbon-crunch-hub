@@ -127,7 +127,7 @@ serve(async (req: Request) => {
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td align="center" style="padding: 10px 0;">
-                            <a href="${invitationUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">View Your Proposal</a>
+                            <a href="${invitationUrl}" style="display: inline-block; padding: 22px 50px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 700; border-radius: 10px; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5);">View Your Proposal →</a>
                           </td>
                         </tr>
                       </table>
@@ -240,7 +240,7 @@ serve(async (req: Request) => {
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td align="center" style="padding: 10px 0;">
-                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Review Full Proposal</a>
+                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 22px 50px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 700; border-radius: 10px; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5);">Review Full Proposal →</a>
                           </td>
                         </tr>
                       </table>
@@ -353,7 +353,7 @@ serve(async (req: Request) => {
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td align="center" style="padding: 10px 0;">
-                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Sign Agreement Now</a>
+                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 22px 50px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 700; border-radius: 10px; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5);">Sign Agreement Now →</a>
                           </td>
                         </tr>
                       </table>
@@ -661,7 +661,7 @@ serve(async (req: Request) => {
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td align="center" style="padding: 10px 0;">
-                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Continue Onboarding</a>
+                            <a href="${sampleProposal.proposalUrl}" style="display: inline-block; padding: 22px 50px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 700; border-radius: 10px; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5);">Continue Onboarding →</a>
                           </td>
                         </tr>
                       </table>
@@ -775,7 +775,7 @@ serve(async (req: Request) => {
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td align="center" style="padding: 10px 0;">
-                            <a href="${onboardingUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Resume Onboarding</a>
+                            <a href="${onboardingUrl}" style="display: inline-block; padding: 22px 50px; background: linear-gradient(135deg, #F4C430 0%, #E6B800 100%); color: #1A1A1A; text-decoration: none; font-weight: 700; border-radius: 10px; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5);">Resume Onboarding →</a>
                           </td>
                         </tr>
                       </table>

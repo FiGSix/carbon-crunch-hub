@@ -66,8 +66,8 @@ export class EmailService {
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
               <a href="${data.invitationLink}" 
-                 style="display: inline-block; background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); color: #1A1A1A; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(244, 196, 48, 0.3); transition: transform 0.2s;">
-                View Your Proposal
+                 style="display: inline-block; background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); color: #1A1A1A; text-decoration: none; padding: 22px 50px; border-radius: 10px; font-weight: 700; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5); transition: transform 0.2s;">
+                View Your Proposal →
               </a>
             </div>
 
