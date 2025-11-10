@@ -104,17 +104,19 @@ serve(async (req: Request) => {
 
     // Create proposal content
     const proposalContent = {
-      client_information: {
+      clientInfo: {
         email: email.toLowerCase().trim(),
+        name: `${firstName} ${lastName}`.trim(),
         first_name: firstName,
         last_name: lastName,
       },
-      project_information: {
+      projectInfo: {
+        size: `${systemSizeKwp} kWp`,
+        commissionDate: commissioningDate,
         system_size_kwp: systemSizeKwp,
-        commissioning_date: commissioningDate,
         annual_energy_kwh: annualEnergy,
       },
-      financial_information: {
+      financialInfo: {
         carbon_credits: carbonCredits,
       }
     };
