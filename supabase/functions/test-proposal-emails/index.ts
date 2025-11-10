@@ -131,7 +131,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,
@@ -154,7 +154,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,
@@ -177,7 +177,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,
@@ -200,7 +200,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,
@@ -223,7 +223,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,
@@ -246,7 +246,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,
@@ -269,7 +269,7 @@ serve(async (req: Request) => {
         const html = replacePlaceholders(template.html, sampleProposal);
         
         const result = await resend.emails.send({
-          from: "Crunch Carbon <proposals@crunchcarbon.app>",
+          from: "Crunch Carbon <proposals@crunchcarbon.com>",
           to: [testEmail],
           subject: replacePlaceholders(template.subject, sampleProposal),
           html: html,

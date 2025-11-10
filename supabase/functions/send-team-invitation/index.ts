@@ -226,7 +226,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email invitation
     const emailResponse = await resend.emails.send({
-      from: "CrunchCarbon <onboarding@resend.dev>",
+      from: "CrunchCarbon <team@crunchcarbon.com>",
       to: [email],
       subject: `You've been invited to join ${company.company_name} on CrunchCarbon`,
       html: `

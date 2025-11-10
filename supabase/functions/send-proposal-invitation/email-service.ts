@@ -88,8 +88,8 @@ export class EmailService {
               </h3>
               <p style="margin: 0; color: #4A5568; font-size: 14px; line-height: 1.6;">
                 ${data.agentFirstName && data.agentLastName 
-                  ? `${data.agentFirstName} ${data.agentLastName}${data.agentCompanyName ? ` from ${data.agentCompanyName}` : ''} has prepared a personalized carbon credit proposal for your project. If you have questions or didn't expect this, please contact ${data.agentFirstName} directly at ${data.agentEmail || 'proposals@crunchcarbon.app'}.`
-                  : `A carbon credit proposal has been prepared for your project. If you have questions or didn't expect this, please contact us at proposals@crunchcarbon.app.`
+                  ? `${data.agentFirstName} ${data.agentLastName}${data.agentCompanyName ? ` from ${data.agentCompanyName}` : ''} has prepared a personalized carbon credit proposal for your project. If you have questions or didn't expect this, please contact ${data.agentFirstName} directly at ${data.agentEmail || 'proposals@crunchcarbon.com'}.`
+                  : `A carbon credit proposal has been prepared for your project. If you have questions or didn't expect this, please contact us at proposals@crunchcarbon.com.`
                 }
               </p>
             </div>
@@ -121,7 +121,7 @@ export class EmailService {
                       Crunch Carbon - Sustainable Energy Solutions
                     </p>
                     <p style="margin: 0; color: #999999; font-size: 12px;">
-                      For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      For support, contact us at <a href="mailto:support@crunchcarbon.com" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.com</a>
                     </p>
                   </td>
                 </tr>
@@ -150,7 +150,7 @@ export class EmailService {
     ccEmail?: string
   ) {
     const emailPayload: any = {
-      from: "Crunch Carbon <proposals@crunchcarbon.app>",
+      from: "Crunch Carbon <proposals@crunchcarbon.com>",
       to: [clientEmail],
       subject: `Carbon Credit Proposal - ${projectName}`,
       html: emailTemplate,

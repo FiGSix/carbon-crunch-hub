@@ -120,7 +120,7 @@ serve(async (req: Request) => {
 
     // Send email
     const emailResponse = await resend.emails.send({
-      from: "Crunch Carbon <results@crunchcarbon.app>",
+      from: "Crunch Carbon <results@crunchcarbon.com>",
       to: [email],
       subject: `Your Solar Impact Report is Ready! ☀️`,
       html: `

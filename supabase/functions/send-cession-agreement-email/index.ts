@@ -199,7 +199,7 @@ serve(async (req) => {
                       Crunch Carbon - Sustainable Energy Solutions
                     </p>
                     <p style="margin: 0; color: #999999; font-size: 12px;">
-                      For support, contact us at <a href="mailto:support@crunchcarbon.app" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.app</a>
+                      For support, contact us at <a href="mailto:support@crunchcarbon.com" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.com</a>
                     </p>
                   </td>
                 </tr>
@@ -214,7 +214,7 @@ serve(async (req) => {
 
     // Send email with or without attachment
     const emailPayload: any = {
-      from: "Crunch Carbon <proposals@crunchcarbon.app>",
+      from: "Crunch Carbon <proposals@crunchcarbon.com>",
       to: [clientEmail],
       subject: `Cession Agreement Confirmation - ${projectName}`,
       html: emailHtml,
