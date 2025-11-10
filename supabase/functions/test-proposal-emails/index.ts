@@ -65,6 +65,7 @@ serve(async (req: Request) => {
       client_name: "Test Client",
       agent_name: "Test Agent",
       agent_email: "agent@test.com",
+      agent_phone: "+27 123 456 789",
       system_size_kwp: 150,
       annual_energy: 180000,
       invitation_token: "test-token-123",
@@ -72,8 +73,9 @@ serve(async (req: Request) => {
 
     const baseUrl = "https://uyjryuopuqgmsvayiccl.supabase.co";
     const invitationUrl = `${baseUrl}/functions/v1/accept-proposal?token=${sampleProposal.invitation_token}`;
+    const onboardingUrl = `${baseUrl}/onboarding/${sampleProposal.id}`;
 
-    // Template 1: Sent but Not Delivered
+    // Template 1: Delivered but Not Opened
     try {
       const template1 = `
         <!DOCTYPE html>
@@ -89,18 +91,18 @@ serve(async (req: Request) => {
             </div>
             
             <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📧 TEST: Sent but Not Delivered</h2>
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📧 TEST: Delivered but Not Opened</h2>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
                 Hi ${sampleProposal.client_name},
               </p>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                We noticed you may not have received our carbon credit proposal for <strong>${sampleProposal.title}</strong>.
+                Just checking if you got our carbon credit proposal for <strong>${sampleProposal.title}</strong>.
               </p>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                Please check your spam folder or click the button below to review the proposal:
+                Sometimes emails end up in spam. Click below to review:
               </p>
               
               <div style="text-align: center; margin: 30px 0;">
@@ -128,16 +130,16 @@ serve(async (req: Request) => {
         from: "Crunch Carbon <proposals@crunchcarbon.com>",
         to: [testEmail],
         cc: [sampleProposal.agent_email],
-        subject: "🔔 Reminder: Your Carbon Credit Proposal",
+        subject: "Just checking if you got this",
         html: template1,
       });
 
-      results.push({ template: "sent_but_not_delivered", success: true, result: result1 });
+      results.push({ template: "delivered_not_opened", success: true, result: result1 });
     } catch (error) {
-      results.push({ template: "sent_but_not_delivered", success: false, error: error.message });
+      results.push({ template: "delivered_not_opened", success: false, error: error.message });
     }
 
-    // Template 2: Delivered but Not Opened
+    // Template 2: Opened but Not Clicked
     try {
       const template2 = `
         <!DOCTYPE html>
@@ -153,14 +155,14 @@ serve(async (req: Request) => {
             </div>
             
             <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">👋 TEST: Delivered but Not Opened</h2>
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">❓ TEST: Opened but Not Clicked</h2>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
                 Hi ${sampleProposal.client_name},
               </p>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                We sent you a carbon credit proposal for your ${sampleProposal.system_size_kwp}kWp solar installation, but we haven't heard back yet.
+                I see you opened the proposal for <strong>${sampleProposal.title}</strong>. Need any clarity?
               </p>
               
               <div style="background: #E8F5E9; border-radius: 8px; padding: 20px; margin: 25px 0;">
@@ -199,16 +201,16 @@ serve(async (req: Request) => {
         from: "Crunch Carbon <proposals@crunchcarbon.com>",
         to: [testEmail],
         cc: [sampleProposal.agent_email],
-        subject: "💚 Your Carbon Credit Proposal is Waiting",
+        subject: `Need any clarity on ${sampleProposal.title}?`,
         html: template2,
       });
 
-      results.push({ template: "delivered_but_not_opened", success: true, result: result2 });
+      results.push({ template: "opened_not_clicked", success: true, result: result2 });
     } catch (error) {
-      results.push({ template: "delivered_but_not_opened", success: false, error: error.message });
+      results.push({ template: "opened_not_clicked", success: false, error: error.message });
     }
 
-    // Template 3: Opened but Not Viewed
+    // Template 3: Clicked but Not Signed
     try {
       const template3 = `
         <!DOCTYPE html>
@@ -224,14 +226,14 @@ serve(async (req: Request) => {
             </div>
             
             <div style="padding: 40px 30px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px;">✨ TEST: Opened but Not Viewed</h2>
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📞 TEST: Clicked but Not Signed</h2>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
                 Hi ${sampleProposal.client_name},
               </p>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
-                I noticed you started reviewing your carbon credit proposal for <strong>${sampleProposal.title}</strong>, but didn't complete it.
+                I see you've reviewed <strong>${sampleProposal.title}</strong>. Want to schedule a quick call to discuss?
               </p>
               
               <div style="background: #E3F2FD; border-radius: 8px; padding: 20px; margin: 25px 0;">
@@ -244,12 +246,12 @@ serve(async (req: Request) => {
               </div>
               
               <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
-                Complete your review and let's discuss how we can help you monetize your solar investment:
+                I'm here to answer any questions and help you move forward:
               </p>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${invitationUrl}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  Continue Reviewing
+                <a href="mailto:${sampleProposal.agent_email}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Schedule a Call
                 </a>
               </div>
               
@@ -260,8 +262,9 @@ serve(async (req: Request) => {
               </div>
               
               <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                Need help or have questions? I'm here to assist.<br>
+                Or reply to this email - I'm happy to help!<br>
                 ${sampleProposal.agent_name}<br>
+                ${sampleProposal.agent_phone}<br>
                 ${sampleProposal.agent_email}
               </p>
             </div>
@@ -274,13 +277,258 @@ serve(async (req: Request) => {
         from: "Crunch Carbon <proposals@crunchcarbon.com>",
         to: [testEmail],
         cc: [sampleProposal.agent_email],
-        subject: "⏰ Complete Your Carbon Credit Proposal Review",
+        subject: "Want to schedule a quick call?",
         html: template3,
       });
 
-      results.push({ template: "opened_but_not_viewed", success: true, result: result3 });
+      results.push({ template: "clicked_not_signed", success: true, result: result3 });
     } catch (error) {
-      results.push({ template: "opened_but_not_viewed", success: false, error: error.message });
+      results.push({ template: "clicked_not_signed", success: false, error: error.message });
+    }
+
+    // Template 4: Graceful Exit
+    try {
+      const template4 = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">We'll Close This For Now</h1>
+            </div>
+            
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">👋 TEST: Graceful Exit</h2>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                Hi ${sampleProposal.client_name},
+              </p>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                We haven't heard back about the carbon credit proposal for <strong>${sampleProposal.title}</strong>, so we'll close it for now.
+              </p>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
+                No worries at all - you're always welcome back whenever you're ready. Just reach out!
+              </p>
+              
+              <div style="background: #F3F4F6; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <p style="margin: 0; color: #374151; font-size: 14px;">
+                  💚 Thank you for considering Crunch Carbon. We're here if you need us in the future.
+                </p>
+              </div>
+              
+              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                Best regards,<br>
+                ${sampleProposal.agent_name}<br>
+                ${sampleProposal.agent_email}
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const result4 = await resend.emails.send({
+        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        to: [testEmail],
+        cc: [sampleProposal.agent_email],
+        subject: "We'll close this for now — you're always welcome back",
+        html: template4,
+      });
+
+      results.push({ template: "graceful_exit", success: true, result: result4 });
+    } catch (error) {
+      results.push({ template: "graceful_exit", success: false, error: error.message });
+    }
+
+    // Template 5: Accepted Thank-You
+    try {
+      const template5 = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🎉 Welcome Aboard!</h1>
+            </div>
+            
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">✅ TEST: Accepted Thank-You</h2>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                Hi ${sampleProposal.client_name},
+              </p>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                Thank you for accepting the proposal for <strong>${sampleProposal.title}</strong>! We're excited to work with you.
+              </p>
+              
+              <div style="background: #E8F5E9; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <p style="margin: 0 0 10px; color: #2E7D32; font-weight: bold;">📋 Next Steps:</p>
+                <p style="margin: 0; color: #1B5E20; font-size: 14px;">
+                  Complete your onboarding form to get started with carbon credit generation.
+                </p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${onboardingUrl}" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Start Onboarding
+                </a>
+              </div>
+              
+              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                Questions? Contact ${sampleProposal.agent_name} at ${sampleProposal.agent_email}
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const result5 = await resend.emails.send({
+        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        to: [testEmail],
+        subject: "Welcome aboard! Your onboarding next steps",
+        html: template5,
+      });
+
+      results.push({ template: "accepted_thank_you", success: true, result: result5 });
+    } catch (error) {
+      results.push({ template: "accepted_thank_you", success: false, error: error.message });
+    }
+
+    // Template 6: Cession Reminder
+    try {
+      const template6 = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">⚡ Action Required</h1>
+            </div>
+            
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">📝 TEST: Cession Reminder</h2>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                Hi ${sampleProposal.client_name},
+              </p>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                This is a friendly reminder to complete the onboarding form for <strong>${sampleProposal.title}</strong>.
+              </p>
+              
+              <div style="background: #FFF8E1; border-left: 4px solid #FFB74D; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0; color: #F57C00; font-size: 14px;">
+                  ⏱️ Complete your form to start generating carbon credits
+                </p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${onboardingUrl}" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Complete Onboarding
+                </a>
+              </div>
+              
+              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                Need help? Contact ${sampleProposal.agent_name} at ${sampleProposal.agent_email}
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const result6 = await resend.emails.send({
+        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        to: [testEmail],
+        cc: [sampleProposal.agent_email],
+        subject: "Action Required: Complete onboarding form",
+        html: template6,
+      });
+
+      results.push({ template: "cession_reminder", success: true, result: result6 });
+    } catch (error) {
+      results.push({ template: "cession_reminder", success: false, error: error.message });
+    }
+
+    // Template 7: Onboarding Idle Help
+    try {
+      const template7 = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🤝 We're Here to Help</h1>
+            </div>
+            
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1a1a1a; margin: 0 0 20px;">💬 TEST: Onboarding Idle Help</h2>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                Hi ${sampleProposal.client_name},
+              </p>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 15px;">
+                I noticed you haven't completed the onboarding for <strong>${sampleProposal.title}</strong> yet.
+              </p>
+              
+              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 25px;">
+                Need any help completing the form? I'm here to assist!
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${onboardingUrl}" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Continue Onboarding
+                </a>
+              </div>
+              
+              <div style="background: #EFF6FF; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                  💡 Stuck on something? Reply to this email or call me directly - happy to walk you through it!
+                </p>
+              </div>
+              
+              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                ${sampleProposal.agent_name}<br>
+                ${sampleProposal.agent_phone}<br>
+                ${sampleProposal.agent_email}
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const result7 = await resend.emails.send({
+        from: "Crunch Carbon <proposals@crunchcarbon.com>",
+        to: [testEmail],
+        subject: "Need any help completing onboarding?",
+        html: template7,
+      });
+
+      results.push({ template: "onboarding_idle_help", success: true, result: result7 });
+    } catch (error) {
+      results.push({ template: "onboarding_idle_help", success: false, error: error.message });
     }
 
     console.log("Test emails sent successfully:", results);
@@ -288,7 +536,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `All test emails sent to ${testEmail}`,
+        message: `All 7 test emails sent to ${testEmail}`,
         results,
       }),
       {
