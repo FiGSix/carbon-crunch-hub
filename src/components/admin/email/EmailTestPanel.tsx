@@ -31,7 +31,7 @@ export function EmailTestPanel() {
       setStatus("success");
       toast({
         title: "Test emails sent",
-        description: `All 3 email templates sent to ${email}`,
+        description: `All 7 email templates sent to ${email}`,
       });
     } catch (error) {
       setStatus("error");
@@ -53,7 +53,7 @@ export function EmailTestPanel() {
           Test Email Templates
         </CardTitle>
         <CardDescription>
-          Send all 3 follow-up email templates to any email address for testing
+          Send all 7 email templates to any email address for testing
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -80,7 +80,7 @@ export function EmailTestPanel() {
         {status === "success" && (
           <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-md">
             <CheckCircle2 className="h-4 w-4" />
-            <span>Successfully sent all 3 email templates to {email}</span>
+            <span>Successfully sent all 7 email templates to {email}</span>
           </div>
         )}
 
@@ -91,13 +91,27 @@ export function EmailTestPanel() {
           </div>
         )}
 
-        <div className="text-sm text-muted-foreground space-y-1">
+        <div className="text-sm text-muted-foreground space-y-3">
           <p className="font-medium">Templates that will be sent:</p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Sent but Not Delivered</li>
-            <li>Delivered but Not Opened</li>
-            <li>Opened but Not Viewed</li>
-          </ul>
+          
+          <div>
+            <p className="text-xs font-semibold mb-1">Pre-Signature Automations:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Delivered but Not Opened</li>
+              <li>Opened but Not Clicked</li>
+              <li>Clicked but Not Signed</li>
+              <li>Graceful Exit</li>
+            </ul>
+          </div>
+          
+          <div>
+            <p className="text-xs font-semibold mb-1">Post-Signature Automations:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Accepted Thank-You</li>
+              <li>Cession Reminder</li>
+              <li>Onboarding Idle Help</li>
+            </ul>
+          </div>
         </div>
       </CardContent>
     </Card>
