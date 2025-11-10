@@ -66,12 +66,18 @@ serve(async (req: Request) => {
       id: "test-proposal-id",
       title: "Test Solar Installation Project",
       client_name: "Test Client",
+      clientName: "Test Client",
       agent_name: "Test Agent",
+      agentName: "Test Agent",
       agent_email: "agent@test.com",
       agent_phone: "+27 123 456 789",
       system_size_kwp: 150,
+      systemSize: "150 kWp",
       annual_energy: 180000,
+      carbonCredits: 850,
+      creditValue: 42500,
       invitation_token: "test-token-123",
+      proposalUrl: `${Deno.env.get("SUPABASE_URL") || "https://uyjryuopuqgmsvayiccl.supabase.co"}/functions/v1/accept-proposal?token=test-token-123`,
     };
 
     const baseUrl = "https://uyjryuopuqgmsvayiccl.supabase.co";
