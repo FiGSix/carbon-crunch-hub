@@ -9,11 +9,14 @@ const MyClients = () => {
   const { userRole } = useAuth();
   const { 
     clients, 
-    isLoading, 
+    isLoading,
+    isLoadingMore,
+    hasMore,
     error, 
     totalCount,
-    refresh
-  } = useClients({ paginated: false });
+    refresh,
+    loadMore
+  } = useClients({ paginated: true, pageSize: 100 });
   
   const isAdmin = userRole === 'admin';
 
@@ -38,10 +41,13 @@ const MyClients = () => {
           <ClientsTable 
             clients={clients}
             isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
             totalCount={totalCount}
             error={error}
             isAdmin={isAdmin}
             onRefresh={refresh}
+            onLoadMore={loadMore}
           />
         </div>
       </div>

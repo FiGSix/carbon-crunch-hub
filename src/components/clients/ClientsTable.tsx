@@ -9,21 +9,27 @@ import { ClientsTableContent } from './table/ClientsTableContent';
 interface ClientsTableProps {
   clients: ClientData[];
   isLoading: boolean;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
   isRefreshing?: boolean;
   totalCount?: number;
   error: string | null;
   isAdmin: boolean;
   onRefresh?: () => void;
+  onLoadMore?: () => void;
 }
 
 export function ClientsTable({ 
   clients, 
-  isLoading, 
+  isLoading,
+  isLoadingMore = false,
+  hasMore = false,
   isRefreshing = false,
   totalCount = 0,
   error, 
   isAdmin,
-  onRefresh
+  onRefresh,
+  onLoadMore
 }: ClientsTableProps) {
 
   // Show loading skeleton only on initial load
@@ -63,7 +69,11 @@ export function ClientsTable({
       clients={clients}
       isAdmin={isAdmin}
       isRefreshing={isRefreshing}
+      isLoadingMore={isLoadingMore}
+      hasMore={hasMore}
+      totalCount={totalCount}
       onRefresh={onRefresh}
+      onLoadMore={onLoadMore}
       error={error} // Pass error for inline display
     />
   );

@@ -39,17 +39,25 @@ interface ClientsTableContentProps {
   clients: ClientData[];
   isAdmin: boolean;
   isRefreshing?: boolean;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
+  totalCount?: number;
   autoRefreshEnabled?: boolean;
   onRefresh?: () => void;
+  onLoadMore?: () => void;
   error?: string | null;
 }
 
 export function ClientsTableContent({ 
   clients, 
   isAdmin, 
-  isRefreshing = false, 
+  isRefreshing = false,
+  isLoadingMore = false,
+  hasMore = false,
+  totalCount = 0,
   autoRefreshEnabled = false, 
   onRefresh,
+  onLoadMore,
   error = null
 }: ClientsTableContentProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -418,6 +426,33 @@ export function ClientsTableContent({
             />
           </TableBody>
         </Table>
+
+        {/* Load More Button */}
+        {hasMore && onLoadMore && (
+          <div className="flex flex-col items-center gap-2 py-4">
+            <Button
+              variant="outline"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+              className="w-full max-w-xs"
+            >
+              {isLoadingMore ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4 mr-2" />
+                  Load More Clients
+                </>
+              )}
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Showing {clients.length} of {totalCount} clients
+            </p>
+          </div>
+        )}
       </CardContent>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
