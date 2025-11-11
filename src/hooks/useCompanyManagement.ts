@@ -10,7 +10,8 @@ import {
   isUserTeamLead,
   getPendingTeamInvitations,
   cancelTeamInvitation,
-  resendTeamInvitation
+  resendTeamInvitation,
+  removeTeamMember
 } from '@/lib/supabase/company/companyOperations';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -148,6 +149,19 @@ export function useCompanyManagement() {
     },
   });
 
+  // Remove team member mutation
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: string) => removeTeamMember(memberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-members'] });
+      toast.success('Team member removed successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || 'Failed to remove team member';
+      toast.error(errorMessage);
+    },
+  });
+
   return {
     company,
     membershipData,
@@ -162,10 +176,12 @@ export function useCompanyManagement() {
     inviteByEmail: inviteByEmailMutation.mutate,
     cancelInvitation: cancelInvitationMutation.mutate,
     resendInvitation: resendInvitationMutation.mutate,
+    removeMember: removeMemberMutation.mutate,
     isApproving: approveMutation.isPending,
     isDeclining: declineMutation.isPending,
     isInviting: inviteByEmailMutation.isPending,
     isCancelling: cancelInvitationMutation.isPending,
     isResending: resendInvitationMutation.isPending,
+    isRemoving: removeMemberMutation.isPending,
   };
 }

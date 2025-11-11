@@ -18,11 +18,13 @@ export default function TeamManagement() {
     inviteByEmail,
     cancelInvitation,
     resendInvitation,
+    removeMember,
     isApproving,
     isDeclining,
     isInviting,
     isCancelling,
     isResending,
+    isRemoving,
   } = useCompanyManagement();
 
   return (
@@ -70,7 +72,9 @@ export default function TeamManagement() {
           isLoading={isLoading}
           isTeamLead={isTeamLead}
           onInvite={inviteByEmail}
+          onRemove={removeMember}
           isInviting={isInviting}
+          isRemoving={isRemoving}
         />
       </div>
     </DashboardLayout>

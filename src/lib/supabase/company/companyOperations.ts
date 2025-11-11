@@ -362,3 +362,65 @@ export async function resendTeamInvitation(invitationId: string) {
 
   return { data, error: null };
 }
+
+/**
+ * Remove a team member (team leads only)
+ * Security checks:
+ * - User must be a team lead
+ * - Member must be in the same company
+ * - Cannot remove other team leads
+ * - Cannot remove yourself
+ */
+export async function removeTeamMember(memberId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
+  // Get the member to be removed
+  const { data: member, error: memberError } = await supabase
+    .from('company_members')
+    .select('*, companies!inner(*)')
+    .eq('id', memberId)
+    .single();
+
+  if (memberError || !member) {
+    return { data: null, error: new Error('Member not found') };
+  }
+
+  // Check if requesting user is a team lead of the same company
+  const { data: requesterMembership, error: requesterError } = await supabase
+    .from('company_members')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('company_id', member.company_id)
+    .eq('role', 'team_lead')
+    .eq('status', 'active')
+    .single();
+
+  if (requesterError || !requesterMembership) {
+    return { data: null, error: new Error('Unauthorized: Only team leads can remove members') };
+  }
+
+  // Cannot remove yourself
+  if (member.user_id === user.id) {
+    return { data: null, error: new Error('Cannot remove yourself from the team') };
+  }
+
+  // Cannot remove other team leads
+  if (member.role === 'team_lead') {
+    return { data: null, error: new Error('Cannot remove other team leads') };
+  }
+
+  // Remove the member
+  const { error: deleteError } = await supabase
+    .from('company_members')
+    .delete()
+    .eq('id', memberId);
+
+  if (deleteError) {
+    return { data: null, error: deleteError };
+  }
+
+  return { data: { success: true }, error: null };
+}
