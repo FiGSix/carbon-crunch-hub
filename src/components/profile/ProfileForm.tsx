@@ -20,7 +20,6 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
     isLoading,
     isSubmitting,
     handleInputChange,
-    handleCompanyLogoChange,
     handleAvatarChange,
     handleSubmit
   } = useOptimizedProfileForm(user?.id, userRole);
@@ -60,9 +59,7 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
       {isAgent && (
         <CompanyInformationCard
           companyName={formData.companyName}
-          companyLogoUrl={formData.companyLogoUrl}
           onInputChange={handleCompanyInputChange}
-          onLogoChange={handleCompanyLogoChange}
           isLoading={isLoading || isSubmitting}
         />
       )}
