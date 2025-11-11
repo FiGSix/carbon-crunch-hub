@@ -4,6 +4,9 @@ project_id = "uyjryuopuqgmsvayiccl"
 [api]
 enabled = true
 
+[functions.send-auth-email]
+verify_jwt = false
+
 [functions.send-contact-email]
 verify_jwt = false
 
