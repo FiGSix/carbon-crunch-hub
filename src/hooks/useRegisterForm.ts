@@ -21,7 +21,6 @@ interface RegisterFormData {
   password: string;
   confirmPassword: string;
   companyName: string;
-  companyLogoUrl: string;
   role: "client" | "agent";
 }
 
@@ -38,7 +37,6 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     password: "",
     confirmPassword: "",
     companyName: "",
-    companyLogoUrl: "",
     role: initialRole,
   });
   
@@ -132,10 +130,6 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     authLogger.info("Role changed during registration", { newRole: value });
     setFormData((prev) => ({ ...prev, role: value as "client" | "agent" }));
   };
-
-  const handleCompanyLogoChange = (logoUrl: string | null) => {
-    setFormData((prev) => ({ ...prev, companyLogoUrl: logoUrl || "" }));
-  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +168,6 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
           first_name: formData.firstName,
           last_name: formData.lastName,
           company_name: formData.companyName || null,
-          company_logo_url: formData.companyLogoUrl || null,
           terms_accepted: formData.role === 'agent' ? termsAccepted : null,
           terms_accepted_at: formData.role === 'agent' && termsAccepted ? new Date().toISOString() : null,
         }
@@ -409,7 +402,6 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     setPrivacyDialogOpen,
     handleChange,
     handleRoleChange,
-    handleCompanyLogoChange,
     handleSubmit,
     handleTermsAccept,
     isInvitationRegistration: !!invitationToken,

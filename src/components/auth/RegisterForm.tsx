@@ -24,7 +24,6 @@ export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps
     setPrivacyDialogOpen,
     handleChange,
     handleRoleChange,
-    handleCompanyLogoChange,
     handleSubmit,
     handleTermsAccept
   } = useRegisterForm(initialRole, invitationToken);
@@ -43,10 +42,8 @@ export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps
           firstName={formData.firstName}
           lastName={formData.lastName}
           companyName={formData.companyName}
-          companyLogoUrl={formData.companyLogoUrl}
           showCompanyField={formData.role === "agent"}
           onChange={handleChange}
-          onCompanyLogoChange={formData.role === "agent" ? handleCompanyLogoChange : undefined}
           disabled={isLoading}
         />
         
