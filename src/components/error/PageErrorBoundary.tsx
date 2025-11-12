@@ -38,7 +38,7 @@ export class PageErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to console for debugging
+    // Log error to console for immediate debugging
     console.error('🚨 Page Error Boundary caught an error:', {
       pageName: this.props.pageName,
       error: error.message,
@@ -46,7 +46,7 @@ export class PageErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack
     });
     
-    // Also log via dev logger
+    // Log error
     devLogger.general.error('Page Error Boundary caught an error:', {
       pageName: this.props.pageName,
       error: error.message,

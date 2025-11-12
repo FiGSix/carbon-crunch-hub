@@ -71,12 +71,14 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
     } catch (error) {
       console.error('Failed to initialize Mapbox map:', error);
       toast({
-        title: "Map Error",
-        description: "Failed to load the map. Please try again or contact support.",
+        title: "Map Initialization Failed",
+        description: "Could not load the interactive map. Please try again later.",
         variant: "destructive"
       });
       return;
     }
+
+    if (!map.current) return;
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.GeolocateControl({
