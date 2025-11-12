@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     minify: 'terser',
-    target: 'es2018',
+    target: 'es2020',
     cssCodeSplit: true,
     cssMinify: true,
     sourcemap: true,
