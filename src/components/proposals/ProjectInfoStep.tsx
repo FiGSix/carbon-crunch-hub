@@ -35,9 +35,25 @@ export function ProjectInfoStep({
   const [showDateRejectionDialog, setShowDateRejectionDialog] = useState(false);
   const [dateValidationError, setDateValidationError] = useState<string | null>(null);
 
-  // Enhanced project info handler with date validation
+  // Enhanced project info handler with date validation and GPS data
   const handleProjectInfoChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    
+    // Handle GPS data from map picker
+    if (name === 'gpsData' && setProjectInfo) {
+      try {
+        const gpsData = JSON.parse(value);
+        setProjectInfo({
+          ...projectInfo,
+          gpsLat: gpsData.lat,
+          gpsLng: gpsData.lng,
+          addressSource: gpsData.addressSource
+        });
+        return;
+      } catch (error) {
+        console.error('Failed to parse GPS data:', error);
+      }
+    }
     
     // If it's the commission date, validate it
     if (name === 'commissionDate' && value) {
@@ -56,17 +72,24 @@ export function ProjectInfoStep({
     updateProjectInfo(e);
   };
 
-  // Add a direct setter for address field since SecureGoogleAddressAutocomplete 
-  // doesn't use standard onChange events
+  // Add a direct setter for address field
   const handleAddressChange = (address: string) => {
-    const mockEvent = {
-      target: {
-        name: "address",
-        value: address
-      }
-    } as ChangeEvent<HTMLTextAreaElement>;
-    
-    updateProjectInfo(mockEvent);
+    if (setProjectInfo) {
+      setProjectInfo({
+        ...projectInfo,
+        address,
+        addressSource: 'autocomplete'
+      });
+    } else {
+      const mockEvent = {
+        target: {
+          name: "address",
+          value: address
+        }
+      } as ChangeEvent<HTMLTextAreaElement>;
+      
+      updateProjectInfo(mockEvent);
+    }
   };
 
   // Handle address input errors

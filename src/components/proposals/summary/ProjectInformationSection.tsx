@@ -27,6 +27,11 @@ export function ProjectInformationSection({ projectInfo }: ProjectInformationSec
         <div className="md:col-span-2">
           <p className="text-sm text-carbon-gray-500">Address</p>
           <p className="font-medium">{projectInfo.address}</p>
+          {projectInfo.gpsLat && projectInfo.gpsLng && (
+            <p className="text-xs text-carbon-gray-500 mt-1">
+              GPS: {projectInfo.gpsLat.toFixed(6)}, {projectInfo.gpsLng.toFixed(6)}
+            </p>
+          )}
         </div>
         <div>
           <p className="text-sm text-carbon-gray-500">Commission Date{projectInfo.isMultiPhase && projectInfo.phases ? 's' : ''}</p>

@@ -57,6 +57,9 @@ export interface ProjectPhase {
 export interface ProjectInformation {
   name: string;
   address: string;
+  addressSource?: 'autocomplete' | 'pin_drop' | 'manual';
+  gpsLat?: number;
+  gpsLng?: number;
   isMultiPhase: boolean;
   // Legacy fields for single-phase projects
   size: string;

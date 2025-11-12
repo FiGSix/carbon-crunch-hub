@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "lucide-react";
 import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
+import { AddressInputMode } from "@/components/common/AddressInputMode";
+import { MapAddressPicker } from "@/components/common/MapAddressPicker";
 import { ProjectInformation } from "@/types/proposals";
 import { getMinimumDateString } from "@/utils/dateValidation";
 import { ProjectPhasesInput } from "./ProjectPhasesInput";
@@ -26,9 +28,33 @@ export function ProjectInfoForm({
   onPhasesChange
 }: ProjectInfoFormProps) {
   const [mapsError, setMapsError] = useState(false);
+  const [addressMode, setAddressMode] = useState<'search' | 'map'>('search');
 
   const handleMapsError = (hasError: boolean) => {
     setMapsError(hasError);
+  };
+
+  const handleMapLocationSelect = (lat: number, lng: number, address: string) => {
+    // Create a synthetic event to update project info with all location data
+    const event = {
+      target: {
+        name: 'address',
+        value: address
+      }
+    } as React.ChangeEvent<HTMLInputElement>;
+    
+    updateProjectInfo(event);
+    
+    // Also store GPS coordinates (we'll need to handle this in the parent)
+    const gpsEvent = {
+      target: {
+        name: 'gpsData',
+        value: JSON.stringify({ lat, lng, addressSource: 'pin_drop' })
+      }
+    } as React.ChangeEvent<HTMLInputElement>;
+    updateProjectInfo(gpsEvent);
+    
+    setAddressMode('search'); // Switch back to search view after selection
   };
 
   return (
@@ -48,15 +74,35 @@ export function ProjectInfoForm({
         
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="address">Project Address</Label>
-          <SecureGoogleAddressAutocomplete
-            value={projectInfo.address}
-            onChange={handleAddressChange}
-            className="retro-input"
-            required
-            placeholder="Enter the project's physical address"
-            onError={handleMapsError}
-          />
-          <p className="text-xs text-carbon-gray-500">Enter the complete physical address of the project</p>
+          <AddressInputMode mode={addressMode} onModeChange={setAddressMode} />
+          
+          {addressMode === 'search' ? (
+            <>
+              <SecureGoogleAddressAutocomplete
+                value={projectInfo.address}
+                onChange={handleAddressChange}
+                className="retro-input"
+                required
+                placeholder="Enter the project's physical address"
+                onError={handleMapsError}
+              />
+              <p className="text-xs text-muted-foreground">
+                Can't find your address? Try "Pin Drop on Map" for rural locations
+              </p>
+            </>
+          ) : (
+            <MapAddressPicker
+              onLocationSelect={handleMapLocationSelect}
+              initialLat={projectInfo.gpsLat}
+              initialLng={projectInfo.gpsLng}
+            />
+          )}
+          
+          {projectInfo.gpsLat && projectInfo.gpsLng && (
+            <p className="text-xs text-muted-foreground">
+              GPS: {projectInfo.gpsLat.toFixed(6)}, {projectInfo.gpsLng.toFixed(6)}
+            </p>
+          )}
         </div>
       </div>
 
