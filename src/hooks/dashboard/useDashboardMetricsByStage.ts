@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryKeys';
 import { DashboardMetricsByStage } from './types';
+import { useLocation } from 'react-router-dom';
 
 /**
  * Phase 3: React Query hook for fetching dashboard metrics by stage
@@ -26,6 +27,10 @@ import { DashboardMetricsByStage } from './types';
  */
 export function useDashboardMetricsByStage() {
   const { user, userRole } = useAuth();
+  const location = useLocation();
+  
+  // Only fetch metrics on dashboard-related routes
+  const isDashboardRoute = location.pathname === '/' || location.pathname === '/dashboard';
   
   return useQuery({
     queryKey: queryKeys.dashboard.metricsByStage(user?.id || '', userRole || ''),
@@ -94,8 +99,8 @@ export function useDashboardMetricsByStage() {
         throw error;
       }
     },
-    // Only enable query if user is authenticated
-    enabled: !!user?.id && !!userRole,
+    // Only enable query if user is authenticated AND on dashboard route
+    enabled: !!user?.id && !!userRole && isDashboardRoute,
     // Cache for 5 minutes (metrics don't change frequently)
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

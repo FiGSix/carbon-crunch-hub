@@ -55,18 +55,28 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken) return;
 
-    mapboxgl.accessToken = mapboxToken;
+    try {
+      mapboxgl.accessToken = mapboxToken;
 
-    const center: [number, number] = initialLat && initialLng 
-      ? [initialLng, initialLat]
-      : [24.9916, -28.4793]; // Center of South Africa
+      const center: [number, number] = initialLat && initialLng 
+        ? [initialLng, initialLat]
+        : [24.9916, -28.4793]; // Center of South Africa
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center,
-      zoom: initialLat && initialLng ? 14 : 5,
-    });
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center,
+        zoom: initialLat && initialLng ? 14 : 5,
+      });
+    } catch (error) {
+      console.error('Failed to initialize Mapbox map:', error);
+      toast({
+        title: "Map Error",
+        description: "Failed to load the map. Please try again or contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.GeolocateControl({
