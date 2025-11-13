@@ -38,7 +38,15 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
         
         if (error) throw error;
         if (data?.token) {
+          console.log('Mapbox token fetched successfully');
           setMapboxToken(data.token);
+        } else {
+          console.error('Mapbox token is empty or missing');
+          toast({
+            title: "Configuration Error",
+            description: "Map token is missing. Please contact support.",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         console.error('Failed to fetch Mapbox token:', error);
@@ -55,6 +63,17 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken) return;
 
+    // Check WebGL support
+    if (!mapboxgl.supported()) {
+      console.error('WebGL not supported by browser');
+      toast({
+        title: "Browser Not Supported",
+        description: "Your browser does not support WebGL, which is required for the map.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       mapboxgl.accessToken = mapboxToken;
 
@@ -68,6 +87,18 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
         center,
         zoom: initialLat && initialLng ? 14 : 5,
       });
+
+      // Add error handler
+      map.current.on('error', (e) => {
+        console.error('Mapbox GL error:', e.error);
+        toast({
+          title: "Map Error",
+          description: "An error occurred while loading the map. Please refresh.",
+          variant: "destructive"
+        });
+      });
+
+      console.log('Mapbox map initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Mapbox map:', error);
       toast({
