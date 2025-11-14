@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ProposalData } from "@/types/proposals";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useInvitationToken } from "@/hooks/useInvitationToken";
@@ -33,39 +33,47 @@ export function useProposalData(id?: string, token?: string | null) {
     navigateOnFatal: false
   });
 
+  // Memoize setters to prevent fetchProposal recreation
+  const stableSetters = useMemo(() => ({
+    setProposal,
+    setClientEmail,
+    setLoading,
+    setError
+  }), [setProposal, setClientEmail, setLoading, setError]);
+
   const fetchProposal = useCallback(async (proposalId?: string, invitationToken?: string | null) => {
     // Validate inputs
     if (!proposalId && !invitationToken) {
       const errorMsg = "No proposal ID or invitation token provided. Please check the URL and try again.";
-      setError(errorMsg);
-      setLoading(false);
+      stableSetters.setError(errorMsg);
+      stableSetters.setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
-      setProposal(null);
+      stableSetters.setLoading(true);
+      stableSetters.setError(null);
+      stableSetters.setProposal(null);
       logProposalFetchStart(proposalId, invitationToken);
       
       if (invitationToken) {
         const { proposal: fetchedProposal, clientEmail: fetchedClientEmail } = await fetchProposalByToken(invitationToken);
-        setProposal(fetchedProposal);
-        setClientEmail(fetchedClientEmail);
+        stableSetters.setProposal(fetchedProposal);
+        stableSetters.setClientEmail(fetchedClientEmail);
       } else if (proposalId) {
         const fetchedProposal = await fetchProposalById(proposalId);
-        setProposal(fetchedProposal);
+        stableSetters.setProposal(fetchedProposal);
       } else {
         throw new Error("No proposal ID or invitation token provided. Please check the URL and try again.");
       }
     } catch (err) {
       const errorMessage = logProposalFetchError(err, proposalId, invitationToken);
-      setError(errorMessage);
-      setProposal(null);
+      stableSetters.setError(errorMessage);
+      stableSetters.setProposal(null);
     } finally {
-      setLoading(false);
+      stableSetters.setLoading(false);
     }
-  }, [setProposal, setClientEmail, setLoading, setError]);
+  }, [stableSetters]);
 
   useEffect(() => {
     if (id || token) {

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
 import { useCacheInvalidation } from './useCacheInvalidation';
 import { logger } from '@/lib/logger';
@@ -119,8 +119,11 @@ export function useProposalCacheManager(options: ProposalCacheOptions = {}) {
 
   }, [enableOptimisticUpdates, optimisticUpdate, cacheLogger]);
 
+  const [isInvalidating, setIsInvalidating] = useState(false);
+  const invalidationTimeoutRef = useRef<NodeJS.Timeout>();
+
   /**
-   * Handle proposal status change events
+   * Handle proposal status change events with debounce and deduplication
    */
   const handleStatusChange = useCallback(async (event: Event) => {
     const customEvent = event as CustomEvent;
@@ -132,17 +135,26 @@ export function useProposalCacheManager(options: ProposalCacheOptions = {}) {
       previousStatus
     });
 
-    // Apply optimistic update immediately
-    if (proposalId && newStatus && userId && userRole) {
-      optimisticStatusUpdate(proposalId, newStatus, userId, userRole);
-    }
+    // Debounce rapid status changes
+    clearTimeout(invalidationTimeoutRef.current);
+    
+    invalidationTimeoutRef.current = setTimeout(() => {
+      if (!isInvalidating) {
+        setIsInvalidating(true);
+        
+        // Apply optimistic update immediately
+        if (proposalId && newStatus && userId && userRole && enableOptimisticUpdates) {
+          optimisticStatusUpdate(proposalId, newStatus, userId, userRole);
+        }
 
-    // Invalidate cache after a short delay to allow optimistic update to show
-    setTimeout(() => {
-      invalidateProposalRelatedData(proposalId, newStatus);
-    }, 100);
+        // Invalidate cache
+        invalidateProposalRelatedData(proposalId, newStatus).finally(() => {
+          setIsInvalidating(false);
+        });
+      }
+    }, 300); // Debounce for 300ms
 
-  }, [invalidateProposalRelatedData, optimisticStatusUpdate, cacheLogger]);
+  }, [invalidateProposalRelatedData, optimisticStatusUpdate, cacheLogger, isInvalidating, enableOptimisticUpdates]);
 
   /**
    * Cross-tab synchronization

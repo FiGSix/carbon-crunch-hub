@@ -63,17 +63,25 @@ export function useProposals(): UseProposalsResult {
     }
   }, [proposals, filters]);
 
-  // Listen for proposal status change events to refresh data - STABLE EVENT LISTENER
+  // Listen for proposal status change events to refresh data - DEBOUNCED
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleProposalStatusChange = () => {
-      proposalsLogger.info("Proposal status change detected - refreshing");
-      clearProposalsCache();
-      fetchProposals(true);
+      proposalsLogger.info("Proposal status change detected - scheduling refresh");
+      
+      // Debounce to prevent multiple rapid refetches
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        clearProposalsCache();
+        fetchProposals(true);
+      }, 500); // Wait 500ms before refetching
     };
 
     window.addEventListener('proposal-status-changed', handleProposalStatusChange);
     
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('proposal-status-changed', handleProposalStatusChange);
     };
   }, [fetchProposals, proposalsLogger]);

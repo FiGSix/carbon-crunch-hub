@@ -12,10 +12,7 @@ import { logger } from "@/lib/logger";
  */
 export function useViewProposal(id?: string, token?: string | null, onDeleteSuccess?: () => void) {
   const { user } = useAuth();
-  const { proposal: initialProposal, loading: initialLoading, error: initialError, clientEmail, fetchProposal } = useProposalData(id, token);
-  const [proposal, setProposal] = useState<ProposalData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { proposal, loading, error, clientEmail, fetchProposal } = useProposalData(id, token);
   
   // Create a contextualized logger
   const viewProposalLogger = logger.withContext({ 
@@ -31,15 +28,6 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     setDeleteDialogOpen,
     deleteLoading
   } = useProposalActions(fetchProposal, onDeleteSuccess);
-  
-  // Update local state when initial data loads
-  useEffect(() => {
-    if (!initialLoading) {
-      setProposal(initialProposal);
-      setLoading(initialLoading);
-      setError(initialError);
-    }
-  }, [initialProposal, initialLoading, initialError]);
   
   // Get proposal status data
   const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal, token);
