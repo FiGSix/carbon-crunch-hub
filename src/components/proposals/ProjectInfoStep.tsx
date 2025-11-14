@@ -49,7 +49,7 @@ export function ProjectInfoStep({
           gpsLng: gpsData.lng,
           addressSource: gpsData.addressSource
         });
-        return;
+        return; // Early return to prevent calling updateProjectInfo
       } catch (error) {
         console.error('Failed to parse GPS data:', error);
       }
@@ -203,6 +203,7 @@ export function ProjectInfoStep({
             dateValidationError={dateValidationError}
             onPhaseToggle={handlePhaseToggle}
             onPhasesChange={handlePhasesChange}
+            setProjectInfo={setProjectInfo}
           />
           <ProjectInfoHelpCard />
         </div>

@@ -44,6 +44,9 @@ const CreateProposal = () => {
     commissionDate: "",
     phases: [],
     additionalNotes: "",
+    gpsLat: undefined,
+    gpsLng: undefined,
+    addressSource: undefined,
   });
   
   const isEligible = Object.values(eligibility).every(value => value === true);

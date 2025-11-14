@@ -14,6 +14,7 @@ interface ProjectInfoFormWithConflictCheckProps {
   dateValidationError?: string | null;
   onPhaseToggle?: (isMultiPhase: boolean) => void;
   onPhasesChange?: (phases: any[]) => void;
+  setProjectInfo?: (info: ProjectInformation) => void;
 }
 
 export function ProjectInfoFormWithConflictCheck({ 
@@ -23,7 +24,8 @@ export function ProjectInfoFormWithConflictCheck({
   handleAddressChange,
   dateValidationError,
   onPhaseToggle,
-  onPhasesChange
+  onPhasesChange,
+  setProjectInfo
 }: ProjectInfoFormWithConflictCheckProps) {
   const {
     isChecking,
@@ -115,6 +117,7 @@ export function ProjectInfoFormWithConflictCheck({
         handleAddressChange={handleAddressChange}
         onPhaseToggle={onPhaseToggle}
         onPhasesChange={onPhasesChange}
+        setProjectInfo={setProjectInfo}
       />
       
       {/* Block form submission if there's a conflict without override or date error */}

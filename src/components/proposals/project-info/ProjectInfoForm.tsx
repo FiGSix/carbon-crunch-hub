@@ -20,6 +20,7 @@ interface ProjectInfoFormProps {
   handleAddressChange: (address: string) => void;
   onPhaseToggle?: (isMultiPhase: boolean) => void;
   onPhasesChange?: (phases: any[]) => void;
+  setProjectInfo?: (info: ProjectInformation) => void;
 }
 
 export function ProjectInfoForm({
@@ -27,7 +28,8 @@ export function ProjectInfoForm({
   updateProjectInfo,
   handleAddressChange,
   onPhaseToggle,
-  onPhasesChange
+  onPhasesChange,
+  setProjectInfo
 }: ProjectInfoFormProps) {
   const { toast } = useToast();
   const [mapsError, setMapsError] = useState(false);
@@ -38,28 +40,37 @@ export function ProjectInfoForm({
   };
 
   const handleMapLocationSelect = (lat: number, lng: number, address: string) => {
-    // Create a synthetic event to update project info with all location data
-    const event = {
-      target: {
-        name: 'address',
-        value: address
-      }
-    } as React.ChangeEvent<HTMLInputElement>;
+    // Use setProjectInfo for consolidated state update if available
+    if (setProjectInfo) {
+      setProjectInfo({
+        ...projectInfo,
+        address,
+        gpsLat: lat,
+        gpsLng: lng,
+        addressSource: 'pin_drop'
+      });
+    } else {
+      // Fallback to synthetic events for backwards compatibility
+      const event = {
+        target: {
+          name: 'address',
+          value: address
+        }
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      updateProjectInfo(event);
+      
+      const gpsEvent = {
+        target: {
+          name: 'gpsData',
+          value: JSON.stringify({ lat, lng, addressSource: 'pin_drop' })
+        }
+      } as React.ChangeEvent<HTMLInputElement>;
+      updateProjectInfo(gpsEvent);
+    }
     
-    updateProjectInfo(event);
+    setAddressMode('search');
     
-    // Also store GPS coordinates (we'll need to handle this in the parent)
-    const gpsEvent = {
-      target: {
-        name: 'gpsData',
-        value: JSON.stringify({ lat, lng, addressSource: 'pin_drop' })
-      }
-    } as React.ChangeEvent<HTMLInputElement>;
-    updateProjectInfo(gpsEvent);
-    
-    setAddressMode('search'); // Switch back to search view after selection
-    
-    // Show success toast
     toast({
       title: "Location Selected",
       description: "Your pin-dropped location has been saved successfully.",
