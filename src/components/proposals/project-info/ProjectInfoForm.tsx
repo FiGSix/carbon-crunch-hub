@@ -11,6 +11,8 @@ import { MapAddressPicker } from "@/components/common/MapAddressPicker";
 import { ProjectInformation } from "@/types/proposals";
 import { getMinimumDateString } from "@/utils/dateValidation";
 import { ProjectPhasesInput } from "./ProjectPhasesInput";
+import { SelectedLocationDisplay } from "./SelectedLocationDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProjectInfoFormProps {
   projectInfo: ProjectInformation;
@@ -27,6 +29,7 @@ export function ProjectInfoForm({
   onPhaseToggle,
   onPhasesChange
 }: ProjectInfoFormProps) {
+  const { toast } = useToast();
   const [mapsError, setMapsError] = useState(false);
   const [addressMode, setAddressMode] = useState<'search' | 'map'>('search');
 
@@ -55,6 +58,12 @@ export function ProjectInfoForm({
     updateProjectInfo(gpsEvent);
     
     setAddressMode('search'); // Switch back to search view after selection
+    
+    // Show success toast
+    toast({
+      title: "Location Selected",
+      description: "Your pin-dropped location has been saved successfully.",
+    });
   };
 
   return (
@@ -78,17 +87,29 @@ export function ProjectInfoForm({
           
           {addressMode === 'search' ? (
             <>
-              <SecureGoogleAddressAutocomplete
-                value={projectInfo.address}
-                onChange={handleAddressChange}
-                className="retro-input"
-                required
-                placeholder="Enter the project's physical address"
-                onError={handleMapsError}
-              />
-              <p className="text-xs text-muted-foreground">
-                Can't find your address? Try "Pin Drop on Map" for rural locations
-              </p>
+              {projectInfo.address && projectInfo.gpsLat && projectInfo.gpsLng ? (
+                <SelectedLocationDisplay
+                  address={projectInfo.address}
+                  gpsLat={projectInfo.gpsLat}
+                  gpsLng={projectInfo.gpsLng}
+                  addressSource={projectInfo.addressSource}
+                  onEdit={() => setAddressMode('map')}
+                />
+              ) : (
+                <>
+                  <SecureGoogleAddressAutocomplete
+                    value={projectInfo.address}
+                    onChange={handleAddressChange}
+                    className="retro-input"
+                    required
+                    placeholder="Enter the project's physical address"
+                    onError={handleMapsError}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Can't find your address? Try "Pin Drop on Map" for rural locations
+                  </p>
+                </>
+              )}
             </>
           ) : (
             <MapAddressPicker
@@ -96,12 +117,6 @@ export function ProjectInfoForm({
               initialLat={projectInfo.gpsLat}
               initialLng={projectInfo.gpsLng}
             />
-          )}
-          
-          {projectInfo.gpsLat && projectInfo.gpsLng && (
-            <p className="text-xs text-muted-foreground">
-              GPS: {projectInfo.gpsLat.toFixed(6)}, {projectInfo.gpsLng.toFixed(6)}
-            </p>
           )}
         </div>
       </div>
