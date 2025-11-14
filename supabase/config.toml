@@ -73,3 +73,6 @@ verify_jwt = false
 
 [functions.test-proposal-emails]
 verify_jwt = true
+
+[functions.mapbox-geocode]
+verify_jwt = false
