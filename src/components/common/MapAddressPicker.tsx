@@ -18,6 +18,10 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  
+  // Store initial coordinates once to prevent re-initialization
+  const initialCoords = useRef({ lat: initialLat, lng: initialLng });
+  
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
   );
@@ -25,9 +29,17 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
   const [generatedAddress, setGeneratedAddress] = useState('');
   const { reverseGeocode, searchAddress, loading } = useMapboxGeocoding();
   const { toast } = useToast();
+  const toastRef = useRef(toast);
   const [mapboxToken, setMapboxToken] = useState<string>('');
   const [containerReady, setContainerReady] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  // Keep toast ref up to date
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
 
   // Fetch Mapbox token from edge function
   useEffect(() => {
@@ -60,7 +72,7 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       }
     };
     fetchToken();
-  }, [toast]);
+  }, []); // Remove toast from dependencies
 
   // Watch for container dimensions using ResizeObserver
   useEffect(() => {
@@ -100,7 +112,7 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
     // Check WebGL support
     if (!mapboxgl.supported()) {
       console.error('WebGL not supported by browser');
-      toast({
+      toastRef.current({
         title: "Browser Not Supported",
         description: "Your browser does not support WebGL, which is required for the map.",
         variant: "destructive"
@@ -108,28 +120,31 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       return;
     }
 
+    // Prevent re-initialization if map already exists
+    if (map.current) {
+      console.log('Map already initialized, skipping');
+      return;
+    }
+
     try {
+      console.log('Initializing new Mapbox map');
       mapboxgl.accessToken = mapboxToken;
 
-      const center: [number, number] = initialLat && initialLng 
-        ? [initialLng, initialLat]
+      const center: [number, number] = initialCoords.current.lat && initialCoords.current.lng 
+        ? [initialCoords.current.lng, initialCoords.current.lat]
         : [24.9916, -28.4793]; // Center of South Africa
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center,
-        zoom: initialLat && initialLng ? 14 : 5,
+        zoom: initialCoords.current.lat && initialCoords.current.lng ? 14 : 5,
       });
 
       // Add error handler
       map.current.on('error', (e) => {
         console.error('Mapbox GL error:', e.error);
-        toast({
-          title: "Map Error",
-          description: "An error occurred while loading the map. Please refresh.",
-          variant: "destructive"
-        });
+        setMapError('Map rendering error occurred');
       });
 
       console.log('Mapbox map initialized successfully');
@@ -140,11 +155,10 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
 
         console.log('Map loaded, adding controls and interactions');
 
-        // Force resize to ensure proper dimensions
-        setTimeout(() => {
-          map.current?.resize();
-          setMapReady(true);
-        }, 100);
+        // Resize and mark as ready immediately
+        map.current.resize();
+        setMapReady(true);
+        setIsInitialLoad(false);
 
         // Add navigation controls
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -188,10 +202,10 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
         });
 
         // Add initial marker if coordinates provided
-        if (initialLat && initialLng && map.current) {
+        if (initialCoords.current.lat && initialCoords.current.lng && map.current) {
           try {
             marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
-              .setLngLat([initialLng, initialLat])
+              .setLngLat([initialCoords.current.lng, initialCoords.current.lat])
               .addTo(map.current);
 
             marker.current.on('dragend', async () => {
@@ -210,11 +224,7 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       });
     } catch (error) {
       console.error('Failed to initialize Mapbox map:', error);
-      toast({
-        title: "Map Initialization Failed",
-        description: "Could not load the interactive map. Please try again later.",
-        variant: "destructive"
-      });
+      setMapError('Could not load the interactive map');
       return;
     }
 
@@ -225,7 +235,7 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       }
       setMapReady(false);
     };
-  }, [mapboxToken, containerReady, initialLat, initialLng, toast]);
+  }, [mapboxToken, containerReady]); // Remove initialLat, initialLng, toast
 
   const performReverseGeocode = async (lat: number, lng: number) => {
     const result = await reverseGeocode(lat, lng);
@@ -309,11 +319,34 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
         ref={mapContainer} 
         className="relative w-full h-[400px] rounded-lg border border-border"
       >
-        {!mapReady && (
+        {!mapReady && isInitialLoad && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm rounded-lg z-10">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">Loading map...</p>
+            </div>
+          </div>
+        )}
+        
+        {mapError && !isInitialLoad && (
+          <div className="absolute inset-0 flex items-center justify-center bg-destructive/10 backdrop-blur-sm rounded-lg z-10">
+            <div className="flex flex-col items-center gap-3 text-center px-4">
+              <p className="text-sm text-destructive font-medium">{mapError}</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  setMapError(null);
+                  setMapReady(false);
+                  setIsInitialLoad(true);
+                  if (map.current) {
+                    map.current.remove();
+                    map.current = null;
+                  }
+                }}
+              >
+                Retry Map Load
+              </Button>
             </div>
           </div>
         )}
