@@ -104,6 +104,43 @@ export function ProjectInfoStep({
     }
   };
 
+  // Validate form before proceeding to next step
+  const validateAndProceed = () => {
+    const missingFields: string[] = [];
+    
+    if (!projectInfo.name) missingFields.push("Project Name");
+    if (!projectInfo.address) missingFields.push("Project Address");
+    
+    if (projectInfo.isMultiPhase) {
+      if (!projectInfo.phases?.length) {
+        missingFields.push("Project Phases");
+      }
+    } else {
+      if (!projectInfo.size) missingFields.push("System Size");
+      if (!projectInfo.commissionDate) missingFields.push("Commission Date");
+    }
+    
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing Required Fields",
+        description: `Please complete: ${missingFields.join(", ")}`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (dateValidationError) {
+      toast({
+        title: "Invalid Date",
+        description: dateValidationError,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    nextStep();
+  };
+
   // Handle phase toggle
   const handlePhaseToggle = (isMultiPhase: boolean) => {
     if (setProjectInfo) {
@@ -172,7 +209,7 @@ export function ProjectInfoStep({
       </CardContent>
       
       <ProjectInfoStepFooter 
-        nextStep={nextStep} 
+        nextStep={validateAndProceed} 
         prevStep={prevStep} 
         isFormValid={isFormValid} 
       />
