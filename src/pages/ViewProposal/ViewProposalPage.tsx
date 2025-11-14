@@ -1,8 +1,32 @@
 import { useEffect } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { useViewProposalLogic } from "./hooks/useViewProposalLogic";
 import { useViewProposalAuth } from "./hooks/useViewProposalAuth";
 import { ViewProposalContent } from "./components/ViewProposalContent";
 import { useToast } from '@/hooks/use-toast';
+
+// Error fallback for transient errors
+function ViewProposalErrorFallback({ error }: { error: Error }) {
+  return (
+    <div className="container max-w-5xl mx-auto px-4 py-12">
+      <div className="text-center space-y-4">
+        <p className="text-muted-foreground">
+          Loading proposal details...
+        </p>
+        {import.meta.env.DEV && (
+          <details className="text-xs text-left max-w-md mx-auto">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Error Details (Dev)
+            </summary>
+            <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto">
+              {error.message}
+            </pre>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const ViewProposalPage = () => {
   const { toast } = useToast();
@@ -46,34 +70,39 @@ const ViewProposalPage = () => {
   }, [viewProposalAuth.user, viewProposalLogic.id, viewProposalLogic.token, toast]);
   
   return (
-    <ViewProposalContent
-      // Data props
-      proposal={viewProposalLogic.proposal}
-      loading={viewProposalLogic.loading}
-      error={viewProposalLogic.error}
-      clientEmail={viewProposalLogic.clientEmail}
-      token={viewProposalLogic.token}
-      user={viewProposalAuth.user}
-      
-      // Auth props
-      showAuthForm={viewProposalAuth.showAuthForm}
-      handleAuthComplete={viewProposalAuth.handleAuthComplete}
-      showSignInPrompt={viewProposalAuth.showSignInPrompt}
-      
-      // Action props
-      canTakeAction={viewProposalLogic.canTakeAction}
-      isClient={viewProposalLogic.isClient}
-      handleApprove={viewProposalLogic.handleApprove}
-      handleReject={viewProposalLogic.handleReject}
-      handleDelete={viewProposalLogic.handleDelete}
-      handleSignInClick={viewProposalAuth.handleSignInClick}
-      deleteDialogOpen={viewProposalLogic.deleteDialogOpen}
-      setDeleteDialogOpen={viewProposalLogic.setDeleteDialogOpen}
-      
-      // Utility props
-      handleRetry={viewProposalLogic.handleRetry}
-      onProposalUpdate={handleProposalUpdate}
-    />
+    <ErrorBoundary 
+      FallbackComponent={ViewProposalErrorFallback}
+      onReset={() => window.location.reload()}
+    >
+      <ViewProposalContent
+        // Data props
+        proposal={viewProposalLogic.proposal}
+        loading={viewProposalLogic.loading}
+        error={viewProposalLogic.error}
+        clientEmail={viewProposalLogic.clientEmail}
+        token={viewProposalLogic.token}
+        user={viewProposalAuth.user}
+        
+        // Auth props
+        showAuthForm={viewProposalAuth.showAuthForm}
+        handleAuthComplete={viewProposalAuth.handleAuthComplete}
+        showSignInPrompt={viewProposalAuth.showSignInPrompt}
+        
+        // Action props
+        canTakeAction={viewProposalLogic.canTakeAction}
+        isClient={viewProposalLogic.isClient}
+        handleApprove={viewProposalLogic.handleApprove}
+        handleReject={viewProposalLogic.handleReject}
+        handleDelete={viewProposalLogic.handleDelete}
+        handleSignInClick={viewProposalAuth.handleSignInClick}
+        deleteDialogOpen={viewProposalLogic.deleteDialogOpen}
+        setDeleteDialogOpen={viewProposalLogic.setDeleteDialogOpen}
+        
+        // Utility props
+        handleRetry={viewProposalLogic.handleRetry}
+        onProposalUpdate={handleProposalUpdate}
+      />
+    </ErrorBoundary>
   );
 };
 

@@ -57,24 +57,20 @@ export function ViewProposalContent({
   onProposalUpdate
 }: ViewProposalContentProps) {
   
-  // Phase 4: Add effect to detect when user becomes authenticated
+  // Trigger proposal refresh when user becomes authenticated
   useEffect(() => {
-    if (user && !showAuthForm && proposal) {
-      // User just became authenticated, ensure we're showing the proposal
-      console.log("=== User Authenticated Post-Registration ===", {
-        userId: user.id,
-        proposalId: proposal?.id
-      });
-      
-      // Trigger a proposal refresh if we have the handler
-      if (onProposalUpdate) {
-        onProposalUpdate();
+    if (user && !showAuthForm && proposal?.id && onProposalUpdate) {
+      if (import.meta.env.DEV) {
+        console.log("User authenticated, refreshing proposal", {
+          userId: user.id,
+          proposalId: proposal.id
+        });
       }
+      onProposalUpdate();
     }
-  }, [user, showAuthForm, proposal?.id, onProposalUpdate]);
+  }, [user?.id, showAuthForm, proposal?.id, onProposalUpdate]);
   
   if (loading) {
-    console.log("=== Showing Loading State ===");
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <ProposalSkeleton />
@@ -83,7 +79,6 @@ export function ViewProposalContent({
   }
   
   if (error) {
-    console.log("=== Showing Error State ===", error);
     return <ProposalError errorMessage={error} onRetry={handleRetry} />;
   }
   
@@ -108,17 +103,14 @@ export function ViewProposalContent({
   }
   
   if (!proposal) {
-    console.log("=== No Proposal Found ===");
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">
-          <p className="text-carbon-gray-500">Proposal not found</p>
+          <p className="text-muted-foreground">Proposal not found</p>
         </div>
       </div>
     );
   }
-  
-  console.log("=== Showing Proposal Content ===", { id: proposal.id, title: proposal.title });
   
   // Action wrapper functions that handle authentication state
   const handleApproveWrapper = async (typedName: string) => {

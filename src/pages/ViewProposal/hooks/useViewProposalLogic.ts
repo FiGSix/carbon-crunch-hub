@@ -41,31 +41,29 @@ export function useViewProposalLogic() {
     viewProposalData.fetchProposal(id, token);
   }, [id, token, viewProposalData.fetchProposal, viewLogger]);
   
-  // Debug logging
+  // Debug logging with stable dependencies
+  const proposalId = viewProposalData.proposal?.id;
+  const proposalStatus = viewProposalData.proposal?.status;
+
   useEffect(() => {
-    console.log("=== ViewProposal State Update ===");
-    console.log("Loading:", viewProposalData.loading);
-    console.log("Error:", viewProposalData.error);
-    console.log("Proposal:", viewProposalData.proposal ? { 
-      id: viewProposalData.proposal.id, 
-      title: viewProposalData.proposal.title, 
-      status: viewProposalData.proposal.status 
-    } : null);
-    console.log("Client Email:", viewProposalData.clientEmail);
-    
-    if (viewProposalData.proposal) {
+    if (import.meta.env.DEV && proposalId) {
+      console.log("=== ViewProposal State Update ===", {
+        proposalId,
+        status: proposalStatus,
+        loading: viewProposalData.loading,
+        error: viewProposalData.error
+      });
+      
       viewLogger.info("ViewProposal - Current proposal state", { 
-        id: viewProposalData.proposal.id,
-        status: viewProposalData.proposal.status,
+        id: proposalId,
+        status: proposalStatus,
         isClient: viewProposalData.isClient,
         canTakeAction: viewProposalData.canTakeAction,
-        hasClientId: !!viewProposalData.proposal.client_id,
-        hasClientReferenceId: !!viewProposalData.proposal.client_reference_id,
         userLoggedIn: !!user,
         accessedViaToken: !!token
       });
     }
-  }, [viewProposalData.proposal, viewProposalData.isClient, viewProposalData.canTakeAction, viewLogger, user, token, viewProposalData.loading, viewProposalData.error, viewProposalData.clientEmail]);
+  }, [proposalId, proposalStatus, user?.id, token, viewLogger, viewProposalData.isClient, viewProposalData.canTakeAction]);
 
   return {
     id,
