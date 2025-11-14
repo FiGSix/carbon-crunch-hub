@@ -26,6 +26,8 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
   const { reverseGeocode, searchAddress, loading } = useMapboxGeocoding();
   const { toast } = useToast();
   const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [containerReady, setContainerReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   // Fetch Mapbox token from edge function
   useEffect(() => {
@@ -60,8 +62,40 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
     fetchToken();
   }, [toast]);
 
+  // Watch for container dimensions using ResizeObserver
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken) return;
+    if (!mapContainer.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const rect = entry.contentRect;
+      console.log('Container dimensions:', rect.width, 'x', rect.height);
+      if (rect.width > 0 && rect.height > 0) {
+        setContainerReady(true);
+      }
+    });
+    
+    resizeObserver.observe(mapContainer.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Initialize map only when container is ready and token is available
+  useEffect(() => {
+    if (!mapContainer.current || !mapboxToken || !containerReady) {
+      console.log('Waiting for dependencies:', { 
+        hasContainer: !!mapContainer.current, 
+        hasToken: !!mapboxToken, 
+        containerReady 
+      });
+      return;
+    }
+
+    // Double-check container has dimensions
+    const rect = mapContainer.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      console.warn('Container not ready yet, dimensions:', rect);
+      return;
+    }
 
     // Check WebGL support
     if (!mapboxgl.supported()) {
@@ -99,6 +133,81 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       });
 
       console.log('Mapbox map initialized successfully');
+
+      // Wait for map to fully load before adding interactive features
+      map.current.on('load', () => {
+        if (!map.current) return;
+
+        console.log('Map loaded, adding controls and interactions');
+
+        // Force resize to ensure proper dimensions
+        setTimeout(() => {
+          map.current?.resize();
+          setMapReady(true);
+        }, 100);
+
+        // Add navigation controls
+        map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        
+        // Add geolocate control
+        map.current.addControl(new mapboxgl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true
+        }), 'top-right');
+
+        // Add click handler with error boundary
+        map.current.on('click', async (e) => {
+          try {
+            if (!map.current) return;
+            const { lng, lat } = e.lngLat;
+            setSelectedLocation({ lat, lng });
+
+            // Update or create marker
+            if (marker.current) {
+              marker.current.setLngLat([lng, lat]);
+            } else {
+              marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
+                .setLngLat([lng, lat])
+                .addTo(map.current!);
+
+              marker.current.on('dragend', async () => {
+                try {
+                  const lngLat = marker.current!.getLngLat();
+                  setSelectedLocation({ lat: lngLat.lat, lng: lngLat.lng });
+                  await performReverseGeocode(lngLat.lat, lngLat.lng);
+                } catch (error) {
+                  console.error('Marker drag handler error:', error);
+                }
+              });
+            }
+
+            await performReverseGeocode(lat, lng);
+          } catch (error) {
+            console.error('Map click handler error:', error);
+          }
+        });
+
+        // Add initial marker if coordinates provided
+        if (initialLat && initialLng && map.current) {
+          try {
+            marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
+              .setLngLat([initialLng, initialLat])
+              .addTo(map.current);
+
+            marker.current.on('dragend', async () => {
+              try {
+                const lngLat = marker.current!.getLngLat();
+                setSelectedLocation({ lat: lngLat.lat, lng: lngLat.lng });
+                await performReverseGeocode(lngLat.lat, lngLat.lng);
+              } catch (error) {
+                console.error('Marker drag handler error:', error);
+              }
+            });
+          } catch (error) {
+            console.error('Initial marker creation error:', error);
+          }
+        }
+      });
     } catch (error) {
       console.error('Failed to initialize Mapbox map:', error);
       toast({
@@ -109,54 +218,14 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       return;
     }
 
-    if (!map.current) return;
-
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    map.current.addControl(new mapboxgl.GeolocateControl({
-      positionOptions: { enableHighAccuracy: true },
-      trackUserLocation: true
-    }), 'top-right');
-
-    // Add click handler
-    map.current.on('click', async (e) => {
-      const { lng, lat } = e.lngLat;
-      setSelectedLocation({ lat, lng });
-
-      // Update or create marker
-      if (marker.current) {
-        marker.current.setLngLat([lng, lat]);
-      } else {
-        marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
-
-        marker.current.on('dragend', async () => {
-          const lngLat = marker.current!.getLngLat();
-          setSelectedLocation({ lat: lngLat.lat, lng: lngLat.lng });
-          await performReverseGeocode(lngLat.lat, lngLat.lng);
-        });
-      }
-
-      await performReverseGeocode(lat, lng);
-    });
-
-    // Add initial marker if coordinates provided
-    if (initialLat && initialLng) {
-      marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
-        .setLngLat([initialLng, initialLat])
-        .addTo(map.current);
-
-      marker.current.on('dragend', async () => {
-        const lngLat = marker.current!.getLngLat();
-        setSelectedLocation({ lat: lngLat.lat, lng: lngLat.lng });
-        await performReverseGeocode(lngLat.lat, lngLat.lng);
-      });
-    }
-
     return () => {
-      map.current?.remove();
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      setMapReady(false);
     };
-  }, [mapboxToken, initialLat, initialLng]);
+  }, [mapboxToken, containerReady, initialLat, initialLng, toast]);
 
   const performReverseGeocode = async (lat: number, lng: number) => {
     const result = await reverseGeocode(lat, lng);
@@ -181,20 +250,28 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
       setGeneratedAddress(result.address);
       
       if (map.current) {
-        map.current.flyTo({ center: [result.lng, result.lat], zoom: 14 });
-        
-        if (marker.current) {
-          marker.current.setLngLat([result.lng, result.lat]);
-        } else {
-          marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
-            .setLngLat([result.lng, result.lat])
-            .addTo(map.current);
+        try {
+          map.current.flyTo({ center: [result.lng, result.lat], zoom: 14 });
+          
+          if (marker.current) {
+            marker.current.setLngLat([result.lng, result.lat]);
+          } else {
+            marker.current = new mapboxgl.Marker({ color: '#10b981', draggable: true })
+              .setLngLat([result.lng, result.lat])
+              .addTo(map.current);
 
-          marker.current.on('dragend', async () => {
-            const lngLat = marker.current!.getLngLat();
-            setSelectedLocation({ lat: lngLat.lat, lng: lngLat.lng });
-            await performReverseGeocode(lngLat.lat, lngLat.lng);
-          });
+            marker.current.on('dragend', async () => {
+              try {
+                const lngLat = marker.current!.getLngLat();
+                setSelectedLocation({ lat: lngLat.lat, lng: lngLat.lng });
+                await performReverseGeocode(lngLat.lat, lngLat.lng);
+              } catch (error) {
+                console.error('Marker drag handler error:', error);
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Search flyTo error:', error);
         }
       }
     } else {
@@ -230,8 +307,17 @@ export function MapAddressPicker({ onLocationSelect, initialLat, initialLng }: M
 
       <div 
         ref={mapContainer} 
-        className="w-full h-[400px] rounded-lg border border-border"
-      />
+        className="relative w-full h-[400px] rounded-lg border border-border"
+      >
+        {!mapReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm rounded-lg z-10">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading map...</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {selectedLocation && (
         <div className="space-y-3 p-4 bg-muted rounded-lg">
