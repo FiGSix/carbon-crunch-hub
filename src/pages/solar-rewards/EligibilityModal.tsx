@@ -38,7 +38,7 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
     },
     {
       question: "Are you registered for any other Greenhouse Gas Emissions program?",
-      correctAnswer: true
+      correctAnswer: false
     },
     {
       question: "Is the system smaller than 30 kWp?",
@@ -65,7 +65,8 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
     if (step < questions.length - 1) {
       setStep(step + 1);
     } else {
-      // Check if all answers are correct
+      // Last question - check results and move past questions
+      setStep(step + 1);
       const allCorrect = newAnswers.every((ans, idx) => ans === questions[idx].correctAnswer);
       if (allCorrect) {
         setShowCongrats(true);
@@ -347,7 +348,7 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
               </h3>
               <p className="text-muted-foreground">
                 {failedStep === 0 && "Currently, we only work with solar systems in South Africa."}
-                {failedStep === 1 && "You need to be registered for a Greenhouse Gas Emissions program to qualify."}
+                {failedStep === 1 && "You must NOT be registered for any other Greenhouse Gas Emissions program to qualify."}
                 {failedStep === 2 && "Systems over 30 kWp require a different registration process. Contact us for enterprise solutions."}
                 {failedStep === 3 && "Your system must have been commissioned on or after September 15, 2022."}
                 {failedStep === 4 && "You must have legal ownership of the system or green attributes."}
