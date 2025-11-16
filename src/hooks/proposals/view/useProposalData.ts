@@ -9,6 +9,7 @@ import {
   logProposalFetchStart, 
   logProposalFetchError 
 } from "./utils/proposalDataLogger";
+import { supabase } from "@/lib/supabase/client";
 
 /**
  * Hook to fetch and manage proposal data using direct token validation
@@ -82,6 +83,20 @@ export function useProposalData(id?: string, token?: string | null) {
       setLoading(false);
     }
   }, [id, token]);
+
+  // Listen for auth state changes and refetch if we have an id/token
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && (id || token)) {
+        console.log("Auth state changed, refetching proposal");
+        fetchProposal(id, token);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [id, token, fetchProposal]);
 
   return {
     proposal,

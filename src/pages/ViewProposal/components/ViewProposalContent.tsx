@@ -59,16 +59,15 @@ export function ViewProposalContent({
   
   // Trigger proposal refresh when user becomes authenticated
   useEffect(() => {
-    if (user && !showAuthForm && proposal?.id && onProposalUpdate) {
+    if (user && !showAuthForm && onProposalUpdate) {
       if (import.meta.env.DEV) {
         console.log("User authenticated, refreshing proposal", {
-          userId: user.id,
-          proposalId: proposal.id
+          userId: user.id
         });
       }
       onProposalUpdate();
     }
-  }, [user?.id, showAuthForm, proposal?.id, onProposalUpdate]);
+  }, [user?.id, showAuthForm, onProposalUpdate]);
   
   if (loading) {
     return (
