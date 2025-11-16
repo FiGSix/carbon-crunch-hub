@@ -16,7 +16,7 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
-            Crunch Carbon turns your clean energy into verified carbon credits, sell them and share the proceeds.
+            <span className="text-crunch-yellow font-semibold">Crunch Carbon</span> turns your clean energy into verified carbon credits, sell them and share the proceeds.
           </p>
           
           <Button 
