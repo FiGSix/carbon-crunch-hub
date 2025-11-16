@@ -181,11 +181,11 @@ function App() {
                       <Suspense fallback={<PageLoader />}><Calculator /></Suspense>
                     </PageErrorBoundary>
                   } />
-                  <Route path="/solar-rewards" element={
-                    <PageErrorBoundary pageName="SolarRewards">
-                      <Suspense fallback={<PageLoader />}><SolarRewards /></Suspense>
-                    </PageErrorBoundary>
-                  } />
+  <Route path="/home-owners" element={
+    <PageErrorBoundary pageName="SolarRewards">
+      <Suspense fallback={<PageLoader />}><SolarRewards /></Suspense>
+    </PageErrorBoundary>
+  } />
                   <Route path="/agents" element={
                     <PageErrorBoundary pageName="Agents">
                       <Suspense fallback={<PageLoader />}><Agents /></Suspense>

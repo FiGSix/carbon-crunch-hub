@@ -210,6 +210,11 @@ const navItems = [
     description: "Learn about our process" 
   },
   { 
+    label: "For Homeowners", 
+    href: "/home-owners",
+    description: "Monetize your solar system" 
+  },
+  { 
     label: "Calculator", 
     href: "/calculator",
     description: "Calculate your potential earnings" 
