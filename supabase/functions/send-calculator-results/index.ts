@@ -15,6 +15,7 @@ interface CalculatorRequest {
   referralCode?: string;
   ipAddress?: string;
   userAgent?: string;
+  address?: string;
 }
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -31,7 +32,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, name, systemSizeKwp, commissioningDate, referralCode, ipAddress, userAgent }: CalculatorRequest =
+    const { email, name, systemSizeKwp, commissioningDate, referralCode, ipAddress, userAgent, address }: CalculatorRequest =
       await req.json();
 
     // Validate inputs
@@ -115,6 +116,7 @@ serve(async (req: Request) => {
         commissionDate: commissioningDate,
         system_size_kwp: systemSizeKwp,
         annual_energy_kwh: annualEnergy,
+        address: address || undefined,
       },
       financialInfo: {
         carbon_credits: carbonCredits,
