@@ -61,12 +61,14 @@ export function HowItWorks({ onCheckEligibility }: HowItWorksProps) {
           ))}
         </div>
         
-        <div className="text-center mt-12">
+        <div className="text-center mt-12 space-y-4">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Verify that the project meets all eligibility criteria for carbon credits.
+          </p>
           <Button 
             size="lg"
-            variant="outline"
             onClick={onCheckEligibility}
-            className="h-12 px-8"
+            className="h-14 px-10 bg-crunch-yellow hover:bg-crunch-yellow/90 text-foreground font-semibold"
           >
             Check Your Eligibility
           </Button>

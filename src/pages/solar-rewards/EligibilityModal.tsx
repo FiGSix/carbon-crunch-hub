@@ -2,8 +2,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import confetti from 'canvas-confetti';
 
 interface EligibilityModalProps {
   open: boolean;
@@ -14,26 +17,43 @@ interface EligibilityModalProps {
 export function EligibilityModal({ open, onOpenChange, onQualified }: EligibilityModalProps) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<boolean[]>([]);
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [showCongrats, setShowCongrats] = useState(false);
+  const [showDetailsForm, setShowDetailsForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    address: "",
+    systemSize: "",
+    commissioningDate: ""
+  });
 
   const questions = [
     {
-      question: "Is your solar system in South Africa?",
+      question: "The project is located in South Africa?",
       correctAnswer: true
     },
     {
-      question: "Do you own the solar system?",
-      subtext: "(not leased or rented)",
+      question: "Are you registered for any other Greenhouse Gas Emissions program?",
       correctAnswer: true
     },
     {
-      question: "Is your system smaller than 15 kWp?",
-      subtext: "(Most homes are 3-10 kWp)",
+      question: "Is the system smaller than 30 kWp?",
       correctAnswer: true
     },
     {
-      question: "Are you already registered in another carbon programme?",
+      question: "Was it commissioned or switched on for the first time on or after September 15, 2022?",
+      correctAnswer: true
+    },
+    {
+      question: "Are you the legal ownership of system or green attributes?",
+      correctAnswer: true
+    },
+    {
+      question: "Are you participating in any South African Government Funding Initiatives?",
       correctAnswer: false
     }
   ];
@@ -48,24 +68,60 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
       // Check if all answers are correct
       const allCorrect = newAnswers.every((ans, idx) => ans === questions[idx].correctAnswer);
       if (allCorrect) {
-        setTimeout(() => onQualified(), 500);
+        setShowCongrats(true);
       }
     }
   };
 
-  const handleNotifyMe = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
+    setIsSubmitting(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("send-eligibility-proposal", {
+        body: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          address: formData.address,
+          systemSizeKwp: parseFloat(formData.systemSize),
+          commissioningDate: formData.commissioningDate,
+          eligibilityAnswers: answers
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success!",
+        description: "Proposal sent! Check your email for details."
+      });
       handleClose();
-    }, 2000);
+    } catch (error) {
+      console.error("Error sending proposal:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send proposal. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     setStep(0);
     setAnswers([]);
-    setEmail("");
-    setSubmitted(false);
+    setShowCongrats(false);
+    setShowDetailsForm(false);
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      address: "",
+      systemSize: "",
+      commissioningDate: ""
+    });
     onOpenChange(false);
   };
 
@@ -75,6 +131,36 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
   const failedStep = step === questions.length ? 
     answers.findIndex((ans, idx) => ans !== questions[idx].correctAnswer) : -1;
 
+  // Confetti effect
+  useEffect(() => {
+    if (showCongrats) {
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#FFD700', '#FFA500', '#FF6B6B']
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#FFD700', '#FFA500', '#FF6B6B']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+  }, [showCongrats]);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -82,7 +168,7 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
           <DialogTitle className="text-2xl">Quick Eligibility Check</DialogTitle>
         </DialogHeader>
         
-        {step < questions.length ? (
+        {step < questions.length && !showCongrats ? (
           <div className="py-6 space-y-6">
             <div className="space-y-2">
               <h3 className="text-lg font-medium">
@@ -91,11 +177,6 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
               <p className="text-xl font-semibold text-foreground">
                 {questions[step].question}
               </p>
-              {questions[step].subtext && (
-                <p className="text-sm text-muted-foreground">
-                  {questions[step].subtext}
-                </p>
-              )}
             </div>
             
             <div className="flex gap-4">
@@ -128,6 +209,113 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
               ))}
             </div>
           </div>
+        ) : showCongrats && !showDetailsForm ? (
+          <div className="text-center py-8 space-y-6">
+            <div className="mb-6">
+              <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-4" />
+              <h3 className="text-3xl font-bold text-foreground mb-2">
+                🎉 Congratulations!
+              </h3>
+              <p className="text-lg text-muted-foreground mb-2">
+                You qualify for carbon credits!
+              </p>
+              <p className="text-base text-muted-foreground max-w-md mx-auto">
+                Your solar system meets all the requirements. Let's get you started on earning passive income from your clean energy.
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowDetailsForm(true)}
+              size="lg"
+              className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-foreground font-semibold h-14 px-10"
+            >
+              Get My Proposal
+            </Button>
+          </div>
+        ) : showDetailsForm ? (
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <h3 className="text-2xl font-bold text-center mb-4">Tell us about your system</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                  required
+                  placeholder="John"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                  required
+                  placeholder="Doe"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                required
+                placeholder="john@example.com"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="address">Physical Address *</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                required
+                placeholder="123 Main St, Cape Town"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="systemSize">System Size (kWp) *</Label>
+              <Input
+                id="systemSize"
+                type="number"
+                step="0.01"
+                min="0.1"
+                max="30"
+                value={formData.systemSize}
+                onChange={(e) => setFormData({...formData, systemSize: e.target.value})}
+                required
+                placeholder="5.5"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="commissioningDate">Commissioning/Installation Date *</Label>
+              <Input
+                id="commissioningDate"
+                type="date"
+                min="2022-09-15"
+                value={formData.commissioningDate}
+                onChange={(e) => setFormData({...formData, commissioningDate: e.target.value})}
+                required
+              />
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-crunch-yellow hover:bg-crunch-yellow/90 text-foreground font-semibold h-12"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Sending..." : "Send My Proposal"}
+            </Button>
+          </form>
         ) : isQualified ? (
           <div className="py-6 text-center space-y-6">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
@@ -159,39 +347,21 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
               </h3>
               <p className="text-muted-foreground">
                 {failedStep === 0 && "Currently, we only work with solar systems in South Africa."}
-                {failedStep === 1 && "You need to own your solar system to qualify for carbon credits."}
-                {failedStep === 2 && "Systems over 15 kWp require a different registration process. Contact us for enterprise solutions."}
-                {failedStep === 3 && "You can only be registered in one carbon programme at a time."}
+                {failedStep === 1 && "You need to be registered for a Greenhouse Gas Emissions program to qualify."}
+                {failedStep === 2 && "Systems over 30 kWp require a different registration process. Contact us for enterprise solutions."}
+                {failedStep === 3 && "Your system must have been commissioned on or after September 15, 2022."}
+                {failedStep === 4 && "You must have legal ownership of the system or green attributes."}
+                {failedStep === 5 && "Participation in South African Government Funding Initiatives affects eligibility."}
               </p>
             </div>
             
-            {!submitted ? (
-              <form onSubmit={handleNotifyMe} className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  We're constantly expanding our program. Leave your email to be notified when you qualify.
-                </p>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notifyEmail" className="sr-only">Email</Label>
-                  <Input
-                    id="notifyEmail"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full">
-                  Notify Me
-                </Button>
-              </form>
-            ) : (
-              <p className="text-green-600 font-medium">
-                ✓ We'll notify you when you're eligible!
-              </p>
-            )}
+            <Button 
+              onClick={handleClose}
+              variant="outline"
+              className="w-full"
+            >
+              Close
+            </Button>
           </div>
         )}
       </DialogContent>
