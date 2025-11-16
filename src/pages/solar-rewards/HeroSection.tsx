@@ -16,7 +16,7 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
             <span className="text-crunch-yellow">Your solar system can earn you money.</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
+          <p className="text-xl font-bold text-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
             <span className="text-crunch-yellow font-semibold">Crunch Carbon</span> turns your clean energy into verified carbon credits, sell them and share the proceeds.
           </p>
           
