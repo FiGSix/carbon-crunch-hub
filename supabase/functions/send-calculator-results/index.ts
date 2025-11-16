@@ -123,7 +123,46 @@ serve(async (req: Request) => {
       }
     };
 
-    // Insert proposal directly
+    // Find or create client record
+    const { data: existingClient } = await supabase
+      .from('clients')
+      .select('id, user_id')
+      .eq('email', email.toLowerCase().trim())
+      .single();
+
+    let clientReferenceId = existingClient?.id;
+    let clientProfileId = existingClient?.user_id;
+
+    // Create client if doesn't exist
+    if (!existingClient) {
+      const { data: newClient } = await supabase
+        .from('clients')
+        .insert({
+          email: email.toLowerCase().trim(),
+          first_name: firstName,
+          last_name: lastName,
+          created_by: agentId,
+          notes: `Created from calculator submission - ${systemSizeKwp} kWp system`
+        })
+        .select('id')
+        .single();
+      
+      clientReferenceId = newClient?.id;
+    }
+
+    // If client has no profile yet, check if one exists with matching email
+    if (!clientProfileId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email.toLowerCase().trim())
+        .eq('role', 'client')
+        .single();
+      
+      clientProfileId = profile?.id;
+    }
+
+    // Insert proposal with all client links
     const { data: proposal, error: insertError } = await supabase
       .from("proposals")
       .insert({
@@ -141,7 +180,9 @@ serve(async (req: Request) => {
         invitation_token: token,
         invitation_expires_at: expiresAt.toISOString(),
         invitation_sent_at: new Date().toISOString(),
-        agent_id: agentId, // Assigned to referral agent or default Crunch Carbon
+        agent_id: agentId,
+        client_reference_id: clientReferenceId,  // Link to clients table
+        client_id: clientProfileId,               // Link to profiles if exists
       })
       .select()
       .single();

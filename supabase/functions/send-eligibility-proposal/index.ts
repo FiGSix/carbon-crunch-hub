@@ -68,23 +68,24 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if client exists
     const { data: existingClient } = await supabase
       .from("clients")
-      .select("id")
-      .eq("email", requestData.email)
+      .select("id, user_id")
+      .eq("email", requestData.email.toLowerCase().trim())
       .single();
 
     let clientId = existingClient?.id;
+    let clientProfileId = existingClient?.user_id;
 
     // Create client if doesn't exist
     if (!clientId) {
       const { data: newClient, error: clientError } = await supabase
         .from("clients")
         .insert({
-          email: requestData.email,
+          email: requestData.email.toLowerCase().trim(),
           first_name: requestData.firstName,
           last_name: requestData.lastName,
           notes: `Eligibility check completed. Address: ${requestData.address}. System: ${requestData.systemSizeKwp} kWp`
         })
-        .select()
+        .select('id')
         .single();
 
       if (clientError) {
@@ -96,12 +97,30 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Created new client:", clientId);
     }
 
-    // Create proposal
+    // If client has no profile yet, check if one exists with matching email
+    if (!clientProfileId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', requestData.email.toLowerCase().trim())
+        .eq('role', 'client')
+        .single();
+      
+      clientProfileId = profile?.id;
+    }
+
+    // Determine agent - use default Crunch Carbon agent
+    const DEFAULT_CRUNCH_CARBON_AGENT = '6538aa1a-c0dc-4ce4-ab6f-bb4368d9fce1';
+    const agentId = DEFAULT_CRUNCH_CARBON_AGENT;
+
+    // Create proposal with all client links
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
       .insert({
         title: `Carbon Credit Proposal - ${requestData.firstName} ${requestData.lastName}`,
-        client_reference_id: clientId,
+        agent_id: agentId,                    // Set agent
+        client_reference_id: clientId,        // Link to clients table
+        client_id: clientProfileId,           // Link to profiles if exists
         status: "draft",
         system_size_kwp: requestData.systemSizeKwp,
         carbon_credits: estimatedCredits,
