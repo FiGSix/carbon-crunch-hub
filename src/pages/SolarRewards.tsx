@@ -8,13 +8,62 @@ import { EarningsEstimator } from "./solar-rewards/EarningsEstimator";
 import { QualificationSection } from "./solar-rewards/QualificationSection";
 import { TrustSection } from "./solar-rewards/TrustSection";
 import { FinalCTA } from "./solar-rewards/FinalCTA";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QuickCalculatorModal } from "./solar-rewards/QuickCalculatorModal";
 import { EligibilityModal } from "./solar-rewards/EligibilityModal";
 
 const SolarRewards = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showEligibility, setShowEligibility] = useState(false);
+
+  useEffect(() => {
+    // Set page title
+    document.title = "For Home Owners - Monetize Your Solar System | Enlit Africa";
+    
+    // Set meta description
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Turn your solar panels into a revenue stream. Earn cash, support charities, or access premium services by sharing your solar data. Check your eligibility and calculate potential earnings today.');
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'description';
+      meta.content = 'Turn your solar panels into a revenue stream. Earn cash, support charities, or access premium services by sharing your solar data. Check your eligibility and calculate potential earnings today.';
+      document.head.appendChild(meta);
+    }
+
+    // Set meta keywords
+    const metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (metaKeywords) {
+      metaKeywords.setAttribute('content', 'solar rewards, monetize solar panels, solar data, home owners, solar system earnings, carbon credits, solar investment');
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'keywords';
+      meta.content = 'solar rewards, monetize solar panels, solar data, home owners, solar system earnings, carbon credits, solar investment';
+      document.head.appendChild(meta);
+    }
+
+    // Set Open Graph tags for social sharing
+    const updateOrCreateOGTag = (property: string, content: string) => {
+      let tag = document.querySelector(`meta[property="${property}"]`);
+      if (tag) {
+        tag.setAttribute('content', content);
+      } else {
+        tag = document.createElement('meta');
+        tag.setAttribute('property', property);
+        tag.setAttribute('content', content);
+        document.head.appendChild(tag);
+      }
+    };
+
+    updateOrCreateOGTag('og:title', 'For Home Owners - Monetize Your Solar System');
+    updateOrCreateOGTag('og:description', 'Turn your solar panels into a revenue stream. Earn cash, support charities, or access premium services.');
+    updateOrCreateOGTag('og:type', 'website');
+
+    // Cleanup function to restore default title when component unmounts
+    return () => {
+      document.title = 'Enlit Africa';
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
