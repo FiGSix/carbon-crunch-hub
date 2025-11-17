@@ -18,7 +18,7 @@ const SolarRewards = () => {
 
   useEffect(() => {
     // Set page title
-    document.title = "For Home Owners - Monetize Your Solar System | Enlit Africa";
+    document.title = "For Home Owners - Monetize Your Solar System | Crunch Carbon Hub";
     
     // Set meta description
     const metaDescription = document.querySelector('meta[name="description"]');
@@ -61,7 +61,7 @@ const SolarRewards = () => {
 
     // Cleanup function to restore default title when component unmounts
     return () => {
-      document.title = 'Enlit Africa';
+      document.title = 'Crunch Carbon Hub';
     };
   }, []);
 
