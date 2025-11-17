@@ -58,17 +58,16 @@ export function ViewProposalContent({
   onProposalUpdate
 }: ViewProposalContentProps) {
   
-  // Trigger proposal refresh when user becomes authenticated
+  // Log when user authenticates (auth listener in useProposalData handles refetch)
   useEffect(() => {
-    if (user && !showAuthForm && onProposalUpdate) {
+    if (user && !showAuthForm) {
       if (import.meta.env.DEV) {
-        console.log("User authenticated, refreshing proposal", {
+        console.log("User authenticated, auth listener will handle refetch", {
           userId: user.id
         });
       }
-      onProposalUpdate();
     }
-  }, [user?.id, showAuthForm, onProposalUpdate]);
+  }, [user?.id, showAuthForm]);
   
   if (loading) {
     return (
