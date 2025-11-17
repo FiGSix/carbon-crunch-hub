@@ -718,15 +718,24 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                   <SelectValue placeholder="Select brand" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ABB">ABB</SelectItem>
+                  <SelectItem value="Afore">Afore</SelectItem>
                   <SelectItem value="Alpha ESS">Alpha ESS</SelectItem>
+                  <SelectItem value="Ario">Ario</SelectItem>
                   <SelectItem value="Atess">Atess</SelectItem>
                   <SelectItem value="Deye">Deye</SelectItem>
                   <SelectItem value="Dyness">Dyness</SelectItem>
+                  <SelectItem value="Enphase">Enphase</SelectItem>
+                  <SelectItem value="FoxESS">FoxESS</SelectItem>
                   <SelectItem value="Fronius">Fronius</SelectItem>
+                  <SelectItem value="GivEnergy">GivEnergy</SelectItem>
                   <SelectItem value="GoodWe">GoodWe</SelectItem>
+                  <SelectItem value="Growatt">Growatt</SelectItem>
                   <SelectItem value="Huawei">Huawei</SelectItem>
                   <SelectItem value="Lux">Lux</SelectItem>
                   <SelectItem value="Megarevo">Megarevo</SelectItem>
+                  <SelectItem value="SigEnergy">SigEnergy</SelectItem>
+                  <SelectItem value="SMA">SMA</SelectItem>
                   <SelectItem value="Solis">Solis</SelectItem>
                   <SelectItem value="SolarEdge">SolarEdge</SelectItem>
                   <SelectItem value="Sungrow">Sungrow</SelectItem>
