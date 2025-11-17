@@ -37,7 +37,12 @@ const Login = () => {
       if (session.expires_at && new Date(session.expires_at * 1000) > new Date()) {
         hasRedirectedRef.current = true;
         lastRedirectAttemptRef.current = now;
-        const from = location.state?.from || '/dashboard';
+        
+        // Check for returnTo in URL query params first
+        const searchParams = new URLSearchParams(location.search);
+        const returnTo = searchParams.get('returnTo');
+        
+        const from = returnTo || location.state?.from || '/dashboard';
         
         // Avoid redirecting to login if that's where we came from
         if (from !== '/login') {
@@ -47,7 +52,7 @@ const Login = () => {
         }
       }
     }
-  }, [user, session, navigate, isInitialized, authLoading, location.state]);
+  }, [user, session, navigate, isInitialized, authLoading, location.state, location.search]);
 
   const handleLoginAttempt = () => {
     setLoginAttempts(prev => prev + 1);
