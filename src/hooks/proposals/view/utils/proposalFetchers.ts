@@ -101,9 +101,13 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
       });
       
       if (fetchError.code === 'PGRST116') {
-        throw new Error("This proposal could not be found. It may have been deleted or you may not have the correct proposal ID.");
+        const error = new Error("This proposal could not be found. It may have been deleted or you may not have the correct proposal ID.");
+        (error as any).code = 'PERMISSION_DENIED';
+        throw error;
       } else if (fetchError.code === '42501' || fetchError.message?.includes('permission')) {
-        throw new Error("You don't have permission to view this proposal. Please make sure you're signed in with the correct account.");
+        const error = new Error("You don't have permission to view this proposal. Please make sure you're signed in with the correct account.");
+        (error as any).code = 'PERMISSION_DENIED';
+        throw error;
       } else {
         throw new Error(`Error loading proposal: ${fetchError.message || "Please try again or contact support if the issue persists."}`);
       }

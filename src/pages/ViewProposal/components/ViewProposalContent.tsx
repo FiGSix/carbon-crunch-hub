@@ -4,6 +4,7 @@ import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleto
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalContent } from "@/components/proposals/view/ProposalContent";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
+import { ProposalAuthRequired } from "@/components/proposals/view/ProposalAuthRequired";
 import { ProposalData } from "@/types/proposals";
 
 interface ViewProposalContentProps {
@@ -75,6 +76,10 @@ export function ViewProposalContent({
         <ProposalSkeleton />
       </div>
     );
+  }
+  
+  if (error === "REQUIRES_AUTH") {
+    return <ProposalAuthRequired onRetry={handleRetry} />;
   }
   
   if (error) {
