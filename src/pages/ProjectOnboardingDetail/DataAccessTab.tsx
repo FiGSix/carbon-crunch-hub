@@ -335,17 +335,25 @@ useEffect(() => {
                 <SelectValue placeholder="Select provider" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ABB">ABB</SelectItem>
+                <SelectItem value="Afore">Afore</SelectItem>
                 <SelectItem value="Alpha ESS">Alpha ESS</SelectItem>
+                <SelectItem value="Ario">Ario</SelectItem>
                 <SelectItem value="Atess">Atess</SelectItem>
                 <SelectItem value="BlueLog">BlueLog</SelectItem>
                 <SelectItem value="Deye">Deye</SelectItem>
                 <SelectItem value="Dyness">Dyness</SelectItem>
+                <SelectItem value="Enphase">Enphase</SelectItem>
+                <SelectItem value="FoxESS">FoxESS</SelectItem>
                 <SelectItem value="Fronius">Fronius</SelectItem>
+                <SelectItem value="GivEnergy">GivEnergy</SelectItem>
                 <SelectItem value="GoodWe">GoodWe</SelectItem>
+                <SelectItem value="Growatt">Growatt</SelectItem>
                 <SelectItem value="Huawei">Huawei</SelectItem>
                 <SelectItem value="Lux">Lux</SelectItem>
                 <SelectItem value="Megarevo">Megarevo</SelectItem>
                 <SelectItem value="Meteo Control">Meteo Control</SelectItem>
+                <SelectItem value="SigEnergy">SigEnergy</SelectItem>
                 <SelectItem value="Sivula">Sivula</SelectItem>
                 <SelectItem value="SMA">SMA</SelectItem>
                 <SelectItem value="Solis">Solis</SelectItem>
