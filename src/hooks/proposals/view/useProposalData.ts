@@ -134,7 +134,7 @@ export function useProposalData(id?: string, token?: string | null) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [id, token, fetchProposal]);
+  }, [id, token]);
 
   return {
     proposal,

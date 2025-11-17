@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useViewProposalLogic } from "./hooks/useViewProposalLogic";
 import { useViewProposalAuth } from "./hooks/useViewProposalAuth";
@@ -38,11 +38,11 @@ const ViewProposalPage = () => {
   );
   
   // Wrap fetchProposal to provide current id and token
-  const handleProposalUpdate = () => {
+  const handleProposalUpdate = useCallback(() => {
     if (viewProposalLogic.id) {
       viewProposalLogic.fetchProposal(viewProposalLogic.id, viewProposalLogic.token);
     }
-  };
+  }, [viewProposalLogic.id, viewProposalLogic.token, viewProposalLogic.fetchProposal]);
   
   // Phase 5: Add effect to detect email verification source
   useEffect(() => {
