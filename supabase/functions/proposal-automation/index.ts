@@ -146,11 +146,7 @@ serve(async (req: Request) => {
             console.log(`👋 Sending graceful exit email for proposal ${proposal.id}`);
             
             await sendFollowUpEmail(
-              clientEmail,
-              clientName,
-              proposal.title,
-              proposal.invitation_token,
-              agentEmail,
+              proposal.id,
               'graceful_exit',
               emailTemplates
             );
@@ -191,11 +187,7 @@ serve(async (req: Request) => {
           console.log(`📧 Sending follow-up for clicked proposal ${proposal.id}`);
           
           await sendFollowUpEmail(
-            clientEmail,
-            clientName,
-            proposal.title,
-            proposal.invitation_token,
-            agentEmail,
+            proposal.id,
             'clicked_not_signed',
             emailTemplates
           );
@@ -227,11 +219,7 @@ serve(async (req: Request) => {
           console.log(`📧 Sending follow-up for opened proposal ${proposal.id}`);
           
           await sendFollowUpEmail(
-            clientEmail,
-            clientName,
-            proposal.title,
-            proposal.invitation_token,
-            agentEmail,
+            proposal.id,
             'opened_not_clicked',
             emailTemplates
           );
@@ -263,11 +251,7 @@ serve(async (req: Request) => {
           console.log(`📧 Sending reminder for delivered proposal ${proposal.id}`);
           
           await sendFollowUpEmail(
-            clientEmail,
-            clientName,
-            proposal.title,
-            proposal.invitation_token,
-            agentEmail,
+            proposal.id,
             'delivered_not_opened',
             emailTemplates
           );
@@ -299,11 +283,7 @@ serve(async (req: Request) => {
           console.log(`📧 Sending reminder for sent proposal ${proposal.id}`);
           
           await sendFollowUpEmail(
-            clientEmail,
-            clientName,
-            proposal.title,
-            proposal.invitation_token,
-            agentEmail,
+            proposal.id,
             'sent_not_delivered',
             emailTemplates
           );
@@ -366,15 +346,51 @@ serve(async (req: Request) => {
 });
 
 async function sendFollowUpEmail(
-  clientEmail: string,
-  clientName: string,
-  proposalTitle: string,
-  invitationToken: string,
-  agentEmail: string,
+  proposalId: string,
   followUpType: 'delivered_not_opened' | 'opened_not_clicked' | 'clicked_not_signed' | 'sent_not_delivered' | 'graceful_exit',
   emailTemplates: any
 ) {
-  const proposalUrl = `https://crunchcarbon.app/proposals/${invitationToken}?token=${invitationToken}`;
+  // Fetch full proposal data with client and agent details
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  
+  const { data: proposal, error: proposalError } = await supabase
+    .from('proposals')
+    .select(`
+      *,
+      agent:profiles!proposals_agent_id_fkey(first_name, last_name, email, phone),
+      client:clients!proposals_client_reference_id_fkey(first_name, last_name, email)
+    `)
+    .eq('id', proposalId)
+    .single();
+  
+  if (proposalError || !proposal) {
+    console.error(`Error fetching proposal ${proposalId}:`, proposalError);
+    throw new Error(`Failed to fetch proposal data: ${proposalError?.message}`);
+  }
+
+  // Extract client info (with fallbacks to content)
+  const clientInfo = proposal.content?.clientInfo || {};
+  const clientEmail = proposal.client?.email || clientInfo.email;
+  const clientFirstName = proposal.client?.first_name || clientInfo.firstName || clientInfo.first_name || '';
+  const clientLastName = proposal.client?.last_name || clientInfo.lastName || clientInfo.last_name || '';
+  const clientName = `${clientFirstName} ${clientLastName}`.trim() || clientInfo.name || 'Client';
+  
+  // Extract agent info
+  const agentFirstName = proposal.agent?.first_name || '';
+  const agentLastName = proposal.agent?.last_name || '';
+  const agentName = `${agentFirstName} ${agentLastName}`.trim() || 'Your Agent';
+  const agentEmail = proposal.agent?.email || 'support@crunchcarbon.com';
+  
+  // Calculate carbon credits and revenue
+  const systemSizeKwp = proposal.system_size_kwp || 0;
+  const annualEnergy = systemSizeKwp * 1200; // Default generation factor
+  const carbonCredits = (annualEnergy / 1000) * 0.5; // Default carbon factor
+  const clientSharePercent = proposal.client_share_percentage || 80;
+  const carbonPrice = 50; // Default price (could fetch dynamic pricing)
+  const clientShareRevenue = (carbonCredits * carbonPrice * clientSharePercent) / 100;
+  
+  // Build proposal URL
+  const proposalUrl = `https://crunchcarbon.app/proposals/${proposal.invitation_token}?token=${proposal.invitation_token}`;
 
   // Get template from config
   const template = emailTemplates[followUpType];
@@ -383,19 +399,40 @@ async function sendFollowUpEmail(
     throw new Error(`Template not found: ${followUpType}`);
   }
 
-  // Replace placeholders in template
-  let subject = template.subject
-    .replace(/\{\{clientName\}\}/g, clientName)
-    .replace(/\{\{proposalTitle\}\}/g, proposalTitle);
+  // Create data object with BOTH snake_case and camelCase for backward compatibility
+  const data = {
+    // Snake_case (primary format)
+    client_name: clientName,
+    proposal_title: proposal.title,
+    system_size: `${Math.round(systemSizeKwp)} kWp`,
+    annual_energy: `${Math.round(annualEnergy).toLocaleString()} kWh`,
+    carbon_credits: Math.round(carbonCredits),
+    client_share: `R ${Math.round(clientShareRevenue).toLocaleString()}`,
+    agent_name: agentName,
+    agent_email: agentEmail,
+    proposal_url: proposalUrl,
+    
+    // CamelCase (for backward compatibility)
+    clientName: clientName,
+    proposalTitle: proposal.title,
+    systemSize: `${Math.round(systemSizeKwp)} kWp`,
+    annualEnergy: `${Math.round(annualEnergy).toLocaleString()} kWh`,
+    carbonCredits: Math.round(carbonCredits),
+    clientShare: `R ${Math.round(clientShareRevenue).toLocaleString()}`,
+    agentName: agentName,
+    agentEmail: agentEmail,
+    proposalUrl: proposalUrl
+  };
 
-  let html = template.html
-    .replace(/\{\{clientName\}\}/g, clientName)
-    .replace(/\{\{proposalTitle\}\}/g, proposalTitle)
-    .replace(/\{\{proposalUrl\}\}/g, proposalUrl)
-    .replace(/\{\{agentEmail\}\}/g, agentEmail)
-    .replace(/\{\{systemSize\}\}/g, 'N/A')
-    .replace(/\{\{annualEnergy\}\}/g, 'N/A')
-    .replace(/\{\{agentName\}\}/g, 'Your Agent');
+  // Replace all placeholders in subject and html
+  let subject = template.subject;
+  let html = template.html;
+  
+  for (const [key, value] of Object.entries(data)) {
+    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    subject = subject.replace(regex, String(value));
+    html = html.replace(regex, String(value));
+  }
 
   const emailResponse = await resend.emails.send({
     from: 'Crunch Carbon <proposals@crunchcarbon.com>',
@@ -405,6 +442,6 @@ async function sendFollowUpEmail(
     html: html
   });
 
-  console.log(`✅ Follow-up email sent to ${clientEmail}:`, emailResponse);
+  console.log(`✅ Follow-up email sent to ${clientEmail} for proposal ${proposalId}:`, emailResponse);
   return emailResponse;
 }
