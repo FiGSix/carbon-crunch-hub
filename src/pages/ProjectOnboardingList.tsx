@@ -60,7 +60,19 @@ export default function ProjectOnboardingList() {
             client_reference_id,
             agent_id,
             signed_at,
-            content
+            content,
+            profiles:client_id (
+              first_name,
+              last_name,
+              email,
+              company_name
+            ),
+            clients:client_reference_id (
+              first_name,
+              last_name,
+              email,
+              company_name
+            )
           )
         `)
         .not('proposals.signed_at', 'is', null);
@@ -115,14 +127,23 @@ export default function ProjectOnboardingList() {
       // Transform data
       const transformedProjects: ProjectOnboardingListItem[] = (onboardingData || []).map((item: any) => {
         const proposal = item.proposals;
-        const clientInfo = proposal.content?.clientInfo || {};
+        
+        // Check clients table first (legacy projects), then profiles table, then fall back to JSON content
+        const clientFromTable = proposal.clients?.[0] || proposal.profiles?.[0];
+        const clientFromJson = proposal.content?.clientInfo || {};
+        
+        const clientName = clientFromTable 
+          ? `${clientFromTable.first_name || ''} ${clientFromTable.last_name || ''}`.trim() || 'Unknown Client'
+          : clientFromJson.name || 'Unknown Client';
+        
+        const siteAddress = clientFromJson.address || null;
         
         return {
           id: item.id,
           proposal_id: item.proposal_id,
           proposal_title: proposal.title || 'Untitled Project',
-          client_name: clientInfo.name || 'Unknown Client',
-          site_address: clientInfo.address || null,
+          client_name: clientName,
+          site_address: siteAddress,
           updated_at: item.updated_at,
           step_status: {
             cession_status: 'green' as const,
