@@ -47,7 +47,16 @@ export default function ProjectOnboardingDetail() {
             clients:client_reference_id (
               first_name,
               last_name,
-              email
+              email,
+              company_name,
+              phone
+            ),
+            profiles:client_id (
+              first_name,
+              last_name,
+              email,
+              company_name,
+              phone
             )
           )
         `)
@@ -126,7 +135,12 @@ export default function ProjectOnboardingDetail() {
                     {proposalData.title || 'Untitled Project'}
                   </h1>
                   <p className="text-muted-foreground mt-1">
-                    Client: {proposalData.content?.clientInfo?.name || 'Unknown'}
+                    Client: {(() => {
+                      const clientFromTable = proposalData.clients?.[0] || proposalData.profiles?.[0];
+                      return clientFromTable
+                        ? `${clientFromTable.first_name || ''} ${clientFromTable.last_name || ''}`.trim()
+                        : proposalData.content?.clientInfo?.name || 'Unknown';
+                    })()}
                   </p>
                 </div>
               </div>
