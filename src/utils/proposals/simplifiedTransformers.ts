@@ -49,9 +49,9 @@ export function transformToProposalListItems(
   const agentProfileMap = new Map(agentProfiles.map(profile => [profile.id, profile]));
 
   return proposalsData.map((proposal) => {
-    // Get profiles
-    const clientProfile = clientProfileMap.get(proposal.client_id) || 
-                         clientProfileMap.get(proposal.client_reference_id);
+    // Get profiles - check clients table first (client_reference_id), then profiles table (client_id)
+    const clientProfile = clientProfileMap.get(proposal.client_reference_id) || 
+                         clientProfileMap.get(proposal.client_id);
     const agentProfile = agentProfileMap.get(proposal.agent_id);
 
     // Extract basic info

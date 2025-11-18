@@ -26,20 +26,22 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
 
   // Extract unique client and agent IDs
   const clientIds = new Set<string>();
+  const clientReferenceIds = new Set<string>();
   const agentIds = new Set<string>();
 
   proposalsData.forEach(proposal => {
     if (proposal.client_id) clientIds.add(proposal.client_id);
-    if (proposal.client_reference_id) clientIds.add(proposal.client_reference_id);
+    if (proposal.client_reference_id) clientReferenceIds.add(proposal.client_reference_id);
     if (proposal.agent_id) agentIds.add(proposal.agent_id);
   });
 
   dataLogger.info("Extracted IDs", { 
-    clientIds: Array.from(clientIds), 
+    clientIds: Array.from(clientIds),
+    clientReferenceIds: Array.from(clientReferenceIds),
     agentIds: Array.from(agentIds) 
   });
 
-  // Fetch client profiles
+  // Fetch client profiles (authenticated users)
   let clientProfilesArray: ProfileRecord[] = [];
   if (clientIds.size > 0) {
     const { data: clientData, error: clientError } = await supabase
@@ -54,6 +56,25 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
       dataLogger.info("Fetched client profiles", { count: clientData.length });
     }
   }
+
+  // Fetch client contacts (non-authenticated clients from clients table)
+  let clientContactsArray: ProfileRecord[] = [];
+  if (clientReferenceIds.size > 0) {
+    const { data: contactData, error: contactError } = await supabase
+      .from('clients')
+      .select('id, first_name, last_name, email')
+      .in('id', Array.from(clientReferenceIds));
+
+    if (contactError) {
+      dataLogger.error("Error fetching client contacts", { error: contactError });
+    } else if (contactData) {
+      clientContactsArray = contactData;
+      dataLogger.info("Fetched client contacts", { count: contactData.length });
+    }
+  }
+
+  // Merge both arrays for unified lookup
+  const allClientProfiles = [...clientProfilesArray, ...clientContactsArray];
 
   // Fetch agent profiles
   let agentProfilesArray: ProfileRecord[] = [];
@@ -74,7 +95,7 @@ export async function fetchAndTransformProposalData(proposalsData: RawProposalDa
   // Transform proposals using the utility function - awaiting the async function and passing userRole
   const transformedProposals = await transformToProposalListItems(
     proposalsData,
-    clientProfilesArray,
+    allClientProfiles,
     agentProfilesArray,
     userRole
   );
