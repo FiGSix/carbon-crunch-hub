@@ -101,14 +101,26 @@ export class ClientFetcher {
         console.info('⚠️ RPC failed, using fallback query');
         
         try {
+          // Query the clients table (not profiles) to match RPC behavior
           let fallbackQueryBuilder = supabase
-            .from('profiles')
-            .select('id, first_name, last_name, email, company_name, created_at, agent_status')
+            .from('clients')
+            .select(`
+              id,
+              first_name,
+              last_name,
+              email,
+              company_name,
+              user_id,
+              created_at,
+              created_by
+            `)
+            .not('email', 'is', null)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
+          // For agents, filter by their created clients
           if (userRole !== 'admin') {
-            fallbackQueryBuilder = fallbackQueryBuilder.eq('id', userId);
+            fallbackQueryBuilder = fallbackQueryBuilder.eq('created_by', userId);
           }
 
           // Execute query with timeout
@@ -129,12 +141,12 @@ export class ClientFetcher {
             client_name: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || row.company_name || 'Unknown',
             client_email: row.email,
             company_name: row.company_name || '',
-            is_registered: true,
+            is_registered: row.user_id !== null,
             project_count: 0,
             total_mwp: 0,
             created_at: row.created_at,
-            agent_id: row.id,
-            is_active: row.agent_status === 'active'
+            agent_id: row.created_by || null,
+            is_active: true
           }));
           
           if (totalCount === 0) {
