@@ -230,75 +230,96 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
       });
 
       // Handle company creation for agents
-      if (formData.role === 'agent' && data?.user?.id && formData.companyName) {
+      if (formData.role === 'agent' && data?.user?.id) {
         try {
-          const emailDomain = extractCorporateDomain(formData.email);
-          
-          // Check if company already exists
-          let existingCompany = null;
-          
-          if (emailDomain) {
-            // Try to find by domain for corporate emails
-            const { data: domainCompany } = await findCompanyByDomain(emailDomain);
-            existingCompany = domainCompany;
-          } else {
-            // For personal emails, try to find by company name
-            const { data: nameCompany } = await findCompanyByName(formData.companyName);
-            existingCompany = nameCompany;
-          }
-          
-          if (existingCompany) {
-            // Company exists - create pending membership request
-            authLogger.info("Existing company found, creating pending membership", {
-              companyId: existingCompany.id,
+          // Priority 1: Use company_id from invitation (if exists)
+          if (invitationData?.company_id) {
+            authLogger.info("Linking agent to inviter's company", {
+              companyId: invitationData.company_id,
               userId: data.user.id
             });
             
-            await inviteMember(existingCompany.id, data.user.id, data.user.id);
-            
-            toast({
-              title: "Company Found",
-              description: "Your request to join the team has been sent to the team lead for approval.",
-            });
-          } else {
-            // Create new company and make user team lead
-            authLogger.info("Creating new company for agent", {
-              companyName: formData.companyName,
-              emailDomain,
-              userId: data.user.id
-            });
-            
-            const { data: companyData, error: companyError } = await createCompany(
-              formData.companyName,
-              emailDomain,
-              data.user.id
+            await inviteMember(
+              invitationData.company_id, 
+              data.user.id, 
+              invitationData.invited_by
             );
             
-            if (companyError) {
-              authLogger.error("CRITICAL: Failed to create company during registration", {
-                error: companyError,
-                errorMessage: companyError.message,
-                errorCode: companyError.code,
-                errorDetails: companyError.details,
-                errorHint: companyError.hint,
-                companyName: formData.companyName,
-                emailDomain,
-                userId: data.user.id,
-                isRLSError: companyError.message?.includes('row-level security') || companyError.code === '42501'
+            toast({
+              title: "Welcome to the Team!",
+              description: "You've been added to your company. A team lead will approve your access.",
+            });
+          } 
+          // Priority 2: Try to find existing company (current logic)
+          else if (formData.companyName) {
+            const emailDomain = extractCorporateDomain(formData.email);
+            
+            // Check if company already exists
+            let existingCompany = null;
+            
+            if (emailDomain) {
+              // Try to find by domain for corporate emails
+              const { data: domainCompany } = await findCompanyByDomain(emailDomain);
+              existingCompany = domainCompany;
+            } else {
+              // For personal emails, try to find by company name
+              const { data: nameCompany } = await findCompanyByName(formData.companyName);
+              existingCompany = nameCompany;
+            }
+            
+            if (existingCompany) {
+              // Company exists - create pending membership request
+              authLogger.info("Existing company found, creating pending membership", {
+                companyId: existingCompany.id,
+                userId: data.user.id
               });
               
-              // Show user-facing error for company creation failure
+              await inviteMember(existingCompany.id, data.user.id, data.user.id);
+              
               toast({
-                title: "Company Setup Warning",
-                description: "Your account was created but company setup failed. Please contact support.",
-                variant: "destructive",
+                title: "Company Found",
+                description: "Your request to join the team has been sent to the team lead for approval.",
               });
             } else {
-              authLogger.info("Company created successfully", {
+              // Create new company and make user team lead
+              authLogger.info("Creating new company for agent", {
                 companyName: formData.companyName,
-                companyId: companyData?.company?.id,
-                membershipId: companyData?.membership?.id
+                emailDomain,
+                userId: data.user.id
               });
+              
+              const { data: companyData, error: companyError } = await createCompany(
+                formData.companyName,
+                emailDomain,
+                data.user.id
+              );
+              
+              if (companyError) {
+                authLogger.error("CRITICAL: Failed to create company during registration", {
+                  error: companyError,
+                  errorMessage: companyError.message,
+                  errorCode: companyError.code,
+                  errorDetails: companyError.details,
+                  errorHint: companyError.hint,
+                  companyName: formData.companyName,
+                  emailDomain,
+                  userId: data.user.id,
+                  isRLSError: companyError.message?.includes('row-level security') || companyError.code === '42501'
+                });
+                
+                // Show user-facing error for company creation failure
+                toast({
+                  title: "Company Setup Warning",
+                  description: "Your account was created but company setup failed. Please contact support.",
+                  variant: "destructive",
+                });
+              } else {
+                authLogger.info("Company created successfully", {
+                  companyName: formData.companyName,
+                  companyId: companyData?.company?.id,
+                  membershipId: companyData?.membership?.id
+                });
+              }
             }
           }
         } catch (companyError) {

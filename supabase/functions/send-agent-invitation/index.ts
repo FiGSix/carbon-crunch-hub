@@ -66,6 +66,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get admin's company (if they belong to one)
+    const { data: adminCompany } = await supabase
+      .from('company_members')
+      .select('company_id, companies(company_name, email_domain)')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    console.log("Admin company:", adminCompany);
+
     const { email, firstName, lastName, companyName }: InvitationRequest = await req.json();
 
     console.log("Processing invitation for:", email);
@@ -143,7 +153,8 @@ const handler = async (req: Request): Promise<Response> => {
         email,
         first_name: firstName,
         last_name: lastName,
-        company_name: companyName,
+        company_name: companyName || adminCompany?.companies?.company_name,
+        company_id: adminCompany?.company_id || null,
         invitation_token: invitationToken,
         expires_at: expiresAt.toISOString(),
         invited_by: user.id,

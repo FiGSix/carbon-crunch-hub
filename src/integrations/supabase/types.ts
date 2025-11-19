@@ -125,6 +125,7 @@ export type Database = {
       agent_invitations: {
         Row: {
           accepted_at: string | null
+          company_id: string | null
           company_name: string | null
           created_at: string | null
           email: string
@@ -138,6 +139,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          company_id?: string | null
           company_name?: string | null
           created_at?: string | null
           email: string
@@ -151,6 +153,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          company_id?: string | null
           company_name?: string | null
           created_at?: string | null
           email?: string
@@ -162,7 +165,15 @@ export type Database = {
           last_name?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_access_audit: {
         Row: {
