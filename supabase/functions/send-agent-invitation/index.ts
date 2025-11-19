@@ -82,18 +82,35 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if invitation already exists
     const { data: existingInvitation, error: invitationCheckError } = await supabase
       .from("agent_invitations")
-      .select("id, status")
+      .select("id, status, expires_at")
       .eq("email", email)
       .single();
 
-    console.log("Existing invitation check:", { exists: !!existingInvitation, status: existingInvitation?.status });
+    console.log("Existing invitation check:", { exists: !!existingInvitation, status: existingInvitation?.status, expiresAt: existingInvitation?.expires_at });
 
     if (existingInvitation && existingInvitation.status === 'pending') {
-      console.log("Duplicate invitation attempt:", email);
-      return new Response(
-        JSON.stringify({ error: "An invitation has already been sent to this email" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Check if the invitation is still valid (not expired)
+      const isExpired = new Date(existingInvitation.expires_at) < new Date();
+      
+      if (!isExpired) {
+        // Only block if invitation is still valid
+        console.log("Duplicate invitation attempt (still valid):", email);
+        return new Response(
+          JSON.stringify({ error: "An invitation has already been sent to this email. Please check your inbox or wait for it to expire." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        // Invitation expired - delete it so we can create a new one
+        console.log("Expired invitation found, deleting:", email);
+        const { error: deleteError } = await supabase
+          .from("agent_invitations")
+          .delete()
+          .eq("id", existingInvitation.id);
+        
+        if (deleteError) {
+          console.error("Failed to delete expired invitation:", deleteError);
+        }
+      }
     }
 
     // Check if user already exists with this email
