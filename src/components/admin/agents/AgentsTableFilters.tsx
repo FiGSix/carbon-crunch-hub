@@ -24,10 +24,11 @@ export function AgentsTableFilters({
 }: AgentsTableFiltersProps) {
   const statusOptions = [
     { value: 'all', label: 'All Statuses', count: null },
+    { value: 'invited', label: 'Invited', count: null },
+    { value: 'pending_approval', label: 'Pending Approval', count: null },
     { value: 'active', label: 'Active', count: null },
     { value: 'inactive', label: 'Inactive', count: null },
-    { value: 'suspended', label: 'Suspended', count: null },
-    { value: 'pending_approval', label: 'Pending Approval', count: null }
+    { value: 'suspended', label: 'Suspended', count: null }
   ];
 
   return (
