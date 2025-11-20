@@ -15,7 +15,7 @@ import { AgentStatusDropdown } from './AgentStatusDropdown';
 import { CommissionOverrideDialog } from './CommissionOverrideDialog';
 import { AgentDetailsDialog } from './AgentDetailsDialog';
 import { AgentData } from './AgentsManagementTable';
-import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle, Info } from 'lucide-react';
+import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle, Info, Mail, X, Copy } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -42,7 +42,10 @@ interface AgentsTableContentProps {
   onSelectAllAgents: (isSelected: boolean) => void;
   onUpdateStatus: (agentId: string, status: string) => void;
   onUpdateCommission: (agentId: string, commission: number | null) => void;
+  onResendInvitation: (invitationId: string) => void;
+  onCancelInvitation: (invitationId: string) => void;
   isUpdating: boolean;
+  isInvitationActionPending: boolean;
 }
 
 export function AgentsTableContent({
@@ -54,13 +57,18 @@ export function AgentsTableContent({
   onSelectAllAgents,
   onUpdateStatus,
   onUpdateCommission,
-  isUpdating
+  onResendInvitation,
+  onCancelInvitation,
+  isUpdating,
+  isInvitationActionPending
 }: AgentsTableContentProps) {
   const [selectedAgent, setSelectedAgent] = useState<AgentData | null>(null);
   const [showCommissionDialog, setShowCommissionDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, expiresAt?: string) => {
+    const isExpired = expiresAt && new Date(expiresAt) < new Date();
+    
     const variants = {
       active: { variant: 'default' as const, label: 'Active', className: '' },
       inactive: { variant: 'secondary' as const, label: 'Inactive', className: '' },
@@ -69,6 +77,11 @@ export function AgentsTableContent({
         variant: 'outline' as const, 
         label: 'Pending Approval',
         className: 'border-yellow-500 text-yellow-600 animate-pulse'
+      },
+      invited: {
+        variant: 'outline' as const,
+        label: isExpired ? 'Expired' : 'Invited',
+        className: isExpired ? 'border-red-500 text-red-600' : 'border-amber-500 text-amber-600'
       }
     };
     
@@ -166,68 +179,90 @@ export function AgentsTableContent({
                 
                 <TableCell>
                   <div className="space-y-2">
-                    {getStatusBadge(agent.agent_status)}
-                    <div className="text-xs text-muted-foreground">
-                      {agent.access_level} access
-                    </div>
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm">
-                      <TrendingUp className="h-3 w-3" />
-                      {agent.total_proposals} total
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {agent.active_proposals} active, {agent.signed_proposals} signed
-                    </div>
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="space-y-1">
-                    {agent.commission_override ? (
-                      <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="text-xs font-medium">
-                          {agent.commission_override}% override
-                        </Badge>
+                    {getStatusBadge(agent.agent_status, agent.invitation_expires_at)}
+                    {agent.is_invitation ? (
+                      <div className="text-xs text-muted-foreground">
+                        Invited {agent.invited_by_email && `by ${agent.invited_by_email}`}
                       </div>
                     ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-help">
-                              <span>Tier-based rate</span>
-                              <Info className="h-3 w-3" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs font-medium mb-1">Dynamic Commission Tiers:</p>
-                            <p className="text-xs">{getDefaultCommissionDescription()}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="text-xs text-muted-foreground">
+                        {agent.access_level} access
+                      </div>
                     )}
-                    <div className="text-xs font-medium">
-                      {formatCurrency(agent.total_commission)} earned
-                    </div>
                   </div>
                 </TableCell>
                 
                 <TableCell>
-                  <div className="text-sm">
-                    {agent.last_active_at ? (
+                  {agent.is_invitation ? (
+                    <div className="text-sm text-muted-foreground">N/A</div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <TrendingUp className="h-3 w-3" />
+                        {agent.total_proposals} total
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {agent.active_proposals} active, {agent.signed_proposals} signed
+                      </div>
+                    </div>
+                  )}
+                </TableCell>
+                
+                <TableCell>
+                  {agent.is_invitation ? (
+                    <div className="text-sm text-muted-foreground">N/A</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {agent.commission_override ? (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs font-medium">
+                            {agent.commission_override}% override
+                          </Badge>
+                        </div>
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-help">
+                                <span>Tier-based rate</span>
+                                <Info className="h-3 w-3" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-xs font-medium mb-1">Dynamic Commission Tiers:</p>
+                              <p className="text-xs">{getDefaultCommissionDescription()}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <div className="text-xs font-medium">
+                        {formatCurrency(agent.total_commission)} earned
+                      </div>
+                    </div>
+                  )}
+                </TableCell>
+                
+                <TableCell>
+                  {agent.is_invitation && agent.invitation_expires_at ? (
+                    <div className="text-sm">
+                      <div className="text-xs text-muted-foreground mb-1">Expires:</div>
+                      <div>{format(new Date(agent.invitation_expires_at), 'MMM d, yyyy')}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(agent.invitation_expires_at), 'h:mm a')}
+                      </div>
+                    </div>
+                  ) : agent.last_active_at ? (
+                    <div className="text-sm">
                       <div className="space-y-1">
                         <div>{format(new Date(agent.last_active_at), 'MMM d, yyyy')}</div>
                         <div className="text-xs text-muted-foreground">
                           {format(new Date(agent.last_active_at), 'h:mm a')}
                         </div>
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground">Never</span>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Never</span>
+                  )}
                 </TableCell>
                 
                 <TableCell>
@@ -240,44 +275,78 @@ export function AgentsTableContent({
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       
-                      {/* Show Approve option FIRST if status is pending_approval */}
-                      {agent.agent_status === 'pending_approval' && (
+                      {/* Invitation-specific actions */}
+                      {agent.is_invitation && agent.invitation_id ? (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(agent.agent_id, 'active')}
-                            className="text-green-600 font-medium"
+                            onClick={() => onResendInvitation(agent.invitation_id!)}
+                            disabled={isInvitationActionPending}
                           >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Approve Agent
+                            <Mail className="h-4 w-4 mr-2" />
+                            Resend Invitation
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              const inviteUrl = `${window.location.origin}/register?token=${agent.invitation_id}`;
+                              navigator.clipboard.writeText(inviteUrl);
+                              alert('Invitation link copied to clipboard!');
+                            }}
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Invitation Link
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => onCancelInvitation(agent.invitation_id!)}
+                            disabled={isInvitationActionPending}
+                            className="text-destructive"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel Invitation
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <>
+                          {/* Show Approve option FIRST if status is pending_approval */}
+                          {agent.agent_status === 'pending_approval' && (
+                            <>
+                              <DropdownMenuItem 
+                                onClick={() => onUpdateStatus(agent.agent_id, 'active')}
+                                className="text-green-600 font-medium"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Approve Agent
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
+                          
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedAgent(agent);
+                              setShowDetailsDialog(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedAgent(agent);
+                              setShowCommissionDialog(true);
+                            }}
+                          >
+                            <Award className="h-4 w-4 mr-2" />
+                            Set Commission
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <AgentStatusDropdown
+                            currentStatus={agent.agent_status}
+                            onStatusChange={(status) => onUpdateStatus(agent.agent_id, status)}
+                            disabled={isUpdating}
+                          />
                         </>
                       )}
-                      
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setSelectedAgent(agent);
-                          setShowDetailsDialog(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setSelectedAgent(agent);
-                          setShowCommissionDialog(true);
-                        }}
-                      >
-                        <Award className="h-4 w-4 mr-2" />
-                        Set Commission
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <AgentStatusDropdown
-                        currentStatus={agent.agent_status}
-                        onStatusChange={(status) => onUpdateStatus(agent.agent_id, status)}
-                        disabled={isUpdating}
-                      />
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

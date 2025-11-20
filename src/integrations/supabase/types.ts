@@ -1869,6 +1869,10 @@ export type Database = {
           agent_status: string
           commission_override: number
           company_name: string
+          invitation_expires_at: string
+          invitation_id: string
+          invited_by_email: string
+          is_invitation: boolean
           join_date: string
           last_active_at: string
           onboarding_completed: boolean

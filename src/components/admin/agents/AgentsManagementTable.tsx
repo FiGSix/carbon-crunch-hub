@@ -28,6 +28,11 @@ export interface AgentData {
   join_date: string | null;
   onboarding_completed: boolean;
   portfolio_size_kwp: number;
+  // Invitation fields
+  is_invitation?: boolean;
+  invitation_id?: string;
+  invitation_expires_at?: string;
+  invited_by_email?: string;
 }
 
 export function AgentsManagementTable() {
@@ -109,6 +114,59 @@ export function AgentsManagementTable() {
 
   // Get total count for pagination (use data length for filtered results)
   const totalCount = data ? data.length : 0;
+
+  // Resend invitation mutation
+  const resendInvitationMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      const invitation = data?.find(a => a.invitation_id === invitationId);
+      if (!invitation) throw new Error('Invitation not found');
+      
+      const { error } = await supabase.functions.invoke('send-agent-invitation', {
+        body: {
+          email: invitation.agent_email,
+          firstName: invitation.agent_name.split(' ')[0],
+          lastName: invitation.agent_name.split(' ').slice(1).join(' '),
+          companyName: invitation.company_name,
+        }
+      });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation resent successfully" });
+      invalidateAgentManagement();
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to resend invitation", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  // Cancel invitation mutation
+  const cancelInvitationMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { error } = await supabase
+        .from('agent_invitations')
+        .delete()
+        .eq('id', invitationId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation cancelled successfully" });
+      invalidateAgentManagement();
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to cancel invitation", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
 
   const updateAgentStatusMutation = useMutation({
     mutationFn: async ({ agentId, status }: { agentId: string; status: string }) => {
@@ -306,7 +364,14 @@ export function AgentsManagementTable() {
         onUpdateCommission={(agentId: string, commission: number | null) =>
           updateCommissionMutation.mutate({ agentId, commission })
         }
+        onResendInvitation={(invitationId: string) => 
+          resendInvitationMutation.mutate(invitationId)
+        }
+        onCancelInvitation={(invitationId: string) => 
+          cancelInvitationMutation.mutate(invitationId)
+        }
         isUpdating={updateAgentStatusMutation.isPending || updateCommissionMutation.isPending}
+        isInvitationActionPending={resendInvitationMutation.isPending || cancelInvitationMutation.isPending}
       />
 
       {totalCount && totalCount > 0 && (
