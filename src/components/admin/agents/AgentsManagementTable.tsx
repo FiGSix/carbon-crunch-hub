@@ -128,6 +128,7 @@ export function AgentsManagementTable() {
           firstName: invitation.agent_name.split(' ')[0],
           lastName: invitation.agent_name.split(' ').slice(1).join(' '),
           companyName: invitation.company_name,
+          resend: true,
         }
       });
       
