@@ -222,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
       : "A team member";
 
     // Create registration link
-    const registrationUrl = `${Deno.env.get("APP_URL") || "https://uyjryuopuqgmsvayiccl.supabase.co"}/register?token=${invitationToken}`;
+    const registrationUrl = `${Deno.env.get("APP_URL") || "https://crunchcarbon.com"}/register?token=${invitationToken}`;
 
     // Send email invitation
     const emailResponse = await resend.emails.send({
