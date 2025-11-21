@@ -1871,6 +1871,7 @@ export type Database = {
           company_name: string
           invitation_expires_at: string
           invitation_id: string
+          invitation_token: string
           invited_by_email: string
           is_invitation: boolean
           join_date: string

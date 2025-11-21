@@ -287,7 +287,7 @@ export function AgentsTableContent({
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => {
-                              const inviteUrl = `${window.location.origin}/register?token=${agent.invitation_id}`;
+                              const inviteUrl = `${window.location.origin}/register?role=agent&token=${agent.invitation_token}`;
                               navigator.clipboard.writeText(inviteUrl);
                               alert('Invitation link copied to clipboard!');
                             }}
