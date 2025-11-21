@@ -26,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const resend = new Resend(resendApiKey);
+    const resendClient = new Resend(resendApiKey);
 
     // Verify admin authentication
     const authHeader = req.headers.get("Authorization");
@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Resending invitation email to:", email);
 
       // Send invitation email
-      const emailResponse = await resend.emails.send({
+      const emailResponse = await resendClient.emails.send({
         from: "CrunchCarbon <noreply@crunchcarbon.com>",
         to: [email],
         subject: "You're Invited to Join CrunchCarbon as an Agent",
@@ -319,7 +319,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending invitation email to:", email);
 
     // Send invitation email
-    const emailResponse = await resend.emails.send({
+    const emailResponse = await resendClient.emails.send({
       from: "CrunchCarbon <noreply@crunchcarbon.com>",
       to: [email],
       subject: "You're Invited to Join CrunchCarbon as an Agent",
