@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
     
     // Get site URL from environment variable, with fallback
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 
     // Use the VERIFIED token from the database to construct invitation link
     // Direct clients to main proposal view page
