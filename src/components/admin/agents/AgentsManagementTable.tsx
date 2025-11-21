@@ -31,6 +31,7 @@ export interface AgentData {
   // Invitation fields
   is_invitation?: boolean;
   invitation_id?: string;
+  invitation_token?: string;
   invitation_expires_at?: string;
   invited_by_email?: string;
 }
