@@ -15,6 +15,7 @@ interface RevenueDistributionSectionProps {
   proposalData?: {
     agent_commission_percentage?: number;
     agent_portfolio_kwp?: number;
+    client_share_percentage?: number;
   } | null;
   isClient?: boolean;
   token?: string | null;
@@ -68,7 +69,9 @@ export function RevenueDistributionSection({
 
   // Use client portfolio size for client share calculations
   const clientPortfolioSize = clientPortfolioData?.totalKWp || parseFloat(systemSize) || 0;
-  const clientSharePercentage = getClientSharePercentage(clientPortfolioSize);
+  // Use stored client share percentage if available, otherwise calculate dynamically
+  const clientSharePercentage = proposalData?.client_share_percentage 
+    ?? getClientSharePercentage(clientPortfolioSize);
 
   // Use stored agent commission percentage from proposal data if available
   // This ensures we show the commission rate that was locked at creation time

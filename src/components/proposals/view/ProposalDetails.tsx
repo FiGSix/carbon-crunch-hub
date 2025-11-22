@@ -53,7 +53,8 @@ export function ProposalDetails({
   // Extract agent commission data from proposal
   const proposalData = {
     agent_commission_percentage: proposal.agent_commission_percentage,
-    agent_portfolio_kwp: proposal.agent_portfolio_kwp
+    agent_portfolio_kwp: proposal.agent_portfolio_kwp,
+    client_share_percentage: proposal.client_share_percentage
   };
   
   return (
