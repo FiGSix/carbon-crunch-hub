@@ -75,7 +75,7 @@ export function RevenueDistributionSection({
 
   // Use stored agent commission percentage from proposal data if available
   // This ensures we show the commission rate that was locked at creation time
-  const agentCommissionPercentage = proposalData?.agent_commission_percentage || 4; // fallback to default
+  const agentCommissionPercentage = proposalData?.agent_commission_percentage ?? 4; // fallback to default
   const agentPortfolioSize = proposalData?.agent_portfolio_kwp || 0;
   
   const crunchCarbonSharePercentage = 100 - clientSharePercentage - agentCommissionPercentage;
