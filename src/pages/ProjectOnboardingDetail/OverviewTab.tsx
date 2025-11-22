@@ -323,21 +323,6 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
           </Button>
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <Button variant="outline" size="sm">
-            Download Summary PDF
-          </Button>
-          <Button variant="outline" size="sm">
-            Export to CSV
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }
