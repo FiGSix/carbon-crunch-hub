@@ -6,7 +6,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 export default function MyClients2() {
-  const { clients, isLoading, error, refresh } = useClients({ paginated: false });
+  const { 
+    clients, 
+    isLoading, 
+    isLoadingMore,
+    hasMore,
+    error, 
+    refresh,
+    loadMore,
+    totalCount
+  } = useClients({ paginated: true, pageSize: 50 });
 
   return (
     <DashboardLayout>
@@ -30,7 +39,14 @@ export default function MyClients2() {
         {isLoading ? (
           <PageLoading minimal />
         ) : (
-          <SimpleClientsTable2 clients={clients} onRefresh={refresh} />
+          <SimpleClientsTable2 
+            clients={clients} 
+            onRefresh={refresh}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            totalCount={totalCount}
+            onLoadMore={loadMore}
+          />
         )}
       </div>
     </DashboardLayout>
