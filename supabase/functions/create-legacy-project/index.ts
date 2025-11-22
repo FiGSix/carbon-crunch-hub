@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
 
     // Validate agent exists (optional)
     let agentId = user.id; // Default to admin user if no agent specified
+    let agentCommissionOverride: number | null = null;
     
     if (body.agent_email) {
       const { data: agents, error: agentError } = await supabase
@@ -81,6 +82,7 @@ Deno.serve(async (req) => {
       }
       
       agentId = agents[0].id;
+      agentCommissionOverride = agents[0].commission_override;
     }
 
     // Find or create client
@@ -123,7 +125,8 @@ Deno.serve(async (req) => {
         annual_energy: annualEnergyKwh,
         carbon_credits: carbonCredits,
         client_share_percentage: body.client_share_percentage || 75,
-        agent_commission_percentage: body.agent_commission_percentage || 4,
+        agent_commission_percentage: body.agent_commission_percentage ?? 
+          (agentCommissionOverride !== null ? agentCommissionOverride : 4),
         content: {
           clientInfo: {
             firstName: body.client_first_name,

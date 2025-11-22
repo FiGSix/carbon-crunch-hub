@@ -162,10 +162,19 @@ serve(async (req) => {
 
         // Calculate agent commission based on portfolio tiers
         let agentCommissionPercentage: number;
-        if (totalPortfolioKwp < 15000) {
-          agentCommissionPercentage = 5; // Below 15 MWp: 5% commission
+        
+        // Check if agent has commission override
+        if (agent.commission_override !== null && agent.commission_override !== undefined) {
+          agentCommissionPercentage = agent.commission_override;
+          console.log(`✓ Row ${rowNum}: Using commission override: ${agentCommissionPercentage}%`);
         } else {
-          agentCommissionPercentage = 4; // 15 MWp and above: 4% commission
+          // Fall back to tier-based calculation
+          if (totalPortfolioKwp < 15000) {
+            agentCommissionPercentage = 5; // Below 15 MWp: 5% commission
+          } else {
+            agentCommissionPercentage = 4; // 15 MWp and above: 4% commission
+          }
+          console.log(`✓ Row ${rowNum}: Using tier-based commission: ${agentCommissionPercentage}%`);
         }
 
         console.log(`Calculated: ${clientSharePercentage}% client share, ${agentCommissionPercentage}% agent commission (tier: ${(totalPortfolioKwp / 1000).toFixed(2)} MWp)`);
