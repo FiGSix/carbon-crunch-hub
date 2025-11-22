@@ -126,7 +126,7 @@ export function DashboardLayout({
           
           <motion.main 
             className={cn(
-              "flex-1 bg-gray-50 overflow-x-hidden",
+              "flex-1 bg-gray-50 overflow-visible",
               isMobile ? "p-3" : "p-4 md:p-6 lg:p-8"
             )}
             initial={{ opacity: 0 }}
