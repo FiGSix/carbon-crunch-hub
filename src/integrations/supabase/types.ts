@@ -1773,6 +1773,16 @@ export type Database = {
         Returns: string
       }
       generate_secure_token: { Args: never; Returns: string }
+      get_agent_by_email: {
+        Args: { email_param: string }
+        Returns: {
+          agent_status: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
       get_agent_clients: {
         Args: { agent_id_param?: string }
         Returns: {
