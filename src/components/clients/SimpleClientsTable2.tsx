@@ -16,9 +16,20 @@ import { useAuth } from '@/contexts/auth';
 interface SimpleClientsTable2Props {
   clients: ClientData[];
   onRefresh: () => void;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
+  totalCount?: number;
+  onLoadMore?: () => void;
 }
 
-export function SimpleClientsTable2({ clients, onRefresh }: SimpleClientsTable2Props) {
+export function SimpleClientsTable2({ 
+  clients, 
+  onRefresh,
+  isLoadingMore = false,
+  hasMore = false,
+  totalCount = 0,
+  onLoadMore
+}: SimpleClientsTable2Props) {
   const { userRole } = useAuth();
   const isAdmin = userRole === 'admin';
   const [editingClient, setEditingClient] = useState<ClientData | null>(null);
@@ -124,6 +135,25 @@ export function SimpleClientsTable2({ clients, onRefresh }: SimpleClientsTable2P
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Info & Load More */}
+        {clients.length > 0 && (
+          <div className="border-t p-4 flex items-center justify-between bg-muted/20">
+            <div className="text-sm text-muted-foreground">
+              Showing {clients.length} {totalCount > 0 ? `of ${totalCount}` : ''} client{clients.length !== 1 ? 's' : ''}
+            </div>
+            {hasMore && onLoadMore && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLoadMore}
+                disabled={isLoadingMore}
+              >
+                {isLoadingMore ? 'Loading...' : 'Load More'}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit Client Dialog */}
