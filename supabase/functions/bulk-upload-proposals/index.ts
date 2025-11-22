@@ -81,11 +81,16 @@ Deno.serve(async (req) => {
         // Find or create client
         let clientId: string;
         
-        const { data: existingClient } = await supabase
+        const { data: existingClient, error: clientLookupError } = await supabase
           .from('clients')
           .select('id')
           .eq('email', proposal.client_email)
           .single();
+
+        // If error exists and it's NOT "no rows found", throw it
+        if (clientLookupError && clientLookupError.code !== 'PGRST116') {
+          throw new Error(`Failed to lookup client: ${clientLookupError.message}`);
+        }
 
         if (existingClient) {
           clientId = existingClient.id;
