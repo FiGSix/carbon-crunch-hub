@@ -1777,6 +1777,7 @@ export type Database = {
         Args: { email_param: string }
         Returns: {
           agent_status: string
+          commission_override: number
           email: string
           first_name: string
           id: string
