@@ -117,21 +117,30 @@ Deno.serve(async (req) => {
           ? proposal.system_size * 1000 
           : proposal.system_size;
 
-        // Get agent's portfolio for pricing calculations
+        // Get CLIENT's portfolio for pricing calculations (correct approach)
+        const { data: clientProposals } = await supabase
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('client_reference_id', clientId)
+          .is('deleted_at', null);
+
+        const clientPortfolioKwp = (clientProposals || []).reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
+
+        // Get AGENT's portfolio separately (for agent_portfolio_kwp field)
         const { data: agentProposals } = await supabase
           .from('proposals')
           .select('system_size_kwp')
           .eq('agent_id', user.id)
           .is('deleted_at', null);
 
-        const portfolioKwp = (agentProposals || []).reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
+        const agentPortfolioKwp = (agentProposals || []).reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
 
-        // Calculate client share percentage based on portfolio using correct tiers
+        // Calculate client share percentage based on CLIENT's portfolio using correct tiers
         let clientSharePercentage = 60.20; // Default: 0-5MWp
-        if (portfolioKwp >= 30000) clientSharePercentage = 70;      // 30+MWp
-        else if (portfolioKwp >= 20000) clientSharePercentage = 68.25; // 20-30MWp
-        else if (portfolioKwp >= 10000) clientSharePercentage = 66.5;  // 10-20MWp
-        else if (portfolioKwp >= 5000) clientSharePercentage = 63;     // 5-10MWp
+        if (clientPortfolioKwp >= 30000) clientSharePercentage = 70;      // 30+MWp
+        else if (clientPortfolioKwp >= 20000) clientSharePercentage = 68.25; // 20-30MWp
+        else if (clientPortfolioKwp >= 10000) clientSharePercentage = 66.5;  // 10-20MWp
+        else if (clientPortfolioKwp >= 5000) clientSharePercentage = 63;     // 5-10MWp
 
         // Apply override if provided
         if (proposal.client_share_override !== undefined) {
@@ -163,7 +172,8 @@ Deno.serve(async (req) => {
             carbon_credits: carbonCreditsPerYear,
             client_share_percentage: clientSharePercentage,
             agent_commission_percentage: agentCommissionPercentage,
-            agent_portfolio_kwp: portfolioKwp,
+            agent_portfolio_kwp: agentPortfolioKwp,
+            client_portfolio_kwp: clientPortfolioKwp,
             eligibility_criteria: {
               inSouthAfrica: proposal.in_south_africa,
               notRegistered: proposal.not_registered,
