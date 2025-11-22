@@ -11,7 +11,7 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
     throw new Error('User not authenticated');
   }
 
-  // Build query similar to proposals
+  // Build query to fetch proposals and join with clients for portfolio override data
   let query = supabase
     .from('proposals')
     .select(`
@@ -20,7 +20,12 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
       client_id,
       client_reference_id,
       agent_id,
-      annual_energy
+      annual_energy,
+      clients:client_reference_id (
+        portfolio_client_share_override,
+        portfolio_override_set_at,
+        portfolio_override_set_by
+      )
     `);
 
   // Apply role-based filtering
@@ -114,6 +119,11 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
     const existingClient = clientMap.get(clientId);
     const annualEnergy = proposal.annual_energy || 0;
 
+    // Extract portfolio override data from joined clients table
+    const portfolioOverride = proposal.clients?.portfolio_client_share_override || null;
+    const portfolioOverrideSetAt = proposal.clients?.portfolio_override_set_at || null;
+    const portfolioOverrideSetBy = proposal.clients?.portfolio_override_set_by || null;
+
     if (existingClient) {
       existingClient.project_count += 1;
       existingClient.total_mwp += annualEnergy / 1000; // Convert kW to MW
@@ -125,7 +135,10 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
         company_name: companyName,
         total_mwp: annualEnergy / 1000, // Convert kW to MW
         project_count: 1,
-        is_active: false // Default for legacy processor
+        is_active: false, // Default for legacy processor
+        portfolio_client_share_override: portfolioOverride,
+        portfolio_override_set_at: portfolioOverrideSetAt,
+        portfolio_override_set_by: portfolioOverrideSetBy,
       });
     }
   });
