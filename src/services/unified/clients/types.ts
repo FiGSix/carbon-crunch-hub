@@ -14,6 +14,9 @@ export interface UnifiedClient {
   agentCompanyName?: string;
   agentId?: string;
   isActive: boolean;
+  clientType?: 'registered_user' | 'contact_prospect' | 'contact_active' | 'team_member';
+  parentCompanyId?: string;
+  isTeamMember: boolean;
 }
 
 export interface ClientSearchResult {
@@ -40,4 +43,7 @@ export interface CreateClientData {
   registrationNumber?: string;
   notes?: string;
   createdBy: string;
+  isActive?: boolean;
+  parentCompanyId?: string;
+  isTeamMember?: boolean;
 }

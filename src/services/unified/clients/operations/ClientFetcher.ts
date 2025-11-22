@@ -146,7 +146,10 @@ export class ClientFetcher {
             total_mwp: 0,
             created_at: row.created_at,
             agent_id: row.created_by || null,
-            is_active: true
+            is_active: (row as any).is_active ?? true,
+            client_type: (row as any).client_type,
+            parent_company_id: (row as any).parent_company_id,
+            is_team_member: (row as any).is_team_member ?? false
           }));
           
           if (totalCount === 0) {
@@ -185,7 +188,10 @@ export class ClientFetcher {
         createdAt: client.created_at || new Date().toISOString(),
         agentCompanyName: (client as any).agent_company_name,
         agentId: (client as any).agent_id,
-        isActive: (client as any).is_active || false
+        isActive: (client as any).is_active ?? true,
+        clientType: (client as any).client_type,
+        parentCompanyId: (client as any).parent_company_id,
+        isTeamMember: (client as any).is_team_member ?? false
       }));
 
       const hasMore = totalCount > 0 ? offset + limit < totalCount : clients.length >= limit;

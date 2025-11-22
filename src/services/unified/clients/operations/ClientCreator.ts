@@ -16,8 +16,8 @@ export class ClientCreator {
    */
   static async createClient(clientData: CreateClientData): Promise<{ success: boolean; client?: ClientRow; error?: string }> {
     try {
-      // Map CreateClientData to ClientInsert
-      const insertData: ClientInsert = {
+      // Map CreateClientData to ClientInsert with type assertion for new fields
+      const insertData = {
         first_name: clientData.firstName,
         last_name: clientData.lastName,
         email: clientData.email,
@@ -25,8 +25,11 @@ export class ClientCreator {
         company_name: clientData.companyName,
         registration_number: clientData.registrationNumber,
         notes: clientData.notes,
-        created_by: clientData.createdBy
-      };
+        created_by: clientData.createdBy,
+        is_active: clientData.isActive ?? false,
+        parent_company_id: clientData.parentCompanyId,
+        is_team_member: clientData.isTeamMember ?? false
+      } as ClientInsert;
 
       const { data, error } = await supabase
         .from('clients')

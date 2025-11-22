@@ -9,6 +9,8 @@ export interface ClientData {
   agent_company_name?: string;
   agent_id?: string;
   is_active: boolean;
+  client_type?: 'registered_user' | 'contact_prospect' | 'contact_active' | 'team_member';
+  is_team_member?: boolean;
 }
 
 export interface UseMyClientsResult {
