@@ -20,6 +20,7 @@ export function BulkLegacyProjectUpload({ open, onOpenChange, onSuccess }: BulkL
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<LegacyProjectRow[]>([]);
+  const [totalRows, setTotalRows] = useState<number>(0);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [uploadResult, setUploadResult] = useState<LegacyProjectUploadResult | null>(null);
 
@@ -63,6 +64,7 @@ export function BulkLegacyProjectUpload({ open, onOpenChange, onSuccess }: BulkL
       const errors = validateLegacyProjectRows(rows);
       
       setValidationErrors(errors);
+      setTotalRows(rows.length);
       setPreview(rows.slice(0, 5));
       
       toast({
@@ -76,6 +78,7 @@ export function BulkLegacyProjectUpload({ open, onOpenChange, onSuccess }: BulkL
         variant: "destructive",
       });
       setFile(null);
+      setTotalRows(0);
     }
   };
 
@@ -267,7 +270,7 @@ export function BulkLegacyProjectUpload({ open, onOpenChange, onSuccess }: BulkL
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload {preview.length} Projects
+                  Upload {totalRows} Projects
                 </>
               )}
             </Button>
