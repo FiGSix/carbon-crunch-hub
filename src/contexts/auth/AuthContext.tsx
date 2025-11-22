@@ -1,5 +1,5 @@
 
-import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { UserProfile, UserRole } from './types';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,10 @@ interface AuthProviderProps {
 // Static state tracker to reduce console spam
 let lastLoggedState: any = null;
 
+// Global profile cache to prevent duplicate fetches across re-renders
+let profileCache: { data: UserProfile | null; userId: string; timestamp: number } | null = null;
+let profileLoadingPromise: Promise<void> | null = null;
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -38,57 +42,82 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const loadProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          role,
-          company_name,
-          phone,
-          avatar_url,
-          company_logo_url,
-          agent_status,
-          terms_accepted_at,
-          created_at,
-          intro_video_viewed,
-          intro_video_viewed_at
-        `)
-        .eq('id', userId)
-        .single();
+    // Check cache first (5 second TTL)
+    if (profileCache && 
+        profileCache.userId === userId && 
+        Date.now() - profileCache.timestamp < 5000) {
+      setProfile(profileCache.data);
+      setUserRole(profileCache.data?.role);
+      return;
+    }
 
-      if (error) {
+    // If already loading, wait for that promise
+    if (profileLoadingPromise) {
+      await profileLoadingPromise;
+      return;
+    }
+
+    // Start new load
+    profileLoadingPromise = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            email,
+            first_name,
+            last_name,
+            role,
+            company_name,
+            phone,
+            avatar_url,
+            company_logo_url,
+            agent_status,
+            terms_accepted_at,
+            created_at,
+            intro_video_viewed,
+            intro_video_viewed_at
+          `)
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          profileCache = { data: null, userId, timestamp: Date.now() };
+          setProfile(null);
+          setUserRole(undefined);
+          return;
+        }
+
+        const userProfile: UserProfile = {
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone,
+          company_name: data.company_name,
+          company_logo_url: data.company_logo_url,
+          avatar_url: data.avatar_url,
+          role: data.role as UserRole,
+          agent_status: data.agent_status,
+          terms_accepted_at: data.terms_accepted_at,
+          created_at: data.created_at,
+          intro_video_viewed: data.intro_video_viewed,
+          intro_video_viewed_at: data.intro_video_viewed_at
+        };
+
+        profileCache = { data: userProfile, userId, timestamp: Date.now() };
+        setProfile(userProfile);
+        setUserRole(userProfile.role);
+      } catch {
+        profileCache = { data: null, userId, timestamp: Date.now() };
         setProfile(null);
         setUserRole(undefined);
-        return;
+      } finally {
+        profileLoadingPromise = null;
       }
+    })();
 
-      const userProfile: UserProfile = {
-        id: data.id,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        company_name: data.company_name,
-        company_logo_url: data.company_logo_url,
-        avatar_url: data.avatar_url,
-        role: data.role as UserRole,
-        agent_status: data.agent_status,
-        terms_accepted_at: data.terms_accepted_at,
-        created_at: data.created_at,
-        intro_video_viewed: data.intro_video_viewed,
-        intro_video_viewed_at: data.intro_video_viewed_at
-      };
-
-      setProfile(userProfile);
-      setUserRole(userProfile.role);
-    } catch {
-      setProfile(null);
-      setUserRole(undefined);
-    }
+    await profileLoadingPromise;
   };
 
   useEffect(() => {
