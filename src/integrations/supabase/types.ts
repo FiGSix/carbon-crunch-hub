@@ -2087,6 +2087,15 @@ export type Database = {
         Args: { size_value: number; unit_type?: string }
         Returns: number
       }
+      recalculate_proposal_client_shares: {
+        Args: never
+        Returns: {
+          new_share: number
+          old_share: number
+          portfolio_kwp: number
+          proposal_id: string
+        }[]
+      }
       search_clients: {
         Args: { search_term: string }
         Returns: {

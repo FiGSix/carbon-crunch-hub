@@ -126,10 +126,12 @@ Deno.serve(async (req) => {
 
         const portfolioKwp = (agentProposals || []).reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
 
-        // Calculate client share percentage based on portfolio
-        let clientSharePercentage = 75; // Default
-        if (portfolioKwp >= 5000) clientSharePercentage = 80;
-        else if (portfolioKwp >= 2000) clientSharePercentage = 77.5;
+        // Calculate client share percentage based on portfolio using correct tiers
+        let clientSharePercentage = 60.20; // Default: 0-5MWp
+        if (portfolioKwp >= 30000) clientSharePercentage = 70;      // 30+MWp
+        else if (portfolioKwp >= 20000) clientSharePercentage = 68.25; // 20-30MWp
+        else if (portfolioKwp >= 10000) clientSharePercentage = 66.5;  // 10-20MWp
+        else if (portfolioKwp >= 5000) clientSharePercentage = 63;     // 5-10MWp
 
         // Apply override if provided
         if (proposal.client_share_override !== undefined) {
@@ -161,6 +163,7 @@ Deno.serve(async (req) => {
             carbon_credits: carbonCreditsPerYear,
             client_share_percentage: clientSharePercentage,
             agent_commission_percentage: agentCommissionPercentage,
+            agent_portfolio_kwp: portfolioKwp,
             eligibility_criteria: {
               inSouthAfrica: proposal.in_south_africa,
               notRegistered: proposal.not_registered,
