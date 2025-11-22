@@ -22,6 +22,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
   const [preview, setPreview] = useState<BulkProposalRow[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
+  const [totalRows, setTotalRows] = useState<number>(0);
 
   const handleDownloadTemplate = async () => {
     // Dynamically import xlsx only when needed to reduce initial bundle size
@@ -59,6 +60,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
 
     setFile(selectedFile);
     setUploadResult(null);
+    setTotalRows(0);
 
     try {
       // Dynamically import xlsx parser only when needed to reduce initial bundle size
@@ -66,6 +68,9 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
       
       // Parse the file
       const rows = await parseExcelFile(selectedFile);
+      
+      // Store total row count
+      setTotalRows(rows.length);
       
       // Validate rows
       const errors = validateProposalRows(rows);
@@ -279,8 +284,8 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload {preview.length} Proposals
+              <Upload className="h-4 w-4 mr-2" />
+              Upload {totalRows} Proposals
                 </>
               )}
             </Button>
