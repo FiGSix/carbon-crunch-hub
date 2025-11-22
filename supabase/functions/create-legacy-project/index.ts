@@ -73,18 +73,14 @@ Deno.serve(async (req) => {
     let agentId = user.id; // Default to admin user if no agent specified
     
     if (body.agent_email) {
-      const { data: agent, error: agentError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', body.agent_email)
-        .eq('role', 'agent')
-        .single();
+      const { data: agents, error: agentError } = await supabase
+        .rpc('get_agent_by_email', { email_param: body.agent_email });
 
-      if (agentError || !agent) {
+      if (agentError || !agents || agents.length === 0) {
         throw new Error(`Agent with email ${body.agent_email} not found`);
       }
       
-      agentId = agent.id;
+      agentId = agents[0].id;
     }
 
     // Find or create client

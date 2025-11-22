@@ -90,16 +90,20 @@ serve(async (req) => {
 
       try {
         console.log(`Processing row ${rowNum}: ${row.client_first_name} ${row.client_last_name}`);
-        // 1. Find agent by email
-        const { data: agent } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', row.agent_email)
-          .eq('role', 'agent')
-          .single();
+        
+        // 1. Find agent by email using proper role checking
+        const { data: agents, error: agentError } = await supabase
+          .rpc('get_agent_by_email', { email_param: row.agent_email });
 
-        if (!agent) {
+        if (agentError || !agents || agents.length === 0) {
           throw new Error(`Agent not found with email: ${row.agent_email}`);
+        }
+
+        const agent = agents[0];
+
+        // Validate agent is active (legacy projects need active agents)
+        if (agent.agent_status !== 'active') {
+          throw new Error(`Agent ${row.agent_email} is not active (status: ${agent.agent_status})`);
         }
 
         // 2. Find or create client
