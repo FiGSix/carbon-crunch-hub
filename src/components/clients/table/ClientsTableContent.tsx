@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { ClientData } from '@/hooks/clients/types';
 import { useState, useMemo, useCallback, useDeferredValue, memo } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
@@ -33,7 +33,6 @@ import { useToast } from '@/hooks/use-toast';
 import { EditClientDialog } from '@/components/clients/EditClientDialog';
 import { EditAssignedAgentDialog } from '@/components/clients/EditAssignedAgentDialog';
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ClientsTableSearch } from './ClientsTableSearch';
 
 interface ClientsTableContentProps {
   clients: ClientData[];
@@ -291,24 +290,27 @@ export function ClientsTableContent({
   };
   
   return (
-    <Card>
-      <CardHeader>
+    <div className="space-y-4">
+      {/* Header with title and filters */}
+      <div className="flex flex-col gap-4">
+        {/* Title and description */}
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Clients ({filteredClients.length}{searchQuery && ` of ${clients.length}`})
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Users className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold tracking-tight">
+                Clients ({filteredClients.length}{searchQuery && ` of ${clients.length}`})
+              </h2>
               {autoRefreshEnabled && (
-                <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                  <Zap className="h-3 w-3" />
+                <Badge variant="secondary" className="ml-2">
+                  <Zap className="h-3 w-3 mr-1" />
                   Auto-updating
-                </span>
+                </Badge>
               )}
-            </CardTitle>
-            <CardDescription>
+            </div>
+            <p className="text-muted-foreground">
               {isAdmin ? 'All clients across all agents' : 'Your client relationships and project data'}
-              {autoRefreshEnabled && ' • Real-time updates enabled'}
-            </CardDescription>
+            </p>
           </div>
           {onRefresh && (
             <Button 
@@ -322,52 +324,70 @@ export function ClientsTableContent({
             </Button>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
-        {/* Search Box */}
-        <div className="mb-4">
-          <ClientsTableSearch onDebouncedChange={setSearchQuery} />
-          {deferredQuery && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{deferredQuery}"
-            </p>
-          )}
+
+        {/* Search and filters row */}
+        <div className="flex gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search clients by name, email, or company..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
 
-        {/* Show inline error notification if there's an error but we have cached data */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center text-red-700">
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              <span className="text-sm">
-                Failed to refresh: {error}
-              </span>
-              {onRefresh && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onRefresh}
-                  disabled={isRefreshing}
-                  className="ml-auto"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Retry
-                </Button>
-              )}
-            </div>
+        {/* Search results indicator */}
+        {deferredQuery && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Found {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} matching "{deferredQuery}"
+            </span>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-sm text-primary hover:underline"
+            >
+              Clear
+            </button>
           </div>
         )}
+      </div>
 
-        {/* Show refreshing notification */}
-        {isRefreshing && !error && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <div className="flex items-center text-blue-700">
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              <span className="text-sm">Refreshing client data...</span>
-            </div>
+      {/* Error notification */}
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="flex items-center text-red-700">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <span className="text-sm">Failed to refresh: {error}</span>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="ml-auto"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry
+              </Button>
+            )}
           </div>
-        )}
-        
+        </div>
+      )}
+
+      {/* Refreshing notification */}
+      {isRefreshing && !error && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-center text-blue-700">
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            <span className="text-sm">Refreshing client data...</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Table */}
+      <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
@@ -426,34 +446,30 @@ export function ClientsTableContent({
             />
           </TableBody>
         </Table>
+      </div>
 
-        {/* Load More Button */}
-        {hasMore && onLoadMore && (
-          <div className="flex flex-col items-center gap-2 py-4">
-            <Button
-              variant="outline"
-              onClick={onLoadMore}
-              disabled={isLoadingMore}
-              className="w-full max-w-xs"
-            >
-              {isLoadingMore ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <Users className="h-4 w-4 mr-2" />
-                  Load More Clients
-                </>
-              )}
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Showing {clients.length} of {totalCount} clients
-            </p>
-          </div>
-        )}
-      </CardContent>
+      {/* Load More Button */}
+      {hasMore && onLoadMore && (
+        <div className="flex flex-col items-center gap-2 py-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {clients.length} of {totalCount} clients
+          </p>
+          <Button
+            variant="outline"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load More'
+            )}
+          </Button>
+        </div>
+      )}
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -495,6 +511,6 @@ export function ClientsTableContent({
           if (onRefresh) onRefresh();
         }}
       />
-    </Card>
+    </div>
   );
 }
