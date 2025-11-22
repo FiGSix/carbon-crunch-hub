@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../../cache/CacheManager';
+import { CACHE_TTL } from '@/services/cache/types';
 import { RoleValidator } from '../../utils/RoleValidator';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 import type { UnifiedClient, PaginatedClientsResult } from '../types';
@@ -11,6 +12,9 @@ import { withTimeout } from '../../utils/withTimeout';
  * Handles fetching clients with pagination and role-based access control
  */
 export class ClientFetcher {
+  // Request deduplication map
+  private static pendingRequests = new Map<string, Promise<PaginatedClientsResult>>();
+
   /**
    * Get all clients for an agent (unified view of registered users and contacts) with pagination
    */
@@ -47,13 +51,44 @@ export class ClientFetcher {
     if (import.meta.env.DEV) {
       devLogger.clients.debug('Role validation passed - user can manage clients');
     }
-
+    
     const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
     
     if (!forceRefresh) {
       const cached = CacheManager.getFromCache<PaginatedClientsResult>(cacheKey);
       if (cached) return cached;
     }
+
+    // Request deduplication - if same request is in flight, wait for it
+    const requestKey = `${userId}_${userRole}_${limit}_${offset}_${forceRefresh}`;
+    if (this.pendingRequests.has(requestKey)) {
+      if (import.meta.env.DEV) {
+        devLogger.clients.debug('Deduplicating request - waiting for existing request');
+      }
+      return this.pendingRequests.get(requestKey)!;
+    }
+
+    // Start new request
+    const promise = this._fetchClients(userId, userRole, cacheKey, limit, offset);
+    this.pendingRequests.set(requestKey, promise);
+
+    try {
+      return await promise;
+    } finally {
+      this.pendingRequests.delete(requestKey);
+    }
+  }
+
+  /**
+   * Internal fetch method (separated for deduplication)
+   */
+  private static async _fetchClients(
+    userId: string,
+    userRole: UserRole,
+    cacheKey: string,
+    limit: number,
+    offset: number
+  ): Promise<PaginatedClientsResult> {
 
     try {
       console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset });
@@ -206,7 +241,8 @@ export class ClientFetcher {
 
       console.info('🏁 Fetch complete', { clientCount: clients.length, hasMore });
 
-      CacheManager.setCache(cacheKey, result);
+      // Cache with 15 minute TTL for better performance
+      CacheManager.setCache(cacheKey, result, CACHE_TTL.MEDIUM);
       return result;
     } catch (error) {
       console.error('❌ ClientFetcher error:', error);

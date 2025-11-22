@@ -1,11 +1,13 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { SimpleClientsTable2 } from '@/components/clients/SimpleClientsTable2';
+import { ClientsTableSkeleton } from '@/components/clients/ClientsTableSkeleton';
 import { useClients } from '@/hooks/clients';
-import { PageLoading } from '@/components/ui/loading-states';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/auth';
 
 export default function MyClients2() {
+  const { userRole } = useAuth();
   const { 
     clients, 
     isLoading, 
@@ -37,7 +39,7 @@ export default function MyClients2() {
         )}
 
         {isLoading ? (
-          <PageLoading minimal />
+          <ClientsTableSkeleton rows={10} isAdmin={userRole === 'admin'} />
         ) : (
           <SimpleClientsTable2 
             clients={clients} 
