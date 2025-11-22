@@ -11,7 +11,6 @@ export interface ValidationError {
  */
 export function validateLegacyProjectRows(rows: LegacyProjectRow[]): ValidationError[] {
   const errors: ValidationError[] = [];
-  const emailSet = new Set<string>();
   
   rows.forEach((row, index) => {
     const rowNum = index + 3; // +3 for header, description, and 0-index offset
@@ -60,12 +59,6 @@ export function validateLegacyProjectRows(rows: LegacyProjectRow[]): ValidationE
     } else if (!isValidEmail(row.agent_email)) {
       errors.push({ row: rowNum, field: 'agent_email', message: 'Invalid agent email format' });
     }
-    
-    // Duplicate email check
-    if (row.client_email && emailSet.has(row.client_email)) {
-      errors.push({ row: rowNum, field: 'client_email', message: 'Duplicate client email in upload' });
-    }
-    emailSet.add(row.client_email);
   });
   
   return errors;
