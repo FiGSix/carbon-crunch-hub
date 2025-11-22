@@ -11,7 +11,6 @@ export interface ValidationError {
  */
 export function validateProposalRows(rows: BulkProposalRow[]): ValidationError[] {
   const errors: ValidationError[] = [];
-  const emailsSeen = new Set<string>();
   
   rows.forEach((row, idx) => {
     const rowNum = idx + 3; // Account for header and description rows
@@ -25,12 +24,6 @@ export function validateProposalRows(rows: BulkProposalRow[]): ValidationError[]
       errors.push({ row: rowNum, field: 'client_email', message: 'Client email is required' });
     } else if (!isValidEmail(row.client_email)) {
       errors.push({ row: rowNum, field: 'client_email', message: 'Invalid email format' });
-    } else {
-      // Check for duplicates within the file
-      if (emailsSeen.has(row.client_email)) {
-        errors.push({ row: rowNum, field: 'client_email', message: 'Duplicate email in file (will reuse same client)' });
-      }
-      emailsSeen.add(row.client_email);
     }
     
     if (!row.client_first_name) {
