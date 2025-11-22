@@ -1364,6 +1364,7 @@ export type Database = {
           automation_paused: boolean | null
           carbon_credits: number | null
           client_id: string | null
+          client_portfolio_kwp: number | null
           client_reference_id: string | null
           client_share_override_enabled: boolean | null
           client_share_override_set_at: string | null
@@ -1408,6 +1409,7 @@ export type Database = {
           automation_paused?: boolean | null
           carbon_credits?: number | null
           client_id?: string | null
+          client_portfolio_kwp?: number | null
           client_reference_id?: string | null
           client_share_override_enabled?: boolean | null
           client_share_override_set_at?: string | null
@@ -1452,6 +1454,7 @@ export type Database = {
           automation_paused?: boolean | null
           carbon_credits?: number | null
           client_id?: string | null
+          client_portfolio_kwp?: number | null
           client_reference_id?: string | null
           client_share_override_enabled?: boolean | null
           client_share_override_set_at?: string | null
@@ -2090,9 +2093,10 @@ export type Database = {
       recalculate_proposal_client_shares: {
         Args: never
         Returns: {
+          agent_portfolio_kwp: number
+          client_portfolio_kwp: number
           new_share: number
           old_share: number
-          portfolio_kwp: number
           proposal_id: string
         }[]
       }
