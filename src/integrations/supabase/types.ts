@@ -232,6 +232,9 @@ export type Database = {
           last_name: string | null
           notes: string | null
           phone: string | null
+          portfolio_client_share_override: number | null
+          portfolio_override_set_at: string | null
+          portfolio_override_set_by: string | null
           registration_number: string | null
           updated_at: string | null
           user_id: string | null
@@ -247,6 +250,9 @@ export type Database = {
           last_name?: string | null
           notes?: string | null
           phone?: string | null
+          portfolio_client_share_override?: number | null
+          portfolio_override_set_at?: string | null
+          portfolio_override_set_by?: string | null
           registration_number?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -262,6 +268,9 @@ export type Database = {
           last_name?: string | null
           notes?: string | null
           phone?: string | null
+          portfolio_client_share_override?: number | null
+          portfolio_override_set_at?: string | null
+          portfolio_override_set_by?: string | null
           registration_number?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -270,6 +279,13 @@ export type Database = {
           {
             foreignKeyName: "clients_last_modified_by_fkey"
             columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_portfolio_override_set_by_fkey"
+            columns: ["portfolio_override_set_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

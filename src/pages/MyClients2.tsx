@@ -1,0 +1,38 @@
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SimpleClientsTable2 } from '@/components/clients/SimpleClientsTable2';
+import { useClients } from '@/hooks/clients';
+import { PageLoading } from '@/components/ui/loading-states';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+
+export default function MyClients2() {
+  const { clients, isLoading, error, refresh } = useClients({ paginated: false });
+
+  return (
+    <DashboardLayout>
+      <div className="container mx-auto py-8 px-4 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">My Clients 2</h1>
+            <p className="text-muted-foreground mt-2">
+              Enhanced client management with portfolio-level client share controls
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {isLoading ? (
+          <PageLoading minimal />
+        ) : (
+          <SimpleClientsTable2 clients={clients} onRefresh={refresh} />
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
