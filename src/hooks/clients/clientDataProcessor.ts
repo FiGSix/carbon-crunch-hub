@@ -20,7 +20,7 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
       client_id,
       client_reference_id,
       agent_id,
-      annual_energy,
+      system_size_kwp,
       clients:client_reference_id (
         portfolio_client_share_override,
         portfolio_override_set_at,
@@ -117,7 +117,7 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
     }
 
     const existingClient = clientMap.get(clientId);
-    const annualEnergy = proposal.annual_energy || 0;
+    const systemSizeKwp = proposal.system_size_kwp || 0;
 
     // Extract portfolio override data from joined clients table
     const portfolioOverride = proposal.clients?.portfolio_client_share_override || null;
@@ -126,14 +126,14 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
 
     if (existingClient) {
       existingClient.project_count += 1;
-      existingClient.total_mwp += annualEnergy / 1000; // Convert kW to MW
+      existingClient.total_mwp += systemSizeKwp / 1000; // Convert kWp to MWp
     } else {
       clientMap.set(clientId, {
         client_id: clientId,
         client_name: clientName,
         client_email: clientEmail,
         company_name: companyName,
-        total_mwp: annualEnergy / 1000, // Convert kW to MW
+        total_mwp: systemSizeKwp / 1000, // Convert kWp to MWp
         project_count: 1,
         is_active: false, // Default for legacy processor
         portfolio_client_share_override: portfolioOverride,
