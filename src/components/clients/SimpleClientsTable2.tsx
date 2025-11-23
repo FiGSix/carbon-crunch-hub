@@ -121,10 +121,12 @@ export function SimpleClientsTable2({
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit Client Info
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPortfolioClient(client)}>
-                              <Percent className="mr-2 h-4 w-4" />
-                              Company Fee % for Portfolio
-                            </DropdownMenuItem>
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={() => setPortfolioClient(client)}>
+                                <Percent className="mr-2 h-4 w-4" />
+                                Company Fee % for Portfolio
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

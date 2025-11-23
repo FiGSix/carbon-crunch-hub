@@ -16,6 +16,7 @@ import { Loader2, Lock, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getClientSharePercentage } from '@/services/calculations/carbon/pricing';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/auth';
 
 interface PortfolioClientShareDialogProps {
   open: boolean;
@@ -38,6 +39,8 @@ export function PortfolioClientShareDialog({
   onSuccess,
 }: PortfolioClientShareDialogProps) {
   const { toast } = useToast();
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingProposals, setIsLoadingProposals] = useState(false);
   const [portfolioOverride, setPortfolioOverride] = useState('');
@@ -161,6 +164,16 @@ export function PortfolioClientShareDialog({
             </div>
           </div>
 
+          {/* Admin-Only Warning */}
+          {!isAdmin && (
+            <Alert variant="destructive">
+              <Lock className="h-4 w-4" />
+              <AlertDescription>
+                Only administrators can modify portfolio client share percentages.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Set Portfolio Override */}
           <div className="space-y-4 p-4 border rounded-lg">
             <div>
@@ -175,9 +188,9 @@ export function PortfolioClientShareDialog({
                   value={portfolioOverride}
                   onChange={(e) => setPortfolioOverride(e.target.value)}
                   placeholder="Enter percentage (e.g., 65.00)"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isAdmin}
                 />
-                <Button onClick={handleApplyToAll} disabled={isSubmitting || !portfolioOverride}>
+                <Button onClick={handleApplyToAll} disabled={isSubmitting || !portfolioOverride || !isAdmin}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Apply to All
                 </Button>
