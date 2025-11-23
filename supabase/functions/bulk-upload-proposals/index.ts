@@ -47,20 +47,25 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Verify admin role
+    // Verify user is an agent or admin with active status
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, agent_status')
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
-      throw new Error('Admin access required');
+    if (!profile || !['agent', 'admin'].includes(profile.role)) {
+      throw new Error('Agent or Admin access required');
+    }
+
+    // Agents must have active status (admins bypass this check)
+    if (profile.role === 'agent' && profile.agent_status !== 'active') {
+      throw new Error('Agent account must be active to perform bulk uploads');
     }
 
     const { proposals } = await req.json() as { proposals: BulkProposalRow[] };
 
-    console.log(`Processing ${proposals.length} proposals for admin ${user.id}`);
+    console.log(`Processing ${proposals.length} proposals for ${profile.role} ${user.id}`);
 
     const results = {
       success: true,
@@ -78,7 +83,7 @@ Deno.serve(async (req) => {
 
       try {
         // Determine which agent should own this proposal
-        let assignedAgentId = user.id; // Default to admin performing upload
+        let assignedAgentId = user.id; // Default to uploader (agent or admin)
 
         if (proposal.assigned_agent_email) {
           console.log(`Looking up agent: ${proposal.assigned_agent_email}`);
