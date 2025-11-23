@@ -8,9 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Percent } from 'lucide-react';
+import { MoreHorizontal, Pencil, Percent, UserCheck } from 'lucide-react';
 import { EditClientDialog } from './EditClientDialog';
 import { PortfolioClientShareDialog } from './PortfolioClientShareDialog';
+import { EditAssignedAgentDialog } from './EditAssignedAgentDialog';
 import { useAuth } from '@/contexts/auth';
 
 interface SimpleClientsTable2Props {
@@ -34,6 +35,7 @@ export function SimpleClientsTable2({
   const isAdmin = userRole === 'admin';
   const [editingClient, setEditingClient] = useState<ClientData | null>(null);
   const [portfolioClient, setPortfolioClient] = useState<ClientData | null>(null);
+  const [reassignClient, setReassignClient] = useState<ClientData | null>(null);
 
   return (
     <>
@@ -127,6 +129,12 @@ export function SimpleClientsTable2({
                                 Company Fee % for Portfolio
                               </DropdownMenuItem>
                             )}
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={() => setReassignClient(client)}>
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                Edit Assigned Agent
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -171,6 +179,14 @@ export function SimpleClientsTable2({
         open={!!portfolioClient}
         onOpenChange={(open) => !open && setPortfolioClient(null)}
         client={portfolioClient}
+        onSuccess={onRefresh}
+      />
+
+      {/* Edit Assigned Agent Dialog */}
+      <EditAssignedAgentDialog
+        open={!!reassignClient}
+        onOpenChange={(open) => !open && setReassignClient(null)}
+        client={reassignClient}
         onSuccess={onRefresh}
       />
     </>
