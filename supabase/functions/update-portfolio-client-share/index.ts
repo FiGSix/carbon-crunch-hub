@@ -42,16 +42,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is agent or admin
+    // Check if user is admin (agents should NOT have access)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile || !['agent', 'admin'].includes(profile.role)) {
+    if (profileError || !profile || profile.role !== 'admin') {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Only agents and admins can update portfolio client share' }),
+        JSON.stringify({ error: 'Forbidden: Only admins can update portfolio client share' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
