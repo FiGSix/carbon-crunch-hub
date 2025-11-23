@@ -84,17 +84,13 @@ export function validateProposalRows(rows: BulkProposalRow[]): ValidationError[]
       errors.push({ row: rowNum, field: 'legal_ownership', message: 'Must have legal ownership (Yes required)' });
     }
     
-    // Optional override validations
-    if (row.client_share_override !== undefined) {
-      if (row.client_share_override < 0 || row.client_share_override > 100) {
-        errors.push({ row: rowNum, field: 'client_share_override', message: 'Client share override must be between 0 and 100' });
-      }
-    }
-    
-    if (row.agent_commission_override !== undefined) {
-      if (row.agent_commission_override < 0 || row.agent_commission_override > 100) {
-        errors.push({ row: rowNum, field: 'agent_commission_override', message: 'Agent commission override must be between 0 and 100' });
-      }
+    // Validate assigned_agent_email format if provided
+    if (row.assigned_agent_email && !isValidEmail(row.assigned_agent_email)) {
+      errors.push({ 
+        row: rowNum, 
+        field: 'assigned_agent_email', 
+        message: 'Invalid agent email format' 
+      });
     }
   });
   

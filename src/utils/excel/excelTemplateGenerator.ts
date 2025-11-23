@@ -26,8 +26,7 @@ export function generateProposalTemplate(): void {
     'commissioned_after_2022',
     'legal_ownership',
     'additional_notes',
-    'client_share_override',
-    'agent_commission_override'
+    'assigned_agent_email'
   ];
   
   const descriptions = [
@@ -48,8 +47,7 @@ export function generateProposalTemplate(): void {
     'Yes or No',
     'Yes or No',
     'Optional notes',
-    'Override % (optional)',
-    'Override % (optional)'
+    'Agent email (optional)'
   ];
   
   // Create example data
@@ -72,8 +70,7 @@ export function generateProposalTemplate(): void {
       'Yes',
       'Yes',
       'Commercial installation',
-      '',
-      ''
+      'agent@example.com'
     ],
     [
       'Industrial Solar Farm Beta',
@@ -93,7 +90,6 @@ export function generateProposalTemplate(): void {
       'Yes',
       'Yes',
       'Large scale project',
-      '',
       ''
     ],
     [
@@ -113,7 +109,6 @@ export function generateProposalTemplate(): void {
       'Yes',
       'Yes',
       'Yes',
-      '',
       '',
       ''
     ]
@@ -148,8 +143,7 @@ export function generateProposalTemplate(): void {
     { wch: 20 }, // commissioned_after_2022
     { wch: 15 }, // legal_ownership
     { wch: 30 }, // additional_notes
-    { wch: 18 }, // client_share_override
-    { wch: 22 }  // agent_commission_override
+    { wch: 25 }  // assigned_agent_email
   ];
   
   // Style header row (bold, blue background)

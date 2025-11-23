@@ -255,8 +255,7 @@ export interface BulkProposalRow {
   commissioned_after_2022: boolean;
   legal_ownership: boolean;
   additional_notes?: string;
-  client_share_override?: number;
-  agent_commission_override?: number;
+  assigned_agent_email?: string;
 }
 
 export interface BulkUploadResult {

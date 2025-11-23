@@ -56,8 +56,7 @@ export function parseExcelFile(file: File): Promise<BulkProposalRow[]> {
             commissioned_after_2022: parseYesNo(proposal.commissioned_after_2022),
             legal_ownership: parseYesNo(proposal.legal_ownership),
             additional_notes: proposal.additional_notes ? String(proposal.additional_notes).trim() : undefined,
-            client_share_override: proposal.client_share_override ? parseFloat(String(proposal.client_share_override)) : undefined,
-            agent_commission_override: proposal.agent_commission_override ? parseFloat(String(proposal.agent_commission_override)) : undefined
+            assigned_agent_email: proposal.assigned_agent_email ? String(proposal.assigned_agent_email).trim().toLowerCase() : undefined
           };
           
           rows.push(parsed);
