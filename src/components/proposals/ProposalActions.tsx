@@ -31,7 +31,7 @@ export function ProposalActions() {
           Create New Proposal
         </Button>
         
-        {userRole === "admin" && (
+        {(userRole === "agent" || userRole === "admin") && (
           <Button 
             variant="outline"
             onClick={() => setShowBulkUpload(true)}
