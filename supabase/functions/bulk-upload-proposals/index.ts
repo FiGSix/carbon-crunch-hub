@@ -22,8 +22,7 @@ interface BulkProposalRow {
   commissioned_after_2022: boolean;
   legal_ownership: boolean;
   additional_notes?: string;
-  client_share_override?: number;
-  agent_commission_override?: number;
+  assigned_agent_email?: string;
 }
 
 Deno.serve(async (req) => {
@@ -78,6 +77,33 @@ Deno.serve(async (req) => {
       const rowNum = i + 3; // Account for header rows
 
       try {
+        // Determine which agent should own this proposal
+        let assignedAgentId = user.id; // Default to admin performing upload
+
+        if (proposal.assigned_agent_email) {
+          console.log(`Looking up agent: ${proposal.assigned_agent_email}`);
+          
+          const { data: agentProfile, error: agentError } = await supabase
+            .from('profiles')
+            .select('id, role, agent_status')
+            .eq('email', proposal.assigned_agent_email.trim().toLowerCase())
+            .single();
+          
+          if (agentError || !agentProfile) {
+            throw new Error(`Agent not found: ${proposal.assigned_agent_email}`);
+          }
+          
+          // Verify the user is an active agent
+          if (agentProfile.role !== 'agent' || agentProfile.agent_status !== 'active') {
+            throw new Error(`User ${proposal.assigned_agent_email} is not an active agent`);
+          }
+          
+          assignedAgentId = agentProfile.id;
+          console.log(`✅ Assigned to agent: ${proposal.assigned_agent_email} (${assignedAgentId})`);
+        } else {
+          console.log(`ℹ️ No agent specified, assigning to uploader: ${user.id}`);
+        }
+
         // Find or create client
         let clientId: string;
         
@@ -130,28 +156,27 @@ Deno.serve(async (req) => {
         const { data: agentProposals } = await supabase
           .from('proposals')
           .select('system_size_kwp')
-          .eq('agent_id', user.id)
+          .eq('agent_id', assignedAgentId)
           .is('deleted_at', null);
 
         const agentPortfolioKwp = (agentProposals || []).reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
 
-        // Calculate client share percentage based on CLIENT's portfolio using correct tiers
+        // Calculate client share percentage based on CLIENT's portfolio using correct tiers (always auto-calculated)
         let clientSharePercentage = 60.20; // Default: 0-5MWp
         if (clientPortfolioKwp >= 30000) clientSharePercentage = 70;      // 30+MWp
         else if (clientPortfolioKwp >= 20000) clientSharePercentage = 68.25; // 20-30MWp
         else if (clientPortfolioKwp >= 10000) clientSharePercentage = 66.5;  // 10-20MWp
         else if (clientPortfolioKwp >= 5000) clientSharePercentage = 63;     // 5-10MWp
 
-        // Apply override if provided
-        if (proposal.client_share_override !== undefined) {
-          clientSharePercentage = proposal.client_share_override;
-        }
+        // Get agent commission from agent's profile or use default (always auto-calculated)
+        const { data: agentProfile } = await supabase
+          .from('profiles')
+          .select('commission_override')
+          .eq('id', assignedAgentId)
+          .single();
 
-        // Calculate agent commission
-        let agentCommissionPercentage = 5; // Default
-        if (proposal.agent_commission_override !== undefined) {
-          agentCommissionPercentage = proposal.agent_commission_override;
-        }
+        const agentCommissionPercentage = agentProfile?.commission_override ?? 
+          (agentPortfolioKwp >= 15000 ? 7 : 4);
 
         // Simple carbon credit calculation (actual calculation is more complex)
         // Using approximate values for demonstration
@@ -163,7 +188,7 @@ Deno.serve(async (req) => {
           .from('proposals')
           .insert({
             title: proposal.proposal_title,
-            agent_id: user.id,
+            agent_id: assignedAgentId,
             client_reference_id: clientId,
             status: 'draft',
             system_size_kwp: systemSizeKwp,
