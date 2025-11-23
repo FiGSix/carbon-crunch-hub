@@ -44,6 +44,7 @@ export function EditAssignedAgentDialog({ open, onOpenChange, client, onSuccess 
     const { data, error } = await supabase
       .from('profiles')
       .select('id, email, first_name, last_name, company_name')
+      .eq('role', 'agent')
       .eq('agent_status', 'active')
       .order('first_name');
     
