@@ -1,6 +1,5 @@
-
 import { toast as sonnerToast } from "sonner";
-import { ReactNode } from "react";
+import { ReactNode, useCallback, useMemo } from "react";
 
 // Types for shadcn/ui toast compatibility
 export type ToastProps = {
@@ -44,17 +43,18 @@ const adaptToSonnerToast = ({
  * and shadcn/ui toast style object parameters.
  */
 const useToast = () => {
-  return {
-    toast: (props: ToastProps | string) => {
-      if (typeof props === "string") {
-        return sonnerToast(props);
-      } else {
-        return adaptToSonnerToast(props);
-      }
-    },
-    // Add the toasts array to maintain compatibility with shadcn/ui toast
+  const toast = useCallback((props: ToastProps | string) => {
+    if (typeof props === "string") {
+      return sonnerToast(props);
+    } else {
+      return adaptToSonnerToast(props);
+    }
+  }, []); // Stable reference - no dependencies
+
+  return useMemo(() => ({
+    toast,
     toasts: [] // Empty array as Sonner manages its own state
-  };
+  }), [toast]);
 };
 
 // Export the hook and direct toast function for convenience

@@ -187,7 +187,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
       
       isFetchingRef.current = false;
     }
-  }, [user?.id, userRole, paginated, pageSize, handleFetchError]);
+  }, [user?.id, userRole, paginated, pageSize]); // handleFetchError removed - accessible via closure
 
   /**
    * Load next page of clients
