@@ -55,8 +55,7 @@ const CreateProposal = createOptimizedLazyComponent(() => import("./pages/Create
 const ProposalsOptimized = createOptimizedLazyComponent(() => import("./pages/ProposalsOptimized"), "ProposalsOptimized");
 const WhyChooseUs = createOptimizedLazyComponent(() => import("./pages/WhyChooseUs"), "WhyChooseUs");
 const Profile = createOptimizedLazyComponent(() => import("./pages/Profile"), "Profile");
-const MyClients = createOptimizedLazyComponent(() => import("./pages/MyClients"), "MyClients");
-const MyClients2 = createOptimizedLazyComponent(() => import("./pages/MyClients2"), "MyClients2");
+const MyClients = createOptimizedLazyComponent(() => import("./pages/MyClients2"), "MyClients");
 const SystemSettings = createOptimizedLazyComponent(() => import("./pages/SystemSettings"), "SystemSettings");
 const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
@@ -311,20 +310,6 @@ function App() {
                           <PageErrorBoundary pageName="My Clients">
                             <Suspense fallback={<PageLoader />}>
                               <MyClients />
-                            </Suspense>
-                          </PageErrorBoundary>
-                        </AgentApprovalGuard>
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/my-clients-2" 
-                    element={
-                      <PrivateRoute allowedRoles={['agent', 'admin']}>
-                        <AgentApprovalGuard>
-                          <PageErrorBoundary pageName="My Clients 2">
-                            <Suspense fallback={<PageLoader />}>
-                              <MyClients2 />
                             </Suspense>
                           </PageErrorBoundary>
                         </AgentApprovalGuard>

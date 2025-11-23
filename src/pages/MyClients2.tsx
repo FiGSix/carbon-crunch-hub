@@ -24,9 +24,9 @@ export default function MyClients2() {
       <div className="container mx-auto py-8 px-4 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">My Clients 2</h1>
+            <h1 className="text-3xl font-bold tracking-tight">My Clients</h1>
             <p className="text-muted-foreground mt-2">
-              Enhanced client management with portfolio-level client share controls
+              Manage your client relationships and projects
             </p>
           </div>
         </div>

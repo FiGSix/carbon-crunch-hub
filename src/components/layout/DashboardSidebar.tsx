@@ -83,12 +83,6 @@ export function DashboardSidebar() {
       roles: ["admin", "agent"]
     },
     {
-      name: "My Clients 2",
-      href: "/my-clients-2",
-      icon: Users,
-      roles: ["admin", "agent"]
-    },
-    {
       name: "Notifications",
       href: "/notifications",
       icon: Bell,
