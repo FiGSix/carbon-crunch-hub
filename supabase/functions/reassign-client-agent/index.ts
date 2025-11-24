@@ -97,11 +97,21 @@ Deno.serve(async (req) => {
 
     // Step 3: Update all associated proposals
     // Find proposals where client_reference_id matches OR client_id matches the client's user_id
-    const { data: proposals, error: proposalsFetchError } = await supabaseAdmin
+    // Build the query conditionally based on whether user_id exists
+    let proposalsQuery = supabaseAdmin
       .from('proposals')
       .select('id')
-      .or(`client_reference_id.eq.${clientId},client_id.eq.${client.user_id}`)
       .is('deleted_at', null);
+
+    // Add filter: client_reference_id matches OR (if user_id exists) client_id matches
+    if (client.user_id) {
+      proposalsQuery = proposalsQuery.or(`client_reference_id.eq.${clientId},client_id.eq.${client.user_id}`);
+    } else {
+      // Only match by client_reference_id if no user_id
+      proposalsQuery = proposalsQuery.eq('client_reference_id', clientId);
+    }
+
+    const { data: proposals, error: proposalsFetchError } = await proposalsQuery;
 
     if (proposalsFetchError) {
       console.error('Proposals fetch error:', proposalsFetchError);
