@@ -215,7 +215,7 @@ export async function createProposal(
       title: proposalTitle,
       agent_id: agentId,
       client_reference_id: clientId,
-      status: 'pending',
+      status: 'draft',
       content: {
         title: proposalTitle,
         eligibilityCriteria,

@@ -23,11 +23,6 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
   if (userRole !== "agent" && userRole !== "admin") {
     return null;
   }
-  
-  // Don't render anything for draft proposals
-  if (proposal.status === "draft") {
-    return null;
-  }
 
   const handleInvite = async () => {
     setIsProcessing(true);
@@ -37,7 +32,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
         status: proposal.status
       });
       
-      // For pending proposals that haven't been sent yet
+      // For draft or pending proposals that haven't been sent yet
       const result = await handleSendInvitation(proposal.id);
       
       if (result.success) {
@@ -110,8 +105,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     }
   };
   
-  // For pending proposals that haven't been sent yet
-  if (proposal.status === "pending" && !proposal.invitation_sent_at) {
+  // For draft proposals or pending proposals that haven't been sent yet
+  if ((proposal.status === "draft" || proposal.status === "pending") && !proposal.invitation_sent_at) {
     return (
       <Button
         variant="outline"
@@ -126,7 +121,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
           </>
         ) : (
           <>
-            Invite <Mail className="h-4 w-4 ml-1" />
+            Send Invitation <Mail className="h-4 w-4 ml-1" />
           </>
         )}
       </Button>
