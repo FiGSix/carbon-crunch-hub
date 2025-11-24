@@ -25,7 +25,8 @@ export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps
     handleChange,
     handleRoleChange,
     handleSubmit,
-    handleTermsAccept
+    handleTermsAccept,
+    invitedEmail
   } = useRegisterForm(initialRole, invitationToken);
   
   return (
@@ -53,6 +54,7 @@ export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps
           confirmPassword={formData.confirmPassword}
           onChange={handleChange}
           disabled={isLoading}
+          emailReadOnly={invitedEmail !== null}
         />
         
         <RegisterTerms 

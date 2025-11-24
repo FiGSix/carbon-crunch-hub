@@ -29,6 +29,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
   const { toast } = useToast();
   const [invitationLoading, setInvitationLoading] = useState(!!invitationToken);
   const [invitationData, setInvitationData] = useState<any>(null);
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<RegisterFormData>({
     firstName: "",
@@ -81,6 +82,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
 
         // Pre-fill form with invitation data
         setInvitationData(data);
+        setInvitedEmail(data.email); // Store the original invited email
         setFormData((prev) => ({
           ...prev,
           email: data.email,
@@ -150,6 +152,21 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate email match for invited agents
+    if (formData.role === "agent" && invitationToken && invitedEmail) {
+      const normalizedFormEmail = formData.email.toLowerCase().trim();
+      const normalizedInvitedEmail = invitedEmail.toLowerCase().trim();
+      
+      if (normalizedFormEmail !== normalizedInvitedEmail) {
+        toast({
+          title: "Email Mismatch",
+          description: `You must register with the email address this invitation was sent to: ${invitedEmail}`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -426,5 +443,6 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     handleSubmit,
     handleTermsAccept,
     isInvitationRegistration: !!invitationToken,
+    invitedEmail, // Expose invited email for read-only field
   };
 }

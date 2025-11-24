@@ -15,6 +15,7 @@ interface FormFieldProps {
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   description?: string;
   error?: string;
   className?: string;
@@ -30,6 +31,7 @@ export function FormField({
   placeholder,
   required = false,
   disabled = false,
+  readOnly = false,
   description,
   error,
   className = ''
@@ -71,12 +73,14 @@ export function FormField({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
+          readOnly={readOnly}
           aria-describedby={ariaDescribedBy}
           aria-invalid={error ? 'true' : 'false'}
           aria-label={`${label}${required ? ' (required)' : ''}`}
           className={cn(
             "transition-all duration-200",
-            error && "border-destructive focus-visible:ring-destructive"
+            error && "border-destructive focus-visible:ring-destructive",
+            readOnly && "bg-muted cursor-not-allowed"
           )}
         />
         
