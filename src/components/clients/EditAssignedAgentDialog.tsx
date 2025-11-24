@@ -79,27 +79,38 @@ export function EditAssignedAgentDialog({ open, onOpenChange, client, onSuccess 
 
     setIsSubmitting(true);
 
-    const result = await UnifiedClientService.updateClient(client.client_id, {
-      createdBy: selectedAgentId,
-    });
-
-    if (result.success) {
-      const newAgent = agents.find(a => a.id === selectedAgentId);
-      toast({
-        title: 'Agent Reassigned',
-        description: `${client.client_name} is now assigned to ${newAgent?.name || 'the selected agent'}.`,
+    try {
+      const { data, error } = await supabase.functions.invoke('reassign-client-agent', {
+        body: {
+          clientId: client.client_id,
+          newAgentId: selectedAgentId,
+        },
       });
-      onOpenChange(false);
-      onSuccess();
-    } else {
+
+      if (error) throw error;
+
+      if (data?.success) {
+        const newAgent = agents.find(a => a.id === selectedAgentId);
+        const proposalCount = data.updatedProposalsCount || 0;
+        toast({
+          title: 'Agent Reassigned',
+          description: `${client.client_name} is now assigned to ${newAgent?.name || 'the selected agent'}. ${proposalCount} proposal(s) updated.`,
+        });
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        throw new Error(data?.error || 'Failed to reassign agent');
+      }
+    } catch (error: any) {
+      console.error('Reassignment error:', error);
       toast({
         title: 'Reassignment Failed',
-        description: result.error || 'Failed to reassign agent',
+        description: error.message || 'Failed to reassign agent',
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   const currentAgent = agents.find(a => a.id === client?.agent_id);
