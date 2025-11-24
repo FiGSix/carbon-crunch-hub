@@ -7,6 +7,7 @@ interface RegisterCredentialsProps {
   confirmPassword: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled: boolean;
+  emailReadOnly?: boolean;
 }
 
 export function RegisterCredentials({ 
@@ -14,7 +15,8 @@ export function RegisterCredentials({
   password, 
   confirmPassword, 
   onChange, 
-  disabled 
+  disabled,
+  emailReadOnly = false
 }: RegisterCredentialsProps) {
   const getPasswordStrength = (pwd: string) => {
     if (pwd.length < 6) return "weak";
@@ -41,7 +43,8 @@ export function RegisterCredentials({
         placeholder="you@example.com"
         required
         disabled={disabled}
-        description="We'll use this email to send you important account information"
+        readOnly={emailReadOnly}
+        description={emailReadOnly ? "This email is pre-filled from your invitation and cannot be changed" : "We'll use this email to send you important account information"}
         className="retro-input"
       />
       
