@@ -36,7 +36,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       logger.info("Starting invitation process for proposal", { proposalId: id });
       
       // First verify the proposal is in the correct status
-      const { data: proposalData, error: proposalError } = await supabase
+      let { data: proposalData, error: proposalError } = await supabase
         .from('proposals')
         .select('status, content, client_id, invitation_token')
         .eq('id', id)
@@ -47,9 +47,41 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         return { success: false, error: proposalError.message };
       }
       
-      // Verify proposal is in the pending status
+      // Auto-promote draft proposals to pending when sending first invitation
+      if (proposalData.status === 'draft') {
+        logger.info(`Auto-promoting proposal ${id} from draft to pending for first invitation send`);
+        
+        const { error: updateError } = await supabase
+          .from('proposals')
+          .update({ status: 'pending' })
+          .eq('id', id);
+        
+        if (updateError) {
+          const errorMsg = `Failed to update proposal status to pending: ${updateError.message}`;
+          logger.error(errorMsg);
+          return { success: false, error: errorMsg };
+        }
+        
+        // Refresh proposal data after status update
+        const { data: updatedProposalData, error: refetchError } = await supabase
+          .from('proposals')
+          .select('status, content, client_id, invitation_token')
+          .eq('id', id)
+          .single();
+          
+        if (refetchError || !updatedProposalData) {
+          const errorMsg = `Failed to refetch proposal after status update: ${refetchError?.message}`;
+          logger.error(errorMsg);
+          return { success: false, error: errorMsg };
+        }
+        
+        proposalData = updatedProposalData;
+        logger.info(`Proposal status updated to: ${proposalData.status}`);
+      }
+      
+      // Only allow pending proposals (or freshly promoted drafts) to send
       if (proposalData.status !== 'pending') {
-        const errorMsg = `Proposal must be in 'pending' status to send invitations. Current status: ${proposalData.status}`;
+        const errorMsg = `Proposal must be in 'draft' or 'pending' status to send invitations. Current status: ${proposalData.status}`;
         logger.error(errorMsg);
         return { success: false, error: errorMsg };
       }
