@@ -151,7 +151,8 @@ serve(async (req: Request) => {
               emailTemplates
             );
 
-            await supabase
+            // Log the automation action with error handling
+            const { error: logError1 } = await supabase
               .from('proposal_automation_log')
               .insert({
                 proposal_id: proposal.id,
@@ -161,6 +162,12 @@ serve(async (req: Request) => {
                 old_status: proposal.status,
                 new_status: 'stale'
               });
+
+            if (logError1) {
+              console.error(`❌ Error logging automation for proposal ${proposal.id}:`, logError1);
+            } else {
+              console.log(`✅ Logged graceful_exit automation for proposal ${proposal.id}`);
+            }
 
             // Then mark as stale
             await supabase.rpc('update_proposal_status_with_log', {
@@ -192,7 +199,8 @@ serve(async (req: Request) => {
             emailTemplates
           );
 
-          await supabase
+          // Log the automation action with error handling
+          const { error: logError2 } = await supabase
             .from('proposal_automation_log')
             .insert({
               proposal_id: proposal.id,
@@ -202,6 +210,12 @@ serve(async (req: Request) => {
               old_status: proposal.status,
               new_status: proposal.status
             });
+
+          if (logError2) {
+            console.error(`❌ Error logging automation for proposal ${proposal.id}:`, logError2);
+          } else {
+            console.log(`✅ Logged clicked_not_signed automation for proposal ${proposal.id}`);
+          }
 
           await supabase
             .from('proposals')
@@ -224,7 +238,8 @@ serve(async (req: Request) => {
             emailTemplates
           );
 
-          await supabase
+          // Log the automation action with error handling
+          const { error: logError3 } = await supabase
             .from('proposal_automation_log')
             .insert({
               proposal_id: proposal.id,
@@ -234,6 +249,12 @@ serve(async (req: Request) => {
               old_status: proposal.status,
               new_status: proposal.status
             });
+
+          if (logError3) {
+            console.error(`❌ Error logging automation for proposal ${proposal.id}:`, logError3);
+          } else {
+            console.log(`✅ Logged opened_not_clicked automation for proposal ${proposal.id}`);
+          }
 
           await supabase
             .from('proposals')
@@ -256,7 +277,8 @@ serve(async (req: Request) => {
             emailTemplates
           );
 
-          await supabase
+          // Log the automation action with error handling
+          const { error: logError4 } = await supabase
             .from('proposal_automation_log')
             .insert({
               proposal_id: proposal.id,
@@ -266,6 +288,12 @@ serve(async (req: Request) => {
               old_status: proposal.status,
               new_status: proposal.status
             });
+
+          if (logError4) {
+            console.error(`❌ Error logging automation for proposal ${proposal.id}:`, logError4);
+          } else {
+            console.log(`✅ Logged delivered_not_opened automation for proposal ${proposal.id}`);
+          }
 
           await supabase
             .from('proposals')
@@ -288,7 +316,8 @@ serve(async (req: Request) => {
             emailTemplates
           );
 
-          await supabase
+          // Log the automation action with error handling
+          const { error: logError5 } = await supabase
             .from('proposal_automation_log')
             .insert({
               proposal_id: proposal.id,
@@ -298,6 +327,12 @@ serve(async (req: Request) => {
               old_status: proposal.status,
               new_status: proposal.status
             });
+
+          if (logError5) {
+            console.error(`❌ Error logging automation for proposal ${proposal.id}:`, logError5);
+          } else {
+            console.log(`✅ Logged sent_not_delivered automation for proposal ${proposal.id}`);
+          }
 
           await supabase
             .from('proposals')
