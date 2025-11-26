@@ -70,9 +70,9 @@ serve(async (req) => {
 
     console.log(`[PDF] Proposal fetched: ${proposal.title}, status: ${proposal.status}`)
 
-    // CRITICAL: Ensure invitation token exists for pending proposals
+    // CRITICAL: Ensure invitation token exists for pending and draft proposals
     let tokenUpdated = false
-    if (proposal.status === 'pending') {
+    if (proposal.status === 'pending' || proposal.status === 'draft') {
       const now = new Date()
       const tokenExpired = !proposal.invitation_expires_at || new Date(proposal.invitation_expires_at) <= now
       
@@ -1491,8 +1491,8 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   drawHeading(page4, 'Acceptance', p4x, y);
   y -= mm(12);
   
-  // Digital Signature Section - only for pending proposals
-  if (proposal.status === 'pending' && proposal.invitation_token && proposal.invitation_expires_at) {
+  // Digital Signature Section - for pending and draft proposals
+  if ((proposal.status === 'pending' || proposal.status === 'draft') && proposal.invitation_token && proposal.invitation_expires_at) {
     y -= mm(2);
     
     const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
