@@ -1,5 +1,5 @@
 
-import { useState, ReactNode, ChangeEvent } from 'react';
+import { useState, ReactNode, ChangeEvent, useEffect } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -30,6 +30,11 @@ export function ImageUpload({
   imageClassName = 'w-20 h-20 rounded-lg'
 }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
+
+  // Sync preview when currentImageUrl changes (e.g., when profile loads)
+  useEffect(() => {
+    setPreview(currentImageUrl || null);
+  }, [currentImageUrl]);
 
   const { uploadFile, removeFile, uploading } = useFileUpload({
     bucket,

@@ -15,6 +15,7 @@ interface PersonalInformationCardProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarChange: (avatarUrl: string | null) => void;
   isLoading: boolean;
+  userId?: string;
 }
 
 export function PersonalInformationCard({
@@ -25,7 +26,8 @@ export function PersonalInformationCard({
   avatarUrl,
   onInputChange,
   onAvatarChange,
-  isLoading
+  isLoading,
+  userId
 }: PersonalInformationCardProps) {
   return (
     <Card>
@@ -46,6 +48,8 @@ export function PersonalInformationCard({
               currentAvatarUrl={avatarUrl}
               onAvatarUpdate={onAvatarChange}
               disabled={isLoading}
+              userId={userId}
+              autoSave={true}
             />
           </div>
         </div>

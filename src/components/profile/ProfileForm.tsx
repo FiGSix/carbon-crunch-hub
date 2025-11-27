@@ -53,6 +53,7 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
         onInputChange={handlePersonalInputChange}
         onAvatarChange={handleAvatarChange}
         isLoading={isLoading || isSubmitting}
+        userId={user?.id}
       />
 
       {/* Company Information - Show for Agents */}
