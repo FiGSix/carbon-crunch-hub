@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/auth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { PageLoading } from '@/components/ui/loading-states';
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { componentLogger } from '@/lib/logger';
@@ -116,6 +116,12 @@ export function DashboardLayout({
                 onClick={() => navigate('/profile')}
               >
                 <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  {profile?.avatar_url && (
+                    <AvatarImage 
+                      src={profile.avatar_url} 
+                      alt={profile?.first_name || 'Profile'} 
+                    />
+                  )}
                   <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs md:text-sm">
                     {userInitials}
                   </AvatarFallback>
