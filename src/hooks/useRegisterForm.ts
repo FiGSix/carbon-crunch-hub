@@ -13,6 +13,7 @@ import {
   inviteMember,
   findCompanyByName
 } from "@/lib/supabase/company/companyOperations";
+import { acceptLegalDocument } from "@/services/legalDocuments";
 
 interface RegisterFormData {
   firstName: string;
@@ -42,6 +43,8 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
   });
   
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [acceptedDocumentId, setAcceptedDocumentId] = useState<string | null>(null);
+  const [acceptedDocumentVersion, setAcceptedDocumentVersion] = useState<number | null>(null);
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -192,6 +195,31 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
       
       if (error) {
         throw error;
+      }
+      
+      // Track legal document acceptance for agents
+      if (formData.role === 'agent' && termsAccepted && acceptedDocumentId && acceptedDocumentVersion && data?.user?.id) {
+        try {
+          await acceptLegalDocument("agent_referral_agreement", {
+            document_id: acceptedDocumentId,
+            version: acceptedDocumentVersion,
+            metadata: {
+              registration_flow: true,
+              invitation_token: invitationToken || null,
+            },
+          });
+          authLogger.info("Legal document acceptance tracked", {
+            userId: data.user.id,
+            documentId: acceptedDocumentId,
+            version: acceptedDocumentVersion,
+          });
+        } catch (acceptanceError) {
+          authLogger.error("Failed to track legal document acceptance", {
+            userId: data.user.id,
+            error: acceptanceError,
+          });
+          // Don't fail registration if acceptance tracking fails
+        }
       }
       
       // Validate role assignment after successful signup
@@ -424,8 +452,11 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     }
   };
   
-  const handleTermsAccept = () => {
+  const handleTermsAccept = (documentId: string, version: number) => {
+    authLogger.info("Terms accepted during registration", { documentId, version });
     setTermsAccepted(true);
+    setAcceptedDocumentId(documentId);
+    setAcceptedDocumentVersion(version);
     setTermsDialogOpen(false);
   };
 

@@ -65,7 +65,7 @@ export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps
           setTermsDialogOpen={setTermsDialogOpen}
           privacyDialogOpen={privacyDialogOpen}
           setPrivacyDialogOpen={setPrivacyDialogOpen}
-          onTermsAccept={handleTermsAccept}
+          onTermsAccept={(docId, version) => handleTermsAccept(docId, version)}
           isLoading={isLoading}
         />
         

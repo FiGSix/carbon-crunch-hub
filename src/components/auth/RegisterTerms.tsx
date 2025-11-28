@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle } from "lucide-react";
 
 // Lazy load dialogs to reduce initial bundle size
-const TermsDialog = lazy(() => import("./TermsDialog").then(m => ({ default: m.TermsDialog })));
+const TermsDialog = lazy(() => import("./TermsDialogUpdated").then(m => ({ default: m.TermsDialogUpdated })));
 const PrivacyPolicyDialog = lazy(() => import("./PrivacyPolicyDialog").then(m => ({ default: m.PrivacyPolicyDialog })));
 
 interface RegisterTermsProps {
@@ -15,7 +15,7 @@ interface RegisterTermsProps {
   setTermsDialogOpen: (open: boolean) => void;
   privacyDialogOpen: boolean;
   setPrivacyDialogOpen: (open: boolean) => void;
-  onTermsAccept: () => void;
+  onTermsAccept: (documentId: string, version: number) => void;
   isLoading: boolean;
 }
 

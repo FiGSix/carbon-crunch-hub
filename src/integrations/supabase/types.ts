@@ -545,6 +545,95 @@ export type Database = {
           },
         ]
       }
+      legal_document_acceptances: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          document_id: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          document_id: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_document_acceptances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_documents: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          current_version: number
+          document_type: string
+          effective_date: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          document_type: string
+          effective_date: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          document_type?: string
+          effective_date?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -2043,6 +2132,10 @@ export type Database = {
         Returns: {
           role: Database["public"]["Enums"]["app_role"]
         }[]
+      }
+      has_accepted_latest_version: {
+        Args: { p_document_type: string; p_user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
