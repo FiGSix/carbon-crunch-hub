@@ -84,6 +84,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
             <section>
               <h3 className="font-semibold mb-2">Between:</h3>
               <div className="space-y-4 ml-4">
+                {/* OWNER FIRST - Reversed from previous version */}
                 <div>
                   <p className="font-semibold">{ownerName}</p>
                   <p className="text-sm">the owner of solar photovoltaic power systems ("the owner")</p>
@@ -92,6 +93,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
                   <p className="text-sm">and email: {ownerEmail}</p>
                 </div>
                 <p className="text-center font-semibold">AND</p>
+                {/* CRUNCH CARBON SECOND - Reversed from previous version */}
                 <div>
                   <p className="font-semibold">Crunch Carbon Pty (Ltd)</p>
                   <p className="text-sm">with Registration 2019/54306/07</p>
@@ -101,6 +103,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
               </div>
             </section>
 
+            {/* PREAMBLE - Completely Rewritten */}
             <section>
               <h3 className="font-semibold mb-2">PREAMBLE</h3>
               <div className="space-y-2 text-sm">
@@ -116,6 +119,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
               <p className="font-semibold mt-4">Now Therefore, it is agreed as follows:</p>
             </section>
 
+            {/* Section 2 - Updated with sub-clauses */}
             <section>
               <h4 className="font-semibold mb-2">2. INTERPRETATION AND PRELIMINARY</h4>
               <div className="ml-4 space-y-2 text-sm">
@@ -129,6 +133,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
               </div>
             </section>
 
+            {/* Section 3 - Major restructure with all new definitions */}
             <section>
               <h4 className="font-semibold mb-2">3. DEFINITIONS</h4>
               <div className="ml-4 space-y-2 text-sm">
@@ -168,129 +173,232 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
               </div>
             </section>
 
+            {/* Section 4 - Added 4.4.5 and 4.4.6 */}
             <section>
-              <h4 className="font-semibold mb-2">4. CESSION OF RIGHTS</h4>
+              <h4 className="font-semibold mb-2">4. NATURE OF AGREEMENT AND OBLIGATIONS OF THE OWNER</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>4.1</strong> The Owner hereby cedes, assigns, and transfers to CDSA all rights, title, and interest in and to any potential environmental benefits, including but not limited to, greenhouse gas (GHG) reduction, arising from the Owner's Solar Photovoltaic Power Systems.</p>
-                <p><strong>4.2</strong> The cession includes all rights to develop, register, verify, and commercialize Carbon Credits derived from the aforementioned environmental benefits.</p>
-                <p><strong>4.3</strong> The Owner warrants that it has the full legal right and authority to cede these rights and that such rights are free from any encumbrances or third-party claims.</p>
+                <p><strong>4.1</strong> The Parties hereby enter into this agreement by virtue of the provisions as set out in the preamble above. For the avoidance of doubt, this Cession Agreement is the sole binding agreement between the Owner and Crunch Carbon (Pty) Ltd. Any references to Crunch Carbon's framework with CDSA merely describe the operational relationship that enables Crunch Carbon to fulfill its obligations to the Owner.</p>
+                <p><strong>4.2</strong> It is hereby acknowledged by the Owner that the definitions herein correspond to those stipulated within this Cession Agreement; however, only the definitions pertinent to this agreement have been expressly included.</p>
+                <p><strong>4.3</strong> Furthermore, it is acknowledged by the Owner that at any time and continuously, they are at liberty to request more information regarding the carbon credit process (audit, development, or otherwise). As such, Owners are regarded as well-informed regarding the carbon credit process.</p>
+                <p><strong>4.4</strong> Accordingly, it is acknowledged and agreed that the Owner's responsibilities in terms of the/this agreement, to facilitate the achievement of the Project, are as follows:</p>
+                <p className="ml-4"><strong>4.4.1</strong> The Owner shall provide Crunch Carbon on behalf of CDSA, with facilitation and sourcing provided by the Aggregator, with detailed specifications concerning the requisite data. The specifics regarding the required data that the Owner must provide to Crunch Carbon on behalf of CDSA are delineated in the data provided to Crunch Carbon.</p>
+                <p className="ml-4"><strong>4.4.2</strong> The Aggregator shall collaborate with the Owner and CDSA and the accredited independent validation and verification body (VVB) to facilitate the efficient and effective validation of the Project Activity and the verification of quantities of Greenhouse Gases reduced by the Project. This cooperation encompasses facilitating access to the sites and all other aspects involved with a Site Visit.</p>
+                <p className="ml-4"><strong>4.4.3</strong> The Owner shall ensure that the Data associated with Greenhouse Gas emissions reduced by the Units subject to this Cession Agreement is not utilized by different Carbon Offset Project developers for the same purpose as that of the Project's objective.</p>
+                <p className="ml-4"><strong>4.4.4</strong> The Owner is obligated to cede, assign, transfer, and relinquish unto Crunch Carbon on behalf of CDSA, all rights, title, interest, and benefits pertaining to the ownership and contractual rights associated with any potential environmental benefits, inclusive of but not limited to greenhouse gas (GHG) reduction, resulting from the Unit, as well as any subsequent pursuit of revenue derived from such environmental benefits.</p>
+                <p className="ml-4"><strong>4.4.5</strong> Clause 4.4.4 would automatically be cancelled after 30-days termination notice by the owner.</p>
+                <p className="ml-4"><strong>4.4.6</strong> Additionally, the owner is obligated to protect the Intellectual Property of Crunch Carbon and CDSA.</p>
               </div>
             </section>
 
+            {/* Section 5 - Added 5.6 */}
             <section>
-              <h4 className="font-semibold mb-2">5. OBLIGATIONS OF THE OWNER</h4>
+              <h4 className="font-semibold mb-2">5. CESSION OF RIGHTS TO CDSA</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>5.1</strong> The Owner shall provide Crunch Carbon on behalf of CDSA with all necessary Data, documents, records, and information required for the development of Carbon Credits.</p>
-                <p><strong>5.2</strong> The Owner shall grant reasonable access to the Premises for Site visits by VVBs or authorized auditors.</p>
-                <p><strong>5.3</strong> The Owner shall maintain the Solar Photovoltaic Power Systems in good working order and notify CDSA of any material changes or decommissioning.</p>
-                <p><strong>5.4</strong> The Owner shall cooperate fully with CDSA and the Aggregator in all matters relating to the Project.</p>
-                <p><strong>5.5</strong> The Owner shall provide, update and maintain accurate information regarding all Units and Premises through the Platform. Any Unit or Premise not recorded on the Platform shall be deemed excluded from this Agreement.</p>
+                <p><strong>5.1</strong> The Owner hereby cedes, assigns, transfers, and relinquishes unto Crunch Carbon on behalf of CDSA, all of its rights, title, interest, and benefits in and to the ownership pertaining to any potential environmental benefits, including but not limited to, greenhouse gas (GHG) reduction, resulting from the Owner's Units located or installed at the Premises, including, the Owner's contractual rights for the pursuit of revenue from the aforementioned potential environmental benefits.</p>
+                <p><strong>5.2</strong> It is agreed that the aforementioned transfer of all rights, title, interest, and benefits pertaining to any potential environmental benefits, arising from the Unit, shall encompass all Units installed or located at the premises as (day/month/year) state on the platform.</p>
+                <p><strong>5.3</strong> It is agreed that the aforementioned transfer of all rights, title, interest, and benefits pertaining to any potential environmental benefits, arising from the Unit, shall constitute a component of the exclusive Intellectual Property of Crunch Carbon and CDSA, which property shall, in accordance with this Cession Agreement, endure as the sole and exclusive Intellectual Property of Crunch Carbon and CDSA.</p>
+                <p><strong>5.4</strong> It is further specifically agreed that only the aforementioned transfer of all of the Owner's contractual rights, title, interest, and benefits pertaining to the pursuit of revenue from any potential environmental benefits shall, in accordance with this Cession Agreement, be retained as the sole and exclusive property of Crunch Carbon on behalf of CDSA until the termination or expiration of this Cession Agreement.</p>
+                <p><strong>5.5</strong> Additionally, the Owner hereby undertakes to furnish Crunch Carbon on behalf of CDSA, with written notice, provided no less than 30 (thirty) days in advance, prior to the sale of the Premises (this shall not hinder the sale or guarantee that the new owner will continue with this Cession Agreement).</p>
+                <p><strong>5.6</strong> This Cession applies to all Units at the Signature Date and automatically to all future Units added by the Owner or its authorised representatives to the Platform, without requiring any further signature or amendment. Any Unit uploaded, submitted, approved or added by the Owner or its EPC/Agent on the Platform is deemed incorporated into this Agreement.</p>
               </div>
             </section>
 
+            {/* Section 6 */}
             <section>
-              <h4 className="font-semibold mb-2">6. OBLIGATIONS OF CDSA</h4>
+              <h4 className="font-semibold mb-2">6. REPRESENTATIONS AND WARRANTIES</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>6.1</strong> CDSA shall use its Intellectual Property and expertise to develop, register, and commercialize Carbon Credits from the Owner's Solar Photovoltaic Power Systems.</p>
-                <p><strong>6.2</strong> CDSA shall keep the Owner informed of significant developments in the Project.</p>
-                <p><strong>6.3</strong> CDSA shall distribute revenue from the sale of Carbon Credits in accordance with the revenue-sharing arrangement specified in this agreement.</p>
+                <p><strong>6.1.1</strong> The Owner represents and warrants that:</p>
+                <p className="ml-4"><strong>6.1.2</strong> It has full power and authority to enter into this agreement and to cede the aforementioned rights, title, interest, and benefits in and to the ownership pertaining to any potential environmental benefits to Crunch Carbon on behalf of CDSA</p>
+                <p className="ml-4"><strong>6.1.3</strong> It is the lawful owner of the rights, title, interest, and benefits being ceded herein.</p>
+                <p className="ml-4"><strong>6.1.4</strong> There are no encumbrances or restrictions on the rights, title, interest, and benefits being ceded herein.</p>
+                <p className="ml-4"><strong>6.1.5</strong> The cession of the rights, title, interest, and benefits to CDSA does not violate any law or agreement binding on the Owner.</p>
+                <p className="ml-4"><strong>6.1.6</strong> That the Owner has not ceded, sold, explicitly or implicitly forfeited any potential environmental benefit arising from the Unit located at the Premises in any form.</p>
               </div>
             </section>
 
+            {/* Section 7 */}
             <section>
-              <h4 className="font-semibold mb-2">7. REVENUE SHARING</h4>
+              <h4 className="font-semibold mb-2">7. INDEMNITY</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>7.1</strong> The net revenue from the sale of Carbon Credits shall be shared as follows:</p>
-                <p className="ml-4"><strong>7.1.1</strong> {ownerPercentage}% to the Owner</p>
-                <p className="ml-4"><strong>7.1.2</strong> The remainder to CDSA and the Aggregator as per their separate agreement</p>
-                <p><strong>7.2</strong> "Net revenue" means the gross proceeds from Carbon Credit sales less any direct costs incurred in the development, verification, registration, and sale of such credits.</p>
-                <p><strong>7.3</strong> Payments to the Owner shall be made within 60 days of receipt of funds by CDSA from Carbon Credit sales.</p>
+                <p><strong>7.1.1</strong> The Owner indemnifies and holds harmless Crunch Carbon and CDSA from and against any and all claims, liabilities, losses, damages, costs, and expenses, arising out of or in connection with any breach of the representations and warranties set forth herein.</p>
               </div>
             </section>
 
+            {/* Section 8 */}
             <section>
-              <h4 className="font-semibold mb-2">8. CONFIDENTIALITY</h4>
+              <h4 className="font-semibold mb-2">8. ACKNOWLEDGEMENT AND ACCEPTANCE</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>8.1</strong> All Parties agree to maintain the confidentiality of Confidential Information disclosed in connection with this agreement.</p>
-                <p><strong>8.2</strong> This obligation shall not apply to information that:</p>
-                <p className="ml-4"><strong>8.2.1</strong> is or becomes publicly available through no breach of this agreement;</p>
-                <p className="ml-4"><strong>8.2.2</strong> is required to be disclosed by law or regulatory authority; or</p>
-                <p className="ml-4"><strong>8.2.3</strong> is independently developed without reference to the Confidential Information.</p>
+                <p><strong>8.1.1</strong> Crunch Carbon and CDSA acknowledges and accepts the cession of the aforementioned rights, title, interest, and benefits from the Owner and agrees to assume all rights, obligations, and liabilities associated therewith.</p>
               </div>
             </section>
 
+            {/* Section 9 - IP Protection */}
             <section>
-              <h4 className="font-semibold mb-2">9. TERM AND TERMINATION</h4>
+              <h4 className="font-semibold mb-2">9. PROTECTION OF CRUNCH CARBON AND CDSA'S INTELLECTUAL PROPERTY</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>9.1</strong> This agreement shall commence on the signature date and continue for a period of 10 years.</p>
-                <p><strong>9.2</strong> This agreement may be terminated earlier by mutual written consent of the Parties.</p>
-                <p><strong>9.3</strong> Upon termination, the rights ceded under this agreement shall revert to the Owner, subject to CDSA's right to complete any ongoing Carbon Credit development and sales processes.</p>
+                <p><strong>9.1</strong> The Parties agree that all Intellectual Property obtained, accessed, or utilized in terms of the/this agreement, as a result of the relationship created by virtue of the/this agreement relating to the development of carbon credits, shall be retained and/or hereby assigned, transferred, ceded and relinquished to Crunch Carbon on behalf of CDSA, vesting solely and exclusively in Crunch Carbon on behalf of CDSA and shall be treated as confidential. Furthermore, it is acknowledged that this provision shall survive the termination of the/this agreement and shall remain effective until explicitly rescinded or amended in writing by the Parties.</p>
+                <p><strong>9.2</strong> In light of the Owner's and/or Aggregator's association with CDSA, the Owner shall be acquainted with and gain access to CDSA's Intellectual Property and Confidential Information, thereby gaining insight into the Intellectual Property essential to the operations and endeavours of CDSA.</p>
+                <p><strong>9.3</strong> Having regard to the facts recorded above, the Owner and/or Aggregator specifically agrees that in order to protect the proprietary interest of CDSA, the Owner and/or Aggregator will not during the subsistence of the/this agreement or at any time thereafter, either use or directly or indirectly divulge or disclose to other any of CDSA's Intellectual Property.</p>
+                <p><strong>9.4</strong> Unless agreed otherwise in writing, nothing in the/this agreement shall confer or be deemed to confer on the Owner and/or Aggregator any rights in or licence to use the above-referenced Intellectual Property rights other than in the performance of its obligations in terms of the/this agreement.</p>
+                <p><strong>9.5</strong> Either party shall ensure that the use by the other party of the information and of the intellectual property, which usage of information and intellectual property is required in order for the fulfilment of the obligations created by virtue of the/this agreement, shall not infringe any third party's intellectual property rights.</p>
+                <p><strong>9.5.1</strong> The parties warrant that:</p>
+                <p className="ml-4"><strong>9.5.1.1</strong> They have fully and accurately disclosed all relevant known facts relating to the Intellectual Property and its application in terms of the/this agreement which may affect the other party's decision to enter into this agreement;</p>
+                <p className="ml-4"><strong>9.5.1.2</strong> They have the sole rights to the Intellectual Property and that it is not encumbered in any manner whatsoever;</p>
+                <p className="ml-4"><strong>9.5.1.3</strong> No third person has any claim to or interest of any nature in the Intellectual Property;</p>
+                <p className="ml-4"><strong>9.5.1.4</strong> Neither the Intellectual Property nor its use constitutes an infringement of the Intellectual Property Rights of any other person.</p>
+                <p className="ml-4"><strong>9.5.1.5</strong> If it is established that such use infringes any third party's intellectual property right, the infringing party shall at its own expense and risk take such measures as to ensure that the infringement is obviated and that the non-infringing party's use of the information is not affected;</p>
+                <p className="ml-8"><strong>9.5.1.5.1</strong> shall procure a license or similar authority for the non-infringing party to use the Intellectual Property without liability for infringement; or</p>
+                <p className="ml-8"><strong>9.5.1.5.2</strong> shall replace or modify the Intellectual Property so that it does not infringe the rights of a third party while retaining equivalent functionality.</p>
               </div>
             </section>
 
+            {/* Section 10 (was 7) - Revenue with new 7.1.4 and 7.1.7 */}
             <section>
-              <h4 className="font-semibold mb-2">10. INTELLECTUAL PROPERTY</h4>
+              <h4 className="font-semibold mb-2">10. REVENUE, MONETARY ARRANGEMENTS, AND RELATED RESPONSIBILITIES</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>10.1</strong> All Intellectual Property used in the Project remains the exclusive property of CDSA.</p>
-                <p><strong>10.2</strong> The Owner acknowledges that it acquires no rights to CDSA's Intellectual Property through this agreement.</p>
+                <p><strong>7.1.1</strong> All costs for setting up the official account of CDSA in the Registry/Registries have been the responsibility of CDSA.</p>
+                <p><strong>7.1.2</strong> CDSA shall cover the costs for the registry account in which the issued carbon credits will be held. The Owner shall not be liable for these costs.</p>
+                <p><strong>7.1.3</strong> CDSA shall cover the fees associated with engaging a VVB for the purposes of validating the Project and verifying the Carbon Credits generated. The Owner shall not be liable for these costs.</p>
+                <p><strong>7.1.4</strong> CDSA shall be responsible for the sale of the Carbon Credits generated by the Project. The decision as to when and how to sell the Carbon Credits, including the choice of buyer, shall be at the sole discretion of CDSA. CDSA shall ensure transparency in the sales process by providing periodic updates to the Owner, including relevant market insights and pricing trends, to keep the Owner informed of the status and performance of the Carbon Credits.</p>
+                <p><strong>7.1.5</strong> Additionally, CDSA shall exercise its discretion in determining the entities to which the Carbon Credits will be sold. This discretion encompasses the selection of interested parties and the negotiation of terms for the sale of the Carbon Credits.</p>
+                <p><strong>7.1.6</strong> Revenue paid out to the owner is stipulated as per the signed proposal.</p>
+                <p><strong>7.1.7</strong> Or to retain and hold the Carbon Credits in its own name. If the Owner elects to hold the Carbon Credits, all costs and fees related to issuance, transfer, registration, or ongoing management shall be for the Owner's account, and CDSA or Crunch Carbon shall bear no responsibility or liability for such costs or activities.</p>
+                <p><strong>7.1.8</strong> It is specifically recorded and agreed that the transfer of the revenue to the Aggregator and subsequently to the owner shall be conducted periodically on an annual basis throughout the subsistence of this Cession Agreement.</p>
+                <p><strong>7.1.9</strong> Feedback will be provided at least quarterly or as required by the project owners.</p>
               </div>
             </section>
 
+            {/* Section 11 (was 8) */}
             <section>
-              <h4 className="font-semibold mb-2">11. WARRANTIES AND REPRESENTATIONS</h4>
+              <h4 className="font-semibold mb-2">8. INCORPORATION OF THIS AGREEMENT INTO THE PROVISIONS OF THE AGREEMENT</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>11.1</strong> Each Party warrants that:</p>
-                <p className="ml-4"><strong>11.1.1</strong> it has the legal capacity and authority to enter into this agreement;</p>
-                <p className="ml-4"><strong>11.1.2</strong> this agreement constitutes valid and binding obligations; and</p>
-                <p className="ml-4"><strong>11.1.3</strong> it will comply with all applicable laws in performing its obligations.</p>
+                <p><strong>8.1</strong> It is specifically agreed that this Agreement shall form an integral and indivisible part of this Cession Agreement, to the extent that the content of this Agreement, including subsequent amendments made to this Agreement, shall be regarded by the parties as fully incorporated into the provisions of this Cession Agreement.</p>
               </div>
             </section>
 
+            {/* Section 12 (was 9) - Termination with new 9.2 */}
             <section>
-              <h4 className="font-semibold mb-2">12. LIMITATION OF LIABILITY</h4>
+              <h4 className="font-semibold mb-2">9. TERMINATION</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>12.1</strong> Neither Party shall be liable for indirect, consequential, or punitive damages arising from this agreement.</p>
-                <p><strong>12.2</strong> CDSA does not guarantee any specific revenue or number of Carbon Credits to be generated.</p>
+                <p><strong>9.1</strong> This Agreement may be terminated at any time by either of the parties hereto, provided that such consent to terminate is in writing and is signed by the party who wants to cancel.</p>
+                <p className="ml-4"><strong>9.1.1</strong> In the case of termination the terminating party must provide 30 days of written notice to the other party.</p>
+                <p className="ml-4"><strong>9.1.2</strong> Data extraction will be terminated as from the last day of the 30-day notice period.</p>
+                <p className="ml-4"><strong>9.1.3</strong> n/a</p>
+                <p><strong>9.2</strong> The Owner may request the removal of a specific Unit by giving 30 days written notice. Such removal applies only to future periods and shall not reverse cessions already utilised for audits, submissions or issued vintages.</p>
+                <p><strong>9.3</strong> Other than Clause 9.1 either party will be entitled to terminate the agreement by providing 30-days written notice to the other in the event of:</p>
+                <p className="ml-4"><strong>9.3.1</strong> the other party committing a breach of the terms and conditions of this Cession Agreement, all of which are declared to be material and failing to remedy the breach within 14 (Fourteen) days of written notice calling upon the other party to remedy the breach complained of;</p>
+                <p className="ml-8"><strong>9.3.1.1</strong> In the event of either of the Parties ("the defaulting party") committing a breach of any of the terms of this Cession Agreement and failing to remedy such breach within a period of 14 (Fourteen) days after receipt of a written notice from the other party ("the aggrieved party") calling upon the defaulting party so to remedy, then the aggrieved party shall be entitled, either claims specific performance of the terms of this Cession Agreement or to cancel this Cession Agreement forthwith and without further notice.</p>
+                <p className="ml-8"><strong>9.3.1.2</strong> the other party committing an act of insolvency or being sequestrated/liquidated or being placed under a provisional or final winding-up or judicial management order or if the other party makes an assignment for the benefit of creditors.</p>
+                <p><strong>9.4</strong> The termination of this Cession Agreement, for whatever reason, will not affect the rights of a party which may have accrued as at the date of termination and will further not affect any rights and obligations which specifically or by their nature survive the termination of this Cession Agreement.</p>
               </div>
             </section>
 
+            {/* Section 13 (was 10) */}
             <section>
-              <h4 className="font-semibold mb-2">13. DISPUTE RESOLUTION</h4>
+              <h4 className="font-semibold mb-2">10. DISPUTE RESOLUTION</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>13.1</strong> Any dispute arising from this agreement shall first be attempted to be resolved through good faith negotiations.</p>
-                <p><strong>13.2</strong> If negotiations fail, the dispute shall be referred to mediation before resorting to litigation.</p>
-                <p><strong>13.3</strong> This agreement shall be governed by the laws of the Republic of South Africa.</p>
+                <p><strong>10.1</strong> In the event of a dispute arising from, or incidental to, this Cession Agreement, the Parties agree to submit the matter for mediation and failing which to arbitration.</p>
+                <p><strong>10.2</strong> Notwithstanding the above provisions, the Parties will be entitled to approach a Court of competent jurisdiction for urgent relief.</p>
               </div>
             </section>
 
+            {/* Section 14 (was 11) - Arbitration with updated 11.5 */}
             <section>
-              <h4 className="font-semibold mb-2">14. GENERAL PROVISIONS</h4>
+              <h4 className="font-semibold mb-2">11. ARBITRATION</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>14.1</strong> This agreement constitutes the entire agreement between the Parties and supersedes all prior agreements or understandings.</p>
-                <p><strong>14.2</strong> No amendment to this agreement shall be valid unless in writing and signed by all Parties.</p>
-                <p><strong>14.3</strong> No Party may cede or assign its rights or obligations under this agreement without the prior written consent of the other Parties.</p>
-                <p><strong>14.4</strong> If any provision of this agreement is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.</p>
+                <p><strong>11.1</strong> Save where otherwise provided for in this Cession Agreement, any dispute between the Parties hereto (and which dispute has previously been submitted to mediation without resolution) in regard to:</p>
+                <p className="ml-4"><strong>11.1.1</strong> the interpretation of; or</p>
+                <p className="ml-4"><strong>11.1.2</strong> the effect of; or</p>
+                <p className="ml-4"><strong>11.1.3</strong> the carrying out of; or</p>
+                <p className="ml-4"><strong>11.1.4</strong> any other matter arising directly or indirectly out of, this Cession Agreement, shall be submitted to and decided by arbitration.</p>
+                <p><strong>11.2</strong> The arbitration shall be held informally but otherwise under the provisions of the Arbitration Act No.42 of 1965, as amended from time to time, or any Act passed in substitution for it; it being the intention as far as possible that the arbitration shall be held and concluded within 21 (twenty one) days after it has been demanded by way of written notice of either party to the other party. The Parties shall be entitled to be represented at the arbitration.</p>
+                <p><strong>11.3</strong> The arbitrator shall be, if the matter in issue is:</p>
+                <p className="ml-4"><strong>11.3.1</strong> primarily an accounting matter an independent chartered accountant of not less than 15 (Fifteen) years' standing, practising as a registered auditor, agreed upon between the Parties;</p>
+                <p className="ml-4"><strong>11.3.2</strong> primarily a legal matter a practising attorney of not less than 15 (Fifteen) years' standing, agreed upon between the Parties;</p>
+                <p className="ml-4"><strong>11.3.3</strong> any other matter an independent person agreed upon between the Parties.</p>
+                <p><strong>11.4</strong> If the Parties cannot agree whether any matter in dispute falls under the clauses mentioned hereinabove within 7 (seven) days after arbitration has been demanded, then that dispute shall be submitted for decision in terms of clause 15.3.3 above within 7 (seven) days after the Parties have so failed to agree, in order that the arbitration can be held and concluded as far as possible within a period of 21 (twenty one) days referred to above.</p>
+                <p><strong>11.5</strong> If the Parties fail to agree on the appointment of an arbitrator, such failure to agree shall be referred to the Attorneys' Association of Gauteng in order for the Association to appoint an arbitrator.</p>
+                <p><strong>11.6</strong> The decision of the arbitrator shall be final and binding upon the Parties and shall be carried into effect by them and made an order of any competent Court, including any decision regarding the costs of the arbitration which the arbitrator shall be empowered to make.</p>
+                <p><strong>11.7</strong> Notwithstanding the foregoing, any party shall be entitled to approach any court of competent jurisdiction for urgent relief.</p>
               </div>
             </section>
 
+            {/* Section 15 (was 12) */}
             <section>
-              <h4 className="font-semibold mb-2">15. NOTICES</h4>
+              <h4 className="font-semibold mb-2">12. FORCE MAJEURE</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>15.1</strong> Any notice required under this agreement shall be in writing and delivered to:</p>
-                <p className="ml-4"><strong>For the Owner:</strong></p>
-                <p className="ml-6">{ownerName}</p>
-                <p className="ml-6">{companyAddress}</p>
-                <p className="ml-6">Email: {ownerEmail}</p>
-                <p className="ml-4 mt-2"><strong>For CDSA:</strong></p>
-                <p className="ml-6">Carbon Disclosure South Africa (Pty) Ltd</p>
-                <p className="ml-6">Email: info@carbondisclosure.co.za</p>
+                <p><strong>12.1</strong> A party is not liable for a failure to perform any of its obligations in so far as it proves:</p>
+                <p className="ml-4"><strong>12.1.1</strong> that the failure was due to an impediment beyond its control.</p>
+                <p className="ml-4"><strong>12.1.2</strong> that it could not reasonably be expected to have taken the impediment and its effects upon the party's ability to perform into account at the time of the conclusion of the contract; and</p>
+                <p className="ml-4"><strong>12.1.3</strong> that it could not reasonably have avoided or overcome the impediment or at least its effects.</p>
+                <p><strong>12.2</strong> An impediment under clause 16.1.1 may result from events such as the following, this enumeration not being exhaustive:</p>
+                <p className="ml-4"><strong>12.2.1</strong> war, whether declared or not, civil war, civil violence, riots and revolutions, acts of piracy, acts of sabotage.</p>
+                <p className="ml-4"><strong>12.2.2</strong> natural disasters such as violent storms, cyclones, earthquakes, tidal waves, floods, destruction by explosions, fires, destruction of machines, of factories and of any kind of installations.</p>
+                <p className="ml-4"><strong>12.2.3</strong> boycotts, strikes and lockouts of all kinds, go-slows, occupation of factories and premises, and work stoppages.</p>
+                <p className="ml-4"><strong>12.2.5</strong> acts of authority, whether lawful or unlawful, apart from acts for which the party seeking relief has assumed the risk by virtue of any other provisions of this Cession Agreement.</p>
+                <p><strong>12.3</strong> Relief from liability for non-performance by reason of the provisions of this clause shall commence on the date upon which the party seeking relief gives notice of the impediment relied upon and shall terminate upon the date upon which such impediment ceases to exist, provided that if such impediment continues for a period of more than 30 (THIRTY) days, either party shall be entitled to terminate this Cession Agreement by written notice to the other party, without cause, penalty, claim or obligation in respect of any loss suffered or damages incurred as a result of such cancellation.</p>
               </div>
             </section>
 
-            <div className="mt-8 pt-4 border-t">
-              <p className="text-sm font-semibold">By signing below, the Parties acknowledge that they have read, understood, and agree to be bound by the terms of this Cession Agreement.</p>
-              <p className="text-sm mt-4">Signed at _________________ on this {signingDate}</p>
-            </div>
+            {/* Section 16 (was 13) */}
+            <section>
+              <h4 className="font-semibold mb-2">13. DOMICILIUM CITANDI ET EXECUTANDI AND NOTICES</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>13.1</strong> The Parties choose as their domicilia citandi et executandi their respective addresses as set out hereinabove for all purposes arising out of or in connection with this Agreement at which physical or electronic mail addresses all processes and notices arising out of or in connection with this Agreement, its breach or termination may validly be served upon or delivered to the Parties.</p>
+                <p><strong>13.2</strong> Any notice, consent or other communication required or permitted hereunder from either party shall be in writing. and shall</p>
+                <p className="ml-4"><strong>13.2.1</strong> if delivered by hand be deemed to have been duly received by the addressee on the date of delivery;</p>
+                <p className="ml-4"><strong>13.2.2</strong> if transmitted by facsimile or electronic mail be deemed to have been received by the addressee on the day following the date of transmission, unless the contrary is proved.</p>
+                <p><strong>13.3</strong> Notwithstanding anything to the contrary contained or implied in this Agreement, a written notice or communication actually received by one of the Parties from another including by way electronic mail transmission shall be adequate written notice or communication to such party.</p>
+              </div>
+            </section>
+
+            {/* Section 17 (was 14) */}
+            <section>
+              <h4 className="font-semibold mb-2">14. TERMINATION / EXPIRATION ASSISTANCE</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p>On the expiration or termination of this Cession Agreement the Parties shall make themselves available for an exit meeting for the discussion and implementation of termination/expiration assistance.</p>
+              </div>
+            </section>
+
+            {/* Section 18 (was 15) */}
+            <section>
+              <h4 className="font-semibold mb-2">15. GENERAL</h4>
+              <div className="ml-4 space-y-2 text-sm">
+                <p><strong>15.1</strong> No waiver, extension of time or other indulgence which may be given or allowed by either party in respect of the performance of any obligation hereunder, and no delay or forbearance in the enforcement of any right of either party arising from this agreement, and no single or partial exercise of any right by either party under this agreement, shall in any circumstances be construed to be an implied consent or election by either party or operate as a waiver or a novation of or otherwise affect any of either party's rights in terms of or arising from this agreement or estop or preclude either party from enforcing at any time and without notice, strict and punctual compliance with each and every provision or term hereof.</p>
+                <p><strong>15.2</strong> This agreement constitutes the entire agreement between the parties who acknowledge that there are no other oral or written understandings or agreements between them relating to the subject matter of this agreement. No amendment, consensual cancellation or other modification of this agreement shall be valid or binding on a party hereto unless reduced to writing and executed by both parties and agreed to be attached hereto as a further Appendix.</p>
+                <p><strong>15.3</strong> Each and every provision of this agreement (excluding only those provisions which are essential at law for a valid and binding agreement to be constituted) shall be deemed to be separate and severable from the remaining provisions of this agreement. If any of the provisions of this agreement (excluding only those provisions which are essential at law for a valid and binding agreement to be constituted) is found by any court of competent jurisdiction to be invalid and/or unenforceable then, notwithstanding such invalidity and/or unenforceability, the remaining provisions of this agreement shall be and remain of full force and effect.</p>
+                <p><strong>15.4</strong> The expiration, cancellation or other termination of this agreement shall not affect those provisions of this agreement which expressly provide that they will operate after such expiration, cancellation or other termination or which of necessity must continue to endure after such expiration, cancellation or other termination, notwithstanding that the relevant clause may not expressly provide for such continuation.</p>
+                <p><strong>15.5</strong> Neither parties may not assign, transfer, sub-contract or otherwise part with this agreement or any part thereof or any right or obligation under it, without obtaining the other party's prior written consent thereto. Consent would not be unreasonably withheld.</p>
+                <p><strong>15.6</strong> This agreement may be executed in one or more counterparts, each of which shall be deemed an original and all of which shall be taken together and deemed to be one instrument.</p>
+                <p><strong>15.7</strong> The Parties agree that the current operation and identity of each shall not be altered, unless it is agreed otherwise and reduced into writing.</p>
+                <p><strong>15.8</strong> The undersigned hereby warrants and represents that they possess complete authority to enter into and execute this agreement on behalf of the party herein, in accordance with the duly conferred authorization to represent said party, and that such execution and performance of this agreement have been duly authorized by all requisite corporate or legal actions. Additionally, the undersigned undertakes to indemnify and absolve the other party from any and all claims, losses, or damages stemming from any breach of the aforementioned warranty.</p>
+                <p><strong>15.9</strong> Each Party recognizes that this Cession Agreement is a legally binding contract and acknowledges that such party has had the opportunity to consult with legal counsel of choice. Each party has reviewed this agreement, and any question of interpretation shall not be resolved by any rule of Interpretation providing for interpretation against the drafting party. This agreement shall be construed as though drafted by the parties.</p>
+              </div>
+            </section>
+
+            {/* Signature Block */}
+            <section>
+              <div className="ml-4 space-y-4 text-sm mt-6">
+                <p className="font-semibold">THUS, DONE AND SIGNED AT __________________________________ ON THIS</p>
+                <p className="font-semibold">DATE {signingDate} IN THE PRESENCE OF THE UNDERSIGNED WITNESSES.</p>
+                <div className="mt-4">
+                  <p className="font-semibold">AS WITNESSES:</p>
+                  <p className="mt-2">1. __________________________________</p>
+                  <p>2. __________________________________</p>
+                  <p className="mt-4">_________________________________ FOR: "{ownerName}" (Owner)</p>
+                </div>
+                <div className="mt-6">
+                  <p className="font-semibold">THUS, DONE AND SIGNED AT SANDTON JOHANNESBURG ON THIS</p>
+                  <p className="font-semibold">DATE {signingDate} IN THE PRESENCE OF THE UNDERSIGNED WITNESSES.</p>
+                  <div className="mt-4">
+                    <p className="font-semibold">AS WITNESSES:</p>
+                    <p className="mt-2">1. ANDREW D. STOCKIL</p>
+                    <p>2. JOHANITA BURGER</p>
+                    <p className="mt-4">FOR: __________________________________ Crunch Carbon Pty (Ltd)</p>
+                  </div>
+                </div>
+              </div>
+            </section>
             
             <div ref={sentinelRef} className="h-1" />
           </div>
