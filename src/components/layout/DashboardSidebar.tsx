@@ -14,7 +14,8 @@ import {
   Shield,
   UserCheck,
   Database,
-  Mail
+  Mail,
+  Scale
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -116,6 +117,12 @@ export function DashboardSidebar() {
       name: "Email Automation",
       href: "/admin/email-automation",
       icon: Mail,
+      roles: ["admin"]
+    },
+    {
+      name: "Legal Documents",
+      href: "/admin/legal-documents",
+      icon: Scale,
       roles: ["admin"]
     },
     {
