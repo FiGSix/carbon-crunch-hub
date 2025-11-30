@@ -58,20 +58,20 @@ function DashboardMetricsByStageCardsComponent({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-      {/* Card 1: Vintage 2025 Audit Ready Projects */}
+      {/* Card 1: Proposals Pending */}
       <StatsCard 
-        title="Vintage 2025 Audit Ready Projects" 
-        value={formatMwp(metrics.auditReadyMwp)} 
-        icon={<CheckCircle className="h-5 w-5" />}
-        color="green"
+        title="Proposal(s) Pending" 
+        value={formatMwp(metrics.pendingApprovalMwp)} 
+        icon={<FileText className="h-5 w-5" />}
+        color="emerald"
       />
       
-      {/* Card 2: Vintage 2025 Est. Revenue (2025-2030) */}
+      {/* Card 2: Pending Proposals Est. Revenue */}
       <StatsCard 
-        title="Vintage 2025 Est. Revenue (2025-2030)" 
-        value={formatRevenue(metrics.auditReadyRevenue)} 
+        title="Proposal(s) Pending Est. Revenue (2025-2030)" 
+        value={formatRevenue(metrics.pendingApprovalRevenue)} 
         icon={<DollarSign className="h-5 w-5" />}
-        color="yellow"
+        color="purple"
       />
       
       {/* Card 3: Onboarding Projects */}
@@ -82,20 +82,20 @@ function DashboardMetricsByStageCardsComponent({
         color="blue"
       />
       
-      {/* Card 4: Proposals Pending */}
+      {/* Card 4: Vintage 2025 Audit Ready Projects */}
       <StatsCard 
-        title="Proposal(s) Pending" 
-        value={formatMwp(metrics.pendingApprovalMwp)} 
-        icon={<FileText className="h-5 w-5" />}
-        color="emerald"
+        title="Vintage 2025 Audit Ready Projects" 
+        value={formatMwp(metrics.auditReadyMwp)} 
+        icon={<CheckCircle className="h-5 w-5" />}
+        color="green"
       />
       
-      {/* Card 5: Pending Proposals Est. Revenue */}
+      {/* Card 5: Vintage 2025 Est. Revenue (2025-2030) */}
       <StatsCard 
-        title="Proposal(s) Pending Est. Revenue (2025-2030)" 
-        value={formatRevenue(metrics.pendingApprovalRevenue)} 
+        title="Vintage 2025 Est. Revenue (2025-2030)" 
+        value={formatRevenue(metrics.auditReadyRevenue)} 
         icon={<DollarSign className="h-5 w-5" />}
-        color="purple"
+        color="yellow"
       />
     </div>
   );
