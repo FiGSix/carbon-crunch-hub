@@ -18,6 +18,7 @@ interface DashboardTopRowProps {
 
 export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowProps) {
   const isAdmin = userRole === 'admin';
+  const isAgent = userRole === 'agent';
   const { data: pendingAgentCount } = usePendingAgentApprovals(isAdmin);
   
   return (
@@ -25,7 +26,7 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
       {/* Row 1, Col 1: Vintage Progress */}
       <VintageProgressDisplayCard />
       
-      {/* Row 1, Col 2: Admin sees Audit Review Requests, others see Solar Starter Badge */}
+      {/* Row 1, Col 2: Role-specific cards */}
       {isAdmin ? (
         <div className="space-y-6">
           <Link to="/onboarding" className="block">
@@ -54,6 +55,19 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
             </Card>
           </Link>
         </div>
+      ) : isAgent ? (
+        <Link to="/onboarding" className="block h-full">
+          <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Audit Review Requests</CardTitle>
+              <ClipboardList className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics?.auditReviewRequests ?? 0}</div>
+              <p className="text-xs text-muted-foreground">Projects awaiting review</p>
+            </CardContent>
+          </Card>
+        </Link>
       ) : (
         <SolarStarterBadgeCard />
       )}
