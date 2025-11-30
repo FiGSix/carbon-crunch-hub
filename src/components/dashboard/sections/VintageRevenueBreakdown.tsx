@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useVintageRevenueBreakdown } from "@/hooks/dashboard/useVintageRevenueBreakdown";
+import { useAdminVintageRevenueBreakdown } from "@/hooks/dashboard/useAdminVintageRevenueBreakdown";
+import { useAuth } from "@/contexts/auth";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -8,7 +10,14 @@ interface VintageRevenueBreakdownProps {
 }
 
 export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownProps) {
-  const { data, isLoading } = useVintageRevenueBreakdown();
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+  
+  const { data: clientData, isLoading: clientLoading } = useVintageRevenueBreakdown();
+  const { data: adminData, isLoading: adminLoading } = useAdminVintageRevenueBreakdown();
+  
+  const data = isAdmin ? adminData : clientData;
+  const isLoading = isAdmin ? adminLoading : clientLoading;
 
   // Format currency as South African Rand
   const formatCurrency = (value: number) => 
@@ -49,6 +58,100 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
     );
   }
 
+  // Admin table view
+  if (isAdmin && adminData) {
+    return (
+      <Card className={cn("h-full", className)}>
+        <CardHeader>
+          <CardTitle className="text-lg">Vintage Est. Revenue:</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-3 text-sm font-semibold text-foreground">Vintage</th>
+                  <th className="text-right py-2 px-3 text-sm font-semibold text-foreground">Client</th>
+                  <th className="text-right py-2 px-3 text-sm font-semibold text-foreground">Agent</th>
+                  <th className="text-right py-2 px-3 text-sm font-semibold text-foreground">Platform</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Blend Row */}
+                <tr className="border-b border-border hover:bg-muted/50">
+                  <td className="py-2 px-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: '#8ED973' }}>
+                      <span className="text-sm font-medium text-white">Blend</span>
+                    </div>
+                  </td>
+                  <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                    {adminData.blend ? formatCurrency(adminData.blend.client) : '-'}
+                  </td>
+                  <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                    {adminData.blend ? formatCurrency(adminData.blend.agent) : '-'}
+                  </td>
+                  <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                    {adminData.blend ? formatCurrency(adminData.blend.platform) : '-'}
+                  </td>
+                </tr>
+                {/* 2025 Row */}
+                <tr className="border-b border-border hover:bg-muted/50">
+                  <td className="py-2 px-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: '#FF4C44' }}>
+                      <span className="text-sm font-medium text-white">2025</span>
+                    </div>
+                  </td>
+                  <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                    {formatCurrency(adminData.years['2025']?.client || 0)}
+                  </td>
+                  <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                    {formatCurrency(adminData.years['2025']?.agent || 0)}
+                  </td>
+                  <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                    {formatCurrency(adminData.years['2025']?.platform || 0)}
+                  </td>
+                </tr>
+                {/* 2026-2030 Rows */}
+                {['2026', '2027', '2028', '2029', '2030'].map(year => (
+                  <tr key={year} className="border-b border-border hover:bg-muted/50">
+                    <td className="py-2 px-3">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-crunch-yellow">
+                        <span className="text-sm font-medium text-black">{year}</span>
+                      </div>
+                    </td>
+                    <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                      {formatCurrency(adminData.years[year]?.client || 0)}
+                    </td>
+                    <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                      {formatCurrency(adminData.years[year]?.agent || 0)}
+                    </td>
+                    <td className="text-right py-2 px-3 text-sm font-medium text-foreground tabular-nums">
+                      {formatCurrency(adminData.years[year]?.platform || 0)}
+                    </td>
+                  </tr>
+                ))}
+                {/* Totals Row */}
+                <tr className="bg-muted/30 font-semibold">
+                  <td className="py-3 px-3 text-sm text-foreground">Totals</td>
+                  <td className="text-right py-3 px-3 text-sm text-foreground tabular-nums">
+                    {formatCurrency(adminData.totals.client)}
+                  </td>
+                  <td className="text-right py-3 px-3 text-sm text-foreground tabular-nums">
+                    {formatCurrency(adminData.totals.agent)}
+                  </td>
+                  <td className="text-right py-3 px-3 text-sm text-foreground tabular-nums">
+                    {formatCurrency(adminData.totals.platform)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Client/Agent list view (original layout)
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader>
@@ -61,7 +164,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-white">Blend</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {data.blend !== null ? formatCurrency(data.blend) : (
+            {clientData?.blend !== null ? formatCurrency(clientData!.blend!) : (
               <span className="text-muted-foreground">Missed Vintage</span>
             )}
           </div>
@@ -73,7 +176,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-white">2025</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(data.years['2025'] || 0)}
+            {formatCurrency(clientData?.years['2025'] || 0)}
           </div>
         </div>
 
@@ -83,7 +186,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2026</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(data.years['2026'] || 0)}
+            {formatCurrency(clientData?.years['2026'] || 0)}
           </div>
         </div>
 
@@ -93,7 +196,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2027</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(data.years['2027'] || 0)}
+            {formatCurrency(clientData?.years['2027'] || 0)}
           </div>
         </div>
 
@@ -103,7 +206,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2028</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(data.years['2028'] || 0)}
+            {formatCurrency(clientData?.years['2028'] || 0)}
           </div>
         </div>
 
@@ -113,7 +216,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2029</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(data.years['2029'] || 0)}
+            {formatCurrency(clientData?.years['2029'] || 0)}
           </div>
         </div>
 
@@ -123,7 +226,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2030</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(data.years['2030'] || 0)}
+            {formatCurrency(clientData?.years['2030'] || 0)}
           </div>
         </div>
       </CardContent>
