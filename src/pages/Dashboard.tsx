@@ -9,6 +9,8 @@ import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjects
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
+import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
+import { VintageCountdown } from "@/components/dashboard/sections/VintageCountdown";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useProposals } from "@/hooks/useProposals";
@@ -142,7 +144,13 @@ export default function Dashboard() {
         </Alert>
       )}
       
-      {/* Dashboard Content */}
+      {/* TOP ROW: Placeholder Cards */}
+      <DashboardTopRow loading={isLoading} />
+      
+      {/* MIDDLE ROW: Vintage Countdown */}
+      <VintageCountdown />
+      
+      {/* BOTTOM ROW: Metric Cards */}
       <DashboardMetricsByStageCards 
         metrics={metricsByStage || getEmptyMetrics()} 
         loading={isLoading}
