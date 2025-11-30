@@ -29,22 +29,24 @@ export function VintageCountdown() {
   }, []);
 
   return (
-    <Card className="mb-6 bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
+    <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
       <CardContent className="py-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col gap-4">
+          {/* Title section */}
           <div className="flex items-center gap-3">
-            <Clock className="h-6 w-6 text-primary" />
+            <Clock className="h-5 w-5 text-primary" />
             <div>
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-base font-semibold text-foreground">
                 Vintage 2025 Closing Countdown
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Time remaining to submit projects for Vintage 2025
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
+          {/* Countdown numbers */}
+          <div className="flex items-center justify-center gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-primary tabular-nums">
                 {timeLeft.days}

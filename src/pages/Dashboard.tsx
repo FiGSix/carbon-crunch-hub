@@ -147,8 +147,12 @@ export default function Dashboard() {
       {/* TOP ROW: Placeholder Cards */}
       <DashboardTopRow loading={isLoading} />
       
-      {/* MIDDLE ROW: Vintage Countdown */}
-      <VintageCountdown />
+        {/* MIDDLE ROW: Vintage Countdown - spans 2 of 5 columns to match bottom row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+          <div className="sm:col-span-2 lg:col-span-2">
+            <VintageCountdown />
+          </div>
+        </div>
       
       {/* BOTTOM ROW: Metric Cards */}
       <DashboardMetricsByStageCards 
