@@ -19,6 +19,7 @@ export default function ProposalAcceptance() {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingAgreement, setHasExistingAgreement] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [typedName, setTypedName] = useState("");
@@ -74,6 +75,11 @@ export default function ProposalAcceptance() {
       };
       
       setProposal(transformedProposal);
+
+      // Check if client already has a signed agreement
+      if (rawProposal.client_reference_id) {
+        await checkExistingAgreement(rawProposal.client_reference_id);
+      }
     } catch (err) {
       console.error("Error fetching proposal by token:", err);
       setError(err instanceof Error ? err.message : "Failed to load proposal");
@@ -123,11 +129,32 @@ export default function ProposalAcceptance() {
       };
       
       setProposal(transformedProposal);
+
+      // Check if client already has a signed agreement
+      if (data.client_reference_id) {
+        await checkExistingAgreement(data.client_reference_id);
+      }
     } catch (err) {
       console.error("Error fetching proposal:", err);
       setError(err instanceof Error ? err.message : "Failed to load proposal");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkExistingAgreement = async (clientReferenceId: string) => {
+    try {
+      const { data: client, error } = await supabase
+        .from('clients')
+        .select('cession_signed_at')
+        .eq('id', clientReferenceId)
+        .single();
+      
+      if (!error && client?.cession_signed_at) {
+        setHasExistingAgreement(true);
+      }
+    } catch (err) {
+      console.error('Error checking for existing agreement:', err);
     }
   };
 
@@ -190,6 +217,16 @@ export default function ProposalAcceptance() {
         return;
       }
 
+      if (data?.autoApproved) {
+        toast({
+          description: "Project successfully added to your existing agreement.",
+        });
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+        return;
+      }
+
       if (data?.error) {
         throw new Error(data.error);
       }
@@ -234,6 +271,57 @@ export default function ProposalAcceptance() {
     );
   }
 
+  // Simplified flow for returning clients with existing agreement
+  if (hasExistingAgreement) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-12">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Project Added to Your Agreement</h1>
+          <p className="text-muted-foreground">
+            You already have a signed Cession Agreement. This project has been automatically added.
+          </p>
+        </div>
+
+        <div className="space-y-8">
+          <ProposalSummarySection proposal={proposal} />
+          
+          <div className="bg-accent/50 border border-accent rounded-lg p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-2">Automatically Added</h3>
+                <p className="text-muted-foreground mb-4">
+                  Per Clause 5.6 of your existing Cession Agreement, new projects are automatically included 
+                  without requiring a new signature. This project has been added to your portfolio and is ready 
+                  for onboarding.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    View Dashboard
+                  </button>
+                  <button
+                    onClick={() => navigate(`/proposals/${proposal.id}`)}
+                    className="px-6 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    View Project Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Original signature flow for new clients
   return (
     <div className="container max-w-4xl mx-auto px-4 py-12">
       <div className="mb-8">

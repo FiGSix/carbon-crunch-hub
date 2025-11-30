@@ -222,10 +222,12 @@ export type Database = {
       }
       clients: {
         Row: {
+          cession_signed_at: string | null
           company_name: string | null
           created_at: string
           created_by: string | null
           email: string
+          first_agreement_id: string | null
           first_name: string | null
           id: string
           last_modified_by: string | null
@@ -240,10 +242,12 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          cession_signed_at?: string | null
           company_name?: string | null
           created_at?: string
           created_by?: string | null
           email: string
+          first_agreement_id?: string | null
           first_name?: string | null
           id?: string
           last_modified_by?: string | null
@@ -258,10 +262,12 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          cession_signed_at?: string | null
           company_name?: string | null
           created_at?: string
           created_by?: string | null
           email?: string
+          first_agreement_id?: string | null
           first_name?: string | null
           id?: string
           last_modified_by?: string | null
@@ -276,6 +282,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_first_agreement_id_fkey"
+            columns: ["first_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_agreements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_last_modified_by_fkey"
             columns: ["last_modified_by"]
