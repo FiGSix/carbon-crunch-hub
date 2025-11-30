@@ -1,5 +1,6 @@
 import { PlaceholderCard } from "@/components/dashboard/PlaceholderCard";
 import { VintageCountdown } from "./VintageCountdown";
+import { VintageRevenueBreakdown } from "./VintageRevenueBreakdown";
 
 interface DashboardTopRowProps {
   loading?: boolean;
@@ -22,12 +23,7 @@ export function DashboardTopRow({ loading }: DashboardTopRowProps) {
       
       {/* Row 1-2, Col 3: Vintage Revenue Breakdown - SPANS 2 ROWS */}
       <div className="lg:row-span-2 flex">
-        <PlaceholderCard 
-          title="Vintage Revenue Breakdown"
-          description="Revenue by year"
-          height="h-full"
-          className="flex-1"
-        />
+        <VintageRevenueBreakdown className="flex-1" />
       </div>
       
       {/* Row 1-2, Col 4-5: Vintage Status: Blend Pipeline - spans 2 columns and 2 rows */}
