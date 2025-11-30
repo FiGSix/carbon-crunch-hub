@@ -31,6 +31,8 @@ export const queryKeys = {
       [...queryKeys.dashboard.all, 'metrics-by-stage', userId, userRole] as const,
     vintageRevenue: (userId: string) =>
       [...queryKeys.dashboard.all, 'vintage-revenue', userId] as const,
+    agentVintageRevenue: (userId: string) =>
+      [...queryKeys.dashboard.all, 'agent-vintage-revenue', userId] as const,
     adminVintageRevenue: () =>
       [...queryKeys.dashboard.all, 'admin-vintage-revenue'] as const,
   },

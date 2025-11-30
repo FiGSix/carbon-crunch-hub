@@ -7,6 +7,7 @@ export { useAgentCommissionStats } from './useAgentCommissionStats';
 export { useDashboardMetricsByStage, isValidMetrics, getEmptyMetrics } from './useDashboardMetricsByStage'; // Phase 3
 export { useDashboardPerformanceTracking } from './useDashboardPerformanceTracking'; // Phase 7
 export { useVintageRevenueBreakdown } from './useVintageRevenueBreakdown';
+export { useAgentVintageRevenueBreakdown } from './useAgentVintageRevenueBreakdown';
 export { useAdminVintageRevenueBreakdown } from './useAdminVintageRevenueBreakdown';
 export { usePendingAgentApprovals } from './usePendingAgentApprovals';
 export * from './types';
