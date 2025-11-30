@@ -63,7 +63,7 @@ function DashboardMetricsByStageCardsComponent({
         title="Proposal(s) Pending" 
         value={formatMwp(metrics.pendingApprovalMwp)} 
         icon={<FileText className="h-5 w-5" />}
-        color="emerald"
+        color="red"
       />
       
       {/* Card 2: Pending Proposals Est. Revenue */}
@@ -71,7 +71,7 @@ function DashboardMetricsByStageCardsComponent({
         title="Proposal(s) Pending Est. Revenue (2025-2030)" 
         value={formatRevenue(metrics.pendingApprovalRevenue)} 
         icon={<DollarSign className="h-5 w-5" />}
-        color="purple"
+        color="red"
       />
       
       {/* Card 3: Onboarding Projects */}
