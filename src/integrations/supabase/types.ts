@@ -2022,6 +2022,7 @@ export type Database = {
           audit_review_requests: number
           onboarding_mwp: number
           pending_approval_mwp: number
+          pending_approval_revenue: number
         }[]
       }
       get_dashboard_stats_optimized: {

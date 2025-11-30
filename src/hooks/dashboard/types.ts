@@ -68,6 +68,9 @@ export interface DashboardMetricsByStage {
   
   /** Card 5: Pending Approval - Total MWp (3 decimals) */
   pendingApprovalMwp: number;
+  
+  /** Card 6: Pending Approval Revenue (2025-2030) in Rands */
+  pendingApprovalRevenue: number;
 }
 
 /**

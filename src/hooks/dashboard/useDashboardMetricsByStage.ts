@@ -73,7 +73,8 @@ export function useDashboardMetricsByStage() {
           audit_ready_revenue: 0,
           audit_review_requests: 0,
           onboarding_mwp: 0,
-          pending_approval_mwp: 0
+          pending_approval_mwp: 0,
+          pending_approval_revenue: 0
         };
 
         // Transform database response to TypeScript interface
@@ -82,7 +83,8 @@ export function useDashboardMetricsByStage() {
           auditReadyRevenue: Math.round(Number(metrics.audit_ready_revenue || 0)),
           auditReviewRequests: Number(metrics.audit_review_requests || 0),
           onboardingMwp: Number(metrics.onboarding_mwp || 0),
-          pendingApprovalMwp: Number(metrics.pending_approval_mwp || 0)
+          pendingApprovalMwp: Number(metrics.pending_approval_mwp || 0),
+          pendingApprovalRevenue: Math.round(Number(metrics.pending_approval_revenue || 0)),
         };
 
         metricsLogger.info('Dashboard metrics loaded successfully', { 
@@ -124,7 +126,8 @@ export function isValidMetrics(metrics: any): metrics is DashboardMetricsByStage
     typeof metrics.auditReadyRevenue === 'number' &&
     typeof metrics.auditReviewRequests === 'number' &&
     typeof metrics.onboardingMwp === 'number' &&
-    typeof metrics.pendingApprovalMwp === 'number'
+    typeof metrics.pendingApprovalMwp === 'number' &&
+    typeof metrics.pendingApprovalRevenue === 'number'
   );
 }
 
@@ -138,6 +141,7 @@ export function getEmptyMetrics(): DashboardMetricsByStage {
     auditReadyRevenue: 0,
     auditReviewRequests: 0,
     onboardingMwp: 0,
-    pendingApprovalMwp: 0
+    pendingApprovalMwp: 0,
+    pendingApprovalRevenue: 0,
   };
 }
