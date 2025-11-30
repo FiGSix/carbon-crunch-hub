@@ -26,10 +26,16 @@ export function VintageProgressDisplayCard() {
   const { statusData } = useVintageAuditStatus(selectedVintage);
   const { notes } = useVintageProgressNotes(selectedVintage);
 
-  // Calculate completion percentage based on completed stages
+  // Calculate completion percentage based on stage status
+  // - Completed stages: 100% of weight
+  // - In Progress stages: 30% of weight
+  // - Pending stages: 0%
   const completionPercentage = auditStages.reduce((total, stage) => {
-    if (statusData[stage.id] === 'completed') {
+    const status = statusData[stage.id];
+    if (status === 'completed') {
       return total + stage.weight;
+    } else if (status === 'in_progress') {
+      return total + (stage.weight * 0.3);
     }
     return total;
   }, 0);
