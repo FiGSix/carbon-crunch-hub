@@ -7,15 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-type StageStatus = 'pending' | 'in_progress' | 'completed';
-type VintageYear = 'blend' | '2025' | '2026' | '2027' | '2028' | '2029' | '2030';
-
-interface AuditStage {
-  id: string;
-  weight: number;
-  name: string;
-}
+import { useVintageAuditStatus, auditStages, type VintageYear, type StageStatus } from '@/hooks/audit/useVintageAuditStatus';
 
 const vintageYears: { value: VintageYear; label: string }[] = [
   { value: 'blend', label: 'Blend' },
@@ -27,37 +19,12 @@ const vintageYears: { value: VintageYear; label: string }[] = [
   { value: '2030', label: '2030' },
 ];
 
-const auditStages: AuditStage[] = [
-  { id: 'project_onboarding', weight: 20, name: 'Project Onboarding' },
-  { id: 'energy_data_analysis', weight: 20, name: 'Energy Data Analysis' },
-  { id: 'independent_external_audit', weight: 30, name: 'Independent External Audit' },
-  { id: 'verra_audit', weight: 15, name: 'Verra Audit' },
-  { id: 'vcu_issue', weight: 5, name: 'VCU or Carbon Credit Issue' },
-  { id: 'vcu_sale', weight: 5, name: 'Sale of VCU or Carbon Credit' },
-  { id: 'payments', weight: 5, name: 'Payments' },
-];
-
 export function VintageStatusCard() {
   const [selectedVintage, setSelectedVintage] = useState<VintageYear>('blend');
-  const [stageStatuses, setStageStatuses] = useState<Record<string, StageStatus>>(
-    auditStages.reduce((acc, stage) => ({ ...acc, [stage.id]: 'pending' }), {})
-  );
+  const { statusData, updateStatus } = useVintageAuditStatus(selectedVintage);
 
   const handleStatusChange = (stageId: string, status: StageStatus) => {
-    setStageStatuses(prev => ({ ...prev, [stageId]: status }));
-  };
-
-  const getStatusLabel = (status: StageStatus): string => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'in_progress':
-        return 'In Progress';
-      case 'completed':
-        return 'Completed';
-      default:
-        return 'Pending';
-    }
+    updateStatus({ stageId, status });
   };
 
   return (
@@ -109,7 +76,7 @@ export function VintageStatusCard() {
                   </td>
                   <td className="p-3">
                     <Select
-                      value={stageStatuses[stage.id]}
+                      value={statusData[stage.id] || 'pending'}
                       onValueChange={(value) => handleStatusChange(stage.id, value as StageStatus)}
                     >
                       <SelectTrigger className="w-full">

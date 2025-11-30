@@ -1815,6 +1815,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vintage_audit_status: {
+        Row: {
+          id: string
+          stage_id: string
+          status: string
+          updated_at: string | null
+          updated_by: string | null
+          vintage_year: string
+        }
+        Insert: {
+          id?: string
+          stage_id: string
+          status?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vintage_year: string
+        }
+        Update: {
+          id?: string
+          stage_id?: string
+          status?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vintage_year?: string
+        }
+        Relationships: []
+      }
+      vintage_progress_notes: {
+        Row: {
+          id: string
+          notes: string | null
+          updated_at: string | null
+          updated_by: string | null
+          vintage_year: string
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          vintage_year: string
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          vintage_year?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

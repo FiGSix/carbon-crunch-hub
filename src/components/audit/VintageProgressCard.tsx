@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -7,8 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-type VintageYear = 'blend' | '2025' | '2026' | '2027' | '2028' | '2029' | '2030';
+import { Textarea } from '@/components/ui/textarea';
+import { useVintageProgressNotes, type VintageYear } from '@/hooks/audit/useVintageProgressNotes';
 
 const vintageYears: { value: VintageYear; label: string }[] = [
   { value: 'blend', label: 'Blend' },
@@ -22,6 +22,19 @@ const vintageYears: { value: VintageYear; label: string }[] = [
 
 export function VintageProgressCard() {
   const [selectedVintage, setSelectedVintage] = useState<VintageYear>('blend');
+  const { notes, updateNotes } = useVintageProgressNotes(selectedVintage);
+  const [localNotes, setLocalNotes] = useState(notes);
+
+  // Sync local notes with fetched notes when vintage changes
+  useEffect(() => {
+    setLocalNotes(notes);
+  }, [notes]);
+
+  const handleNotesBlur = () => {
+    if (localNotes !== notes) {
+      updateNotes(localNotes);
+    }
+  };
 
   return (
     <Card className="max-w-md">
@@ -43,11 +56,13 @@ export function VintageProgressCard() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="min-h-[200px] p-4 border border-dashed border-border rounded-lg">
-          <p className="text-muted-foreground text-sm">
-            Progress notes will appear here...
-          </p>
-        </div>
+        <Textarea
+          value={localNotes}
+          onChange={(e) => setLocalNotes(e.target.value)}
+          onBlur={handleNotesBlur}
+          placeholder="Enter progress notes here..."
+          className="min-h-[200px] resize-none"
+        />
       </CardContent>
     </Card>
   );
