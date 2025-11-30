@@ -43,7 +43,7 @@ function StatsCardComponent({
       case 'green':
         return 'bg-[#DEF1D3] text-[#8ED973]';
       case 'blue':
-        return 'bg-crunch-yellow/10 text-crunch-yellow';
+        return 'bg-[#F0EBDC] text-[#FFCD03]';
       case 'emerald':
         return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'purple':
@@ -64,6 +64,9 @@ function StatsCardComponent({
     }
     if (color === 'green') {
       return 'text-[#8ED973]';
+    }
+    if (color === 'blue') {
+      return 'text-[#FFCD03]';
     }
     return '';
   }, [color]);
