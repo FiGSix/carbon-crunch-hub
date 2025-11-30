@@ -144,6 +144,22 @@ export async function createProposal(
     // Step 2: Handle client
     const clientId = selectedClientId || await findOrCreateClient(clientInfo, agentId);
     
+    // Step 2.5: Check if client has existing cession agreement (master agreement check)
+    const { data: clientRecord } = await supabase
+      .from('clients')
+      .select('cession_signed_at')
+      .eq('id', clientId)
+      .single();
+
+    const hasExistingAgreement = !!clientRecord?.cession_signed_at;
+    
+    if (hasExistingAgreement) {
+      proposalLogger.info("Auto-approving proposal for returning client", {
+        clientId,
+        cessionSignedAt: clientRecord.cession_signed_at
+      });
+    }
+    
     // Step 3: Calculate system values
     const systemSizeKWp = projectInfo.isMultiPhase && projectInfo.phases
       ? projectInfo.phases.reduce((sum, p) => sum + p.sizeKWp, 0)
@@ -215,7 +231,8 @@ export async function createProposal(
       title: proposalTitle,
       agent_id: agentId,
       client_reference_id: clientId,
-      status: 'draft',
+      status: hasExistingAgreement ? 'approved' : 'draft',
+      signed_at: hasExistingAgreement ? new Date().toISOString() : null,
       content: {
         title: proposalTitle,
         eligibilityCriteria,
