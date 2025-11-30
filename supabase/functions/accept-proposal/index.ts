@@ -102,7 +102,51 @@ serve(async (req) => {
       proposal = proposalData;
     }
 
-    // 2. Validate proposal status
+    // 2. Check if client has already signed a master agreement
+    console.log('🔍 Checking for existing cession agreement...');
+    
+    if (proposal.client_reference_id) {
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, cession_signed_at, first_agreement_id')
+        .eq('id', proposal.client_reference_id)
+        .single();
+      
+      if (!clientError && client?.cession_signed_at) {
+        console.log(`✅ Client already has master agreement (signed ${client.cession_signed_at})`);
+        
+        // Auto-approve this proposal without requiring signature
+        const { error: updateError } = await supabase
+          .from('proposals')
+          .update({ 
+            status: 'approved', 
+            signed_at: new Date().toISOString() 
+          })
+          .eq('id', proposal.id);
+        
+        if (updateError) {
+          console.error('❌ Error auto-approving proposal:', updateError);
+          throw new Error('Failed to approve proposal');
+        }
+        
+        console.log(`✅ Proposal ${proposal.id} auto-approved under existing master agreement`);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            autoApproved: true,
+            proposalId: proposal.id,
+            message: "Project added to your existing cession agreement"
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+
+    // 3. Validate proposal status for new signatures
     console.log('🔍 Validating proposal status:', proposal.status);
     
     if (proposal.status === 'approved' || proposal.status === 'signed') {
@@ -309,7 +353,50 @@ serve(async (req) => {
 
     console.log(`✅ Proposal ${proposal.id} successfully signed via ${signatureType}`);
 
-    // 7. Generate signed agreement PDF in background
+    // 7. Set cession_signed_at on client (first-time signature)
+    if (proposal.client_reference_id) {
+      console.log('🔍 Setting master agreement timestamp on client...');
+      
+      const { error: clientUpdateError } = await supabase
+        .from('clients')
+        .update({ 
+          cession_signed_at: new Date().toISOString(),
+          first_agreement_id: newAgreement.id
+        })
+        .eq('id', proposal.client_reference_id)
+        .is('cession_signed_at', null); // Only update if not already set
+      
+      if (clientUpdateError) {
+        console.error('❌ Error setting master agreement on client:', clientUpdateError);
+      } else {
+        console.log('✅ Master agreement timestamp set on client');
+      }
+
+      // 8. Auto-approve ALL other draft/pending/sent proposals for this client
+      console.log('🔍 Auto-approving other proposals for this client...');
+      
+      const { data: otherProposals, error: batchUpdateError } = await supabase
+        .from('proposals')
+        .update({ 
+          status: 'approved', 
+          signed_at: new Date().toISOString() 
+        })
+        .eq('client_reference_id', proposal.client_reference_id)
+        .neq('id', proposal.id)  // Exclude current proposal
+        .in('status', ['draft', 'pending', 'sent'])
+        .is('deleted_at', null)
+        .is('archived_at', null)
+        .select('id, title');
+      
+      if (batchUpdateError) {
+        console.error('❌ Error auto-approving other proposals:', batchUpdateError);
+      } else {
+        console.log(`✅ Auto-approved ${otherProposals?.length || 0} additional proposals:`, 
+          otherProposals?.map(p => p.title).join(', ') || 'none');
+      }
+    }
+
+    // 9. Generate signed agreement PDF in background
     (async () => {
       try {
         console.log('🖊️ Generating signed agreement PDF...');
@@ -334,12 +421,12 @@ serve(async (req) => {
       }
     })();
 
-    // 8. Mark invitation as viewed (for analytics) - only if token was used
+    // 10. Mark invitation as viewed (for analytics) - only if token was used
     if (token) {
       await supabase.rpc('mark_invitation_viewed', { token_param: token });
     }
 
-    // 9. Send cession agreement confirmation email in background
+    // 11. Send cession agreement confirmation email in background
     // Fetch client email asynchronously without blocking response
     (async () => {
       try {
