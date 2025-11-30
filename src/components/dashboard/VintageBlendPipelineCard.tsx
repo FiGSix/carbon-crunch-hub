@@ -24,7 +24,7 @@ export function VintageBlendPipelineCard() {
   const { statusData } = useVintageAuditStatus(selectedVintage);
 
   return (
-    <Card className="h-full">
+    <Card className="h-full w-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           Vintage Status:
@@ -56,14 +56,16 @@ export function VintageBlendPipelineCard() {
               'Pending';
 
             return (
-              <div key={stage.id} className="flex items-center gap-3">
-                <div
-                  className="px-4 py-2 rounded-full"
-                  style={{ backgroundColor: bgColor }}
-                >
-                  <span className="text-sm font-medium text-white">{stage.name}</span>
+              <div key={stage.id} className="flex items-center">
+                <div className="w-[240px]">
+                  <div
+                    className="px-4 py-2 rounded-full inline-block"
+                    style={{ backgroundColor: bgColor }}
+                  >
+                    <span className="text-sm font-medium text-white">{stage.name}</span>
+                  </div>
                 </div>
-                <span className="text-sm text-muted-foreground">{statusText}</span>
+                <span className="text-sm text-muted-foreground text-center flex-1">{statusText}</span>
               </div>
             );
           })}
