@@ -1,5 +1,6 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { VintageStatusCard } from '@/components/audit/VintageStatusCard';
+import { VintageProgressCard } from '@/components/audit/VintageProgressCard';
 
 export default function AuditStatus() {
   return (
@@ -12,7 +13,10 @@ export default function AuditStatus() {
           </p>
         </div>
         
-        <VintageStatusCard />
+        <div className="flex gap-6 items-start">
+          <VintageStatusCard />
+          <VintageProgressCard />
+        </div>
       </div>
     </DashboardLayout>
   );
