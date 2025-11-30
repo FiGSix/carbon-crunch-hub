@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryKeys';
 import { CARBON_PRICES } from '@/lib/calculations/carbon/constants';
+import { calculateRevenueByYearSync } from '@/services/calculations/carbon/pricing';
 
 export interface VintageRevenueData {
   blend: number | null; // null = "Missed Vintage"
@@ -13,10 +14,11 @@ export interface VintageRevenueData {
 /**
  * Hook for fetching vintage revenue breakdown for the client's portfolio
  * 
- * Calculates total revenue per vintage year (2024-2030) by:
- * 1. Fetching all signed/approved proposals for the client
- * 2. For each proposal: revenue = carbon_credits × carbon_price × (client_share / 100)
- * 3. Aggregating revenue by year
+ * Calculates total revenue per vintage year by:
+ * 1. Fetching only audit-ready proposals (project_onboarding.audit_ready = true)
+ * 2. For Blend (2022-2024): Includes projects with signed_at <= Dec 31, 2024
+ * 3. For future years (2025-2030): Uses calculateRevenueByYearSync with commission_date
+ * 4. Aggregating revenue across all qualifying projects
  * 
  * @returns React Query result with vintage revenue data
  */
@@ -40,16 +42,18 @@ export function useVintageRevenueBreakdown() {
       revenueLogger.info('Fetching vintage revenue breakdown');
 
       try {
-        // Fetch all signed/approved proposals for the client
+        // Fetch only audit-ready proposals with signed_at and commission date
         const { data: proposals, error } = await supabase
           .from('proposals')
           .select(`
             carbon_credits,
             client_share_percentage,
-            status
+            signed_at,
+            content,
+            project_onboarding!inner(audit_ready)
           `)
           .or(`client_id.eq.${user.id},client_reference_id.in.(select id from clients where user_id='${user.id}')`)
-          .in('status', ['signed', 'approved'])
+          .eq('project_onboarding.audit_ready', true)
           .is('deleted_at', null);
 
         if (error) {
@@ -59,9 +63,15 @@ export function useVintageRevenueBreakdown() {
           throw error;
         }
 
-        // Initialize revenue totals for each year
-        const revenueByYear: Record<string, number> = {
-          '2024': 0, // Blend
+        // Blend cutoff: December 31, 2024 23:59:59
+        const BLEND_CUTOFF_DATE = new Date('2024-12-31T23:59:59');
+        
+        // Future years carbon prices (2025-2030)
+        const { '2024': blendPrice, ...futureYearsPrices } = CARBON_PRICES;
+
+        // Initialize totals
+        let blendTotal = 0;
+        const futureYearsTotals: Record<string, number> = {
           '2025': 0,
           '2026': 0,
           '2027': 0,
@@ -70,32 +80,47 @@ export function useVintageRevenueBreakdown() {
           '2030': 0
         };
 
-        // Calculate revenue for each proposal
+        // Calculate revenue for each audit-ready proposal
         proposals?.forEach((proposal) => {
           const carbonCredits = proposal.carbon_credits || 0;
           const clientSharePercentage = proposal.client_share_percentage || 0;
+          const signedAt = proposal.signed_at ? new Date(proposal.signed_at) : null;
+          const commissionDate = (proposal.content as any)?.projectInfo?.commissionDate;
 
-          // Calculate revenue for each year
-          Object.entries(CARBON_PRICES).forEach(([year, price]) => {
-            const revenue = carbonCredits * price * (clientSharePercentage / 100);
-            revenueByYear[year] += revenue;
+          // Calculate future years (2025-2030) using commission date
+          const futureRevenueByYear = calculateRevenueByYearSync(
+            carbonCredits,
+            clientSharePercentage,
+            futureYearsPrices,
+            commissionDate
+          );
+
+          // Aggregate future years
+          Object.entries(futureRevenueByYear).forEach(([year, revenue]) => {
+            if (futureYearsTotals[year] !== undefined) {
+              futureYearsTotals[year] += revenue;
+            }
           });
+
+          // Calculate Blend only if signed ON or BEFORE Dec 31, 2024
+          if (signedAt && signedAt <= BLEND_CUTOFF_DATE) {
+            const blendRevenue = carbonCredits * blendPrice * (clientSharePercentage / 100);
+            blendTotal += blendRevenue;
+          }
         });
 
-        // Extract blend (2024) separately
-        const blend = revenueByYear['2024'] > 0 ? revenueByYear['2024'] : null;
-        
-        // Remove 2024 from years object
-        const { '2024': _, ...years } = revenueByYear;
+        // If no projects qualified for Blend, set to null ("Missed Vintage")
+        const blend = blendTotal > 0 ? blendTotal : null;
 
         const result: VintageRevenueData = {
           blend,
-          years
+          years: futureYearsTotals
         };
 
         revenueLogger.info('Vintage revenue calculated successfully', { 
           blend: blend ? 'present' : 'missed',
-          yearsCount: Object.keys(years).length
+          yearsCount: Object.keys(futureYearsTotals).length,
+          auditReadyProjects: proposals?.length || 0
         });
 
         return result;
