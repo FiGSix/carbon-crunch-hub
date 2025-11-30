@@ -143,6 +143,19 @@ Deno.serve(async (req) => {
           clientId = newClient.id;
         }
 
+        // Check if client has existing cession agreement (master agreement check)
+        const { data: clientRecord } = await supabase
+          .from('clients')
+          .select('cession_signed_at')
+          .eq('id', clientId)
+          .single();
+
+        const hasExistingAgreement = !!clientRecord?.cession_signed_at;
+        
+        if (hasExistingAgreement) {
+          console.log(`✅ Auto-approving proposal for returning client (cession signed ${clientRecord.cession_signed_at})`);
+        }
+
         // Convert system size to kWp
         const systemSizeKwp = proposal.system_size_unit === 'MWp' 
           ? proposal.system_size * 1000 
@@ -195,7 +208,8 @@ Deno.serve(async (req) => {
             title: proposal.proposal_title,
             agent_id: assignedAgentId,
             client_reference_id: clientId,
-            status: 'draft',
+            status: hasExistingAgreement ? 'approved' : 'draft',
+            signed_at: hasExistingAgreement ? new Date().toISOString() : null,
             system_size_kwp: systemSizeKwp,
             unit_standard: 'kWp',
             annual_energy: annualEnergyKwh,
