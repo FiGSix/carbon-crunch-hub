@@ -16,8 +16,8 @@ export const auditStages: AuditStage[] = [
   { id: 'energy_data_analysis', weight: 20, name: 'Energy Data Analysis' },
   { id: 'independent_external_audit', weight: 30, name: 'Independent External Audit' },
   { id: 'verra_audit', weight: 15, name: 'Verra Audit' },
-  { id: 'vcu_issue', weight: 5, name: 'VCU or Carbon Credit Issue' },
-  { id: 'vcu_sale', weight: 5, name: 'Sale of VCU or Carbon Credit' },
+  { id: 'vcu_issue', weight: 5, name: 'Issue Carbon Credits' },
+  { id: 'vcu_sale', weight: 5, name: 'Sale of Carbon Credit' },
   { id: 'payments', weight: 5, name: 'Payments' },
 ];
 
