@@ -42,8 +42,8 @@ export function VintageBlendPipelineCard() {
           </Select>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
+      <CardContent className="pt-6">
+        <div className="space-y-3">
           {auditStages.map((stage) => {
             const status = statusData[stage.id];
             const bgColor = 
@@ -56,13 +56,14 @@ export function VintageBlendPipelineCard() {
               'Pending';
 
             return (
-              <div
-                key={stage.id}
-                className="flex items-center justify-between px-4 py-2 rounded-full"
-                style={{ backgroundColor: bgColor }}
-              >
-                <span className="text-sm font-medium text-gray-900">{stage.name}</span>
-                <span className="text-sm font-semibold text-gray-900">{statusText}</span>
+              <div key={stage.id} className="flex items-center gap-3">
+                <div
+                  className="px-4 py-2 rounded-full"
+                  style={{ backgroundColor: bgColor }}
+                >
+                  <span className="text-sm font-medium text-white">{stage.name}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{statusText}</span>
               </div>
             );
           })}
