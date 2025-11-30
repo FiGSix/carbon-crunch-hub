@@ -4,6 +4,7 @@ import { VintageRevenueBreakdown } from "./VintageRevenueBreakdown";
 import { DashboardMetricsByStage } from "@/hooks/dashboard/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface DashboardTopRowProps {
   loading?: boolean;
@@ -23,16 +24,18 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
       
       {/* Row 1, Col 2: Admin sees Audit Review Requests, others see Solar Starter Badge */}
       {isAdmin ? (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Audit Review Requests</CardTitle>
-            <ClipboardList className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics?.auditReviewRequests ?? 0}</div>
-            <p className="text-xs text-muted-foreground">Projects awaiting review</p>
-          </CardContent>
-        </Card>
+        <Link to="/onboarding" className="block">
+          <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Audit Review Requests</CardTitle>
+              <ClipboardList className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics?.auditReviewRequests ?? 0}</div>
+              <p className="text-xs text-muted-foreground">Projects awaiting review</p>
+            </CardContent>
+          </Card>
+        </Link>
       ) : (
         <PlaceholderCard 
           title="Solar Starter Badge"
