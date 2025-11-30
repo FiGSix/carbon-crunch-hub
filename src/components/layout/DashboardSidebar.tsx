@@ -78,6 +78,12 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Audit Status",
+      href: "/admin/audit-status",
+      icon: ClipboardCheck,
+      roles: ["admin"]
+    },
+    {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,

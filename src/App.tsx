@@ -70,6 +70,7 @@ const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pag
 const TeamManagement = createOptimizedLazyComponent(() => import("./pages/TeamManagement"), "TeamManagement");
 const Referral = createOptimizedLazyComponent(() => import("./pages/Referral"), "Referral");
 const LegalDocuments = createOptimizedLazyComponent(() => import("./pages/Admin/LegalDocuments"), "LegalDocuments");
+const AuditStatus = createOptimizedLazyComponent(() => import("./pages/admin/AuditStatus"), "AuditStatus");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -423,6 +424,18 @@ function App() {
                         <PageErrorBoundary pageName="Email Automation">
                           <Suspense fallback={<PageLoader />}>
                             <EmailAutomation />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/audit-status" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Audit Status">
+                          <Suspense fallback={<PageLoader />}>
+                            <AuditStatus />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>
