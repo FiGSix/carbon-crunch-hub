@@ -60,7 +60,7 @@ function DashboardMetricsByStageCardsComponent({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
       {/* Card 1: Audit Ready Projects */}
       <StatsCard 
         title="Audit Ready Projects" 
@@ -100,6 +100,14 @@ function DashboardMetricsByStageCardsComponent({
         value={formatMwp(metrics.pendingApprovalMwp)} 
         icon={<FileText className="h-5 w-5" />}
         color="emerald"
+      />
+      
+      {/* Card 6: Pending Proposals Est. Revenue */}
+      <StatsCard 
+        title="Proposal(s) Pending Est. Revenue (2025-2030)" 
+        value={formatRevenue(metrics.pendingApprovalRevenue)} 
+        icon={<DollarSign className="h-5 w-5" />}
+        color="purple"
       />
     </div>
   );
