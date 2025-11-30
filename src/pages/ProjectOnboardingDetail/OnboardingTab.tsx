@@ -46,6 +46,13 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     fetchInstallers();
   }, [projectId]);
 
+  // Sync formData with fields prop when fields changes (e.g., after save/refresh)
+  useEffect(() => {
+    if (fields) {
+      setFormData(fields);
+    }
+  }, [fields]);
+
   // Auto-calculate total_capex from component costs
   useEffect(() => {
     const inverterCost = formData.inverter_cost || 0;
