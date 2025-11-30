@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePendingAgentApprovals } from "@/hooks/dashboard/usePendingAgentApprovals";
+import { SolarStarterBadgeCard } from "@/components/dashboard/SolarStarterBadgeCard";
 
 interface DashboardTopRowProps {
   loading?: boolean;
@@ -54,10 +55,7 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
           </Link>
         </div>
       ) : (
-        <PlaceholderCard 
-          title="Solar Starter Badge"
-          description="Referral tier progress"
-        />
+        <SolarStarterBadgeCard />
       )}
       
       {/* Row 1-2, Col 3: Vintage Revenue Breakdown - SPANS 2 ROWS, 3 COLS for admin */}
