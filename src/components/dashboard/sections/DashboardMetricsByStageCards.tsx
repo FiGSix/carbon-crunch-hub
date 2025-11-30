@@ -95,7 +95,7 @@ function DashboardMetricsByStageCardsComponent({
         title="Vintage 2025 Est. Revenue (2025-2030)" 
         value={formatRevenue(metrics.auditReadyRevenue)} 
         icon={<DollarSign className="h-5 w-5" />}
-        color="yellow"
+        color="green"
       />
     </div>
   );

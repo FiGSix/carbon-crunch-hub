@@ -41,7 +41,7 @@ function StatsCardComponent({
     
     switch(color) {
       case 'green':
-        return 'bg-crunch-yellow/10 text-crunch-yellow';
+        return 'bg-[#DEF1D3] text-[#8ED973]';
       case 'blue':
         return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'emerald':
@@ -61,6 +61,9 @@ function StatsCardComponent({
   const getValueColor = useMemo(() => {
     if (color === 'red') {
       return 'text-[#FF4C44]';
+    }
+    if (color === 'green') {
+      return 'text-[#8ED973]';
     }
     return '';
   }, [color]);
