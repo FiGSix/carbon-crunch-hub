@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/select';
 import { useVintageAuditStatus, auditStages, type VintageYear } from '@/hooks/audit/useVintageAuditStatus';
 import { useVintageProgressNotes } from '@/hooks/audit/useVintageProgressNotes';
-import { Progress } from '@/components/ui/progress';
 
 const vintageYears: { value: VintageYear; label: string }[] = [
   { value: 'blend', label: 'Blend' },
@@ -62,11 +61,36 @@ export function VintageProgressDisplayCard() {
       <CardContent>
         <div className="space-y-4">
           {/* Prominent percentage display */}
-          <div className="text-center">
-            <div className="text-5xl font-bold text-primary mb-2">
+          <div className="text-center mb-4">
+            <div className="text-5xl font-bold text-primary">
               {completionPercentage}%
             </div>
-            <Progress value={completionPercentage} className="h-2" />
+          </div>
+
+          {/* Stage pills */}
+          <div className="space-y-2">
+            {auditStages.map((stage) => {
+              const status = statusData[stage.id];
+              const bgColor = 
+                status === 'completed' ? '#8ED973' : 
+                status === 'in_progress' ? '#FFCD03' : 
+                '#FF581D';
+              const statusText = 
+                status === 'completed' ? 'Completed' : 
+                status === 'in_progress' ? 'In Progress' : 
+                'Pending';
+
+              return (
+                <div
+                  key={stage.id}
+                  className="flex items-center justify-between px-4 py-2 rounded-full"
+                  style={{ backgroundColor: bgColor }}
+                >
+                  <span className="text-sm font-medium text-gray-900">{stage.name}</span>
+                  <span className="text-sm font-semibold text-gray-900">{statusText}</span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Progress notes */}
