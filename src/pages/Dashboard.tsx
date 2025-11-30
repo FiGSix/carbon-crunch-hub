@@ -123,7 +123,11 @@ export default function Dashboard() {
       )}
       
       {/* TOP ROW: Combined grid with Placeholder Cards and Countdown */}
-      <DashboardTopRow loading={isLoading} />
+      <DashboardTopRow 
+        loading={isLoading} 
+        metrics={metricsByStage}
+        userRole={userRole}
+      />
       
       {/* BOTTOM ROW: Metric Cards */}
       <DashboardMetricsByStageCards 
