@@ -1,6 +1,7 @@
 import { PlaceholderCard } from "@/components/dashboard/PlaceholderCard";
 import { VintageCountdown } from "./VintageCountdown";
 import { VintageRevenueBreakdown } from "./VintageRevenueBreakdown";
+import { VintageProgressDisplayCard } from "@/components/dashboard/VintageProgressDisplayCard";
 import { DashboardMetricsByStage } from "@/hooks/dashboard/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, UserCheck } from "lucide-react";
@@ -19,11 +20,8 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
   
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
-      {/* Row 1, Col 1: Vintage Status: Blend */}
-      <PlaceholderCard 
-        title="Vintage Status: Blend"
-        description="Project blend status"
-      />
+      {/* Row 1, Col 1: Vintage Progress */}
+      <VintageProgressDisplayCard />
       
       {/* Row 1, Col 2: Admin sees Audit Review Requests, others see Solar Starter Badge */}
       {isAdmin ? (
