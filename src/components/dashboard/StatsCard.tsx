@@ -101,27 +101,27 @@ function StatsCardComponent({
   
   return (
     <CardComponent>
-      <CardHeader className="pb-2">
-        <CardTitle className={titleClassName}>{title}</CardTitle>
+      <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+        <CardTitle className={cn(titleClassName, "line-clamp-3 flex-1")}>
+          {title}
+        </CardTitle>
+        <div className={`rounded-full ${getIconColor} ${isLegacy ? 'p-2' : 'p-3 shadow-sm'} flex-shrink-0`}>
+          {icon}
+        </div>
       </CardHeader>
       <CardContent className={!isLegacy ? "flex-1 flex flex-col justify-between" : ""}>
-        <div className="flex justify-between items-center">
-          <div className={!isLegacy ? "space-y-1" : ""}>
-            <div className="text-2xl font-bold">{value}</div>
-            {!isLegacy && trend && (
-              <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${getTrendColor}`}>
-                {trendDirection === 'up' ? (
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                ) : (
-                  <TrendingDown className="h-3 w-3 mr-1" />
-                )}
-                {trend}
-              </div>
-            )}
-          </div>
-          <div className={`rounded-full ${getIconColor} ${isLegacy ? 'p-2' : 'p-3 shadow-sm'}`}>
-            {icon}
-          </div>
+        <div className={!isLegacy ? "space-y-1" : ""}>
+          <div className="text-2xl font-bold">{value}</div>
+          {!isLegacy && trend && (
+            <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${getTrendColor}`}>
+              {trendDirection === 'up' ? (
+                <TrendingUp className="h-3 w-3 mr-1" />
+              ) : (
+                <TrendingDown className="h-3 w-3 mr-1" />
+              )}
+              {trend}
+            </div>
+          )}
         </div>
         {/* Add extra space for non-legacy cards to match CommissionCard height */}
         {!isLegacy && <div className="pt-4"></div>}
