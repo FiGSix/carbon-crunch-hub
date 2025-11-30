@@ -5,14 +5,12 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { RefreshCw, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
-import { useProposals } from "@/hooks/useProposals";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
@@ -22,33 +20,16 @@ export default function Dashboard() {
   // Fetch dashboard metrics by stage
   const { 
     data: metricsByStage, 
-    isLoading: metricsLoading, 
-    isError: metricsError,
-    refetch: refetchMetrics 
+    isLoading, 
+    isError,
+    refetch 
   } = useDashboardMetricsByStage();
-
-  // Fetch recent proposals (limited to 10)
-  const { 
-    proposals,
-    loading: proposalsLoading,
-    error: proposalsError,
-    fetchProposals
-  } = useProposals();
-
-  const recentProposals = proposals.slice(0, 10);
-  const isLoading = metricsLoading || proposalsLoading;
-  const isError = metricsError || !!proposalsError;
-
-  const refetch = () => {
-    refetchMetrics();
-    fetchProposals();
-  };
 
   const {
     getWelcomeMessage,
     getUserDisplayName,
     formatUserRole
-  } = useDashboardHelpers(refetch);
+  } = useDashboardHelpers(() => refetch());
 
   const {
     isModalOpen,
@@ -76,7 +57,7 @@ export default function Dashboard() {
   }, [toast]);
 
   // Loading state
-  if (isLoading && !metricsByStage && !recentProposals) {
+  if (isLoading && !metricsByStage) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -87,10 +68,8 @@ export default function Dashboard() {
   }
 
   // Error state
-  if (isError && !metricsByStage && !recentProposals) {
-    const errorMessage = metricsError 
-      ? "Failed to load dashboard metrics" 
-      : proposalsError || "Failed to load dashboard data";
+  if (isError && !metricsByStage) {
+    const errorMessage = "Failed to load dashboard metrics";
     
     return (
       <DashboardLayout>
@@ -101,7 +80,7 @@ export default function Dashboard() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={refetch}
+              onClick={() => refetch()}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -123,7 +102,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={refetch}
+            onClick={() => refetch()}
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''} text-crunch-yellow`} />
@@ -151,19 +130,12 @@ export default function Dashboard() {
         metrics={metricsByStage || getEmptyMetrics()} 
         loading={isLoading}
       />
-      
-      {/* Recent Projects */}
-      <RecentProjectsNew 
-        proposals={recentProposals || []} 
-        loading={isLoading}
-        onRefresh={refetch}
-      />
 
       {/* Global Refresh Button */}
       <div className="flex justify-end mt-6">
         <Button 
           variant="outline"
-          onClick={refetch}
+          onClick={() => refetch()}
           disabled={isLoading}
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
