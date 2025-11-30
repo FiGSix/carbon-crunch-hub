@@ -1,4 +1,5 @@
 import { PlaceholderCard } from "@/components/dashboard/PlaceholderCard";
+import { VintageCountdown } from "./VintageCountdown";
 
 interface DashboardTopRowProps {
   loading?: boolean;
@@ -7,31 +8,41 @@ interface DashboardTopRowProps {
 export function DashboardTopRow({ loading }: DashboardTopRowProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
-      {/* Card 1: Vintage Status: Blend - 1 column */}
+      {/* Row 1, Col 1: Vintage Status: Blend */}
       <PlaceholderCard 
         title="Vintage Status: Blend"
         description="Project blend status"
       />
       
-      {/* Card 2: Solar Starter Badge - 1 column */}
+      {/* Row 1, Col 2: Solar Starter Badge */}
       <PlaceholderCard 
         title="Solar Starter Badge"
         description="Referral tier progress"
       />
       
-      {/* Card 3: Vintage Revenue Breakdown - 1 column */}
-      <PlaceholderCard 
-        title="Vintage Revenue Breakdown"
-        description="Revenue by year"
-      />
+      {/* Row 1-2, Col 3: Vintage Revenue Breakdown - SPANS 2 ROWS */}
+      <div className="lg:row-span-2 flex">
+        <PlaceholderCard 
+          title="Vintage Revenue Breakdown"
+          description="Revenue by year"
+          height="h-full"
+          className="flex-1"
+        />
+      </div>
       
-      {/* Card 4: Vintage Status: Blend Pipeline - spans 2 columns */}
-      <div className="sm:col-span-2 lg:col-span-2">
+      {/* Row 1-2, Col 4-5: Vintage Status: Blend Pipeline - spans 2 columns and 2 rows */}
+      <div className="sm:col-span-2 lg:col-span-2 lg:row-span-2 flex">
         <PlaceholderCard 
           title="Vintage Status: Blend Pipeline"
           description="Project stages overview"
-          height="h-full min-h-[120px]"
+          height="h-full"
+          className="flex-1"
         />
+      </div>
+      
+      {/* Row 2, Col 1-2: Vintage Countdown */}
+      <div className="sm:col-span-2 lg:col-span-2">
+        <VintageCountdown />
       </div>
     </div>
   );
