@@ -10,7 +10,6 @@ import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
-import { VintageCountdown } from "@/components/dashboard/sections/VintageCountdown";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useProposals } from "@/hooks/useProposals";
@@ -144,15 +143,8 @@ export default function Dashboard() {
         </Alert>
       )}
       
-      {/* TOP ROW: Placeholder Cards */}
+      {/* TOP ROW: Combined grid with Placeholder Cards and Countdown */}
       <DashboardTopRow loading={isLoading} />
-      
-        {/* MIDDLE ROW: Vintage Countdown - spans 2 of 5 columns to match bottom row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
-          <div className="sm:col-span-2 lg:col-span-2">
-            <VintageCountdown />
-          </div>
-        </div>
       
       {/* BOTTOM ROW: Metric Cards */}
       <DashboardMetricsByStageCards 
