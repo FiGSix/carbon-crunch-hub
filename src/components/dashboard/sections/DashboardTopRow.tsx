@@ -2,6 +2,7 @@ import { PlaceholderCard } from "@/components/dashboard/PlaceholderCard";
 import { VintageCountdown } from "./VintageCountdown";
 import { VintageRevenueBreakdown } from "./VintageRevenueBreakdown";
 import { VintageProgressDisplayCard } from "@/components/dashboard/VintageProgressDisplayCard";
+import { VintageBlendPipelineCard } from "@/components/dashboard/VintageBlendPipelineCard";
 import { DashboardMetricsByStage } from "@/hooks/dashboard/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, UserCheck } from "lucide-react";
@@ -67,12 +68,7 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
       {/* Row 1-2, Col 4-5: Vintage Status: Blend Pipeline - only for agents/clients */}
       {!isAdmin && (
         <div className="sm:col-span-2 lg:col-span-2 lg:row-span-2 flex">
-          <PlaceholderCard 
-            title="Vintage Status: Blend Pipeline"
-            description="Project stages overview"
-            height="h-full"
-            className="flex-1"
-          />
+          <VintageBlendPipelineCard />
         </div>
       )}
       
