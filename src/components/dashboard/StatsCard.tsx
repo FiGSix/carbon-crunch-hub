@@ -16,7 +16,7 @@ interface StatsCardProps {
   icon: ReactNode;
   trend?: string;
   trendDirection?: 'up' | 'down';
-  color?: 'yellow' | 'green' | 'blue' | 'emerald' | 'purple' | 'orange';
+  color?: 'yellow' | 'green' | 'blue' | 'emerald' | 'purple' | 'orange' | 'red';
   className?: string;
   isLegacy?: boolean;
   onClick?: () => void;
@@ -50,11 +50,20 @@ function StatsCardComponent({
         return 'bg-crunch-yellow/10 text-crunch-yellow';
       case 'orange':
         return 'bg-orange-500/10 text-orange-600';
+      case 'red':
+        return 'bg-[#FDF3EC] text-[#FF4C44]';
       case 'yellow':
       default:
         return 'bg-crunch-yellow/10 text-crunch-yellow';
     }
   }, [isLegacy, color]);
+
+  const getValueColor = useMemo(() => {
+    if (color === 'red') {
+      return 'text-[#FF4C44]';
+    }
+    return '';
+  }, [color]);
 
   const getTrendColor = useMemo(() => {
     if (trendDirection === 'up') {
@@ -111,7 +120,7 @@ function StatsCardComponent({
       </CardHeader>
       <CardContent className={!isLegacy ? "flex-1 flex flex-col justify-between" : ""}>
         <div className={!isLegacy ? "space-y-1" : ""}>
-          <div className="text-2xl font-bold">{value}</div>
+          <div className={cn("text-2xl font-bold", getValueColor)}>{value}</div>
           {!isLegacy && trend && (
             <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${getTrendColor}`}>
               {trendDirection === 'up' ? (
