@@ -1,4 +1,5 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { VintageStatusCard } from '@/components/audit/VintageStatusCard';
 
 export default function AuditStatus() {
   return (
@@ -11,10 +12,7 @@ export default function AuditStatus() {
           </p>
         </div>
         
-        {/* Placeholder for future content */}
-        <div className="text-muted-foreground">
-          Audit status content coming soon...
-        </div>
+        <VintageStatusCard />
       </div>
     </DashboardLayout>
   );
