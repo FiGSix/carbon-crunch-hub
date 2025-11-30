@@ -53,6 +53,9 @@ export default function ProjectOnboardingList() {
           onboarding_complete,
           data_access_verified,
           audit_ready,
+          submitted_for_review,
+          submitted_for_review_at,
+          admin_validated,
           proposals!inner(
             id,
             title,
@@ -145,6 +148,9 @@ export default function ProjectOnboardingList() {
           client_name: clientName,
           site_address: siteAddress,
           updated_at: item.updated_at,
+          submitted_for_review: item.submitted_for_review,
+          submitted_for_review_at: item.submitted_for_review_at,
+          admin_validated: item.admin_validated,
           step_status: {
             cession_status: 'green' as const,
             onboarding_status: item.onboarding_complete ? 'green' as const : 'orange' as const,
@@ -186,7 +192,7 @@ export default function ProjectOnboardingList() {
   } => {
     const { onboarding_status, data_access_status, audit_ready_status } = project.step_status;
     
-    // 🟢 Audit Ready
+    // 🟢 Audit Ready (highest priority)
     if (audit_ready_status === 'green') {
       return {
         label: 'Audit Ready',
@@ -194,8 +200,16 @@ export default function ProjectOnboardingList() {
       };
     }
     
-    // 🟠 Under Review (all steps done but not audit-ready yet)
-    if (onboarding_status === 'green' && data_access_status === 'green') {
+    // 🟣 Awaiting Review (submitted for review but not validated)
+    if (project.submitted_for_review && !project.admin_validated) {
+      return {
+        label: 'Awaiting Review',
+        color: 'bg-violet-100 text-violet-800 border-violet-300'
+      };
+    }
+    
+    // 🟠 Under Review (validated by admin but not audit-ready)
+    if (project.admin_validated) {
       return {
         label: 'Under Review',
         color: 'bg-orange-100 text-orange-800 border-orange-300'
@@ -357,6 +371,10 @@ export default function ProjectOnboardingList() {
             <span className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-yellow-500" />
               In Progress
+            </span>
+            <span className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-violet-500" />
+              Awaiting Review
             </span>
             <span className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-orange-500" />
