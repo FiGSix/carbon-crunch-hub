@@ -87,7 +87,7 @@ export function SignedAgreementDownloadButton({
       
       // Use Supabase storage API (automatically includes auth token)
       const { data, error } = await supabase.storage
-        .from('onboarding-documents')
+        .from('signed-agreements')
         .download(filePath);
       
       if (error) {
