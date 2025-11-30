@@ -220,6 +220,51 @@ export type Database = {
         }
         Relationships: []
       }
+      client_referrals: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          referred_client_id: string | null
+          referred_email: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          referred_client_id?: string | null
+          referred_email: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          referred_client_id?: string | null
+          referred_email?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_referrals_referred_client_id_fkey"
+            columns: ["referred_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           cession_signed_at: string | null
