@@ -33,7 +33,9 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader>
-          <CardTitle className="text-lg">Vintage Est. Revenue:</CardTitle>
+          <CardTitle className="text-lg">
+            {isAdmin ? "Audit Ready Projects Est. Revenue" : "Vintage Est. Revenue:"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
@@ -49,7 +51,9 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader>
-          <CardTitle className="text-lg">Vintage Est. Revenue:</CardTitle>
+          <CardTitle className="text-lg">
+            {isAdmin ? "Audit Ready Projects Est. Revenue" : "Vintage Est. Revenue:"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">No revenue data available</div>
@@ -63,7 +67,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader>
-          <CardTitle className="text-lg">Vintage Est. Revenue:</CardTitle>
+          <CardTitle className="text-lg">Audit Ready Projects Est. Revenue</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
