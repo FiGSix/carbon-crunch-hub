@@ -8,4 +8,5 @@ export { useDashboardMetricsByStage, isValidMetrics, getEmptyMetrics } from './u
 export { useDashboardPerformanceTracking } from './useDashboardPerformanceTracking'; // Phase 7
 export { useVintageRevenueBreakdown } from './useVintageRevenueBreakdown';
 export { useAdminVintageRevenueBreakdown } from './useAdminVintageRevenueBreakdown';
+export { usePendingAgentApprovals } from './usePendingAgentApprovals';
 export * from './types';
