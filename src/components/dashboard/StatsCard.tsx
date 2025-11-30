@@ -126,7 +126,7 @@ function StatsCardComponent({
       </CardHeader>
       <CardContent className={!isLegacy ? "flex-1 flex flex-col justify-between" : ""}>
         <div className={!isLegacy ? "space-y-1" : ""}>
-          <div className={cn("text-2xl font-bold", getValueColor)}>{value}</div>
+          <div className={cn("text-xl font-bold", getValueColor)}>{value}</div>
           {!isLegacy && trend && (
             <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${getTrendColor}`}>
               {trendDirection === 'up' ? (
