@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useVintageRevenueBreakdown } from "@/hooks/dashboard/useVintageRevenueBreakdown";
+import { useAgentVintageRevenueBreakdown } from "@/hooks/dashboard/useAgentVintageRevenueBreakdown";
 import { useAdminVintageRevenueBreakdown } from "@/hooks/dashboard/useAdminVintageRevenueBreakdown";
 import { useAuth } from "@/contexts/auth";
 import { Loader2 } from "lucide-react";
@@ -12,12 +13,14 @@ interface VintageRevenueBreakdownProps {
 export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownProps) {
   const { userRole } = useAuth();
   const isAdmin = userRole === 'admin';
+  const isAgent = userRole === 'agent';
   
   const { data: clientData, isLoading: clientLoading } = useVintageRevenueBreakdown();
+  const { data: agentData, isLoading: agentLoading } = useAgentVintageRevenueBreakdown();
   const { data: adminData, isLoading: adminLoading } = useAdminVintageRevenueBreakdown();
   
-  const data = isAdmin ? adminData : clientData;
-  const isLoading = isAdmin ? adminLoading : clientLoading;
+  const data = isAdmin ? adminData : (isAgent ? agentData : clientData);
+  const isLoading = isAdmin ? adminLoading : (isAgent ? agentLoading : clientLoading);
 
   // Format currency as South African Rand
   const formatCurrency = (value: number) => 
@@ -156,6 +159,8 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
   }
 
   // Client/Agent list view (original layout)
+  const listData = isAgent ? agentData : clientData;
+  
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader>
@@ -168,7 +173,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-white">Blend</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {clientData?.blend !== null ? formatCurrency(clientData!.blend!) : (
+            {listData?.blend !== null ? formatCurrency(listData!.blend!) : (
               <span className="text-muted-foreground">Missed Vintage</span>
             )}
           </div>
@@ -180,7 +185,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-white">2025</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(clientData?.years['2025'] || 0)}
+            {formatCurrency(listData?.years['2025'] || 0)}
           </div>
         </div>
 
@@ -190,7 +195,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2026</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(clientData?.years['2026'] || 0)}
+            {formatCurrency(listData?.years['2026'] || 0)}
           </div>
         </div>
 
@@ -200,7 +205,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2027</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(clientData?.years['2027'] || 0)}
+            {formatCurrency(listData?.years['2027'] || 0)}
           </div>
         </div>
 
@@ -210,7 +215,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2028</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(clientData?.years['2028'] || 0)}
+            {formatCurrency(listData?.years['2028'] || 0)}
           </div>
         </div>
 
@@ -220,7 +225,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2029</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(clientData?.years['2029'] || 0)}
+            {formatCurrency(listData?.years['2029'] || 0)}
           </div>
         </div>
 
@@ -230,7 +235,7 @@ export function VintageRevenueBreakdown({ className }: VintageRevenueBreakdownPr
             <span className="text-sm font-medium text-black">2030</span>
           </div>
           <div className="text-left font-semibold text-foreground tabular-nums">
-            {formatCurrency(clientData?.years['2030'] || 0)}
+            {formatCurrency(listData?.years['2030'] || 0)}
           </div>
         </div>
       </CardContent>
