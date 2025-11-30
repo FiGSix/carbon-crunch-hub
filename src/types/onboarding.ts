@@ -172,5 +172,8 @@ export interface ProjectOnboardingListItem {
   client_name: string;
   site_address: string | null;
   updated_at: string;
+  submitted_for_review?: boolean;
+  submitted_for_review_at?: string | null;
+  admin_validated?: boolean;
   step_status: ProjectStepStatus;
 }
