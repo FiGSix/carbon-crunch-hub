@@ -40,22 +40,10 @@ export function DashboardTopRow({ loading, metrics, userRole }: DashboardTopRowP
         />
       )}
       
-      {/* Row 1-2, Col 3: Vintage Revenue Breakdown - SPANS 2 ROWS, 3 COLS for admin */}
-      <div className={`lg:row-span-2 flex ${isAdmin ? 'lg:col-span-3' : ''}`}>
+      {/* Row 1-2, Col 3-5: Vintage Revenue Breakdown - SPANS 2 ROWS, 3 COLS */}
+      <div className="lg:row-span-2 lg:col-span-3 flex">
         <VintageRevenueBreakdown className="flex-1" />
       </div>
-      
-      {/* Row 1-2, Col 4-5: Vintage Status: Blend Pipeline - spans 2 columns and 2 rows (hidden for admin) */}
-      {!isAdmin && (
-        <div className="sm:col-span-2 lg:col-span-2 lg:row-span-2 flex">
-          <PlaceholderCard 
-            title="Vintage Status: Blend Pipeline"
-            description="Project stages overview"
-            height="h-full"
-            className="flex-1"
-          />
-        </div>
-      )}
       
       {/* Row 2, Col 1-2: Vintage Countdown */}
       <div className="sm:col-span-2 lg:col-span-2">
