@@ -15,7 +15,8 @@ import {
   UserCheck,
   Database,
   Mail,
-  Scale
+  Scale,
+  Calculator
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -57,6 +58,12 @@ export function DashboardSidebar() {
       name: "Team",
       href: "/team",
       icon: UserCheck,
+      roles: ["admin", "agent"]
+    },
+    {
+      name: "Quick Calc",
+      href: "/quick-calc",
+      icon: Calculator,
       roles: ["admin", "agent"]
     },
     {
