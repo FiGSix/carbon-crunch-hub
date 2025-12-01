@@ -1155,15 +1155,18 @@ Do good. Get rewarded. Join Crunch Carbon.`;
                             anyProposal.content?.projectInfo?.commissionDate || null;
   const commissionDate = commissionDateStr ? new Date(commissionDateStr) : null;
   const currentYear = new Date().getFullYear();
-  const commissionYearRaw = commissionDate ? commissionDate.getFullYear() : currentYear;
-  const commissionYear = Math.max(commissionYearRaw, currentYear); // Never show past years
   
-  // Calculate yearly energy with pro-rating for commission year
+  // Calculate yearly energy with pro-rating for commission year (matching frontend logic)
   const calculateYearlyEnergy = (systemKWp: number, actualYear: number): number => {
     const annualEnergy = systemKWp * ANNUAL_GENERATION_FACTOR;
     
-    // Pro-rate for commission year
-    if (commissionDate && actualYear === commissionYear) {
+    // Return 0 for years before commissioning
+    if (commissionDate && actualYear < commissionDate.getFullYear()) {
+      return 0;
+    }
+    
+    // Pro-rate only for the ACTUAL commission year (not artificially moved forward)
+    if (commissionDate && actualYear === commissionDate.getFullYear()) {
       const yearStart = new Date(actualYear, 0, 1);
       const yearEnd = new Date(actualYear, 11, 31);
       const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
@@ -1171,6 +1174,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       return annualEnergy * (remainingDays / totalDaysInYear);
     }
     
+    // Full year for years after commission year
     return annualEnergy;
   };
   
