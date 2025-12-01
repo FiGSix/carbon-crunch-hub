@@ -106,15 +106,19 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
- * Validate date format (YYYY-MM-DD)
+ * Validate date format (accepts multiple formats, expects YYYY-MM-DD after normalization)
  */
 function isValidDate(dateString: string): boolean {
-  // Accept both YYYY/MM/DD and YYYY-MM-DD formats
+  if (!dateString) return false;
+  
+  const str = dateString.trim();
+  
+  // Accept YYYY/MM/DD, YYYY-MM-DD format (normalized format from parser)
   const dateRegex = /^\d{4}[-\/]\d{2}[-\/]\d{2}$/;
-  if (!dateRegex.test(dateString)) return false;
+  if (!dateRegex.test(str)) return false;
   
   // Normalize to YYYY-MM-DD for Date parsing
-  const normalizedDate = dateString.replace(/\//g, '-');
+  const normalizedDate = str.replace(/\//g, '-');
   const date = new Date(normalizedDate);
   return date instanceof Date && !isNaN(date.getTime());
 }
