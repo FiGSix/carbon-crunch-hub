@@ -42,6 +42,7 @@ const ResetPassword = createOptimizedLazyComponent(() => import("./pages/ResetPa
 const About = createOptimizedLazyComponent(() => import("./pages/About"), "About");
 const Contact = createOptimizedLazyComponent(() => import("./pages/Contact"), "Contact");
 const Calculator = createOptimizedLazyComponent(() => import("./pages/Calculator"), "Calculator");
+const QuickCalc = createOptimizedLazyComponent(() => import("./pages/QuickCalc"), "QuickCalc");
 const SolarRewards = createOptimizedLazyComponent(() => import("./pages/SolarRewards"), "SolarRewards");
 const Agents = createOptimizedLazyComponent(() => import("./pages/Agents"), "Agents");
 const VerifyEmail = createOptimizedLazyComponent(() => import("./pages/VerifyEmail"), "VerifyEmail");
@@ -183,6 +184,20 @@ function App() {
                       <Suspense fallback={<PageLoader />}><Calculator /></Suspense>
                     </PageErrorBoundary>
                   } />
+                  <Route 
+                    path="/quick-calc" 
+                    element={
+                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                        <AgentApprovalGuard>
+                          <PageErrorBoundary pageName="Quick Calc">
+                            <Suspense fallback={<PageLoader />}>
+                              <QuickCalc />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </AgentApprovalGuard>
+                      </PrivateRoute>
+                    } 
+                  />
   <Route path="/home-owners" element={
     <PageErrorBoundary pageName="SolarRewards">
       <Suspense fallback={<PageLoader />}><SolarRewards /></Suspense>
