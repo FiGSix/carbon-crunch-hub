@@ -49,7 +49,7 @@ export function parseExcelFile(file: File): Promise<BulkProposalRow[]> {
             project_address: String(proposal.project_address || '').trim(),
             system_size: parseFloat(String(proposal.system_size || '0')),
             system_size_unit: (String(proposal.system_size_unit || 'kWp').trim() as 'kWp' | 'MWp'),
-            commission_date: String(proposal.commission_date || '').trim(),
+            commission_date: normalizeDate(proposal.commission_date),
             in_south_africa: parseYesNo(proposal.in_south_africa),
             not_registered: parseYesNo(proposal.not_registered),
             under_15mwp: parseYesNo(proposal.under_15mwp),
@@ -74,6 +74,40 @@ export function parseExcelFile(file: File): Promise<BulkProposalRow[]> {
     
     reader.readAsBinaryString(file);
   });
+}
+
+/**
+ * Normalize date from various formats to YYYY-MM-DD
+ */
+function normalizeDate(value: any): string {
+  if (!value) return '';
+  
+  const str = String(value).trim();
+  
+  // Already in YYYY/MM/DD or YYYY-MM-DD format
+  if (/^\d{4}[-\/]\d{2}[-\/]\d{2}$/.test(str)) {
+    return str.replace(/\//g, '-');
+  }
+  
+  // MM/DD/YY or M/DD/YY or M/D/YY format (Excel default US format)
+  if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(str)) {
+    const parts = str.split('/');
+    const month = parts[0].padStart(2, '0');
+    const day = parts[1].padStart(2, '0');
+    // Assume 00-49 = 2000-2049, 50-99 = 1950-1999
+    const year = parseInt(parts[2]) > 49 ? `19${parts[2]}` : `20${parts[2]}`;
+    return `${year}-${month}-${day}`;
+  }
+  
+  // MM/DD/YYYY or M/DD/YYYY or M/D/YYYY format
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+    const parts = str.split('/');
+    const month = parts[0].padStart(2, '0');
+    const day = parts[1].padStart(2, '0');
+    return `${parts[2]}-${month}-${day}`;
+  }
+  
+  return str;
 }
 
 /**
