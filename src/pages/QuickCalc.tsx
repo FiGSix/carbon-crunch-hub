@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { QuickCalcForm } from "@/components/quick-calc/QuickCalcForm";
 import { QuickCalcResults } from "@/components/quick-calc/QuickCalcResults";
 
@@ -18,6 +21,7 @@ export interface QuickCalcResult {
 }
 
 const QuickCalc = () => {
+  const navigate = useNavigate();
   const [result, setResult] = useState<QuickCalcResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -63,6 +67,16 @@ const QuickCalc = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/dashboard")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold text-foreground">Quick Calc</h1>
