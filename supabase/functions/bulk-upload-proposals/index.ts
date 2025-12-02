@@ -144,10 +144,11 @@ Deno.serve(async (req) => {
           clientId = newClient.id;
         }
 
-        // ====== DUPLICATE DETECTION (Address-based) ======
-        // Check for existing proposal with same client + project address
-        // Address is the "golden thread" - same client can have multiple projects at different addresses
+        // ====== DUPLICATE DETECTION (Address + Commission Date) ======
+        // Check for existing proposal with same client + project address + commission date
+        // This allows legitimate multi-installation properties (same address, different commission dates)
         const normalizedAddress = (proposal.project_address || '').trim().toLowerCase();
+        const normalizedCommissionDate = (proposal.commission_date || '').trim();
         
         const { data: existingProposals } = await supabase
           .from('proposals')
@@ -155,15 +156,17 @@ Deno.serve(async (req) => {
           .eq('client_reference_id', clientId)
           .is('deleted_at', null);
 
-        // Check if any existing proposal has matching address
+        // Check if any existing proposal has matching address AND commission date
         const duplicateProposal = existingProposals?.find(p => {
           const existingAddress = ((p.project_info as any)?.address || '').toLowerCase().trim();
-          // Only consider it a duplicate if both addresses exist and match
-          return normalizedAddress && existingAddress && existingAddress === normalizedAddress;
+          const existingCommissionDate = ((p.project_info as any)?.commissionDate || '').trim();
+          // Only consider it a duplicate if BOTH address AND commission date match
+          return normalizedAddress && existingAddress && existingAddress === normalizedAddress &&
+                 normalizedCommissionDate && existingCommissionDate && existingCommissionDate === normalizedCommissionDate;
         });
 
         if (duplicateProposal) {
-          const errorMsg = `Duplicate: Proposal already exists for "${proposal.client_email}" at address "${proposal.project_address}"`;
+          const errorMsg = `Duplicate: Proposal already exists for "${proposal.client_email}" at "${proposal.project_address}" commissioned ${proposal.commission_date}`;
           console.log(`⚠️ Row ${rowNum}: ${errorMsg}`);
           results.skippedDuplicates++;
           results.failureCount++;
