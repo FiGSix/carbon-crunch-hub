@@ -72,7 +72,8 @@ Deno.serve(async (req) => {
       totalRows: proposals.length,
       successCount: 0,
       failureCount: 0,
-      errors: [] as Array<{ row: number; data: Partial<BulkProposalRow>; error: string }>,
+      skippedDuplicates: 0,
+      errors: [] as Array<{ row: number; data: Partial<BulkProposalRow>; error: string; isDuplicate?: boolean }>,
       createdProposalIds: [] as string[]
     };
 
@@ -142,6 +143,37 @@ Deno.serve(async (req) => {
           if (clientError) throw new Error(`Failed to create client: ${clientError.message}`);
           clientId = newClient.id;
         }
+
+        // ====== DUPLICATE DETECTION ======
+        // Check for existing proposal with same client + project name
+        const normalizedProjectName = proposal.project_name.trim().toLowerCase();
+        
+        const { data: existingProposals } = await supabase
+          .from('proposals')
+          .select('id, title, project_info')
+          .eq('client_reference_id', clientId)
+          .is('deleted_at', null);
+
+        // Check if any existing proposal has matching project name
+        const duplicateProposal = existingProposals?.find(p => {
+          const existingName = ((p.project_info as any)?.name || p.title || '').toLowerCase().trim();
+          return existingName === normalizedProjectName;
+        });
+
+        if (duplicateProposal) {
+          const errorMsg = `Duplicate: Proposal already exists for "${proposal.client_email}" with project "${proposal.project_name}"`;
+          console.log(`⚠️ Row ${rowNum}: ${errorMsg}`);
+          results.skippedDuplicates++;
+          results.failureCount++;
+          results.errors.push({
+            row: rowNum,
+            data: proposal,
+            error: errorMsg,
+            isDuplicate: true
+          });
+          continue; // Skip to next proposal
+        }
+        // ====== END DUPLICATE DETECTION ======
 
         // Check if client has existing cession agreement (master agreement check)
         const { data: clientRecord } = await supabase
@@ -268,7 +300,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Bulk upload complete: ${results.successCount} success, ${results.failureCount} failed`);
+    console.log(`Bulk upload complete: ${results.successCount} success, ${results.failureCount} failed, ${results.skippedDuplicates} duplicates skipped`);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
