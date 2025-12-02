@@ -222,10 +222,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
           description: `Successfully created ${result.successCount} proposals. ${result.failureCount > 0 ? `${result.failureCount} failed.` : ''}`,
         });
         
-        if (result.successCount === result.totalRows) {
-          onSuccess();
-          onOpenChange(false);
-        }
+        // Results will be displayed, user clicks "Done" to close
       } else {
         toast({
           title: "Upload Failed",
@@ -403,25 +400,39 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={!file || uploading || validationErrors.length > 0}
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload {totalRows} Proposals
-                </>
-              )}
-            </Button>
+            {uploadResult ? (
+              <Button
+                onClick={() => {
+                  onSuccess();
+                  onOpenChange(false);
+                }}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpload}
+                  disabled={!file || uploading || validationErrors.length > 0}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload {totalRows} Proposals
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>
