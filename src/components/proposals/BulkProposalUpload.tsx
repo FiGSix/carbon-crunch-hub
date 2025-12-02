@@ -7,11 +7,31 @@ import { validateProposalRows, ValidationError } from "@/utils/excel/excelValida
 import { BulkProposalRow, BulkUploadResult } from "@/types/proposals";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/auth";
+import { Progress } from "@/components/ui/progress";
 
 interface BulkProposalUploadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+}
+
+const BATCH_SIZE = 50;
+
+// Helper function to chunk array into batches
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+interface BatchProgress {
+  currentBatch: number;
+  totalBatches: number;
+  processedCount: number;
+  successCount: number;
+  failureCount: number;
 }
 
 export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkProposalUploadProps) {
@@ -23,6 +43,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
   const [totalRows, setTotalRows] = useState<number>(0);
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
 
   const handleDownloadTemplate = async () => {
     // Dynamically import xlsx only when needed to reduce initial bundle size
@@ -48,11 +69,11 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (selectedFile.size > 5 * 1024 * 1024) {
+    // Validate file size (10MB limit for larger files)
+    if (selectedFile.size > 10 * 1024 * 1024) {
       toast({
         title: "File Too Large",
-        description: "File size must be less than 5MB.",
+        description: "File size must be less than 10MB.",
         variant: "destructive",
       });
       return;
@@ -61,6 +82,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
     setFile(selectedFile);
     setUploadResult(null);
     setTotalRows(0);
+    setBatchProgress(null);
 
     try {
       // Dynamically import xlsx parser only when needed to reduce initial bundle size
@@ -79,9 +101,10 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
       // Show preview (first 5 rows)
       setPreview(rows.slice(0, 5));
       
+      const batchCount = Math.ceil(rows.length / BATCH_SIZE);
       toast({
         title: "File Parsed Successfully",
-        description: `Found ${rows.length} proposals. ${errors.length > 0 ? `${errors.length} validation errors found.` : 'Ready to upload.'}`,
+        description: `Found ${rows.length} proposals (${batchCount} batch${batchCount > 1 ? 'es' : ''}). ${errors.length > 0 ? `${errors.length} validation errors found.` : 'Ready to upload.'}`,
       });
     } catch (error) {
       toast({
@@ -93,10 +116,89 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
     }
   };
 
+  const processBatches = async (allRows: BulkProposalRow[]): Promise<BulkUploadResult> => {
+    const batches = chunkArray(allRows, BATCH_SIZE);
+    const totalBatches = batches.length;
+    
+    const aggregatedResult: BulkUploadResult = {
+      success: true,
+      totalRows: allRows.length,
+      successCount: 0,
+      failureCount: 0,
+      errors: [],
+      createdProposalIds: []
+    };
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      const batchNumber = i + 1;
+      
+      // Update progress state
+      setBatchProgress({
+        currentBatch: batchNumber,
+        totalBatches,
+        processedCount: i * BATCH_SIZE,
+        successCount: aggregatedResult.successCount,
+        failureCount: aggregatedResult.failureCount
+      });
+
+      try {
+        const { data, error } = await supabase.functions.invoke('bulk-upload-proposals', {
+          body: { proposals: batch }
+        });
+
+        if (error) {
+          // If the batch fails entirely, mark all rows in batch as failed
+          aggregatedResult.failureCount += batch.length;
+          aggregatedResult.errors.push({
+            row: (i * BATCH_SIZE) + 1,
+            data: {},
+            error: `Batch ${batchNumber} failed: ${error.message}`
+          });
+          console.error(`Batch ${batchNumber} error:`, error);
+        } else if (data) {
+          const batchResult = data as BulkUploadResult;
+          aggregatedResult.successCount += batchResult.successCount;
+          aggregatedResult.failureCount += batchResult.failureCount;
+          aggregatedResult.createdProposalIds.push(...(batchResult.createdProposalIds || []));
+          
+          // Adjust row numbers in errors to reflect actual row position
+          const adjustedErrors = batchResult.errors.map(err => ({
+            ...err,
+            row: err.row + (i * BATCH_SIZE)
+          }));
+          aggregatedResult.errors.push(...adjustedErrors);
+        }
+      } catch (err) {
+        // Network or other error - mark batch as failed
+        aggregatedResult.failureCount += batch.length;
+        aggregatedResult.errors.push({
+          row: (i * BATCH_SIZE) + 1,
+          data: {},
+          error: `Batch ${batchNumber} failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+        });
+        console.error(`Batch ${batchNumber} exception:`, err);
+      }
+
+      // Update progress after batch completes
+      setBatchProgress({
+        currentBatch: batchNumber,
+        totalBatches,
+        processedCount: Math.min((i + 1) * BATCH_SIZE, allRows.length),
+        successCount: aggregatedResult.successCount,
+        failureCount: aggregatedResult.failureCount
+      });
+    }
+
+    aggregatedResult.success = aggregatedResult.successCount > 0;
+    return aggregatedResult;
+  };
+
   const handleUpload = async () => {
     if (!file || !user) return;
 
     setUploading(true);
+    setBatchProgress(null);
     
     try {
       // Dynamically import xlsx parser only when needed to reduce initial bundle size
@@ -105,14 +207,8 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
       // Parse file again for full data
       const rows = await parseExcelFile(file);
       
-      // Call edge function
-      const { data, error } = await supabase.functions.invoke('bulk-upload-proposals', {
-        body: { proposals: rows }
-      });
-
-      if (error) throw error;
-
-      const result = data as BulkUploadResult;
+      // Process in batches
+      const result = await processBatches(rows);
       setUploadResult(result);
 
       if (result.success && result.successCount > 0) {
@@ -140,8 +236,13 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
       });
     } finally {
       setUploading(false);
+      setBatchProgress(null);
     }
   };
+
+  const progressPercentage = batchProgress 
+    ? Math.round((batchProgress.processedCount / totalRows) * 100)
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,9 +284,33 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
               type="file"
               accept=".xlsx"
               onChange={handleFileSelect}
-              className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+              disabled={uploading}
+              className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 disabled:opacity-50"
             />
           </div>
+
+          {/* Batch Progress Section */}
+          {batchProgress && (
+            <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                <h3 className="font-semibold text-blue-800">Processing Batches...</h3>
+              </div>
+              <div className="space-y-3">
+                <Progress value={progressPercentage} className="h-3" />
+                <div className="flex justify-between text-sm text-blue-700">
+                  <span>Batch {batchProgress.currentBatch} of {batchProgress.totalBatches}</span>
+                  <span>{batchProgress.processedCount} / {totalRows} proposals</span>
+                </div>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-green-600">✓ {batchProgress.successCount} successful</span>
+                  {batchProgress.failureCount > 0 && (
+                    <span className="text-red-600">✗ {batchProgress.failureCount} failed</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Validation Errors */}
           {validationErrors.length > 0 && (
@@ -210,7 +335,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
           )}
 
           {/* Preview Section */}
-          {preview.length > 0 && (
+          {preview.length > 0 && !uploading && (
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-3">Preview (First 5 Rows)</h3>
               <div className="overflow-x-auto">
@@ -270,7 +395,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
               Cancel
             </Button>
             <Button
@@ -280,7 +405,7 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
               {uploading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
+                  Processing...
                 </>
               ) : (
                 <>
