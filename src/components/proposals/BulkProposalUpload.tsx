@@ -32,6 +32,7 @@ interface BatchProgress {
   processedCount: number;
   successCount: number;
   failureCount: number;
+  skippedDuplicates: number;
 }
 
 export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkProposalUploadProps) {
@@ -120,11 +121,12 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
     const batches = chunkArray(allRows, BATCH_SIZE);
     const totalBatches = batches.length;
     
-    const aggregatedResult: BulkUploadResult = {
+    const aggregatedResult: BulkUploadResult & { skippedDuplicates: number } = {
       success: true,
       totalRows: allRows.length,
       successCount: 0,
       failureCount: 0,
+      skippedDuplicates: 0,
       errors: [],
       createdProposalIds: []
     };
@@ -139,7 +141,8 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
         totalBatches,
         processedCount: i * BATCH_SIZE,
         successCount: aggregatedResult.successCount,
-        failureCount: aggregatedResult.failureCount
+        failureCount: aggregatedResult.failureCount,
+        skippedDuplicates: aggregatedResult.skippedDuplicates
       });
 
       try {
@@ -157,9 +160,10 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
           });
           console.error(`Batch ${batchNumber} error:`, error);
         } else if (data) {
-          const batchResult = data as BulkUploadResult;
+          const batchResult = data as BulkUploadResult & { skippedDuplicates?: number };
           aggregatedResult.successCount += batchResult.successCount;
           aggregatedResult.failureCount += batchResult.failureCount;
+          aggregatedResult.skippedDuplicates += batchResult.skippedDuplicates || 0;
           aggregatedResult.createdProposalIds.push(...(batchResult.createdProposalIds || []));
           
           // Adjust row numbers in errors to reflect actual row position
@@ -186,7 +190,8 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
         totalBatches,
         processedCount: Math.min((i + 1) * BATCH_SIZE, allRows.length),
         successCount: aggregatedResult.successCount,
-        failureCount: aggregatedResult.failureCount
+        failureCount: aggregatedResult.failureCount,
+        skippedDuplicates: aggregatedResult.skippedDuplicates
       });
     }
 
@@ -377,12 +382,15 @@ export function BulkProposalUpload({ open, onOpenChange, onSuccess }: BulkPropos
               <div className="space-y-2 text-sm">
                 <p>Total Rows: {uploadResult.totalRows}</p>
                 <p className="text-green-600">✓ Successful: {uploadResult.successCount}</p>
+                {(uploadResult as any).skippedDuplicates > 0 && (
+                  <p className="text-amber-600">⚠️ Duplicates Skipped: {(uploadResult as any).skippedDuplicates}</p>
+                )}
                 {uploadResult.failureCount > 0 && (
                   <>
-                    <p className="text-destructive">✗ Failed: {uploadResult.failureCount}</p>
+                    <p className="text-destructive">✗ Failed: {uploadResult.failureCount - ((uploadResult as any).skippedDuplicates || 0)}</p>
                     <div className="mt-3 space-y-1 max-h-40 overflow-y-auto">
                       {uploadResult.errors.map((error, idx) => (
-                        <p key={idx} className="text-muted-foreground">
+                        <p key={idx} className={`${(error as any).isDuplicate ? 'text-amber-600' : 'text-muted-foreground'}`}>
                           Row {error.row}: {error.error}
                         </p>
                       ))}
