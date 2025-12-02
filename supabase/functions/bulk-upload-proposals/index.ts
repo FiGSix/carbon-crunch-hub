@@ -144,9 +144,10 @@ Deno.serve(async (req) => {
           clientId = newClient.id;
         }
 
-        // ====== DUPLICATE DETECTION ======
-        // Check for existing proposal with same client + project name
-        const normalizedProjectName = proposal.project_name.trim().toLowerCase();
+        // ====== DUPLICATE DETECTION (Address-based) ======
+        // Check for existing proposal with same client + project address
+        // Address is the "golden thread" - same client can have multiple projects at different addresses
+        const normalizedAddress = (proposal.project_address || '').trim().toLowerCase();
         
         const { data: existingProposals } = await supabase
           .from('proposals')
@@ -154,14 +155,15 @@ Deno.serve(async (req) => {
           .eq('client_reference_id', clientId)
           .is('deleted_at', null);
 
-        // Check if any existing proposal has matching project name
+        // Check if any existing proposal has matching address
         const duplicateProposal = existingProposals?.find(p => {
-          const existingName = ((p.project_info as any)?.name || p.title || '').toLowerCase().trim();
-          return existingName === normalizedProjectName;
+          const existingAddress = ((p.project_info as any)?.address || '').toLowerCase().trim();
+          // Only consider it a duplicate if both addresses exist and match
+          return normalizedAddress && existingAddress && existingAddress === normalizedAddress;
         });
 
         if (duplicateProposal) {
-          const errorMsg = `Duplicate: Proposal already exists for "${proposal.client_email}" with project "${proposal.project_name}"`;
+          const errorMsg = `Duplicate: Proposal already exists for "${proposal.client_email}" at address "${proposal.project_address}"`;
           console.log(`⚠️ Row ${rowNum}: ${errorMsg}`);
           results.skippedDuplicates++;
           results.failureCount++;
