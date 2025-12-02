@@ -8,7 +8,7 @@ const EmbeddedGame = () => {
       <Link to="/" className="absolute top-4 left-4 z-50">
         <Button 
           variant="secondary" 
-          className="bg-white/90 hover:bg-white shadow-lg"
+          className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black shadow-lg"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Home
