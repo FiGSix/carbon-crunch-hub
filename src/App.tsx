@@ -69,6 +69,7 @@ const EmailAutomation = createOptimizedLazyComponent(() => import("./pages/admin
 const ProjectOnboardingList = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingList"), "ProjectOnboardingList");
 const ProjectOnboardingDetail = createOptimizedLazyComponent(() => import("./pages/ProjectOnboardingDetail"), "ProjectOnboardingDetail");
 const TeamManagement = createOptimizedLazyComponent(() => import("./pages/TeamManagement"), "TeamManagement");
+const ClientTeamManagement = createOptimizedLazyComponent(() => import("./pages/ClientTeamManagement"), "ClientTeamManagement");
 const Referral = createOptimizedLazyComponent(() => import("./pages/Referral"), "Referral");
 const LegalDocuments = createOptimizedLazyComponent(() => import("./pages/Admin/LegalDocuments"), "LegalDocuments");
 const AuditStatus = createOptimizedLazyComponent(() => import("./pages/admin/AuditStatus"), "AuditStatus");
@@ -475,6 +476,18 @@ function App() {
                         <PageErrorBoundary pageName="Referral">
                           <Suspense fallback={<PageLoader />}>
                             <Referral />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/client-team" 
+                    element={
+                      <PrivateRoute allowedRoles={['client']}>
+                        <PageErrorBoundary pageName="Client Team Management">
+                          <Suspense fallback={<PageLoader />}>
+                            <ClientTeamManagement />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>
