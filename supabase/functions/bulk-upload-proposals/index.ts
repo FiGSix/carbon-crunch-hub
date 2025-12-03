@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
             title: proposal.proposal_title,
             agent_id: assignedAgentId,
             client_reference_id: clientId,
-            status: hasExistingAgreement ? 'approved' : 'draft',
+            status: hasExistingAgreement ? 'approved' : (profile.role === 'admin' ? 'pending' : 'draft'),
             signed_at: hasExistingAgreement ? new Date().toISOString() : null,
             system_size_kwp: systemSizeKwp,
             unit_standard: 'kWp',
