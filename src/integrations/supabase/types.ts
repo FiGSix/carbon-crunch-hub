@@ -220,6 +220,89 @@ export type Database = {
         }
         Relationships: []
       }
+      client_companies: {
+        Row: {
+          company_name: string
+          created_at: string
+          created_by: string | null
+          email_domain: string | null
+          id: string
+          registration_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          created_by?: string | null
+          email_domain?: string | null
+          id?: string
+          registration_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          created_by?: string | null
+          email_domain?: string | null
+          id?: string
+          registration_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_company_members: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          can_sign_agreements: boolean
+          client_company_id: string
+          created_at: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          can_sign_agreements?: boolean
+          client_company_id: string
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          can_sign_agreements?: boolean
+          client_company_id?: string
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_company_members_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "client_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_referrals: {
         Row: {
           confirmed_at: string | null
@@ -265,9 +348,63 @@ export type Database = {
           },
         ]
       }
+      client_team_invitations: {
+        Row: {
+          accepted_at: string | null
+          client_company_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          first_name: string | null
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          last_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          client_company_id: string
+          created_at?: string
+          email: string
+          expires_at: string
+          first_name?: string | null
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          last_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          client_company_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          first_name?: string | null
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          last_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_team_invitations_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "client_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           cession_signed_at: string | null
+          client_company_id: string | null
           company_name: string | null
           created_at: string
           created_by: string | null
@@ -288,6 +425,7 @@ export type Database = {
         }
         Insert: {
           cession_signed_at?: string | null
+          client_company_id?: string | null
           company_name?: string | null
           created_at?: string
           created_by?: string | null
@@ -308,6 +446,7 @@ export type Database = {
         }
         Update: {
           cession_signed_at?: string | null
+          client_company_id?: string | null
           company_name?: string | null
           created_at?: string
           created_by?: string | null
@@ -327,6 +466,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "client_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_first_agreement_id_fkey"
             columns: ["first_agreement_id"]
@@ -2112,6 +2258,10 @@ export type Database = {
         }[]
       }
       get_client_email: { Args: never; Returns: string }
+      get_client_user_company_id: {
+        Args: { user_id_param: string }
+        Returns: string
+      }
       get_company_member_profiles: {
         Args: { _company_id: string; _requesting_user_id: string }
         Returns: {
@@ -2258,12 +2408,21 @@ export type Database = {
         Args: { event_type: string; proposal_id: string }
         Returns: undefined
       }
+      is_client_account_admin: {
+        Args: { company_id_param: string; user_id_param: string }
+        Returns: boolean
+      }
+      is_client_company_member: {
+        Args: { company_id_param: string; user_id_param: string }
+        Returns: boolean
+      }
       is_company_member: {
         Args: { company_id_param: string; user_id_param: string }
         Returns: boolean
       }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_agent: { Args: never; Returns: boolean }
+      is_current_user_client_account_admin: { Args: never; Returns: boolean }
       is_project_stakeholder: {
         Args: { _project_id: string }
         Returns: boolean
@@ -2376,6 +2535,12 @@ export type Database = {
           trigger_event?: string
         }
         Returns: boolean
+      }
+      user_client_company_ids: {
+        Args: { user_id_param: string }
+        Returns: {
+          client_company_id: string
+        }[]
       }
       user_company_ids: {
         Args: { user_id_param: string }
