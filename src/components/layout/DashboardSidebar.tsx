@@ -103,6 +103,12 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Team",
+      href: "/client-team",
+      icon: UserCheck,
+      roles: ["client"]
+    },
+    {
       name: "Refer a Friend",
       href: "/referral",
       icon: UserPlus,

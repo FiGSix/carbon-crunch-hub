@@ -1,4 +1,3 @@
-
 project_id = "uyjryuopuqgmsvayiccl"
 
 [api]
@@ -9,7 +8,6 @@ verify_jwt = false
 
 [functions.send-contact-email]
 verify_jwt = false
-
 
 [functions.accept-proposal]
 verify_jwt = false
@@ -30,6 +28,9 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-team-invitation]
+verify_jwt = true
+
+[functions.send-client-team-invitation]
 verify_jwt = true
 
 [functions.manage-user-role]
