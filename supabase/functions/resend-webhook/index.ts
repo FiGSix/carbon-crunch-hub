@@ -139,7 +139,9 @@ async function extractProposalIdFromEmail(
   emailId: string,
   recipientEmail: string
 ): Promise<string | null> {
-  // First try: Check automation log for recently sent emails
+  // ONLY match emails that were explicitly logged as proposal emails
+  // This prevents agent invitations or other emails from being
+  // incorrectly associated with proposals
   const { data: logEntry } = await supabase
     .from('proposal_automation_log')
     .select('proposal_id')
@@ -151,19 +153,9 @@ async function extractProposalIdFromEmail(
     return logEntry.proposal_id;
   }
 
-  // Fallback: Find by client email in proposal content
-  const { data: proposals } = await supabase
-    .from('proposals')
-    .select('id, content, created_at')
-    .or(`content->clientInfo->>email.eq.${recipientEmail}`)
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (proposals && proposals.length > 0) {
-    console.log('📋 Found proposal from client email match');
-    return proposals[0].id;
-  }
-
+  // DO NOT fallback to email matching - this causes agent invitations
+  // and other unrelated emails to be incorrectly associated with proposals
+  console.log('⚠️ No proposal found in automation log for email:', emailId, 'to:', recipientEmail);
   return null;
 }
 
