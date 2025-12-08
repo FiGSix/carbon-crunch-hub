@@ -258,7 +258,52 @@ serve(async (req) => {
     }
     console.log(`Deleted ${auditLogs?.length || 0} audit log entries`);
 
-    // Delete user from auth.users (cascades to profiles, user_roles, etc.)
+    // Handle client_company_members - delete memberships
+    console.log('Deleting client company memberships...');
+    const { data: clientMemberships, error: clientMembershipsError } = await supabaseAdmin
+      .from('client_company_members')
+      .delete()
+      .eq('user_id', userId)
+      .select('id');
+
+    if (clientMembershipsError) {
+      console.error('Client company memberships deletion failed:', clientMembershipsError);
+    }
+    console.log(`Deleted ${clientMemberships?.length || 0} client company memberships`);
+
+    // Handle legal_document_acceptances - delete acceptances
+    console.log('Deleting legal document acceptances...');
+    const { data: acceptances, error: acceptancesError } = await supabaseAdmin
+      .from('legal_document_acceptances')
+      .delete()
+      .eq('user_id', userId)
+      .select('id');
+
+    if (acceptancesError) {
+      console.error('Legal document acceptances deletion failed:', acceptancesError);
+    }
+    console.log(`Deleted ${acceptances?.length || 0} legal document acceptances`);
+
+    // Delete profile explicitly (profiles.id references auth.users.id)
+    console.log('Deleting profile...');
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Profile deletion failed:', profileError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to delete profile: ${profileError.message}` 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log('Profile deleted successfully');
+
+    // Delete user from auth.users
     console.log('Attempting to delete user from auth.users...');
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     
