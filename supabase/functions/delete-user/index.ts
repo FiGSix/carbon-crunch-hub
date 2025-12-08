@@ -198,6 +198,19 @@ serve(async (req) => {
     }
     console.log(`Nullified submitted_by in ${onboardingRecords?.length || 0} project onboarding records`);
 
+    // Handle clients table - nullify user_id (NO ACTION foreign key blocks auth deletion)
+    console.log('Handling clients table...');
+    const { data: clientRecords, error: clientsError } = await supabaseAdmin
+      .from('clients')
+      .update({ user_id: null })
+      .eq('user_id', userId)
+      .select('id');
+
+    if (clientsError) {
+      console.error('Clients user_id nullification failed:', clientsError);
+    }
+    console.log(`Nullified user_id in ${clientRecords?.length || 0} client records`);
+
     // Handle notifications - delete them
     console.log('Checking notifications...');
     const { data: notifications, error: notificationsError } = await supabaseAdmin
