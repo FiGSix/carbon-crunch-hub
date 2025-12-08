@@ -111,20 +111,9 @@ serve(async (req) => {
       role: targetProfile.role 
     });
 
-    // Log deletion attempt before execution
-    console.log('Inserting audit log...');
-    const { error: auditError } = await supabaseAdmin.from('user_role_audit').insert({
-      user_id: userId,
-      role: targetProfile.role,
-      action: 'deleted',
-      performed_by: user.id
-    });
-
-    if (auditError) {
-      console.error('Audit log insertion failed:', auditError);
-      // Continue anyway - audit failure shouldn't block deletion
-    }
-    console.log('Audit log inserted successfully');
+    // Skip audit log for deletion - 'deleted' action violates check constraint
+    // and the user is being removed anyway
+    console.log('Skipping audit log insertion (user being deleted, action not in check constraint)');
 
     // Preserve business records - update proposals to nullify agent_id
     console.log('Updating proposals where user is agent...');
@@ -183,18 +172,31 @@ serve(async (req) => {
     }
     console.log(`Removed ${companyMemberships?.length || 0} company memberships`);
 
-    // Handle onboarding documents
+    // Handle onboarding documents - DELETE instead of nullify (NOT NULL constraint on uploaded_by)
     console.log('Handling onboarding documents...');
     const { data: docs, error: docsError } = await supabaseAdmin
       .from('onboarding_documents')
-      .update({ uploaded_by: null })
+      .delete()
       .eq('uploaded_by', userId)
       .select('id');
 
     if (docsError) {
-      console.error('Onboarding documents update failed:', docsError);
+      console.error('Onboarding documents deletion failed:', docsError);
     }
-    console.log(`Nullified uploaded_by in ${docs?.length || 0} documents`);
+    console.log(`Deleted ${docs?.length || 0} onboarding documents`);
+
+    // Handle project_onboarding - nullify submitted_by foreign key
+    console.log('Handling project onboarding records...');
+    const { data: onboardingRecords, error: onboardingError } = await supabaseAdmin
+      .from('project_onboarding')
+      .update({ submitted_by: null })
+      .eq('submitted_by', userId)
+      .select('id');
+
+    if (onboardingError) {
+      console.error('Project onboarding update failed:', onboardingError);
+    }
+    console.log(`Nullified submitted_by in ${onboardingRecords?.length || 0} project onboarding records`);
 
     // Handle notifications - delete them
     console.log('Checking notifications...');
