@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { FileCheck, Download, Loader2 } from "lucide-react";
+import { FileCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
@@ -22,13 +22,6 @@ export function SignedAgreementDownloadButton({
     component: 'SignedAgreementDownload',
     feature: 'pdf-download'
   });
-
-  // Helper function to extract storage path from URL
-  const extractStoragePathFromUrl = (url: string): string | null => {
-    // Match pattern: .../storage/v1/object/[public|sign|authenticated]/bucket-name/path
-    const match = url.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/[^/]+\/(.+)$/);
-    return match ? match[1] : null;
-  };
 
   useEffect(() => {
     fetchSignedPdfUrl();
@@ -76,31 +69,24 @@ export function SignedAgreementDownloadButton({
     try {
       const filename = `Signed_Agreement_${proposalTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       
-      // Extract file path from the storage URL
-      const filePath = extractStoragePathFromUrl(signedPdfUrl);
+      downloadLogger.info('Fetching PDF from public URL', { signedPdfUrl });
       
-      if (!filePath) {
-        throw new Error('Invalid storage URL format');
+      // Use fetch directly since the signed-agreements bucket is public
+      // This bypasses RLS and works reliably for public files
+      const response = await fetch(signedPdfUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
       }
       
-      downloadLogger.info('Downloading from storage', { filePath });
+      const blob = await response.blob();
       
-      // Use Supabase storage API (automatically includes auth token)
-      const { data, error } = await supabase.storage
-        .from('signed-agreements')
-        .download(filePath);
-      
-      if (error) {
-        downloadLogger.error('Storage download error', { error });
-        throw new Error(`Failed to download: ${error.message}`);
-      }
-      
-      if (!data) {
+      if (!blob || blob.size === 0) {
         throw new Error('No data received from storage');
       }
       
       // Create blob URL and trigger download
-      const blobUrl = URL.createObjectURL(data);
+      const blobUrl = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -125,9 +111,9 @@ export function SignedAgreementDownloadButton({
       
       toast({
         title: "Download Failed",
-        description: errorMessage.includes('not found') 
+        description: errorMessage.includes('not found') || errorMessage.includes('404')
           ? "The file could not be found. It may have been moved or deleted."
-          : errorMessage.includes('access denied') || errorMessage.includes('unauthorized')
+          : errorMessage.includes('403') || errorMessage.includes('unauthorized')
           ? "You don't have permission to download this file."
           : "Could not download the signed agreement. Please try again.",
         variant: "destructive",
