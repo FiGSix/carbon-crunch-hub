@@ -2062,6 +2062,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      agent_has_proposals_with_client: {
+        Args: { client_id_param: string }
+        Returns: boolean
+      }
       archive_proposal: {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
@@ -2385,6 +2389,8 @@ export type Database = {
           title: string
         }[]
       }
+      get_user_client_company_client_ids: { Args: never; Returns: string[] }
+      get_user_client_ids: { Args: never; Returns: string[] }
       get_user_company_id: { Args: { user_id_param: string }; Returns: string }
       get_user_role: { Args: never; Returns: string }
       get_user_roles: {
