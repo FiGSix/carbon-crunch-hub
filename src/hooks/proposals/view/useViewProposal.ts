@@ -1,10 +1,9 @@
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth";
 import { useProposalData } from "./useProposalData";
 import { useProposalActions } from "./useProposalActions";
 import { useProposalStatus } from "./useProposalStatus";
-import { ProposalData } from "@/types/proposals";
+import { useProposalClientCompanyId } from "./useProposalClientCompanyId";
 import { logger } from "@/lib/logger";
 
 /**
@@ -13,6 +12,9 @@ import { logger } from "@/lib/logger";
 export function useViewProposal(id?: string, token?: string | null, onDeleteSuccess?: () => void) {
   const { user } = useAuth();
   const { proposal, loading, error, clientEmail, fetchProposal } = useProposalData(id, token);
+  
+  // Fetch client company ID for team member permission check
+  const { clientCompanyId } = useProposalClientCompanyId(proposal);
   
   // Create a contextualized logger
   const viewProposalLogger = logger.withContext({ 
@@ -29,8 +31,12 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     deleteLoading
   } = useProposalActions(fetchProposal, onDeleteSuccess);
   
-  // Get proposal status data
-  const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal, token);
+  // Get proposal status data - now includes team member check via clientCompanyId
+  const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(
+    proposal, 
+    token,
+    { proposalClientCompanyId: clientCompanyId }
+  );
 
   // Create wrapper functions that convert boolean returns to void and pass typed name
   const handleApproveWrapper = async (typedName: string): Promise<void> => {
