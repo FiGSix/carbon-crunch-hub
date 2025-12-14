@@ -2,12 +2,23 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import { ProposalData } from "@/types/proposals";
+import { useClientCompanyMembership } from "@/hooks/useClientCompanyMembership";
+
+interface UseProposalStatusOptions {
+  proposalClientCompanyId?: string | null;
+}
 
 /**
  * Hook to determine proposal status and user permissions
+ * Now includes team member permissions for client companies
  */
-export function useProposalStatus(proposal: ProposalData | null, token?: string | null) {
+export function useProposalStatus(
+  proposal: ProposalData | null, 
+  token?: string | null,
+  options?: UseProposalStatusOptions
+) {
   const { user, userRole } = useAuth();
+  const { membership } = useClientCompanyMembership();
 
   return useMemo(() => {
     if (!proposal) {
@@ -18,16 +29,27 @@ export function useProposalStatus(proposal: ProposalData | null, token?: string 
       };
     }
 
-    // Client is either:
-    // 1. Authenticated as client with matching ID
-    // 2. Accessing via invitation token (prospective client)
-    const isClient = (
-      (userRole === 'client' && (
-        proposal.client_id === user.id || 
-        proposal.client_reference_id === user.id
-      )) ||
-      (!!token && !user) // Token access without authentication = prospective client
+    // Direct client match (existing logic)
+    const isDirectClient = userRole === 'client' && (
+      proposal.client_id === user?.id || 
+      proposal.client_reference_id === user?.id
     );
+
+    // Team member with signing rights - can act on behalf of company
+    const proposalCompanyId = options?.proposalClientCompanyId;
+    const isClientTeamMember = !!(
+      userRole === 'client' &&
+      membership &&
+      proposalCompanyId &&
+      membership.clientCompanyId === proposalCompanyId &&
+      membership.canSignAgreements
+    );
+
+    // Token access without authentication = prospective client
+    const isTokenAccess = !!token && !user;
+
+    // Client is either direct match, team member with signing rights, or token access
+    const isClient = isDirectClient || isClientTeamMember || isTokenAccess;
     
     // Can take action (approve/reject) if client and proposal is pending
     const canTakeAction = isClient && 
@@ -40,9 +62,14 @@ export function useProposalStatus(proposal: ProposalData | null, token?: string 
       hasToken: !!token,
       hasUser: !!user,
       userRole,
+      isDirectClient,
+      isClientTeamMember,
       isClient,
       canTakeAction,
-      tokenAccess: !!token && !user
+      tokenAccess: isTokenAccess,
+      proposalCompanyId,
+      userCompanyId: membership?.clientCompanyId,
+      canSignAgreements: membership?.canSignAgreements
     });
 
     return {
@@ -50,5 +77,5 @@ export function useProposalStatus(proposal: ProposalData | null, token?: string 
       canTakeAction,
       isAuthenticated: !!user
     };
-  }, [proposal, user, userRole, token]);
+  }, [proposal, user, userRole, token, membership, options?.proposalClientCompanyId]);
 }
