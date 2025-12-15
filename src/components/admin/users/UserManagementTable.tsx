@@ -48,6 +48,13 @@ interface UserWithRoles {
   company_name?: string | null;
   company_role?: string | null;
   is_legacy_company?: boolean;
+  company_type?: 'agent' | 'client' | null;
+}
+
+interface CompanyOption {
+  id: string;
+  company_name: string;
+  type: 'agent' | 'client';
 }
 
 export function UserManagementTable() {
@@ -86,27 +93,79 @@ export function UserManagementTable() {
       const { data: profiles, error: profileError } = await profileQuery;
       if (profileError) throw profileError;
 
-      // Get company memberships
-      const { data: memberships } = await supabase
+      const profileIds = profiles?.map(p => p.id) || [];
+
+      // Get AGENT company memberships (companies table)
+      const { data: agentMemberships } = await supabase
         .from('company_members')
         .select('user_id, company_id, role, status')
         .eq('status', 'active')
-        .in('user_id', profiles?.map(p => p.id) || []);
+        .in('user_id', profileIds);
 
-      // Get company names
-      const companyIds = [...new Set(memberships?.map(m => m.company_id) || [])];
-      const { data: companies } = await supabase
+      // Get CLIENT company memberships (client_companies table)
+      const { data: clientMemberships } = await supabase
+        .from('client_company_members')
+        .select('user_id, client_company_id, role, status')
+        .eq('status', 'active')
+        .in('user_id', profileIds);
+
+      // Get agent company names
+      const agentCompanyIds = [...new Set(agentMemberships?.map(m => m.company_id) || [])];
+      const { data: agentCompanies } = await supabase
         .from('companies')
         .select('id, company_name')
-        .in('id', companyIds);
+        .in('id', agentCompanyIds);
+
+      // Get client company names
+      const clientCompanyIds = [...new Set(clientMemberships?.map(m => m.client_company_id) || [])];
+      const { data: clientCompanies } = await supabase
+        .from('client_companies')
+        .select('id, company_name')
+        .in('id', clientCompanyIds);
 
       const usersWithCompanies: UserWithRoles[] = (profiles || []).map(profile => {
-        const membership = memberships?.find(m => m.user_id === profile.id);
-        const company = companies?.find(c => c.id === membership?.company_id);
+        // For agents: use company_members -> companies
+        // For clients: use client_company_members -> client_companies
+        const isClient = profile.role === 'client';
         
-        // Use company from company_members OR fallback to profile.company_name (legacy)
-        const companyName = company?.company_name || profile.company_name || null;
-        const isLegacyCompany = !company && !!profile.company_name;
+        let companyId: string | null = null;
+        let companyName: string | null = null;
+        let companyRole: string | null = null;
+        let companyType: 'agent' | 'client' | null = null;
+        let isLegacyCompany = false;
+
+        if (isClient) {
+          // Check client company membership
+          const clientMembership = clientMemberships?.find(m => m.user_id === profile.id);
+          const clientCompany = clientCompanies?.find(c => c.id === clientMembership?.client_company_id);
+          
+          if (clientMembership && clientCompany) {
+            companyId = clientMembership.client_company_id;
+            companyName = clientCompany.company_name;
+            // Map account_admin to team_lead for display consistency
+            companyRole = clientMembership.role === 'account_admin' ? 'team_lead' : clientMembership.role;
+            companyType = 'client';
+          } else if (profile.company_name) {
+            // Fallback to legacy company_name on profile
+            companyName = profile.company_name;
+            isLegacyCompany = true;
+          }
+        } else {
+          // Check agent company membership
+          const agentMembership = agentMemberships?.find(m => m.user_id === profile.id);
+          const agentCompany = agentCompanies?.find(c => c.id === agentMembership?.company_id);
+          
+          if (agentMembership && agentCompany) {
+            companyId = agentMembership.company_id;
+            companyName = agentCompany.company_name;
+            companyRole = agentMembership.role;
+            companyType = 'agent';
+          } else if (profile.company_name) {
+            // Fallback to legacy company_name on profile
+            companyName = profile.company_name;
+            isLegacyCompany = true;
+          }
+        }
 
         return {
           id: profile.id,
@@ -116,16 +175,17 @@ export function UserManagementTable() {
           role: profile.role,
           created_at: profile.created_at,
           agent_status: profile.agent_status,
-          company_id: membership?.company_id || null,
+          company_id: companyId,
           company_name: companyName,
-          company_role: membership?.role || null,
+          company_role: companyRole,
           is_legacy_company: isLegacyCompany,
+          company_type: companyType,
         };
       });
 
       // Apply company filter
       if (companyFilter === 'none') {
-        return usersWithCompanies.filter(u => !u.company_id);
+        return usersWithCompanies.filter(u => !u.company_id && !u.is_legacy_company);
       } else if (companyFilter !== 'all') {
         return usersWithCompanies.filter(u => u.company_id === companyFilter);
       }
@@ -134,16 +194,31 @@ export function UserManagementTable() {
     },
   });
 
-  // Get unique companies for filter
-  const { data: companies } = useQuery({
-    queryKey: ['companies-filter'],
+  // Get unique companies for filter (both agent and client companies)
+  const { data: allCompanies } = useQuery({
+    queryKey: ['all-companies-filter'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch agent companies
+      const { data: agentCompanies, error: agentError } = await supabase
         .from('companies')
         .select('id, company_name')
         .order('company_name');
-      if (error) throw error;
-      return data || [];
+      if (agentError) throw agentError;
+
+      // Fetch client companies
+      const { data: clientCompanies, error: clientError } = await supabase
+        .from('client_companies')
+        .select('id, company_name')
+        .order('company_name');
+      if (clientError) throw clientError;
+
+      const combined: CompanyOption[] = [
+        ...(agentCompanies || []).map(c => ({ ...c, type: 'agent' as const })),
+        ...(clientCompanies || []).map(c => ({ ...c, type: 'client' as const })),
+      ];
+
+      // Sort combined by name
+      return combined.sort((a, b) => a.company_name.localeCompare(b.company_name));
     },
   });
 
@@ -225,9 +300,9 @@ export function UserManagementTable() {
           <SelectContent>
             <SelectItem value="all">All Companies</SelectItem>
             <SelectItem value="none">No Company</SelectItem>
-            {companies?.map((company) => (
+            {allCompanies?.map((company) => (
               <SelectItem key={company.id} value={company.id}>
-                {company.company_name}
+                {company.company_name} ({company.type === 'client' ? 'Client' : 'Agent'})
               </SelectItem>
             ))}
           </SelectContent>
@@ -311,7 +386,7 @@ export function UserManagementTable() {
                           <UserCog className="h-4 w-4 mr-2" />
                           Manage Roles
                         </DropdownMenuItem>
-                        {!user.company_id && (
+                        {!user.company_id && user.role !== 'client' && (
                           <DropdownMenuItem onClick={() => {
                             setSelectedUser(user);
                             setLinkDialogOpen(true);
@@ -320,7 +395,7 @@ export function UserManagementTable() {
                             Link to Company
                           </DropdownMenuItem>
                         )}
-                        {user.company_id && (
+                        {user.company_id && user.company_type === 'agent' && (
                           <DropdownMenuItem onClick={() => {
                             setSelectedCompanyId(user.company_id!);
                             setCompanyDialogOpen(true);
