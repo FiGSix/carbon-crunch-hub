@@ -41,14 +41,21 @@ export class ClientUpdater {
       if (updates.notes !== undefined) clientUpdate.notes = updates.notes;
       if (updates.createdBy !== undefined) clientUpdate.created_by = updates.createdBy;
 
-      const { error: updateError } = await supabase
+      const { data, error: updateError } = await supabase
         .from('clients')
         .update(clientUpdate)
-        .eq('id', clientId);
+        .eq('id', clientId)
+        .select('id')
+        .single();
 
       if (updateError) {
         devLogger.clients.error('Error updating client:', updateError);
         return { success: false, error: updateError.message };
+      }
+
+      if (!data) {
+        devLogger.clients.error('No client updated - possibly RLS blocked:', clientId);
+        return { success: false, error: 'Update failed - insufficient permissions or client not found' };
       }
 
       devLogger.clients.info('Client updated successfully:', clientId);
