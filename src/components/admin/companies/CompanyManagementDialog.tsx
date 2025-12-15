@@ -2,9 +2,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
 import { useAdminCompanyManagement } from '@/hooks/useAdminCompanyManagement';
 import { formatDistanceToNow } from 'date-fns';
-import { Crown, Users, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trash2, Loader2 } from 'lucide-react';
+import { Crown, Users, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trash2, Loader2, PenLine } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,11 +32,13 @@ export function CompanyManagementDialog({
     removeMember,
     approveMember,
     declineMember,
+    toggleSigningPermission,
     isPromoting,
     isDemoting,
     isRemoving,
     isApproving,
     isDeclining,
+    isTogglingSign,
   } = useAdminCompanyManagement(companyId || undefined);
 
   useEffect(() => {
@@ -48,15 +51,27 @@ export function CompanyManagementDialog({
 
   if (!companyId) return null;
 
+  const companyType = companyDetails?.companyType || 'agent';
+  const isClientCompany = companyType === 'client';
+  
+  // Labels based on company type
+  const leadLabel = isClientCompany ? 'Account Admin' : 'Team Lead';
+  const leadsLabel = isClientCompany ? 'Account Admins' : 'Team Leads';
+
   const teamLeads = companyDetails?.members.filter(m => m.role === 'team_lead') || [];
   const regularMembers = companyDetails?.members.filter(m => m.role === 'member') || [];
-  const isAnyOperationPending = isPromoting || isDemoting || isRemoving || isApproving || isDeclining;
+  const isAnyOperationPending = isPromoting || isDemoting || isRemoving || isApproving || isDeclining || isTogglingSign;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Company Management</DialogTitle>
+          <DialogTitle className="text-2xl flex items-center gap-2">
+            Company Management
+            {isClientCompany && (
+              <Badge variant="secondary" className="ml-2">Client Company</Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         {isAnyOperationPending && (
@@ -88,7 +103,7 @@ export function CompanyManagementDialog({
                   </div>
                   <div className="flex items-center gap-2">
                     <Crown className="h-4 w-4" />
-                    <span>{companyDetails.team_leads} team leads</span>
+                    <span>{companyDetails.team_leads} {leadsLabel.toLowerCase()}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
@@ -99,14 +114,14 @@ export function CompanyManagementDialog({
 
               <Separator />
 
-              {/* Team Leads Section */}
+              {/* Team Leads / Account Admins Section */}
               <div className="space-y-3">
                 <h4 className="font-semibold flex items-center gap-2">
                   <Crown className="h-4 w-4 text-yellow-600" />
-                  Team Leads ({teamLeads.length})
+                  {leadsLabel} ({teamLeads.length})
                 </h4>
                 {teamLeads.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No team leads yet</p>
+                  <p className="text-sm text-muted-foreground">No {leadsLabel.toLowerCase()} yet</p>
                 ) : (
                   <div className="space-y-2">
                     {teamLeads.map((member) => (
@@ -128,13 +143,31 @@ export function CompanyManagementDialog({
                             <p className="text-sm text-muted-foreground">
                               {member.profile?.email}
                             </p>
+                            {isClientCompany && (member as any).can_sign_agreements && (
+                              <Badge variant="outline" className="mt-1 text-xs">
+                                <PenLine className="h-3 w-3 mr-1" />
+                                Can Sign
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {isClientCompany && (
+                            <div className="flex items-center gap-2 mr-4">
+                              <span className="text-xs text-muted-foreground">Can Sign</span>
+                              <Switch
+                                checked={(member as any).can_sign_agreements || false}
+                                onCheckedChange={(checked) => 
+                                  toggleSigningPermission({ memberId: member.id, canSign: checked })
+                                }
+                                disabled={isAnyOperationPending}
+                              />
+                            </div>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => demoteFromTeamLead({ memberId: member.id, userId: currentUserId })}
+                            onClick={() => demoteFromTeamLead({ memberId: member.id, userId: currentUserId, companyType })}
                             disabled={isAnyOperationPending || teamLeads.length === 1}
                           >
                             <ArrowDown className="h-4 w-4 mr-1" />
@@ -143,7 +176,7 @@ export function CompanyManagementDialog({
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => removeMember(member.id)}
+                            onClick={() => removeMember({ memberId: member.id, companyType })}
                             disabled={isAnyOperationPending || teamLeads.length === 1}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -186,13 +219,31 @@ export function CompanyManagementDialog({
                             <p className="text-sm text-muted-foreground">
                               {member.profile?.email}
                             </p>
+                            {isClientCompany && (member as any).can_sign_agreements && (
+                              <Badge variant="outline" className="mt-1 text-xs">
+                                <PenLine className="h-3 w-3 mr-1" />
+                                Can Sign
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {isClientCompany && (
+                            <div className="flex items-center gap-2 mr-4">
+                              <span className="text-xs text-muted-foreground">Can Sign</span>
+                              <Switch
+                                checked={(member as any).can_sign_agreements || false}
+                                onCheckedChange={(checked) => 
+                                  toggleSigningPermission({ memberId: member.id, canSign: checked })
+                                }
+                                disabled={isAnyOperationPending}
+                              />
+                            </div>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => promoteToTeamLead({ memberId: member.id, userId: currentUserId })}
+                            onClick={() => promoteToTeamLead({ memberId: member.id, userId: currentUserId, companyType })}
                             disabled={isAnyOperationPending}
                           >
                             <ArrowUp className="h-4 w-4 mr-1" />
@@ -201,7 +252,7 @@ export function CompanyManagementDialog({
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => removeMember(member.id)}
+                            onClick={() => removeMember({ memberId: member.id, companyType })}
                             disabled={isAnyOperationPending}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -251,7 +302,7 @@ export function CompanyManagementDialog({
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => approveMember({ memberId: member.id, userId: currentUserId })}
+                              onClick={() => approveMember({ memberId: member.id, userId: currentUserId, companyType })}
                               disabled={isAnyOperationPending}
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
@@ -260,7 +311,7 @@ export function CompanyManagementDialog({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => declineMember(member.id)}
+                              onClick={() => declineMember({ memberId: member.id, companyType })}
                               disabled={isAnyOperationPending}
                             >
                               <XCircle className="h-4 w-4 mr-1" />
