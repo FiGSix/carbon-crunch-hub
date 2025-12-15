@@ -395,7 +395,7 @@ export function UserManagementTable() {
                             Link to Company
                           </DropdownMenuItem>
                         )}
-                        {user.company_id && user.company_type === 'agent' && (
+                        {user.company_id && (
                           <DropdownMenuItem onClick={() => {
                             setSelectedCompanyId(user.company_id!);
                             setCompanyDialogOpen(true);

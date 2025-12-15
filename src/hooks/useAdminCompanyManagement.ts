@@ -7,6 +7,12 @@ import {
   demoteFromTeamLead,
   removeMemberFromCompany,
   updateCompanyDetails,
+  promoteToAccountAdmin,
+  demoteFromAccountAdmin,
+  removeClientMemberFromCompany,
+  updateClientSigningPermission,
+  approveClientMemberAdmin,
+  declineClientMemberAdmin,
 } from '@/lib/supabase/company/adminCompanyOperations';
 import { approveMember, declineMember } from '@/lib/supabase/company/companyOperations';
 
@@ -20,24 +26,32 @@ export function useAdminCompanyManagement(companyId?: string) {
     queryFn: getAllCompaniesForAdmin,
   });
 
-  // Fetch detailed company info
+  // Fetch detailed company info (works for both agent AND client companies)
   const { data: companyDetails, isLoading: isLoadingDetails } = useQuery({
     queryKey: ['admin-company-details', companyId],
     queryFn: () => companyId ? getCompanyDetailsForAdmin(companyId) : null,
     enabled: !!companyId,
   });
 
-  // Promote to team lead
+  const invalidateQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+  };
+
+  // Promote to team lead (agent) or account admin (client)
   const promoteMutation = useMutation({
-    mutationFn: ({ memberId, userId }: { memberId: string; userId: string }) =>
-      promoteToTeamLead(memberId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    mutationFn: async ({ memberId, userId, companyType }: { memberId: string; userId: string; companyType: 'agent' | 'client' }) => {
+      if (companyType === 'client') {
+        return promoteToAccountAdmin(memberId);
+      }
+      return promoteToTeamLead(memberId, userId);
+    },
+    onSuccess: (_, { companyType }) => {
+      invalidateQueries();
       toast({
         title: "Success",
-        description: "Member promoted to team lead",
+        description: companyType === 'client' ? "Member promoted to Account Admin" : "Member promoted to Team Lead",
       });
     },
     onError: (error) => {
@@ -50,23 +64,25 @@ export function useAdminCompanyManagement(companyId?: string) {
     },
   });
 
-  // Demote from team lead
+  // Demote from team lead (agent) or account admin (client)
   const demoteMutation = useMutation({
-    mutationFn: ({ memberId, userId }: { memberId: string; userId: string }) =>
-      demoteFromTeamLead(memberId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    mutationFn: async ({ memberId, userId, companyType }: { memberId: string; userId: string; companyType: 'agent' | 'client' }) => {
+      if (companyType === 'client') {
+        return demoteFromAccountAdmin(memberId);
+      }
+      return demoteFromTeamLead(memberId, userId);
+    },
+    onSuccess: (_, { companyType }) => {
+      invalidateQueries();
       toast({
         title: "Success",
-        description: "Team lead demoted to member",
+        description: companyType === 'client' ? "Account Admin demoted to member" : "Team Lead demoted to member",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to demote team lead",
+        description: "Failed to demote member",
         variant: "destructive",
       });
       console.error('Demote error:', error);
@@ -75,11 +91,14 @@ export function useAdminCompanyManagement(companyId?: string) {
 
   // Remove member
   const removeMutation = useMutation({
-    mutationFn: (memberId: string) => removeMemberFromCompany(memberId),
+    mutationFn: async ({ memberId, companyType }: { memberId: string; companyType: 'agent' | 'client' }) => {
+      if (companyType === 'client') {
+        return removeClientMemberFromCompany(memberId);
+      }
+      return removeMemberFromCompany(memberId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      invalidateQueries();
       toast({
         title: "Success",
         description: "Member removed from company",
@@ -95,14 +114,16 @@ export function useAdminCompanyManagement(companyId?: string) {
     },
   });
 
-  // Approve member (reusing from regular operations)
+  // Approve member (works for both agent and client companies)
   const approveMutation = useMutation({
-    mutationFn: ({ memberId, userId }: { memberId: string; userId: string }) =>
-      approveMember(memberId, userId),
+    mutationFn: async ({ memberId, userId, companyType }: { memberId: string; userId: string; companyType: 'agent' | 'client' }) => {
+      if (companyType === 'client') {
+        return approveClientMemberAdmin(memberId, userId);
+      }
+      return approveMember(memberId, userId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      invalidateQueries();
       toast({
         title: "Success",
         description: "Member approved",
@@ -118,12 +139,16 @@ export function useAdminCompanyManagement(companyId?: string) {
     },
   });
 
-  // Decline member
+  // Decline member (works for both agent and client companies)
   const declineMutation = useMutation({
-    mutationFn: (memberId: string) => declineMember(memberId),
+    mutationFn: async ({ memberId, companyType }: { memberId: string; companyType: 'agent' | 'client' }) => {
+      if (companyType === 'client') {
+        return declineClientMemberAdmin(memberId);
+      }
+      return declineMember(memberId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+      invalidateQueries();
       toast({
         title: "Success",
         description: "Member request declined",
@@ -144,8 +169,7 @@ export function useAdminCompanyManagement(companyId?: string) {
     mutationFn: ({ companyId, updates }: { companyId: string; updates: any }) =>
       updateCompanyDetails(companyId, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-company-details'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+      invalidateQueries();
       toast({
         title: "Success",
         description: "Company details updated",
@@ -161,6 +185,27 @@ export function useAdminCompanyManagement(companyId?: string) {
     },
   });
 
+  // Toggle signing permission (client companies only)
+  const toggleSigningMutation = useMutation({
+    mutationFn: ({ memberId, canSign }: { memberId: string; canSign: boolean }) =>
+      updateClientSigningPermission(memberId, canSign),
+    onSuccess: () => {
+      invalidateQueries();
+      toast({
+        title: "Success",
+        description: "Signing permission updated",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update signing permission",
+        variant: "destructive",
+      });
+      console.error('Toggle signing error:', error);
+    },
+  });
+
   return {
     companies,
     isLoadingCompanies,
@@ -172,10 +217,12 @@ export function useAdminCompanyManagement(companyId?: string) {
     approveMember: approveMutation.mutate,
     declineMember: declineMutation.mutate,
     updateCompany: updateCompanyMutation.mutate,
+    toggleSigningPermission: toggleSigningMutation.mutate,
     isPromoting: promoteMutation.isPending,
     isDemoting: demoteMutation.isPending,
     isRemoving: removeMutation.isPending,
     isApproving: approveMutation.isPending,
     isDeclining: declineMutation.isPending,
+    isTogglingSign: toggleSigningMutation.isPending,
   };
 }
