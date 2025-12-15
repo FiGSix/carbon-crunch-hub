@@ -7,6 +7,7 @@ import {
   demoteFromTeamLead,
   removeMemberFromCompany,
   updateCompanyDetails,
+  updateClientCompanyDetails,
   promoteToAccountAdmin,
   demoteFromAccountAdmin,
   removeClientMemberFromCompany,
@@ -164,10 +165,14 @@ export function useAdminCompanyManagement(companyId?: string) {
     },
   });
 
-  // Update company
+  // Update company (supports both agent and client companies)
   const updateCompanyMutation = useMutation({
-    mutationFn: ({ companyId, updates }: { companyId: string; updates: any }) =>
-      updateCompanyDetails(companyId, updates),
+    mutationFn: ({ companyId, updates, companyType }: { companyId: string; updates: { company_name?: string; email_domain?: string | null }; companyType: 'agent' | 'client' }) => {
+      if (companyType === 'client') {
+        return updateClientCompanyDetails(companyId, updates);
+      }
+      return updateCompanyDetails(companyId, updates);
+    },
     onSuccess: () => {
       invalidateQueries();
       toast({

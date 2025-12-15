@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { useAdminCompanyManagement } from '@/hooks/useAdminCompanyManagement';
 import { formatDistanceToNow } from 'date-fns';
-import { Crown, Users, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trash2, Loader2, PenLine } from 'lucide-react';
+import { Crown, Users, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trash2, Loader2, PenLine, Pencil, Check, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +24,8 @@ export function CompanyManagementDialog({
   onOpenChange,
 }: CompanyManagementDialogProps) {
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
   
   const {
     companyDetails,
@@ -33,6 +36,7 @@ export function CompanyManagementDialog({
     approveMember,
     declineMember,
     toggleSigningPermission,
+    updateCompany,
     isPromoting,
     isDemoting,
     isRemoving,
@@ -48,6 +52,29 @@ export function CompanyManagementDialog({
     };
     fetchUserId();
   }, []);
+
+  // Reset edit state when company changes
+  useEffect(() => {
+    if (companyDetails) {
+      setEditedName(companyDetails.company_name);
+      setIsEditingName(false);
+    }
+  }, [companyDetails]);
+
+  const handleSaveName = () => {
+    if (!companyId || !editedName.trim()) return;
+    updateCompany({
+      companyId,
+      updates: { company_name: editedName.trim() },
+      companyType: companyDetails?.companyType || 'agent',
+    });
+    setIsEditingName(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditedName(companyDetails?.company_name || '');
+    setIsEditingName(false);
+  };
 
   if (!companyId) return null;
 
@@ -92,7 +119,40 @@ export function CompanyManagementDialog({
             <div className="space-y-6 pr-4">
               {/* Company Overview */}
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold">{companyDetails.company_name}</h3>
+                <div className="flex items-center gap-2">
+                  {isEditingName ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        className="text-lg font-semibold h-9"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveName();
+                          if (e.key === 'Escape') handleCancelEdit();
+                        }}
+                      />
+                      <Button size="sm" variant="ghost" onClick={handleSaveName} disabled={!editedName.trim()}>
+                        <Check className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                        <X className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-semibold">{companyDetails.company_name}</h3>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsEditingName(true)}
+                        className="h-7 w-7 p-0"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  )}
+                </div>
                 {companyDetails.email_domain && (
                   <p className="text-sm text-muted-foreground">Domain: {companyDetails.email_domain}</p>
                 )}
