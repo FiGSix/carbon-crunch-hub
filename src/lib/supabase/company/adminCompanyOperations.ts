@@ -235,7 +235,7 @@ export async function removeMemberFromCompany(memberId: string): Promise<void> {
 }
 
 /**
- * Update company details (admin only)
+ * Update company details (admin only) - AGENT companies
  */
 export async function updateCompanyDetails(
   companyId: string,
@@ -243,6 +243,24 @@ export async function updateCompanyDetails(
 ): Promise<void> {
   const { error } = await supabase
     .from('companies')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', companyId);
+
+  if (error) throw error;
+}
+
+/**
+ * Update client company details (admin only) - CLIENT companies
+ */
+export async function updateClientCompanyDetails(
+  companyId: string,
+  updates: { company_name?: string; email_domain?: string | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from('client_companies')
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
