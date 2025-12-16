@@ -135,18 +135,6 @@ export default function Dashboard() {
         loading={isLoading}
       />
 
-      {/* Global Refresh Button */}
-      <div className="flex justify-end mt-6">
-        <Button 
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh Data
-        </Button>
-      </div>
-
       {/* Agent Introduction Video Modal */}
       <AgentIntroVideoModal
         isOpen={isModalOpen}
