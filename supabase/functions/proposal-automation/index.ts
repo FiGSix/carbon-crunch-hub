@@ -428,6 +428,15 @@ async function sendFollowUpEmail(
   const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
   const proposalUrl = `${siteUrl}/proposals/${proposal.id}?token=${proposal.invitation_token}`;
 
+  // Format expiry date for email template
+  const expiryDate = proposal.invitation_expires_at 
+    ? new Date(proposal.invitation_expires_at).toLocaleDateString('en-ZA', {
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric'
+      })
+    : 'the expiry date shown in your proposal';
+
   // Get template from config
   const template = emailTemplates[followUpType];
   if (!template) {
@@ -447,6 +456,7 @@ async function sendFollowUpEmail(
     agent_name: agentName,
     agent_email: agentEmail,
     proposal_url: proposalUrl,
+    expiry_date: expiryDate,
     
     // CamelCase (for backward compatibility)
     clientName: clientName,
@@ -457,7 +467,8 @@ async function sendFollowUpEmail(
     clientShare: `R ${Math.round(clientShareRevenue).toLocaleString()}`,
     agentName: agentName,
     agentEmail: agentEmail,
-    proposalUrl: proposalUrl
+    proposalUrl: proposalUrl,
+    expiryDate: expiryDate
   };
 
   // Replace all placeholders in subject and html
