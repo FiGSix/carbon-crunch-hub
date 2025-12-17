@@ -163,7 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (emailResponse.id) {
         console.log(`📧 Storing message_id for webhook tracking: ${emailResponse.id}`);
         
-        await supabase
+        const { error: logError } = await supabase
           .from('proposal_automation_log')
           .insert({
             proposal_id: proposalId,
@@ -177,8 +177,15 @@ const handler = async (req: Request): Promise<Response> => {
             }
           });
 
+        if (logError) {
+          console.error(`❌ Failed to log email to proposal_automation_log:`, logError);
+          // Continue anyway - email was sent successfully
+        } else {
+          console.log(`✅ Successfully logged email to proposal_automation_log`);
+        }
+
         // Update proposal status to 'sent' and track email send time
-        await supabase
+        const { error: updateError } = await supabase
           .from('proposals')
           .update({
             status: 'sent',
@@ -187,6 +194,15 @@ const handler = async (req: Request): Promise<Response> => {
             invitation_sent_at: new Date().toISOString()
           })
           .eq('id', proposalId);
+
+        if (updateError) {
+          console.error(`❌ Failed to update proposal status:`, updateError);
+          // Continue anyway - email was sent successfully
+        } else {
+          console.log(`✅ Successfully updated proposal ${proposalId} status to 'sent'`);
+        }
+      } else {
+        console.warn(`⚠️ No email ID returned from Resend - cannot track email events`);
       }
 
       // Create a notification for the client if we have their ID
