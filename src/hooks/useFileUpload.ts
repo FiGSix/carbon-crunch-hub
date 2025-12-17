@@ -28,6 +28,16 @@ export function useFileUpload({
   const uploadFile = async (file: File, fileName?: string) => {
     if (!file || !user) return null;
 
+    // Pre-upload diagnostics
+    console.log('Upload diagnostics:', {
+      bucket,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      userId: user.id,
+      folderPrefix
+    });
+
     // Preflight auth check to prevent anonymous uploads
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
@@ -39,6 +49,16 @@ export function useFileUpload({
       });
       onError?.(error);
       return null;
+    }
+
+    // Force session refresh to ensure fresh token
+    console.log('Refreshing session before upload...');
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      console.error('Session refresh failed:', refreshError);
+      // Continue with existing session if refresh fails
+    } else if (refreshData.session) {
+      console.log('Session refreshed successfully, token expires:', refreshData.session.expires_at);
     }
 
     // Validate file type
@@ -84,16 +104,25 @@ export function useFileUpload({
           : `${user.id}/${Date.now()}.${fileExt}`
       );
 
-      console.log('Uploading to:', bucket, 'Path:', finalFileName);
+      console.log('Uploading to:', bucket, 'Path:', finalFileName, 'File size:', file.size, 'File type:', file.type);
       
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(finalFileName, file, { upsert: true });
 
       if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
+        console.error('Supabase upload error (full object):', JSON.stringify(uploadError, null, 2));
+        console.error('Upload error details:', {
+          message: uploadError.message,
+          name: uploadError.name,
+          statusCode: (uploadError as any).statusCode,
+          error: (uploadError as any).error,
+          cause: (uploadError as any).cause
+        });
         throw uploadError;
       }
+      
+      console.log('Upload successful, data:', uploadData);
 
       // For private buckets, generate a signed URL valid for 1 year
       const { data: urlData, error: urlError } = await supabase.storage
@@ -111,24 +140,44 @@ export function useFileUpload({
       
       return signedUrl;
     } catch (error: any) {
-      console.error('Upload error details:', error);
+      console.error('Upload error (full):', JSON.stringify(error, null, 2));
+      console.error('Upload error details:', {
+        message: error.message,
+        name: error.name,
+        statusCode: error.statusCode,
+        code: error.code,
+        error: error.error,
+        cause: error.cause,
+        stack: error.stack
+      });
+      
       const errorMessage = error.message || 'Upload failed';
+      const statusCode = error.statusCode || (error as any).status;
       const isRLSError = errorMessage.includes('row-level security') || 
                          errorMessage.includes('policy') ||
                          error.code === 'PGRST116' ||
                          error.code === '42501';
       const isBucketError = errorMessage.includes('Bucket not found') || 
                            errorMessage.includes('bucket');
+      const is400Error = statusCode === 400;
+      
+      let title = "Upload Failed";
+      let description = errorMessage;
+      
+      if (isRLSError) {
+        title = "Permission Denied";
+        description = "Storage permissions need to be configured. The bucket exists but you don't have upload access.";
+      } else if (isBucketError) {
+        title = "Storage Not Configured";
+        description = "The storage bucket is not properly set up. Please ensure the migration has been applied.";
+      } else if (is400Error) {
+        title = "Upload Request Failed";
+        description = `Bad request (400): ${errorMessage}. Try refreshing the page and uploading again.`;
+      }
       
       toast({
-        title: isRLSError ? "Permission Denied" : 
-               isBucketError ? "Storage Not Configured" : 
-               "Upload Failed",
-        description: isRLSError 
-          ? "Storage permissions need to be configured. The bucket exists but you don't have upload access."
-          : isBucketError 
-          ? "The storage bucket is not properly set up. Please ensure the migration has been applied."
-          : errorMessage,
+        title,
+        description,
         variant: "destructive",
       });
       onError?.(errorMessage);
