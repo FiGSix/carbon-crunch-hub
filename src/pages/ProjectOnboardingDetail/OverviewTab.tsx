@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, MapPin, User, FileText, CheckCircle2, XCircle, FileDown } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Calendar, MapPin, User, FileText, CheckCircle2, XCircle, FileDown, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { ProjectOnboarding } from "@/types/onboarding";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
   const { toast } = useToast();
   const { userRole } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [forceOverride, setForceOverride] = useState(false);
   const isAdmin = userRole === 'admin';
   
   // Enhanced client info with fallback to clients table
@@ -60,7 +62,8 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
   const allChecksComplete = checklist.every(item => item.status);
 
   const handleToggleAuditReady = async () => {
-    if (!allChecksComplete && !project.audit_ready) {
+    // Skip validation if admin force override is enabled
+    if (!allChecksComplete && !project.audit_ready && !forceOverride) {
       toast({
         title: "Cannot Mark as Audit Ready",
         description: "Please complete all checklist items first",
@@ -274,12 +277,36 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Admin Force Override for Legacy/Backfill Projects */}
+            {!allChecksComplete && !project.audit_ready && (
+              <div className="p-4 rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <span className="font-medium text-amber-800 dark:text-amber-300">Admin Override</span>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+                  This project has incomplete onboarding data. Enable override to mark as 
+                  Audit Ready for legacy/backfill projects that have already been audited.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="force-override"
+                    checked={forceOverride} 
+                    onCheckedChange={setForceOverride} 
+                  />
+                  <label htmlFor="force-override" className="text-sm font-medium cursor-pointer">
+                    Enable Force Override (bypass validation)
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="audit_ready"
                 checked={project.audit_ready}
                 onCheckedChange={handleToggleAuditReady}
-                disabled={isUpdating || (!allChecksComplete && !project.audit_ready)}
+                disabled={isUpdating || (!allChecksComplete && !project.audit_ready && !forceOverride)}
               />
               <label
                 htmlFor="audit_ready"
@@ -297,7 +324,7 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
               </div>
             )}
 
-            {!allChecksComplete && (
+            {!allChecksComplete && !forceOverride && (
               <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
                 <p className="text-sm text-orange-600 dark:text-orange-400">
                   Complete all checklist items before marking as audit ready
