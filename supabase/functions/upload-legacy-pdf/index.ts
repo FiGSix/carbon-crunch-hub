@@ -23,18 +23,18 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user's token to verify identity
+    // Extract JWT token and verify with service role client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const token = authHeader.replace('Bearer ', '');
     
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+    // Create admin client with service role
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false }
     });
 
-    // Verify user is authenticated
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    // Verify user is authenticated using the token
+    const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
     if (userError || !user) {
       console.error('User authentication failed:', userError);
       return new Response(
@@ -46,7 +46,7 @@ serve(async (req) => {
     console.log('Authenticated user:', user.id, user.email);
 
     // Check if user is admin using user_roles table
-    const { data: roleData, error: roleError } = await userClient
+    const { data: roleData, error: roleError } = await adminClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -100,11 +100,6 @@ serve(async (req) => {
     }
 
     console.log('File validated:', file.name, file.size, file.type);
-
-    // Create service role client to bypass RLS
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { persistSession: false }
-    });
 
     // Generate unique file path
     const timestamp = Date.now();
