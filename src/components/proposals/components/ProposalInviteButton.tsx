@@ -174,6 +174,29 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     );
   }
   
+  // For stale proposals - allow revival with new invitation
+  if (proposal.status === "stale") {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResend}
+        className="text-carbon-blue-600"
+        disabled={isProcessing || sending}
+      >
+        {isProcessing || sending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...
+          </>
+        ) : (
+          <>
+            Revive & Send <Mail className="h-4 w-4 ml-1" />
+          </>
+        )}
+      </Button>
+    );
+  }
+  
   // Don't show for other statuses (signed, rejected, etc.)
   return null;
 }
