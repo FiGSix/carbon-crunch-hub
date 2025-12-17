@@ -221,16 +221,47 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       // Prepare data for upsert, excluding auto-managed fields
       const { id, created_at, updated_at, validated_at, validated_by, ...upsertData } = formData;
       
-    const { error } = await supabase
-      .from('onboarding_fields')
-      .upsert({
-        project_id: projectId,
-        ...upsertData as any,
-      }, {
-        onConflict: 'project_id'
-      });
+      const { error } = await supabase
+        .from('onboarding_fields')
+        .upsert({
+          project_id: projectId,
+          ...upsertData as any,
+        }, {
+          onConflict: 'project_id'
+        });
 
       if (error) throw error;
+
+      // Cascade sync system_name to proposals table
+      if (formData.system_name) {
+        const { data: projectData } = await supabase
+          .from('project_onboarding')
+          .select('proposal_id')
+          .eq('id', projectId)
+          .single();
+
+        if (projectData?.proposal_id) {
+          const { data: proposalData } = await supabase
+            .from('proposals')
+            .select('project_info')
+            .eq('id', projectData.proposal_id)
+            .single();
+
+          const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
+          const updatedProjectInfo = {
+            ...currentProjectInfo,
+            name: formData.system_name
+          };
+
+          await supabase
+            .from('proposals')
+            .update({
+              title: formData.system_name,
+              project_info: updatedProjectInfo
+            })
+            .eq('id', projectData.proposal_id);
+        }
+      }
 
       toast({
         title: "Success",
