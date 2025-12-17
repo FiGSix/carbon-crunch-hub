@@ -47,6 +47,65 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         return { success: false, error: proposalError.message };
       }
       
+      // Handle stale proposals - revive them by regenerating token and resetting to pending
+      if (proposalData.status === 'stale') {
+        logger.info(`Reviving stale proposal ${id} - generating new token and resetting to pending`);
+        
+        // Fetch validity period from system_settings
+        const { data: timingData } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'email_automation_timing')
+          .single();
+
+        const validityHours = (timingData?.setting_value as any)?.proposal_validity_hours || 240;
+        
+        // Generate new token and set new expiration date
+        const expirationDate = new Date();
+        expirationDate.setHours(expirationDate.getHours() + validityHours);
+        
+        const { data: newToken, error: tokenError } = await supabase.rpc('generate_secure_token');
+        
+        if (tokenError) {
+          logger.error("Token generation error for stale revival", { error: tokenError });
+          return { success: false, error: tokenError.message };
+        }
+        
+        // Update the proposal with new token, expiration, and reset status to pending
+        const { error: updateError } = await supabase
+          .from('proposals')
+          .update({
+            status: 'pending',
+            invitation_token: newToken,
+            invitation_expires_at: expirationDate.toISOString(),
+            invitation_viewed_at: null,
+            invitation_sent_at: null
+          })
+          .eq('id', id);
+        
+        if (updateError) {
+          const errorMsg = `Failed to revive stale proposal: ${updateError.message}`;
+          logger.error(errorMsg);
+          return { success: false, error: errorMsg };
+        }
+        
+        // Refresh proposal data after revival
+        const { data: revivedData, error: refetchError } = await supabase
+          .from('proposals')
+          .select('status, content, client_id, invitation_token')
+          .eq('id', id)
+          .single();
+          
+        if (refetchError || !revivedData) {
+          const errorMsg = `Failed to refetch proposal after revival: ${refetchError?.message}`;
+          logger.error(errorMsg);
+          return { success: false, error: errorMsg };
+        }
+        
+        proposalData = revivedData;
+        logger.info(`Stale proposal revived with new token, status now: ${proposalData.status}`);
+      }
+      
       // Auto-promote draft proposals to pending when sending first invitation
       if (proposalData.status === 'draft') {
         logger.info(`Auto-promoting proposal ${id} from draft to pending for first invitation send`);
@@ -79,9 +138,9 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         logger.info(`Proposal status updated to: ${proposalData.status}`);
       }
       
-      // Only allow pending proposals (or freshly promoted drafts) to send
+      // Only allow pending proposals (or freshly promoted drafts/revived stale) to send
       if (proposalData.status !== 'pending') {
-        const errorMsg = `Proposal must be in 'draft' or 'pending' status to send invitations. Current status: ${proposalData.status}`;
+        const errorMsg = `Proposal must be in 'draft', 'pending', or 'stale' status to send invitations. Current status: ${proposalData.status}`;
         logger.error(errorMsg);
         return { success: false, error: errorMsg };
       }
