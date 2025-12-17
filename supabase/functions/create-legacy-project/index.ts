@@ -168,23 +168,24 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create agreement');
     }
 
-    // Create project onboarding
+    // Fetch the auto-created project_onboarding (created by trigger when signed_at is set)
     const { data: projectOnboarding, error: onboardingError } = await supabase
       .from('project_onboarding')
-      .insert({
-        proposal_id: proposal.id
-      })
       .select()
+      .eq('proposal_id', proposal.id)
       .single();
 
     if (onboardingError || !projectOnboarding) {
-      throw new Error('Failed to create project onboarding');
+      console.error('Failed to find auto-created project onboarding:', onboardingError);
+      throw new Error('Failed to find project onboarding');
     }
 
-    // Create onboarding fields
+    console.log('Found auto-created project onboarding:', projectOnboarding.id);
+
+    // Upsert onboarding fields with legacy data (trigger may have created basic fields)
     const { error: fieldsError } = await supabase
       .from('onboarding_fields')
-      .insert({
+      .upsert({
         project_id: projectOnboarding.id,
         system_name: body.project_title,
         system_address: body.system_address,
@@ -202,10 +203,10 @@ Deno.serve(async (req) => {
         battery_brand: body.battery_brand,
         battery_model: body.battery_model,
         total_capex: body.total_capex
-      });
+      }, { onConflict: 'project_id' });
 
     if (fieldsError) {
-      console.error('Fields creation error:', fieldsError);
+      console.error('Fields upsert error:', fieldsError);
     }
 
     // Create onboarding document record for the signed PDF
@@ -228,8 +229,8 @@ Deno.serve(async (req) => {
       .insert({
         project_id: projectOnboarding.id,
         actor_id: user.id,
-        activity_type: 'project_created',
-        description: 'Legacy project imported manually by admin'
+        action: 'project_created',
+        details: { description: 'Legacy project imported manually by admin' }
       });
 
     return new Response(
