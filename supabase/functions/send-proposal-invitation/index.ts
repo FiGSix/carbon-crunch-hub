@@ -94,10 +94,10 @@ const handler = async (req: Request): Promise<Response> => {
     // CRITICAL: Verify the token from the request matches what's stored in the database
     const verifiedToken = await verifyTokenConsistency(proposalId, invitationToken, supabase);
     
-    // Fetch agent email to CC them on the invitation
+    // Fetch agent email and project details for the invitation
     const { data: proposalData } = await supabase
       .from('proposals')
-      .select('agent_id')
+      .select('agent_id, system_size_kwp, carbon_credits')
       .eq('id', proposalId)
       .single();
     
@@ -137,12 +137,19 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize email service and send email
     const emailService = new EmailService(Deno.env.get("RESEND_API_KEY")!);
     
+    // Format system size for display
+    const systemSizeKwp = proposalData?.system_size_kwp;
+    const carbonCredits = proposalData?.carbon_credits;
+    const formattedSystemSize = systemSizeKwp ? `${Math.round(systemSizeKwp)} kWp` : undefined;
+    
     const emailTemplateData: EmailTemplateData = {
       clientName,
       projectName,
       invitationLink,
       tokenPreview: verifiedToken.substring(0, 8) + "...",
       proposalId,
+      systemSize: formattedSystemSize,
+      carbonCredits: carbonCredits ? Math.round(carbonCredits) : undefined,
       agentFirstName,
       agentLastName,
       agentCompanyName,

@@ -424,8 +424,9 @@ async function sendFollowUpEmail(
   const carbonPrice = 50; // Default price (could fetch dynamic pricing)
   const clientShareRevenue = (carbonCredits * carbonPrice * clientSharePercent) / 100;
   
-  // Build proposal URL
-  const proposalUrl = `https://crunchcarbon.app/proposals/${proposal.invitation_token}?token=${proposal.invitation_token}`;
+  // Build proposal URL using SITE_URL environment variable
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
+  const proposalUrl = `${siteUrl}/proposals/${proposal.id}?token=${proposal.invitation_token}`;
 
   // Get template from config
   const template = emailTemplates[followUpType];
