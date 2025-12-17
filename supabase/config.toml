@@ -80,3 +80,6 @@ verify_jwt = true
 
 [functions.mapbox-geocode]
 verify_jwt = false
+
+[functions.upload-legacy-pdf]
+verify_jwt = true

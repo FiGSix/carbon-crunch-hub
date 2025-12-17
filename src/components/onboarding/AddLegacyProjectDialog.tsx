@@ -4,11 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useFileUpload } from '@/hooks/useFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { validateStep1, validateStep2, Step1Data, Step2Data } from '@/utils/validation/legacyProjectValidation';
 import { ChevronLeft, ChevronRight, Upload, FileText, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface AddLegacyProjectDialogProps {
   open: boolean;
@@ -20,6 +18,7 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [agents, setAgents] = useState<Array<{ id: string; email: string; name: string }>>([]);
   
   // Step 1 data
@@ -42,29 +41,6 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
     signed_pdf_url: '',
   });
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-
-  // Step 3 removed - optional details now handled in project onboarding detail page
-
-  const { uploadFile, uploading } = useFileUpload({
-    bucket: 'onboarding-documents',
-    maxSizeInMB: 10,
-    allowedTypes: ['application/pdf', 'application/x-pdf', '.pdf'],
-    folderPrefix: `legacy-${Date.now()}`,
-    onSuccess: (url) => {
-      setStep2(prev => ({ ...prev, signed_pdf_url: url }));
-      toast({
-        title: "Success",
-        description: "Signed agreement uploaded successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Upload failed",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  });
 
   // Fetch agents when dialog opens
   useEffect(() => {
@@ -90,21 +66,46 @@ export function AddLegacyProjectDialog({ open, onOpenChange, onSuccess }: AddLeg
     }
   };
 
+  // Upload PDF via edge function (bypasses RLS using service role)
   const handlePdfUpload = async (file: File) => {
-    console.log('Starting PDF upload:', file.name, file.size);
+    console.log('Starting PDF upload via edge function:', file.name, file.size);
     setPdfFile(file);
-    const result = await uploadFile(file);
-    console.log('Upload result:', result);
-    if (result) {
-      // Fallback: ensure state is set even if onSuccess callback timing changes
-      setStep2(prev => ({ ...prev, signed_pdf_url: result }));
-    } else {
-      console.error('Upload failed - no URL returned');
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data, error } = await supabase.functions.invoke('upload-legacy-pdf', {
+        body: formData,
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      if (!data?.success || !data?.url) {
+        console.error('Upload response error:', data);
+        throw new Error(data?.error || 'Upload failed - no URL returned');
+      }
+
+      console.log('Upload successful, URL:', data.url);
+      setStep2(prev => ({ ...prev, signed_pdf_url: data.url }));
+      toast({
+        title: "Success",
+        description: "Signed agreement uploaded successfully",
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setPdfFile(null);
       toast({
         title: "Upload Failed",
-        description: "The PDF upload did not complete. Please check console for details.",
+        description: error.message || 'The PDF upload did not complete.',
         variant: "destructive"
       });
+    } finally {
+      setUploading(false);
     }
   };
 
