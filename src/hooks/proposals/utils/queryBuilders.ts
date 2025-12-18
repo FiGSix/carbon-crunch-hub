@@ -67,12 +67,8 @@ export function buildBaseProposalsQuery(
     }
   }
 
-  // Apply search filter
-  if (filters.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,content->clientInfo->>email.ilike.%${filters.search}%,content->clientInfo->>firstName.ilike.%${filters.search}%,content->clientInfo->>lastName.ilike.%${filters.search}%,content->clientInfo->>companyName.ilike.%${filters.search}%`
-    );
-  }
+  // NOTE: Search filter is now applied client-side for instant performance
+  // Server-side filtering was causing slow queries on every keystroke
 
   // Apply sorting
   if (filters.sort === 'oldest') {

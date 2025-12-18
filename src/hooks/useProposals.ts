@@ -15,7 +15,7 @@ export function useProposals(): UseProposalsResult {
   const { toast } = useToast();
   const { filters, handleFilterChange } = useProposalFilters();
   
-  const [proposals, setProposals] = useState<ProposalListItem[]>([]);
+  const [allProposals, setAllProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
@@ -35,7 +35,7 @@ export function useProposals(): UseProposalsResult {
     filters,
     toast,
     refreshUser,
-    setProposals,
+    setProposals: setAllProposals,
     setLoading,
     setError
   });
@@ -46,7 +46,7 @@ export function useProposals(): UseProposalsResult {
       const cachedProposals = getCachedProposals();
       if (cachedProposals) {
         proposalsLogger.info("Using cached proposals", { count: cachedProposals.length });
-        setProposals(cachedProposals);
+        setAllProposals(cachedProposals);
         setLoading(false);
         return;
       }
@@ -56,12 +56,43 @@ export function useProposals(): UseProposalsResult {
     await fetchProposalsCore(forceRefresh);
   }, [filters, fetchProposalsCore, proposalsLogger]);
 
+  // Client-side search filtering for instant search performance
+  const proposals = useMemo(() => {
+    if (!filters.search || !filters.search.trim()) {
+      return allProposals;
+    }
+    
+    const search = filters.search.toLowerCase().trim();
+    return allProposals.filter(proposal => {
+      // Search in title
+      if (proposal.title?.toLowerCase().includes(search)) return true;
+      
+      // Search in client info from content
+      const content = proposal.content;
+      const clientInfo = content?.clientInfo;
+      
+      if (clientInfo) {
+        const email = clientInfo.email?.toLowerCase() || '';
+        const name = clientInfo.name?.toLowerCase() || '';
+        const companyName = clientInfo.companyName?.toLowerCase() || '';
+        
+        if (email.includes(search) || 
+            name.includes(search) ||
+            companyName.includes(search)) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+  }, [allProposals, filters.search]);
+
   // Update cache when proposals change
   useEffect(() => {
-    if (proposals.length > 0) {
-      updateProposalsCache(proposals, filters);
+    if (allProposals.length > 0) {
+      updateProposalsCache(allProposals, filters);
     }
-  }, [proposals, filters]);
+  }, [allProposals, filters]);
 
   // Listen for proposal status change events to refresh data - DEBOUNCED
   useEffect(() => {

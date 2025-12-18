@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MoreVertical, Shield, UserCog, Building2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -71,20 +71,14 @@ export function UserManagementTable() {
   
   const deleteUserMutation = useDeleteUser();
 
-  const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['admin-users', searchTerm, roleFilter, companyFilter],
+  const { data: allUsers, isLoading, refetch } = useQuery({
+    queryKey: ['admin-users', roleFilter, companyFilter],
     queryFn: async () => {
-      // First get profiles
+      // First get profiles - fetch all users (search is done client-side for instant performance)
       let profileQuery = supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (searchTerm) {
-        profileQuery = profileQuery.or(
-          `email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`
-        );
-      }
 
       if (roleFilter !== 'all') {
         profileQuery = profileQuery.eq('role', roleFilter);
@@ -265,6 +259,23 @@ export function UserManagementTable() {
   const handleDeleteConfirm = async (userId: string) => {
     await deleteUserMutation.mutateAsync(userId);
   };
+
+  // Client-side search filtering for instant search performance
+  const users = useMemo(() => {
+    if (!allUsers) return [];
+    if (!searchTerm.trim()) return allUsers;
+    
+    const search = searchTerm.toLowerCase().trim();
+    return allUsers.filter(user => {
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+      return (
+        user.email.toLowerCase().includes(search) ||
+        fullName.includes(search) ||
+        (user.first_name && user.first_name.toLowerCase().includes(search)) ||
+        (user.last_name && user.last_name.toLowerCase().includes(search))
+      );
+    });
+  }, [allUsers, searchTerm]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading users...</div>;
