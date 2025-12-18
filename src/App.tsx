@@ -10,6 +10,7 @@ import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AgentApprovalGuard } from "@/components/auth/AgentApprovalGuard";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
+import { InactivityMonitor } from "@/components/auth/InactivityMonitor";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
 import { Suspense, lazy, useEffect } from "react";
@@ -128,6 +129,7 @@ function App() {
                   </Suspense>
                 )}
                 <AuthStatusMonitor />
+                <InactivityMonitor />
                 <Toaster />
                 <Sonner />
                 <Routes>
