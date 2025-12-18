@@ -67,6 +67,12 @@ export function useProposals(): UseProposalsResult {
       // Search in title
       if (proposal.title?.toLowerCase().includes(search)) return true;
       
+      // Search in agent name
+      if (proposal.agent_name?.toLowerCase().includes(search)) return true;
+      
+      // Search in status
+      if (proposal.status?.toLowerCase().includes(search)) return true;
+      
       // Search in client info from content
       const content = proposal.content;
       const clientInfo = content?.clientInfo;
