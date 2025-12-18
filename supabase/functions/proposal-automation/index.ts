@@ -6,6 +6,10 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Rate limiting utilities
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const RATE_LIMIT_DELAY_MS = 600; // Stay under Resend's 2 req/sec limit
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -88,7 +92,8 @@ serve(async (req: Request) => {
       reminders_sent: 0,
       followups_sent: 0,
       marked_stale: 0,
-      errors: 0
+      errors: 0,
+      emails_sent: 0
     };
 
     for (const proposal of proposals || []) {
@@ -150,6 +155,10 @@ serve(async (req: Request) => {
               'graceful_exit',
               emailTemplates
             );
+            actions.emails_sent++;
+            
+            // Rate limit delay after sending email
+            await sleep(RATE_LIMIT_DELAY_MS);
 
             // Log the automation action with error handling
             const { error: logError1 } = await supabase
@@ -198,6 +207,10 @@ serve(async (req: Request) => {
             'clicked_not_signed',
             emailTemplates
           );
+          actions.emails_sent++;
+          
+          // Rate limit delay after sending email
+          await sleep(RATE_LIMIT_DELAY_MS);
 
           // Log the automation action with error handling
           const { error: logError2 } = await supabase
@@ -237,6 +250,10 @@ serve(async (req: Request) => {
             'opened_not_clicked',
             emailTemplates
           );
+          actions.emails_sent++;
+          
+          // Rate limit delay after sending email
+          await sleep(RATE_LIMIT_DELAY_MS);
 
           // Log the automation action with error handling
           const { error: logError3 } = await supabase
@@ -276,6 +293,10 @@ serve(async (req: Request) => {
             'delivered_not_opened',
             emailTemplates
           );
+          actions.emails_sent++;
+          
+          // Rate limit delay after sending email
+          await sleep(RATE_LIMIT_DELAY_MS);
 
           // Log the automation action with error handling
           const { error: logError4 } = await supabase
@@ -315,6 +336,10 @@ serve(async (req: Request) => {
             'sent_not_delivered',
             emailTemplates
           );
+          actions.emails_sent++;
+          
+          // Rate limit delay after sending email
+          await sleep(RATE_LIMIT_DELAY_MS);
 
           // Log the automation action with error handling
           const { error: logError5 } = await supabase
@@ -350,6 +375,7 @@ serve(async (req: Request) => {
 
     console.log("\n✅ AUTOMATION COMPLETE");
     console.log(`📊 Summary:
+      - Emails sent: ${actions.emails_sent}
       - Reminders sent: ${actions.reminders_sent}
       - Follow-ups sent: ${actions.followups_sent}
       - Marked stale: ${actions.marked_stale}
@@ -481,14 +507,41 @@ async function sendFollowUpEmail(
     html = html.replace(regex, String(value));
   }
 
-  const emailResponse = await resend.emails.send({
-    from: 'Crunch Carbon <proposals@crunchcarbon.com>',
-    to: [clientEmail],
-    cc: [agentEmail],
-    subject: subject,
-    html: html
-  });
+  // Retry logic with exponential backoff for rate limiting
+  const maxRetries = 3;
+  let lastError: any = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const emailResponse = await resend.emails.send({
+        from: 'Crunch Carbon <proposals@crunchcarbon.com>',
+        to: [clientEmail],
+        cc: [agentEmail],
+        subject: subject,
+        html: html
+      });
 
-  console.log(`✅ Follow-up email sent to ${clientEmail} for proposal ${proposalId}:`, emailResponse);
-  return emailResponse;
+      console.log(`✅ Follow-up email sent to ${clientEmail} for proposal ${proposalId}:`, emailResponse);
+      return emailResponse;
+      
+    } catch (error: any) {
+      lastError = error;
+      const statusCode = error?.statusCode || error?.status;
+      
+      // Check if it's a rate limit error (429)
+      if (statusCode === 429 && attempt < maxRetries - 1) {
+        const backoffMs = Math.pow(2, attempt) * 2000; // 2s, 4s, 8s
+        console.log(`⏳ Rate limited (429), waiting ${backoffMs}ms before retry ${attempt + 2}/${maxRetries}...`);
+        await sleep(backoffMs);
+        continue;
+      }
+      
+      // For other errors or final retry, throw
+      console.error(`❌ Email send failed for proposal ${proposalId} (attempt ${attempt + 1}/${maxRetries}):`, error);
+      throw error;
+    }
+  }
+  
+  // Should not reach here, but just in case
+  throw lastError || new Error('Email send failed after retries');
 }
