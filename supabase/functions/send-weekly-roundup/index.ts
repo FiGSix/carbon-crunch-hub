@@ -1128,6 +1128,26 @@ const handler = async (req: Request): Promise<Response> => {
   console.log("=== Starting Weekly Roundup Email Job ===");
   console.log("Time:", new Date().toISOString());
   
+  // Parse request body for test mode parameters
+  let testAgentEmail: string | null = null;
+  let testAdminEmail: string | null = null;
+  
+  try {
+    const body = await req.json();
+    testAgentEmail = body.testAgentEmail || null;
+    testAdminEmail = body.testAdminEmail || null;
+  } catch {
+    // No body or invalid JSON - that's fine, run in production mode
+  }
+  
+  const isTestMode = !!(testAgentEmail || testAdminEmail);
+  
+  if (isTestMode) {
+    console.log("=== TEST MODE ENABLED ===");
+    console.log("Test Agent Email:", testAgentEmail || "(none)");
+    console.log("Test Admin Email:", testAdminEmail || "(none)");
+  }
+  
   try {
     // Fetch all data
     const [agents, admins, proposals, onboarding, newAgents] = await Promise.all([
@@ -1158,50 +1178,107 @@ const handler = async (req: Request): Promise<Response> => {
     let adminEmailsSent = 0;
     let adminEmailsFailed = 0;
     
-    // Send Agent Roundup emails
-    console.log(`\n--- Sending ${agents.length} Agent Roundup emails ---`);
-    for (const agent of agents) {
-      const metrics = calculateAgentMetrics(agent, proposals, onboardingMap, teamMetrics);
-      const subject = buildAgentEmailSubject(metrics);
-      const html = buildAgentEmailHtml(metrics, platformMetrics);
-      
-      console.log(`Sending to agent: ${agent.email} (${metrics.segment})`);
-      
-      const result = await sendEmailWithRetry(agent.email, subject, html);
-      if (result.success) {
-        agentEmailsSent++;
-      } else {
-        agentEmailsFailed++;
-        console.error(`Failed to send to ${agent.email}: ${result.error}`);
+    // TEST MODE: Send to specific test emails only
+    if (isTestMode) {
+      // Send test agent email
+      if (testAgentEmail) {
+        // Find the agent by email, or use first agent as template
+        const targetAgent = agents.find((a) => a.email.toLowerCase() === testAgentEmail.toLowerCase()) || agents[0];
+        
+        if (targetAgent) {
+          const metrics = calculateAgentMetrics(targetAgent, proposals, onboardingMap, teamMetrics);
+          const subject = `[TEST] ${buildAgentEmailSubject(metrics)}`;
+          const html = buildAgentEmailHtml(metrics, platformMetrics);
+          
+          console.log(`Sending TEST agent email to: ${testAgentEmail}`);
+          
+          const result = await sendEmailWithRetry(testAgentEmail, subject, html);
+          if (result.success) {
+            agentEmailsSent++;
+            console.log(`TEST agent email sent successfully to ${testAgentEmail}`);
+          } else {
+            agentEmailsFailed++;
+            console.error(`Failed to send TEST agent email to ${testAgentEmail}: ${result.error}`);
+          }
+        } else {
+          console.log("No agents found to use as template for test email");
+        }
       }
       
-      // Rate limiting: 600ms between emails
-      await sleep(600);
-    }
-    
-    // Send Admin Platform Summary emails
-    console.log(`\n--- Sending ${admins.length} Admin Platform Summary emails ---`);
-    for (const admin of admins) {
-      const subject = buildAdminEmailSubject(platformMetrics);
-      const html = buildAdminEmailHtml(admin, platformMetrics);
+      // Send test admin email
+      if (testAdminEmail) {
+        // Find the admin by email, or use first admin as template
+        const targetAdmin = admins.find((a) => a.email.toLowerCase() === testAdminEmail.toLowerCase()) || admins[0];
+        
+        if (targetAdmin) {
+          const subject = `[TEST] ${buildAdminEmailSubject(platformMetrics)}`;
+          const html = buildAdminEmailHtml(targetAdmin, platformMetrics);
+          
+          console.log(`Sending TEST admin email to: ${testAdminEmail}`);
+          
+          const result = await sendEmailWithRetry(testAdminEmail, subject, html);
+          if (result.success) {
+            adminEmailsSent++;
+            console.log(`TEST admin email sent successfully to ${testAdminEmail}`);
+          } else {
+            adminEmailsFailed++;
+            console.error(`Failed to send TEST admin email to ${testAdminEmail}: ${result.error}`);
+          }
+        } else {
+          console.log("No admins found to use as template for test email");
+        }
+      }
+    } else {
+      // PRODUCTION MODE: Send to all agents and admins
       
-      console.log(`Sending to admin: ${admin.email}`);
-      
-      const result = await sendEmailWithRetry(admin.email, subject, html);
-      if (result.success) {
-        adminEmailsSent++;
-      } else {
-        adminEmailsFailed++;
-        console.error(`Failed to send to ${admin.email}: ${result.error}`);
+      // Send Agent Roundup emails
+      console.log(`\n--- Sending ${agents.length} Agent Roundup emails ---`);
+      for (const agent of agents) {
+        const metrics = calculateAgentMetrics(agent, proposals, onboardingMap, teamMetrics);
+        const subject = buildAgentEmailSubject(metrics);
+        const html = buildAgentEmailHtml(metrics, platformMetrics);
+        
+        console.log(`Sending to agent: ${agent.email} (${metrics.segment})`);
+        
+        const result = await sendEmailWithRetry(agent.email, subject, html);
+        if (result.success) {
+          agentEmailsSent++;
+        } else {
+          agentEmailsFailed++;
+          console.error(`Failed to send to ${agent.email}: ${result.error}`);
+        }
+        
+        // Rate limiting: 600ms between emails
+        await sleep(600);
       }
       
-      // Rate limiting: 600ms between emails
-      await sleep(600);
+      // Send Admin Platform Summary emails
+      console.log(`\n--- Sending ${admins.length} Admin Platform Summary emails ---`);
+      for (const admin of admins) {
+        const subject = buildAdminEmailSubject(platformMetrics);
+        const html = buildAdminEmailHtml(admin, platformMetrics);
+        
+        console.log(`Sending to admin: ${admin.email}`);
+        
+        const result = await sendEmailWithRetry(admin.email, subject, html);
+        if (result.success) {
+          adminEmailsSent++;
+        } else {
+          adminEmailsFailed++;
+          console.error(`Failed to send to ${admin.email}: ${result.error}`);
+        }
+        
+        // Rate limiting: 600ms between emails
+        await sleep(600);
+      }
     }
     
     // Summary
     const summary = {
       timestamp: new Date().toISOString(),
+      test_mode: isTestMode,
+      test_agent_email: testAgentEmail,
+      test_admin_email: testAdminEmail,
       agent_emails_sent: agentEmailsSent,
       agent_emails_failed: agentEmailsFailed,
       admin_emails_sent: adminEmailsSent,
