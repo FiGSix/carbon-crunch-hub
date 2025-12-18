@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.upload-legacy-pdf]
 verify_jwt = true
+
+[functions.send-weekly-roundup]
+verify_jwt = false
