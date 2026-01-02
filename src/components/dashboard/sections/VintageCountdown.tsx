@@ -7,7 +7,7 @@ export function VintageCountdown() {
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const targetDate = new Date('2025-12-31T23:59:59');
+      const targetDate = new Date('2026-01-20T12:00:00');
       const now = new Date();
       const difference = targetDate.getTime() - now.getTime();
 
@@ -40,7 +40,7 @@ export function VintageCountdown() {
                 Vintage 2025 Closing Countdown
               </h3>
               <p className="text-xs text-muted-foreground">
-                Time remaining to submit projects for Vintage 2025
+                Deadline: 20 January 2026 at 12:00pm
               </p>
             </div>
           </div>
