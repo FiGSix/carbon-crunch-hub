@@ -145,55 +145,48 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         return { success: false, error: errorMsg };
       }
       
-      // Check if proposal already has a token
-      let tokenToUse = proposalData.invitation_token;
-      let expirationDate: Date;
+      // Option A: Always generate a fresh token for security (invalidates old links)
+      logger.debug("Generating fresh token for invitation (Option A - always new token)");
       
-      if (!tokenToUse) {
-        logger.debug("No existing token found, generating new one");
-        
-        // Fetch validity period from system_settings
-        const { data: timingData } = await supabase
-          .from('system_settings')
-          .select('setting_value')
-          .eq('setting_key', 'email_automation_timing')
-          .single();
+      // Fetch validity period from system_settings
+      const { data: timingData } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'email_automation_timing')
+        .single();
 
-        const validityHours = (timingData?.setting_value as any)?.proposal_validity_hours || 240;
-        
-        // Generate token and set expiration date
-        expirationDate = new Date();
-        expirationDate.setHours(expirationDate.getHours() + validityHours);
-        
-        const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
-        
-        if (tokenError) {
-          logger.error("Token generation error", { error: tokenError });
-          return { success: false, error: tokenError.message };
-        }
-        
-        logger.debug("Token generated successfully", { tokenPrefix: token.substring(0, 8) });
-        
-        // Update the proposal with token and expiration (but NOT invitation_sent_at yet)
-        const { error: updateError } = await supabase
-          .from('proposals')
-          .update({
-            invitation_token: token,
-            invitation_expires_at: expirationDate.toISOString(),
-            invitation_viewed_at: null
-          })
-          .eq('id', id);
-        
-        if (updateError) {
-          logger.error("Error updating proposal with token", { error: updateError });
-          return { success: false, error: updateError.message };
-        }
-        
-        tokenToUse = token;
-        logger.debug("Proposal updated with new token (email not sent yet)");
-      } else {
-        logger.debug("Using existing token", { tokenPrefix: tokenToUse.substring(0, 8) });
+      const validityHours = (timingData?.setting_value as any)?.proposal_validity_hours || 240;
+      
+      // Generate fresh token and set new expiration date
+      const expirationDate = new Date();
+      expirationDate.setHours(expirationDate.getHours() + validityHours);
+      
+      const { data: token, error: tokenError } = await supabase.rpc('generate_secure_token');
+      
+      if (tokenError) {
+        logger.error("Token generation error", { error: tokenError });
+        return { success: false, error: tokenError.message };
       }
+      
+      const tokenToUse = token;
+      logger.debug("New secure token generated", { tokenPrefix: token.substring(0, 8) });
+      
+      // Update the proposal with new token and fresh expiration (invalidates old links)
+      const { error: updateError } = await supabase
+        .from('proposals')
+        .update({
+          invitation_token: tokenToUse,
+          invitation_expires_at: expirationDate.toISOString(),
+          invitation_viewed_at: null // Reset view tracking
+        })
+        .eq('id', id);
+      
+      if (updateError) {
+        logger.error("Error updating proposal with token", { error: updateError });
+        return { success: false, error: updateError.message };
+      }
+      
+      logger.debug("Proposal updated with fresh token and expiration");
       
       // Extract client info from proposal content
       const content = proposalData.content as ProposalContent;
@@ -250,16 +243,14 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           };
         }
         
-        // Revert token if we just created it
-        if (!proposalData.invitation_token) {
-          await supabase
-            .from('proposals')
-            .update({
-              invitation_token: null,
-              invitation_expires_at: null
-            })
-            .eq('id', id);
-        }
+        // Revert token on failure (we always generate fresh tokens now)
+        await supabase
+          .from('proposals')
+          .update({
+            invitation_token: null,
+            invitation_expires_at: null
+          })
+          .eq('id', id);
         
         return { 
           success: false, 
@@ -283,16 +274,14 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           duration: invokeDuration
         });
         
-        // Revert token if we just created it
-        if (!proposalData.invitation_token) {
-          await supabase
-            .from('proposals')
-            .update({
-              invitation_token: null,
-              invitation_expires_at: null
-            })
-            .eq('id', id);
-        }
+        // Revert token on failure (we always generate fresh tokens now)
+        await supabase
+          .from('proposals')
+          .update({
+            invitation_token: null,
+            invitation_expires_at: null
+          })
+          .eq('id', id);
           
         return { success: false, error: errorMessage };
       }
