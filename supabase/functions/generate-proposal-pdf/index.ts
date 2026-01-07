@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
+import { getMinimumVintageYear } from "../_shared/vintageConfig.ts"
 
 // Create Supabase admin client with service role key
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://uyjryuopuqgmsvayiccl.supabase.co"
@@ -1154,7 +1155,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const commissionDateStr = anyProposal.project_info?.commission_date || 
                             anyProposal.content?.projectInfo?.commissionDate || null;
   const commissionDate = commissionDateStr ? new Date(commissionDateStr) : null;
-  const currentYear = new Date().getFullYear();
+  
+  // Get minimum vintage year from configuration
+  const currentYear = await getMinimumVintageYear(supabaseAdmin);
   
   // Calculate yearly energy with pro-rating for commission year (matching frontend logic)
   const calculateYearlyEnergy = (systemKWp: number, actualYear: number): number => {

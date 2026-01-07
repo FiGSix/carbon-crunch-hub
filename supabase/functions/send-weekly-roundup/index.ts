@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getVintageDeadlines, getNextVintageDeadline } from "../_shared/vintageConfig.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -18,7 +19,6 @@ const corsHeaders = {
 // ============================================================================
 
 const PLATFORM_2026_GOAL_MWP = 250;
-const VINTAGE_2025_END = new Date("2025-12-31T23:59:59+02:00"); // SAST
 
 const CARBON_PRICES: Record<number, number> = {
   2024: 97.34,
@@ -168,19 +168,26 @@ function formatMwp(kwp: number): string {
   return (kwp / 1000).toFixed(3);
 }
 
-function getVintageCountdown(): { days: number; hours: number; minutes: number } {
+async function getVintageCountdown(): Promise<{ days: number; hours: number; minutes: number; year: number } | null> {
+  const deadlines = await getVintageDeadlines(supabase);
+  const nextDeadline = getNextVintageDeadline(deadlines);
+  
+  if (!nextDeadline) {
+    return null;
+  }
+  
   const now = new Date();
-  const diff = VINTAGE_2025_END.getTime() - now.getTime();
+  const diff = nextDeadline.deadline.getTime() - now.getTime();
   
   if (diff <= 0) {
-    return { days: 0, hours: 0, minutes: 0 };
+    return { days: 0, hours: 0, minutes: 0, year: nextDeadline.year };
   }
   
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   
-  return { days, hours, minutes };
+  return { days, hours, minutes, year: nextDeadline.year };
 }
 
 function calculateRevenue2025to2030(carbonCredits: number, sharePercent: number): number {
@@ -702,8 +709,9 @@ function buildAgentEmailSubject(metrics: AgentMetrics): string {
   }
 }
 
-function buildAgentEmailHtml(metrics: AgentMetrics, platformMetrics: PlatformMetrics): string {
-  const { days, hours, minutes } = getVintageCountdown();
+async function buildAgentEmailHtml(metrics: AgentMetrics, platformMetrics: PlatformMetrics): Promise<string> {
+  const vintageCountdown = await getVintageCountdown();
+  const { days = 0, hours = 0, minutes = 0, year: vintageYear = new Date().getFullYear() } = vintageCountdown || {};
   const firstName = metrics.agent.first_name || "there";
   
   // Segment-specific opening
@@ -848,7 +856,7 @@ function buildAgentEmailHtml(metrics: AgentMetrics, platformMetrics: PlatformMet
     <h2 style="color: #333; font-size: 18px; margin-top: 30px;">🚀 Momentum We Can Build On</h2>
     ${momentumSection}
     
-    <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⏳ Vintage 2025 Countdown</h2>
+    <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⏳ Vintage ${vintageYear} Countdown</h2>
     <div style="background-color: #1a1a1a; color: #FFCD03; padding: 25px; border-radius: 6px; text-align: center; margin: 15px 0;">
       <span style="font-size: 32px; font-weight: bold;">${days}</span><span style="font-size: 14px; margin-right: 15px;"> days</span>
       <span style="font-size: 32px; font-weight: bold;">${hours}</span><span style="font-size: 14px; margin-right: 15px;"> hours</span>
@@ -877,8 +885,9 @@ function buildAdminEmailSubject(platformMetrics: PlatformMetrics): string {
   return subjects[Math.floor(Math.random() * subjects.length)];
 }
 
-function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMetrics): string {
-  const { days, hours, minutes } = getVintageCountdown();
+async function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMetrics): Promise<string> {
+  const vintageCountdown = await getVintageCountdown();
+  const { days = 0, hours = 0, minutes = 0, year: vintageYear = new Date().getFullYear() } = vintageCountdown || {};
   const firstName = admin.first_name || "Admin";
   
   // Team performance table
@@ -1056,13 +1065,13 @@ function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMetrics)
     <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⚠️ Platform Blockers Overview</h2>
     ${blockersSection}
     
-    <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⏳ Vintage 2025 Countdown</h2>
+    <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⏳ Vintage ${vintageYear} Countdown</h2>
     <div style="background-color: #1a1a1a; color: #FFCD03; padding: 25px; border-radius: 6px; text-align: center; margin: 15px 0;">
       <span style="font-size: 32px; font-weight: bold;">${days}</span><span style="font-size: 14px; margin-right: 15px;"> days</span>
       <span style="font-size: 32px; font-weight: bold;">${hours}</span><span style="font-size: 14px; margin-right: 15px;"> hours</span>
       <span style="font-size: 32px; font-weight: bold;">${minutes}</span><span style="font-size: 14px;"> minutes</span>
     </div>
-    <p style="color: #888; font-size: 13px; font-style: italic;">Projects not audit-ready by Dec 31 roll into Vintage 2026.</p>
+    <p style="color: #888; font-size: 13px; font-style: italic;">Projects not audit-ready by the deadline roll into Vintage ${vintageYear + 1}.</p>
     
     <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
     
@@ -1188,7 +1197,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (targetAgent) {
           const metrics = calculateAgentMetrics(targetAgent, proposals, onboardingMap, teamMetrics);
           const subject = `[TEST] ${buildAgentEmailSubject(metrics)}`;
-          const html = buildAgentEmailHtml(metrics, platformMetrics);
+          const html = await buildAgentEmailHtml(metrics, platformMetrics);
           
           console.log(`Sending TEST agent email to: ${testAgentEmail}`);
           
@@ -1212,7 +1221,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (targetAdmin) {
           const subject = `[TEST] ${buildAdminEmailSubject(platformMetrics)}`;
-          const html = buildAdminEmailHtml(targetAdmin, platformMetrics);
+          const html = await buildAdminEmailHtml(targetAdmin, platformMetrics);
           
           console.log(`Sending TEST admin email to: ${testAdminEmail}`);
           
@@ -1236,7 +1245,7 @@ const handler = async (req: Request): Promise<Response> => {
       for (const agent of agents) {
         const metrics = calculateAgentMetrics(agent, proposals, onboardingMap, teamMetrics);
         const subject = buildAgentEmailSubject(metrics);
-        const html = buildAgentEmailHtml(metrics, platformMetrics);
+        const html = await buildAgentEmailHtml(metrics, platformMetrics);
         
         console.log(`Sending to agent: ${agent.email} (${metrics.segment})`);
         
@@ -1256,7 +1265,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`\n--- Sending ${admins.length} Admin Platform Summary emails ---`);
       for (const admin of admins) {
         const subject = buildAdminEmailSubject(platformMetrics);
-        const html = buildAdminEmailHtml(admin, platformMetrics);
+        const html = await buildAdminEmailHtml(admin, platformMetrics);
         
         console.log(`Sending to admin: ${admin.email}`);
         
