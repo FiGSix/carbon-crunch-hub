@@ -1,10 +1,9 @@
-
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CarbonPriceManager } from "@/components/admin/CarbonPriceManager";
 import { DataCorrectionManager } from "@/components/admin/DataCorrectionManager";
 import { ClientPopulationManager } from "@/components/admin/ClientPopulationManager";
+import { VintageDeadlineManager } from "@/components/admin/VintageDeadlineManager";
 import { useAuth } from "@/contexts/auth";
 
 const SystemSettings = () => {
@@ -29,6 +28,7 @@ const SystemSettings = () => {
         description="Manage carbon pricing and system configurations." 
       />
       <div className="space-y-6">
+        <VintageDeadlineManager />
         <DataCorrectionManager />
         <ClientPopulationManager />
         <CarbonPriceManager />
