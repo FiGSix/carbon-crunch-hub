@@ -1,15 +1,32 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock } from "lucide-react";
+import { vintageConfigService } from "@/services/vintageConfigService";
+
+interface VintageInfo {
+  year: number;
+  deadline: Date;
+}
 
 export function VintageCountdown() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+  const [vintageInfo, setVintageInfo] = useState<VintageInfo | null>(null);
 
   useEffect(() => {
+    // Fetch vintage deadline from config
+    vintageConfigService.getNextVintageDeadline().then((info) => {
+      if (info) {
+        setVintageInfo(info);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!vintageInfo) return;
+
     const calculateTimeLeft = () => {
-      const targetDate = new Date('2026-01-20T12:00:00');
       const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
+      const difference = vintageInfo.deadline.getTime() - now.getTime();
 
       if (difference > 0) {
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
@@ -26,7 +43,21 @@ export function VintageCountdown() {
     const timer = setInterval(calculateTimeLeft, 60000); // Update every minute
 
     return () => clearInterval(timer);
-  }, []);
+  }, [vintageInfo]);
+
+  const formatDeadline = (date: Date) => {
+    return date.toLocaleDateString('en-ZA', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (!vintageInfo) {
+    return null; // Don't show countdown if no deadline configured
+  }
 
   return (
     <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
@@ -37,10 +68,10 @@ export function VintageCountdown() {
             <Clock className="h-5 w-5 text-primary" />
             <div>
               <h3 className="text-base font-semibold text-foreground">
-                Vintage 2025 Closing Countdown
+                Vintage {vintageInfo.year} Closing Countdown
               </h3>
               <p className="text-xs text-muted-foreground">
-                Deadline: 20 January 2026 at 12:00pm
+                Deadline: {formatDeadline(vintageInfo.deadline)}
               </p>
             </div>
           </div>
