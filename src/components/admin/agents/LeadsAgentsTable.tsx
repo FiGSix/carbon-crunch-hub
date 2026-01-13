@@ -26,11 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, Plus, Search, UserPlus, Trash2, Eye, Pencil, Building2 } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, UserPlus, Trash2, Eye, Pencil, Building2, Upload } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AddLeadDialog } from './AddLeadDialog';
 import { LeadDetailsDialog } from './LeadDetailsDialog';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
+import { BulkLeadImportDialog } from './BulkLeadImportDialog';
 
 interface AgentLead {
   id: string;
@@ -66,6 +67,7 @@ export function LeadsAgentsTable() {
   const [selectedLead, setSelectedLead] = useState<AgentLead | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [isBulkImportDialogOpen, setIsBulkImportDialogOpen] = useState(false);
 
   const { data: leads, isLoading, error } = useQuery({
     queryKey: ['agents', 'leads', statusFilter, searchTerm],
@@ -167,10 +169,16 @@ export function LeadsAgentsTable() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Lead
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsBulkImportDialogOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Bulk Import
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -272,6 +280,11 @@ export function LeadsAgentsTable() {
           />
         </>
       )}
+
+      <BulkLeadImportDialog
+        open={isBulkImportDialogOpen}
+        onOpenChange={setIsBulkImportDialogOpen}
+      />
     </div>
   );
 }
