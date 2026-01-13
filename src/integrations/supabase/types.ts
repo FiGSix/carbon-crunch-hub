@@ -175,6 +175,68 @@ export type Database = {
           },
         ]
       }
+      agent_leads: {
+        Row: {
+          company_name: string
+          contact_name: string | null
+          converted_at: string | null
+          converted_invitation_id: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          phone: string | null
+          source: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_name: string
+          contact_name?: string | null
+          converted_at?: string | null
+          converted_invitation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string | null
+          converted_at?: string | null
+          converted_invitation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_leads_converted_invitation_id_fkey"
+            columns: ["converted_invitation_id"]
+            isOneToOne: false
+            referencedRelation: "agent_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_access_audit: {
         Row: {
           accessed_at: string
