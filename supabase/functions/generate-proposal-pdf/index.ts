@@ -1502,7 +1502,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   if ((proposal.status === 'pending' || proposal.status === 'draft') && proposal.invitation_token && proposal.invitation_expires_at) {
     y -= mm(2);
     
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
     const acceptanceUrl = `${siteUrl}/proposals/${proposal.id}/accept?token=${proposal.invitation_token}`;
     
     // Calculate days until expiry

@@ -196,7 +196,7 @@ serve(async (req: Request) => {
     }
 
     // Build proposal URL
-    const siteUrl = Deno.env.get("SITE_URL") || "https://crunchcarbon.app";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://crunchcarbon.com";
     const resultsUrl = `${siteUrl}/proposals/${proposal.id}?token=${token}`;
 
     // Send email
@@ -272,7 +272,7 @@ serve(async (req: Request) => {
                       </p>
                       
                       <p style="margin: 30px 0 0; color: #666666; font-size: 14px; line-height: 1.6; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-                        Questions? Reply to this email or visit <a href="https://crunchcarbon.app" style="color: #1a1a1a; text-decoration: none; font-weight: 600;">crunchcarbon.app</a>
+                        Questions? Reply to this email or visit <a href="https://crunchcarbon.com" style="color: #1a1a1a; text-decoration: none; font-weight: 600;">crunchcarbon.com</a>
                       </p>
                     </td>
                   </tr>

@@ -20,7 +20,7 @@ export function AddressConflictWarning({
     return null;
   }
 
-  const supportEmailUrl = "mailto:support@crunchcarbon.app?subject=Duplicate Address Project&body=I need assistance with a project that appears to be already registered at this address.";
+  const supportEmailUrl = "mailto:support@crunchcarbon.com?subject=Duplicate Address Project&body=I need assistance with a project that appears to be already registered at this address.";
 
   return (
     <Alert variant="destructive" className="mb-4">
