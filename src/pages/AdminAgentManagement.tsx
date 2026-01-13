@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { AgentsManagementHeader } from '@/components/admin/agents/AgentsManagementHeader';
 import { AgentsManagementStats } from '@/components/admin/agents/AgentsManagementStats';
+import { LeadsAgentsTable } from '@/components/admin/agents/LeadsAgentsTable';
 import { InvitedAgentsTable } from '@/components/admin/agents/InvitedAgentsTable';
 import { PendingAgentsTable } from '@/components/admin/agents/PendingAgentsTable';
 import { ActiveAgentsTable } from '@/components/admin/agents/ActiveAgentsTable';
@@ -29,7 +30,11 @@ export default function AdminAgentManagement() {
   const { data: counts } = useQuery({
     queryKey: ['agents', 'management', 'tab-counts'],
     queryFn: async () => {
-      const [invitedResult, pendingResult, activeResult, suspendedResult] = await Promise.all([
+      const [leadsResult, invitedResult, pendingResult, activeResult, suspendedResult] = await Promise.all([
+        supabase
+          .from('agent_leads')
+          .select('id', { count: 'exact', head: true })
+          .neq('status', 'converted'),
         supabase
           .from('agent_invitations')
           .select('id', { count: 'exact', head: true })
@@ -52,6 +57,7 @@ export default function AdminAgentManagement() {
       ]);
 
       return {
+        leads: leadsResult.count || 0,
         invited: invitedResult.count || 0,
         pending: pendingResult.count || 0,
         active: activeResult.count || 0,
@@ -70,7 +76,15 @@ export default function AdminAgentManagement() {
         </QueryErrorBoundary>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="leads" className="gap-2">
+              Leads
+              {counts?.leads !== undefined && counts.leads > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-blue-100 text-blue-700">
+                  {counts.leads}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="invited" className="gap-2">
               Invited
               {counts?.invited !== undefined && counts.invited > 0 && (
@@ -104,6 +118,12 @@ export default function AdminAgentManagement() {
               )}
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="leads">
+            <QueryErrorBoundary>
+              <LeadsAgentsTable />
+            </QueryErrorBoundary>
+          </TabsContent>
           
           <TabsContent value="invited">
             <QueryErrorBoundary>
