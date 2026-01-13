@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
-import { AgentData } from './AgentsManagementTable';
+import { AgentData } from './types';
 import { getDefaultCommissionDescription } from '@/utils/admin/commissionHelpers';
 
 interface CommissionOverrideDialogProps {

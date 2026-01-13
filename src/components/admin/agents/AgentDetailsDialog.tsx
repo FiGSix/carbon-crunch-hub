@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AgentData } from './AgentsManagementTable';
+import { AgentData } from './types';
 import { getAgentDisplayCommission, getDefaultCommissionDescription } from '@/utils/admin/commissionHelpers';
 import { 
   User, 
