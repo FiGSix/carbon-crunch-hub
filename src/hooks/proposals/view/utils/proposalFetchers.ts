@@ -87,7 +87,17 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
     
     const { data, error: fetchError } = await supabase
       .from('proposals')
-      .select('*')
+      .select(`
+        *,
+        client:client_reference_id (
+          first_name,
+          last_name,
+          email,
+          phone,
+          company_name,
+          registration_number
+        )
+      `)
       .eq('id', proposalId)
       .is('deleted_at', null) // Exclude soft-deleted proposals
       .single();

@@ -32,7 +32,9 @@ export function transformToProposalData(rawProposal: any): ProposalData {
     invitation_token: rawProposal.invitation_token,
     invitation_expires_at: rawProposal.invitation_expires_at,
     invitation_sent_at: rawProposal.invitation_sent_at,
-    invitation_viewed_at: rawProposal.invitation_viewed_at
+    invitation_viewed_at: rawProposal.invitation_viewed_at,
+    // Preserve joined client record for live data resolution
+    client: rawProposal.client || null
   };
 }
 

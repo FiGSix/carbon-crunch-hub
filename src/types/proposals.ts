@@ -138,6 +138,16 @@ export interface ProposalData {
   last_email_sent_at?: string | null;
   automation_paused?: boolean | null;
   automation_pause_reason?: string | null;
+  
+  // Live client data from clients table (joined at fetch time)
+  client?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    company_name?: string | null;
+    registration_number?: string | null;
+  } | null;
 }
 
 /**

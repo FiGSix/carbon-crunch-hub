@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
+import { resolveClientInfo } from "@/utils/proposals/resolveClientInfo";
 
 interface OverviewTabProps {
   project: ProjectOnboarding;
@@ -23,16 +24,11 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
   const [forceOverride, setForceOverride] = useState(false);
   const isAdmin = userRole === 'admin';
   
-  // Enhanced client info with fallback to clients table
-  const clientInfo = {
-    ...(proposal.content?.clientInfo || {}),
-    // Fallback to clients table if name is missing from content
-    name: proposal.content?.clientInfo?.name || 
-          (proposal.clients?.first_name && proposal.clients?.last_name
-            ? `${proposal.clients.first_name} ${proposal.clients.last_name}`.trim()
-            : proposal.content?.clientInfo?.name || '—'),
-    email: proposal.content?.clientInfo?.email || proposal.clients?.email || '—',
-  };
+  // Resolve client info using shared utility: prioritize live data from clients table
+  const clientInfo = resolveClientInfo(
+    proposal.content?.clientInfo || {},
+    proposal.clients // Note: OverviewTab receives 'clients' from its query join
+  );
   
   const projectInfo = proposal.content?.projectInfo || {};
 
