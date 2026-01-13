@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProposalData } from "@/types/proposals";
 import { Building2, Calendar, DollarSign, Zap } from "lucide-react";
+import { resolveClientInfo } from "@/utils/proposals/resolveClientInfo";
 
 interface ProposalSummarySectionProps {
   proposal: ProposalData;
@@ -8,8 +9,12 @@ interface ProposalSummarySectionProps {
 
 export function ProposalSummarySection({ proposal }: ProposalSummarySectionProps) {
   const projectInfo = proposal.content?.projectInfo;
-  const clientInfo = proposal.content?.clientInfo;
-
+  
+  // Resolve client info: prioritize live data from clients table over snapshot
+  const clientInfo = resolveClientInfo(
+    proposal.content?.clientInfo || {},
+    proposal.client
+  );
   return (
     <Card>
       <CardHeader>

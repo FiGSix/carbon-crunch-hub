@@ -1,6 +1,4 @@
-
-
-import { FileText } from "lucide-react";
+import { FileText, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientInfoSection } from "./ClientInfoSection";
 import { ProjectInfoSection } from "./ProjectInfoSection";
@@ -14,8 +12,8 @@ import { AutomationToggle } from "@/components/proposals/automation/AutomationTo
 import { useAuth } from "@/contexts/auth";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
+import { resolveClientInfo } from "@/utils/proposals/resolveClientInfo";
 
 interface ProposalDetailsProps {
   proposal: ProposalData;
@@ -38,6 +36,12 @@ export function ProposalDetails({
   
   // Extract project info from the proposal content and properly type it
   const projectInfo = (proposal.content?.projectInfo || {}) as ProjectInformation;
+  
+  // Resolve client info: prioritize live data from clients table over snapshot
+  const resolvedClientInfo = resolveClientInfo(
+    proposal.content?.clientInfo || {},
+    proposal.client
+  );
   
   // Get the client ID for portfolio-based pricing
   const clientId = proposal.client_reference_id || proposal.client_id;
@@ -103,7 +107,7 @@ export function ProposalDetails({
             </div>
           )}
           
-          <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
+          <ClientInfoSection clientInfo={resolvedClientInfo} />
           <ProjectInfoSection projectInfo={projectInfo} />
           
           {/* Show carbon credit section for both single-phase and multi-phase projects */}
@@ -148,7 +152,7 @@ export function ProposalDetails({
           onApprove={onApprove}
           onReject={onReject}
           showActions={showActions}
-          clientName={proposal.content?.clientInfo?.name || 'Client'}
+          clientName={resolvedClientInfo.name || 'Client'}
           proposalTitle={proposal.title}
           isClient={isClient}
           accessedViaToken={!!token}
