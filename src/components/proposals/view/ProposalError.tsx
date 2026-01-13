@@ -23,7 +23,7 @@ export function ProposalError({ errorMessage, onRetry }: ProposalErrorProps) {
                            errorMessage.toLowerCase().includes('unauthorized');
 
   // Create the support email URL
-  const supportEmailUrl = `mailto:support@crunchcarbon.app?subject=Proposal Loading Error&body=I'm having trouble loading a proposal. Error: ${encodeURIComponent(errorMessage)}`;
+  const supportEmailUrl = `mailto:support@crunchcarbon.com?subject=Proposal Loading Error&body=I'm having trouble loading a proposal. Error: ${encodeURIComponent(errorMessage)}`;
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-12">

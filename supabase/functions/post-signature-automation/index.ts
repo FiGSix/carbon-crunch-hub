@@ -344,7 +344,7 @@ async function sendPostSignatureEmail(
   emailTemplates: any,
   epcEmail?: string | null
 ) {
-  const onboardingUrl = `https://crunchcarbon.app/onboarding/${proposalId}`;
+  const onboardingUrl = `https://crunchcarbon.com/onboarding/${proposalId}`;
 
   const template = emailTemplates[emailType];
   if (!template) {
