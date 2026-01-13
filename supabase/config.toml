@@ -86,3 +86,6 @@ verify_jwt = true
 
 [functions.send-weekly-roundup]
 verify_jwt = false
+
+[functions.discover-leads]
+verify_jwt = false

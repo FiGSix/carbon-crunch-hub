@@ -26,12 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, Plus, Search, UserPlus, Trash2, Eye, Pencil, Building2, Upload } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, UserPlus, Trash2, Eye, Pencil, Building2, Upload, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AddLeadDialog } from './AddLeadDialog';
 import { LeadDetailsDialog } from './LeadDetailsDialog';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { BulkLeadImportDialog } from './BulkLeadImportDialog';
+import { ResearchLeadsDialog } from './ResearchLeadsDialog';
 
 interface AgentLead {
   id: string;
@@ -68,6 +69,7 @@ export function LeadsAgentsTable() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isBulkImportDialogOpen, setIsBulkImportDialogOpen] = useState(false);
+  const [isResearchDialogOpen, setIsResearchDialogOpen] = useState(false);
 
   const { data: leads, isLoading, error } = useQuery({
     queryKey: ['agents', 'leads', statusFilter, searchTerm],
@@ -170,6 +172,10 @@ export function LeadsAgentsTable() {
           </Select>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsResearchDialogOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Research Leads
+          </Button>
           <Button variant="outline" onClick={() => setIsBulkImportDialogOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Bulk Import
@@ -284,6 +290,11 @@ export function LeadsAgentsTable() {
       <BulkLeadImportDialog
         open={isBulkImportDialogOpen}
         onOpenChange={setIsBulkImportDialogOpen}
+      />
+
+      <ResearchLeadsDialog
+        open={isResearchDialogOpen}
+        onOpenChange={setIsResearchDialogOpen}
       />
     </div>
   );
