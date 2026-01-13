@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { AgentStatusDropdown } from './AgentStatusDropdown';
 import { CommissionOverrideDialog } from './CommissionOverrideDialog';
 import { AgentDetailsDialog } from './AgentDetailsDialog';
-import { AgentData } from './AgentsManagementTable';
+import { AgentData } from './types';
 import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle, Info, Mail, X, Copy } from 'lucide-react';
 import { 
   Tooltip,

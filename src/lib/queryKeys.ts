@@ -64,12 +64,15 @@ export const queryKeys = {
   // Agent management related queries
   agents: {
     all: ['agents'] as const,
-    management: {
+  management: {
       all: ['agents', 'management'] as const,
       list: (filters: Record<string, any>, pagination: { page: number; size: number }) =>
         ['agents', 'management', 'list', filters, pagination] as const,
       stats: () => ['agents', 'management', 'stats'] as const,
       count: () => ['agents', 'management', 'count'] as const,
+      invited: () => ['agents', 'management', 'invited'] as const,
+      pending: () => ['agents', 'management', 'pending'] as const,
+      suspended: () => ['agents', 'management', 'suspended'] as const,
     },
     commissions: {
       all: ['agents', 'commissions'] as const,

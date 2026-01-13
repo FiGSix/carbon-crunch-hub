@@ -11,33 +11,9 @@ import { AgentsAdvancedFilters } from './enhanced-filters/AgentsAdvancedFilters'
 import { useAgentsRealtime } from './realtime/useAgentsRealtime';
 import { useToast } from '@/hooks/use-toast';
 import { createNotification } from '@/services/notificationService';
+import { AgentData } from './types';
 
-export interface AgentData {
-  agent_id: string;
-  agent_name: string;
-  agent_email: string;
-  company_name: string | null;
-  agent_status: string;
-  access_level: string;
-  commission_override: number | null;
-  last_active_at: string | null;
-  total_proposals: number;
-  active_proposals: number;
-  signed_proposals: number;
-  total_commission: number;
-  join_date: string | null;
-  onboarding_completed: boolean;
-  portfolio_size_kwp: number;
-  // Invitation fields
-  is_invitation?: boolean;
-  invitation_id?: string;
-  invitation_token?: string;
-  invitation_expires_at?: string;
-  invited_by_email?: string;
-}
-
-export function AgentsManagementTable() {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+export function ActiveAgentsTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -58,12 +34,12 @@ export function AgentsManagementTable() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.agents.management.list(
-      { status: statusFilter, search: searchTerm, accessLevel: accessLevelFilter, commission: commissionFilter, onboarding: onboardingFilter, joinDate: joinDateFilter },
+      { status: 'active', search: searchTerm, accessLevel: accessLevelFilter, commission: commissionFilter, onboarding: onboardingFilter, joinDate: joinDateFilter },
       { page: currentPage, size: pageSize }
     ),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_agents_management_data', {
-        status_filter: statusFilter === 'all' ? null : statusFilter,
+        status_filter: 'active',
         search_term: searchTerm || null,
         limit_param: pageSize,
         offset_param: (currentPage - 1) * pageSize
@@ -113,66 +89,10 @@ export function AgentsManagementTable() {
     }
   });
 
-  // Get total count for pagination (use data length for filtered results)
   const totalCount = data ? data.length : 0;
-
-  // Resend invitation mutation
-  const resendInvitationMutation = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const invitation = data?.find(a => a.invitation_id === invitationId);
-      if (!invitation) throw new Error('Invitation not found');
-      
-      const { error } = await supabase.functions.invoke('send-agent-invitation', {
-        body: {
-          email: invitation.agent_email,
-          firstName: invitation.agent_name.split(' ')[0],
-          lastName: invitation.agent_name.split(' ').slice(1).join(' '),
-          companyName: invitation.company_name,
-          resend: true,
-        }
-      });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Invitation resent successfully" });
-      invalidateAgentManagement();
-    },
-    onError: (error: Error) => {
-      toast({ 
-        title: "Failed to resend invitation", 
-        description: error.message,
-        variant: "destructive" 
-      });
-    }
-  });
-
-  // Cancel invitation mutation
-  const cancelInvitationMutation = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const { error } = await supabase
-        .from('agent_invitations')
-        .delete()
-        .eq('id', invitationId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Invitation cancelled successfully" });
-      invalidateAgentManagement();
-    },
-    onError: (error: Error) => {
-      toast({ 
-        title: "Failed to cancel invitation", 
-        description: error.message,
-        variant: "destructive" 
-      });
-    }
-  });
 
   const updateAgentStatusMutation = useMutation({
     mutationFn: async ({ agentId, status }: { agentId: string; status: string }) => {
-      // Get current agent status before updating
       const { data: agentProfile } = await supabase
         .from('profiles')
         .select('email, first_name, last_name, agent_status')
@@ -186,7 +106,6 @@ export function AgentsManagementTable() {
 
       if (error) throw error;
       
-      // Send notification to agent if they're being approved (from pending_approval to active)
       if (status === 'active' && agentProfile?.agent_status === 'pending_approval') {
         await createNotification({
           userId: agentId,
@@ -243,7 +162,7 @@ export function AgentsManagementTable() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    setSelectedAgents([]); // Clear selection when changing pages
+    setSelectedAgents([]);
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
@@ -269,7 +188,6 @@ export function AgentsManagementTable() {
   };
 
   const clearAllFilters = () => {
-    setStatusFilter('all');
     setSearchTerm('');
     setAccessLevelFilter('all');
     setCommissionFilter('all');
@@ -280,7 +198,6 @@ export function AgentsManagementTable() {
   };
 
   const activeFilterCount = [
-    statusFilter !== 'all' ? 1 : 0,
     searchTerm.length > 0 ? 1 : 0,
     accessLevelFilter !== 'all' ? 1 : 0,
     commissionFilter !== 'all' ? 1 : 0,
@@ -288,24 +205,9 @@ export function AgentsManagementTable() {
     joinDateFilter ? 1 : 0
   ].reduce((sum, val) => sum + val, 0);
 
-  const getCurrentFilters = () => ({
-    statusFilter,
-    searchTerm,
-    accessLevelFilter,
-    commissionFilter,
-    onboardingFilter,
-    joinDateFilter
-  });
-
   return (
     <div className="space-y-4">
       <AgentsTableFilters
-        statusFilter={statusFilter}
-        onStatusFilterChange={(value) => {
-          setStatusFilter(value);
-          setCurrentPage(1);
-          setSelectedAgents([]);
-        }}
         searchTerm={searchTerm}
         onSearchTermChange={(value) => {
           setSearchTerm(value);
@@ -366,14 +268,10 @@ export function AgentsManagementTable() {
         onUpdateCommission={(agentId: string, commission: number | null) =>
           updateCommissionMutation.mutate({ agentId, commission })
         }
-        onResendInvitation={(invitationId: string) => 
-          resendInvitationMutation.mutate(invitationId)
-        }
-        onCancelInvitation={(invitationId: string) => 
-          cancelInvitationMutation.mutate(invitationId)
-        }
+        onResendInvitation={() => {}}
+        onCancelInvitation={() => {}}
         isUpdating={updateAgentStatusMutation.isPending || updateCommissionMutation.isPending}
-        isInvitationActionPending={resendInvitationMutation.isPending || cancelInvitationMutation.isPending}
+        isInvitationActionPending={false}
       />
 
       {totalCount && totalCount > 0 && (
