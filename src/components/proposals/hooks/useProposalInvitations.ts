@@ -138,9 +138,9 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         logger.info(`Proposal status updated to: ${proposalData.status}`);
       }
       
-      // Only allow pending proposals (or freshly promoted drafts/revived stale) to send
-      if (proposalData.status !== 'pending') {
-        const errorMsg = `Proposal must be in 'draft', 'pending', or 'stale' status to send invitations. Current status: ${proposalData.status}`;
+      // Allow pending or sent proposals to send/resend (drafts and stale are already promoted above)
+      if (proposalData.status !== 'pending' && proposalData.status !== 'sent') {
+        const errorMsg = `Proposal must be in 'draft', 'pending', 'sent', or 'stale' status to send invitations. Current status: ${proposalData.status}`;
         logger.error(errorMsg);
         return { success: false, error: errorMsg };
       }
