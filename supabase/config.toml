@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.send-cold-outreach]
 verify_jwt = true
+
+[functions.test-auth-verification]
+verify_jwt = true
