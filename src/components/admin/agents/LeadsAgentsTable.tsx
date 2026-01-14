@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -26,13 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, Plus, Search, UserPlus, Trash2, Eye, Pencil, Building2, Upload, Sparkles } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, UserPlus, Trash2, Eye, Building2, Upload, Sparkles, Mail, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AddLeadDialog } from './AddLeadDialog';
 import { LeadDetailsDialog } from './LeadDetailsDialog';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { BulkLeadImportDialog } from './BulkLeadImportDialog';
 import { ResearchLeadsDialog } from './ResearchLeadsDialog';
+import { SendOutreachDialog } from './SendOutreachDialog';
+import { OutreachHistoryDialog } from './OutreachHistoryDialog';
 
 interface AgentLead {
   id: string;
@@ -49,6 +53,8 @@ interface AgentLead {
   updated_at: string;
   converted_at: string | null;
   converted_invitation_id: string | null;
+  last_outreach_at: string | null;
+  outreach_count: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -70,6 +76,9 @@ export function LeadsAgentsTable() {
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isBulkImportDialogOpen, setIsBulkImportDialogOpen] = useState(false);
   const [isResearchDialogOpen, setIsResearchDialogOpen] = useState(false);
+  const [isOutreachDialogOpen, setIsOutreachDialogOpen] = useState(false);
+  const [isOutreachHistoryOpen, setIsOutreachHistoryOpen] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
 
   const { data: leads, isLoading, error } = useQuery({
     queryKey: ['agents', 'leads', statusFilter, searchTerm],
@@ -127,6 +136,55 @@ export function LeadsAgentsTable() {
     setIsConvertDialogOpen(true);
   };
 
+  const handleSendOutreach = (lead: AgentLead) => {
+    setSelectedLead(lead);
+    setSelectedLeadIds(new Set([lead.id]));
+    setIsOutreachDialogOpen(true);
+  };
+
+  const handleViewOutreachHistory = (lead: AgentLead) => {
+    setSelectedLead(lead);
+    setIsOutreachHistoryOpen(true);
+  };
+
+  const handleBulkOutreach = () => {
+    if (selectedLeadIds.size === 0) {
+      toast({
+        title: 'No leads selected',
+        description: 'Please select at least one lead to send outreach',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsOutreachDialogOpen(true);
+  };
+
+  const toggleLeadSelection = (leadId: string) => {
+    setSelectedLeadIds(prev => {
+      const next = new Set(prev);
+      if (next.has(leadId)) {
+        next.delete(leadId);
+      } else {
+        next.add(leadId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllSelection = () => {
+    if (!leads) return;
+    if (selectedLeadIds.size === leads.length) {
+      setSelectedLeadIds(new Set());
+    } else {
+      setSelectedLeadIds(new Set(leads.map(l => l.id)));
+    }
+  };
+
+  const getSelectedLeads = () => {
+    if (!leads) return [];
+    return leads.filter(l => selectedLeadIds.has(l.id));
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -172,6 +230,12 @@ export function LeadsAgentsTable() {
           </Select>
         </div>
         <div className="flex gap-2">
+          {selectedLeadIds.size > 0 && (
+            <Button variant="secondary" onClick={handleBulkOutreach}>
+              <Mail className="mr-2 h-4 w-4" />
+              Send Outreach ({selectedLeadIds.size})
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setIsResearchDialogOpen(true)}>
             <Sparkles className="mr-2 h-4 w-4" />
             Research Leads
@@ -205,12 +269,20 @@ export function LeadsAgentsTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={selectedLeadIds.size === leads.length && leads.length > 0}
+                    onCheckedChange={toggleAllSelection}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Outreach</TableHead>
                 <TableHead>Added</TableHead>
                 <TableHead className="w-[70px]"></TableHead>
               </TableRow>
@@ -218,6 +290,13 @@ export function LeadsAgentsTable() {
             <TableBody>
               {leads.map((lead) => (
                 <TableRow key={lead.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedLeadIds.has(lead.id)}
+                      onCheckedChange={() => toggleLeadSelection(lead.id)}
+                      aria-label={`Select ${lead.company_name}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{lead.company_name}</TableCell>
                   <TableCell>{lead.contact_name || '-'}</TableCell>
                   <TableCell>{lead.email || '-'}</TableCell>
@@ -227,6 +306,16 @@ export function LeadsAgentsTable() {
                     <Badge className={statusColors[lead.status] || ''}>
                       {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {lead.outreach_count > 0 ? (
+                      <div className="flex items-center gap-1 text-sm">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{lead.outreach_count}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
@@ -243,12 +332,25 @@ export function LeadsAgentsTable() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
+                        {lead.email && lead.status !== 'converted' && (
+                          <DropdownMenuItem onClick={() => handleSendOutreach(lead)}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Outreach
+                          </DropdownMenuItem>
+                        )}
+                        {lead.outreach_count > 0 && (
+                          <DropdownMenuItem onClick={() => handleViewOutreachHistory(lead)}>
+                            <History className="mr-2 h-4 w-4" />
+                            Outreach History
+                          </DropdownMenuItem>
+                        )}
                         {lead.status !== 'converted' && (
                           <DropdownMenuItem onClick={() => handleConvert(lead)}>
                             <UserPlus className="mr-2 h-4 w-4" />
                             Convert to Invitation
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => deleteMutation.mutate(lead.id)}
                           className="text-destructive"
@@ -284,6 +386,12 @@ export function LeadsAgentsTable() {
             onOpenChange={setIsConvertDialogOpen}
             lead={selectedLead}
           />
+          <OutreachHistoryDialog
+            open={isOutreachHistoryOpen}
+            onOpenChange={setIsOutreachHistoryOpen}
+            leadId={selectedLead.id}
+            companyName={selectedLead.company_name}
+          />
         </>
       )}
 
@@ -295,6 +403,20 @@ export function LeadsAgentsTable() {
       <ResearchLeadsDialog
         open={isResearchDialogOpen}
         onOpenChange={setIsResearchDialogOpen}
+      />
+
+      <SendOutreachDialog
+        open={isOutreachDialogOpen}
+        onOpenChange={(open) => {
+          setIsOutreachDialogOpen(open);
+          if (!open) {
+            setSelectedLeadIds(new Set());
+          }
+        }}
+        leads={getSelectedLeads()}
+        onComplete={() => {
+          setSelectedLeadIds(new Set());
+        }}
       />
     </div>
   );

@@ -185,8 +185,10 @@ export type Database = {
           created_by: string | null
           email: string | null
           id: string
+          last_outreach_at: string | null
           location: string | null
           notes: string | null
+          outreach_count: number
           phone: string | null
           source: string | null
           status: string
@@ -202,8 +204,10 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          last_outreach_at?: string | null
           location?: string | null
           notes?: string | null
+          outreach_count?: number
           phone?: string | null
           source?: string | null
           status?: string
@@ -219,8 +223,10 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          last_outreach_at?: string | null
           location?: string | null
           notes?: string | null
+          outreach_count?: number
           phone?: string | null
           source?: string | null
           status?: string
@@ -807,6 +813,59 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_outreach_history: {
+        Row: {
+          body_preview: string | null
+          clicked_at: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          opened_at: string | null
+          resend_message_id: string | null
+          sent_at: string
+          sent_by: string | null
+          status: string
+          subject: string
+          template_type: string
+        }
+        Insert: {
+          body_preview?: string | null
+          clicked_at?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          opened_at?: string | null
+          resend_message_id?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          subject: string
+          template_type: string
+        }
+        Update: {
+          body_preview?: string | null
+          clicked_at?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          opened_at?: string | null
+          resend_message_id?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          template_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_outreach_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "agent_leads"
             referencedColumns: ["id"]
           },
         ]
