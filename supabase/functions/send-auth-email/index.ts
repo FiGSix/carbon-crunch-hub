@@ -48,10 +48,15 @@ serve(async (req) => {
     const { user, email_data } = webhookData;
     const { email_action_type, token_hash, redirect_to } = email_data;
 
+    // CRITICAL: Use our actual app URL, not email_data.site_url which returns Supabase's URL
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunch-carbon-hub.lovable.app';
+
     console.log("Processing auth email:", {
       type: email_action_type,
       email: user.email,
       token_hash_prefix: token_hash?.substring(0, 8),
+      supabase_site_url: email_data.site_url,
+      using_site_url: siteUrl,
     });
 
     // Map email_action_type to the correct EmailOtpType for verification
@@ -75,7 +80,7 @@ serve(async (req) => {
       case "invite":
         html = await renderAsync(
           React.createElement(SignupVerificationEmail, {
-            verificationUrl: `${email_data.site_url}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${redirect_to}`,
+            verificationUrl: `${siteUrl}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${redirect_to}`,
             userEmail: user.email,
           })
         );
@@ -85,7 +90,7 @@ serve(async (req) => {
       case "recovery":
         html = await renderAsync(
           React.createElement(PasswordResetEmail, {
-            resetUrl: `${email_data.site_url}/auth/callback?token_hash=${token_hash}&type=recovery&redirect_to=${redirect_to}`,
+            resetUrl: `${siteUrl}/auth/callback?token_hash=${token_hash}&type=recovery&redirect_to=${redirect_to}`,
             userEmail: user.email,
           })
         );
@@ -95,7 +100,7 @@ serve(async (req) => {
       case "email_change":
         html = await renderAsync(
           React.createElement(EmailChangeEmail, {
-            confirmUrl: `${email_data.site_url}/auth/callback?token_hash=${token_hash}&type=email_change&redirect_to=${redirect_to}`,
+            confirmUrl: `${siteUrl}/auth/callback?token_hash=${token_hash}&type=email_change&redirect_to=${redirect_to}`,
             userEmail: user.email,
           })
         );
