@@ -87,11 +87,14 @@ class SystemSettingsService {
     try {
       const { error } = await supabase
         .from('system_settings')
-        .upsert({
-          setting_key: 'carbon_prices',
-          setting_value: prices,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(
+          {
+            setting_key: 'carbon_prices',
+            setting_value: prices,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'setting_key' }
+        );
 
       if (error) throw error;
       
@@ -144,12 +147,15 @@ class SystemSettingsService {
     try {
       const { error } = await supabase
         .from('system_settings')
-        .upsert({
-          setting_key: key,
-          setting_value: value,
-          description,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(
+          {
+            setting_key: key,
+            setting_value: value,
+            description,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'setting_key' }
+        );
 
       if (error) throw error;
       
