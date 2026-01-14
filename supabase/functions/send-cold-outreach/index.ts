@@ -357,31 +357,39 @@ const handler = async (req: Request): Promise<Response> => {
           console.error("Error recording outreach history:", historyError);
         }
 
-        // Update lead status and outreach count
+        // Update lead status and last outreach time
         const { error: updateError } = await supabase
           .from('agent_leads')
           .update({
             status: 'contacted',
             last_outreach_at: new Date().toISOString(),
-            outreach_count: supabase.rpc ? undefined : 1, // Will use raw SQL increment
           })
           .eq('id', lead.id);
 
-        // Increment outreach_count using raw update
-        await supabase.rpc('increment_outreach_count', { lead_id: lead.id }).catch(() => {
-          // If RPC doesn't exist, manually update
-          return supabase
-            .from('agent_leads')
-            .update({ 
-              outreach_count: 1,
-              last_outreach_at: new Date().toISOString(),
-            })
-            .eq('id', lead.id)
-            .eq('outreach_count', 0);
-        });
-
         if (updateError) {
-          console.error("Error updating lead:", updateError);
+          console.error("Error updating lead status:", updateError);
+        }
+
+        // Increment outreach_count - try RPC first, fallback to manual increment
+        const { error: rpcError } = await supabase.rpc('increment_outreach_count', { lead_id: lead.id });
+
+        if (rpcError) {
+          // RPC doesn't exist or failed - manually increment
+          console.log("RPC increment failed, using manual increment:", rpcError.message);
+          
+          // First get current count
+          const { data: currentLead } = await supabase
+            .from('agent_leads')
+            .select('outreach_count')
+            .eq('id', lead.id)
+            .single();
+          
+          // Then update with incremented value
+          const newCount = (currentLead?.outreach_count || 0) + 1;
+          await supabase
+            .from('agent_leads')
+            .update({ outreach_count: newCount })
+            .eq('id', lead.id);
         }
 
         results.push({ 
