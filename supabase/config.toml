@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.discover-leads]
 verify_jwt = false
+
+[functions.send-cold-outreach]
+verify_jwt = true
