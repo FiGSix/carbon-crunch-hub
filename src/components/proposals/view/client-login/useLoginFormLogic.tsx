@@ -83,9 +83,15 @@ export function useLoginFormLogic(
         email: clientEmail
       });
       
-      const errorMessage = error.message?.includes("Invalid login credentials")
-        ? "Invalid email or password. Please try again."
-        : "Failed to log in. Please try again.";
+      let errorMessage = "Failed to log in. Please try again.";
+      let errorTitle = "Login failed";
+
+      if (error.message?.toLowerCase().includes("email not confirmed")) {
+        errorMessage = "Please confirm your email first. Check your inbox for a confirmation link, then try again.";
+        errorTitle = "Email not confirmed";
+      } else if (error.message?.includes("Invalid login credentials")) {
+        errorMessage = "Invalid email or password. Please try again.";
+      }
       
       handleError(error, errorMessage);
       
@@ -95,8 +101,8 @@ export function useLoginFormLogic(
       }
       
       toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
