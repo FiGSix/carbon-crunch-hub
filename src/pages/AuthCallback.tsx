@@ -127,9 +127,13 @@ const AuthCallback = () => {
           
           // Try PKCE method first (newer, recommended)
           if (tokenHash) {
+            // Use the actual type from URL - 'signup' for new signups, 'email' for email changes
+            const otpType = type === 'signup' ? 'signup' : 'email';
+            console.log('🔑 Verifying OTP with type:', otpType);
+            
             const { error: verifyError } = await supabase.auth.verifyOtp({
               token_hash: tokenHash,
-              type: 'email'
+              type: otpType
             });
 
             if (verifyError) {
