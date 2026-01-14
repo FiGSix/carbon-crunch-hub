@@ -113,10 +113,8 @@ const AuthCallback = () => {
             setIsProcessing(false);
             return;
           }
-        } else if (type === 'email' || type === 'signup') {
-          // Phase 3 & 5: Email confirmation with deferred error handling and redirect support
-          let verificationError: any = null;
-          
+        } else if (type === 'email' || type === 'signup' || type === 'email_change') {
+          // Email confirmation with fallback type verification
           console.log('📧 Email verification attempt:', {
             type,
             hasTokenHash: !!tokenHash,
@@ -125,43 +123,62 @@ const AuthCallback = () => {
             confirmationTokenPrefix: confirmationToken?.substring(0, 8)
           });
           
-          // Try PKCE method first (newer, recommended)
+          // Try PKCE method with fallback types
           if (tokenHash) {
-            // Use the actual type from URL - 'signup' for new signups, 'email' for email changes
-            const otpType = type === 'signup' ? 'signup' : 'email';
-            console.log('🔑 Verifying OTP with type:', otpType);
+            // Valid EmailOtpType values for verification
+            type EmailOtpType = 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email';
             
-            const { error: verifyError } = await supabase.auth.verifyOtp({
-              token_hash: tokenHash,
-              type: otpType
-            });
-
-            if (verifyError) {
-              console.warn('⚠️ PKCE verification failed, trying alternatives:', verifyError);
-              verificationError = verifyError; // Store but don't show yet
-            } else {
-              // Success - ensure minimum time has passed
-              await enforceMinimumProcessingTime(startTime, minimumProcessingTime);
-              setSuccess(true);
-              setIsProcessing(false);
+            // Try types in order of likelihood based on URL type parameter
+            const typesToTry: EmailOtpType[] = type === 'email_change' 
+              ? ['email_change', 'email', 'signup']
+              : type === 'signup'
+                ? ['signup', 'email', 'magiclink']
+                : ['email', 'signup', 'magiclink'];
+            
+            let verified = false;
+            
+            for (const attemptType of typesToTry) {
+              console.log(`🔑 Trying verification with type: ${attemptType}`);
               
-              // Phase 5: Smart redirect based on context
-              const destination = redirectTo && redirectTo.startsWith('/') 
-                ? redirectTo 
-                : '/dashboard';
-              
-              toast({
-                title: 'Email verified',
-                description: redirectTo 
-                  ? 'Your email has been verified. Returning to your proposal...'
-                  : 'Your email has been verified. Redirecting to dashboard...',
+              const { error: verifyError } = await supabase.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: attemptType
               });
 
-              window.history.replaceState(null, '', window.location.pathname);
-              setTimeout(() => {
-                navigate(destination);
-              }, 2000);
-              return;
+              if (!verifyError) {
+                console.log(`✅ Verification succeeded with type: ${attemptType}`);
+                verified = true;
+                
+                // Success - ensure minimum time has passed
+                await enforceMinimumProcessingTime(startTime, minimumProcessingTime);
+                setSuccess(true);
+                setIsProcessing(false);
+                
+                // Smart redirect based on context
+                const destination = redirectTo && redirectTo.startsWith('/') 
+                  ? redirectTo 
+                  : '/dashboard';
+                
+                toast({
+                  title: 'Email verified',
+                  description: redirectTo 
+                    ? 'Your email has been verified. Returning to your proposal...'
+                    : 'Your email has been verified. Redirecting to dashboard...',
+                });
+
+                window.history.replaceState(null, '', window.location.pathname);
+                setTimeout(() => {
+                  navigate(destination);
+                }, 2000);
+                return;
+              } else {
+                console.warn(`⚠️ Verification with type '${attemptType}' failed:`, verifyError.message);
+              }
+            }
+            
+            // If none of the types worked, continue to try other methods
+            if (!verified) {
+              console.warn('⚠️ All OTP types failed, trying fallback methods...');
             }
           }
           
