@@ -11,6 +11,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const BOOKING_LINK = "https://outlook.office.com/bookwithme/user/9d260efd86dd40d586655ba9b9a3b4c1@crunchcarbon.com/meetingtype/NFYHu93970W7f_fhSJejcg2?anonymous&ismsaljsauthenabled&ep=mlink";
+const REGISTRATION_LINK = "https://crunchcarbon.com/register?role=agent";
 
 // CrunchCarbon Brand Colors
 const BRAND = {
@@ -36,8 +37,12 @@ const emailFooter = (name: string = "Shaun Slabber", includeEmail: boolean = tru
   </div>
 `;
 
-const ctaButton = (text: string) => `
-  <a href="${BOOKING_LINK}" style="background-color: ${BRAND.black}; color: ${BRAND.yellow}; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 15px;">${text}</a>
+const ctaButton = (text: string, link: string = REGISTRATION_LINK) => `
+  <a href="${link}" style="background-color: ${BRAND.black}; color: ${BRAND.yellow}; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 15px;">${text}</a>
+`;
+
+const secondaryCta = (text: string, link: string) => `
+  <a href="${link}" style="color: ${BRAND.black}; text-decoration: underline; font-size: 14px;">${text}</a>
 `;
 
 interface Lead {
@@ -84,10 +89,14 @@ const emailTemplates = {
   
   <p style="font-size: 16px;">Our agent partners typically add <strong style="color: ${BRAND.black};">R2,000–R5,000 per project</strong> to their bottom line.</p>
   
-  <p style="font-size: 16px;">Would you be open to a quick 15-minute call to explore if this makes sense for ${lead.company_name}?</p>
+  <p style="font-size: 16px;">Ready to start earning? Sign up takes less than 2 minutes:</p>
   
   <p style="margin: 28px 0;">
-    ${ctaButton('Schedule a Meeting')}
+    ${ctaButton('Become a CrunchCarbon Agent')}
+  </p>
+  
+  <p style="font-size: 14px; color: #666;">
+    Prefer to chat first? ${secondaryCta('Schedule a call with me', BOOKING_LINK)}
   </p>
   
   ${emailFooter()}
@@ -113,10 +122,14 @@ const emailTemplates = {
   
   <p style="font-size: 16px;">Many solar installers are leaving money on the table — we make it easy to capture this additional revenue stream for <strong style="color: ${BRAND.black};">${lead.company_name}</strong>.</p>
   
-  <p style="font-size: 16px;">Would 15 minutes this week work for a quick call?</p>
+  <p style="font-size: 16px;">Join our network of solar partners earning passive income:</p>
   
   <p style="margin: 28px 0;">
-    ${ctaButton('Schedule a Meeting')}
+    ${ctaButton('Sign Up Now - It\'s Free')}
+  </p>
+  
+  <p style="font-size: 14px; color: #666;">
+    Have questions? ${secondaryCta('Schedule a quick call', BOOKING_LINK)}
   </p>
   
   ${emailFooter("Shaun Slabber", false)}
@@ -140,12 +153,14 @@ const emailTemplates = {
   
   <p style="font-size: 16px;">I'll keep this brief — I've reached out twice about helping <strong style="color: ${BRAND.black};">${lead.company_name}</strong> earn from carbon credits.</p>
   
-  <p style="font-size: 16px;">If the timing isn't right, no worries. But if you're curious, I'd love to show you how easy it is.</p>
-  
-  <p style="font-size: 16px;">Just reply "interested" and I'll send over more details, or book a quick call:</p>
+  <p style="font-size: 16px;">If the timing isn't right, no worries. But if you're curious, signing up takes just 2 minutes:</p>
   
   <p style="margin: 28px 0;">
-    ${ctaButton('Schedule a Meeting')}
+    ${ctaButton('Join CrunchCarbon Today')}
+  </p>
+  
+  <p style="font-size: 14px; color: #666;">
+    Want to learn more first? ${secondaryCta('Let\'s chat', BOOKING_LINK)}
   </p>
   
   <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
