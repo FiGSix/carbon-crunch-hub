@@ -12,6 +12,34 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const BOOKING_LINK = "https://outlook.office.com/bookwithme/user/9d260efd86dd40d586655ba9b9a3b4c1@crunchcarbon.com/meetingtype/NFYHu93970W7f_fhSJejcg2?anonymous&ismsaljsauthenabled&ep=mlink";
 
+// CrunchCarbon Brand Colors
+const BRAND = {
+  yellow: '#FFBF00',
+  black: '#1A1A1A',
+  logoUrl: 'https://crunchcarbon.com/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png'
+};
+
+const emailHeader = `
+  <div style="text-align: center; padding: 24px 0; border-bottom: 3px solid ${BRAND.yellow}; margin-bottom: 28px;">
+    <img src="${BRAND.logoUrl}" alt="CrunchCarbon" style="height: 44px; width: auto;" />
+  </div>
+`;
+
+const emailFooter = (name: string = "Shaun Slabber", includeEmail: boolean = true) => `
+  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
+    <p style="margin: 0; line-height: 1.8;">
+      Best regards,<br>
+      <strong style="color: ${BRAND.black};">${name}</strong><br>
+      <span style="color: #666;">CrunchCarbon</span>
+      ${includeEmail ? `<br><a href="mailto:shaun@crunchcarbon.com" style="color: ${BRAND.black}; font-weight: 500;">shaun@crunchcarbon.com</a>` : ''}
+    </p>
+  </div>
+`;
+
+const ctaButton = (text: string) => `
+  <a href="${BOOKING_LINK}" style="background-color: ${BRAND.black}; color: ${BRAND.yellow}; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 15px;">${text}</a>
+`;
+
 interface Lead {
   id: string;
   company_name: string;
@@ -38,34 +66,31 @@ const emailTemplates = {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <p>Hi ${lead.contact_name || 'there'},</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+  ${emailHeader}
   
-  ${aiPersonalization ? `<p>${aiPersonalization}</p>` : ''}
+  <p style="font-size: 16px;">Hi ${lead.contact_name || 'there'},</p>
   
-  <p>I'm reaching out because CrunchCarbon helps solar companies like <strong>${lead.company_name}</strong> earn additional revenue through carbon credits — with zero upfront costs.</p>
+  ${aiPersonalization ? `<p style="font-size: 16px; color: #444;">${aiPersonalization}</p>` : ''}
   
-  <p><strong>Here's how it works:</strong></p>
-  <ul>
-    <li>Register solar installations on our platform</li>
-    <li>We handle all the carbon credit certification</li>
-    <li>You earn commission on every verified credit</li>
+  <p style="font-size: 16px;">I'm reaching out because CrunchCarbon helps solar companies like <strong style="color: ${BRAND.black};">${lead.company_name}</strong> earn additional revenue through carbon credits — with zero upfront costs.</p>
+  
+  <p style="font-size: 16px; font-weight: 600; color: ${BRAND.black};">Here's how it works:</p>
+  <ul style="font-size: 16px; padding-left: 20px;">
+    <li style="margin-bottom: 8px;">Register solar installations on our platform</li>
+    <li style="margin-bottom: 8px;">We handle all the carbon credit certification</li>
+    <li style="margin-bottom: 8px;">You earn commission on every verified credit</li>
   </ul>
   
-  <p>Our agent partners typically add <strong>R2,000–R5,000 per project</strong> to their bottom line.</p>
+  <p style="font-size: 16px;">Our agent partners typically add <strong style="color: ${BRAND.black};">R2,000–R5,000 per project</strong> to their bottom line.</p>
   
-  <p>Would you be open to a quick 15-minute call to explore if this makes sense for ${lead.company_name}?</p>
+  <p style="font-size: 16px;">Would you be open to a quick 15-minute call to explore if this makes sense for ${lead.company_name}?</p>
   
-  <p style="margin: 24px 0;">
-    <a href="${BOOKING_LINK}" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Schedule a Meeting</a>
+  <p style="margin: 28px 0;">
+    ${ctaButton('Schedule a Meeting')}
   </p>
   
-  <p>
-    Best regards,<br>
-    <strong>Shaun Slabber</strong><br>
-    CrunchCarbon<br>
-    <a href="mailto:shaun@crunchcarbon.com">shaun@crunchcarbon.com</a>
-  </p>
+  ${emailFooter()}
 </body>
 </html>
 `,
@@ -79,24 +104,22 @@ const emailTemplates = {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <p>Hi ${lead.contact_name || 'there'},</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+  ${emailHeader}
   
-  <p>I wanted to follow up on my previous email about earning from carbon credits.</p>
+  <p style="font-size: 16px;">Hi ${lead.contact_name || 'there'},</p>
   
-  <p>Many solar installers are leaving money on the table — we make it easy to capture this additional revenue stream for <strong>${lead.company_name}</strong>.</p>
+  <p style="font-size: 16px;">I wanted to follow up on my previous email about earning from carbon credits.</p>
   
-  <p>Would 15 minutes this week work for a quick call?</p>
+  <p style="font-size: 16px;">Many solar installers are leaving money on the table — we make it easy to capture this additional revenue stream for <strong style="color: ${BRAND.black};">${lead.company_name}</strong>.</p>
   
-  <p style="margin: 24px 0;">
-    <a href="${BOOKING_LINK}" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Schedule a Meeting</a>
+  <p style="font-size: 16px;">Would 15 minutes this week work for a quick call?</p>
+  
+  <p style="margin: 28px 0;">
+    ${ctaButton('Schedule a Meeting')}
   </p>
   
-  <p>
-    Best,<br>
-    <strong>Shaun Slabber</strong><br>
-    CrunchCarbon
-  </p>
+  ${emailFooter("Shaun Slabber", false)}
 </body>
 </html>
 `,
@@ -110,23 +133,27 @@ const emailTemplates = {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <p>Hi ${lead.contact_name || 'there'},</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+  ${emailHeader}
   
-  <p>I'll keep this brief — I've reached out twice about helping <strong>${lead.company_name}</strong> earn from carbon credits.</p>
+  <p style="font-size: 16px;">Hi ${lead.contact_name || 'there'},</p>
   
-  <p>If the timing isn't right, no worries. But if you're curious, I'd love to show you how easy it is.</p>
+  <p style="font-size: 16px;">I'll keep this brief — I've reached out twice about helping <strong style="color: ${BRAND.black};">${lead.company_name}</strong> earn from carbon credits.</p>
   
-  <p>Just reply "interested" and I'll send over more details, or book a quick call:</p>
+  <p style="font-size: 16px;">If the timing isn't right, no worries. But if you're curious, I'd love to show you how easy it is.</p>
   
-  <p style="margin: 24px 0;">
-    <a href="${BOOKING_LINK}" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Schedule a Meeting</a>
+  <p style="font-size: 16px;">Just reply "interested" and I'll send over more details, or book a quick call:</p>
+  
+  <p style="margin: 28px 0;">
+    ${ctaButton('Schedule a Meeting')}
   </p>
   
-  <p>
-    <strong>Shaun Slabber</strong><br>
-    CrunchCarbon
-  </p>
+  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
+    <p style="margin: 0; line-height: 1.8;">
+      <strong style="color: ${BRAND.black};">Shaun Slabber</strong><br>
+      <span style="color: #666;">CrunchCarbon</span>
+    </p>
+  </div>
 </body>
 </html>
 `,
