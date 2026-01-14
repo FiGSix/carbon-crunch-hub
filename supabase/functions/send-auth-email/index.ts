@@ -8,7 +8,7 @@ import { PasswordResetEmail } from "./_templates/password-reset.tsx";
 import { EmailChangeEmail } from "./_templates/email-change.tsx";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY") as string);
-const hookSecret = Deno.env.get("SEND_AUTH_EMAIL_HOOK_SECRET") as string;
+const hookSecret = (Deno.env.get("SEND_AUTH_EMAIL_HOOK_SECRET") as string).replace("v1,whsec_", "");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +49,7 @@ serve(async (req) => {
     const { email_action_type, token_hash, redirect_to } = email_data;
 
     // CRITICAL: Use our actual app URL, not email_data.site_url which returns Supabase's URL
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunch-carbon-hub.lovable.app';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 
     console.log("Processing auth email:", {
       type: email_action_type,
