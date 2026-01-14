@@ -85,20 +85,35 @@ class SystemSettingsService {
    */
   async updateCarbonPrices(prices: CarbonPrices): Promise<void> {
     try {
-      const { error } = await supabase
+      // First, try to update the existing setting
+      const { data: updateData, error: updateError } = await supabase
         .from('system_settings')
-        .upsert(
-          {
+        .update({
+          setting_value: prices,
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', 'carbon_prices')
+        .select('id');
+
+      if (updateError) throw updateError;
+
+      // If no rows were updated, the setting doesn't exist - insert it
+      if (!updateData || updateData.length === 0) {
+        const { error: insertError } = await supabase
+          .from('system_settings')
+          .insert({
             setting_key: 'carbon_prices',
             setting_value: prices,
+            description: 'Carbon credit prices by year (in Rand per tCO₂e)',
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          },
-          { onConflict: 'setting_key' }
-        );
+          });
 
-      if (error) throw error;
-      
-      this.logger.info("Updated carbon prices", { prices });
+        if (insertError) throw insertError;
+        this.logger.info("Created carbon prices setting", { prices });
+      } else {
+        this.logger.info("Updated carbon prices", { prices });
+      }
     } catch (error) {
       this.logger.error("Error updating carbon prices", { error });
       throw error;
@@ -121,9 +136,21 @@ class SystemSettingsService {
         "2030": 190.55
       };
 
+      // Check if setting already exists
+      const { data: existing } = await supabase
+        .from('system_settings')
+        .select('id')
+        .eq('setting_key', 'carbon_prices')
+        .maybeSingle();
+
+      if (existing) {
+        this.logger.info("Carbon prices already exist, skipping initialization");
+        return;
+      }
+
       const { error } = await supabase
         .from('system_settings')
-        .upsert({
+        .insert({
           setting_key: 'carbon_prices',
           setting_value: defaultPrices,
           description: 'Carbon credit prices by year (in Rand per tCO₂e)',
@@ -145,21 +172,36 @@ class SystemSettingsService {
    */
   async updateSetting(key: string, value: any, description?: string): Promise<void> {
     try {
-      const { error } = await supabase
+      // First, try to update the existing setting
+      const { data: updateData, error: updateError } = await supabase
         .from('system_settings')
-        .upsert(
-          {
+        .update({
+          setting_value: value,
+          description,
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', key)
+        .select('id');
+
+      if (updateError) throw updateError;
+
+      // If no rows were updated, the setting doesn't exist - insert it
+      if (!updateData || updateData.length === 0) {
+        const { error: insertError } = await supabase
+          .from('system_settings')
+          .insert({
             setting_key: key,
             setting_value: value,
             description,
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          },
-          { onConflict: 'setting_key' }
-        );
+          });
 
-      if (error) throw error;
-      
-      this.logger.info("Updated system setting", { key, value });
+        if (insertError) throw insertError;
+        this.logger.info("Created new system setting", { key });
+      } else {
+        this.logger.info("Updated system setting", { key, value });
+      }
     } catch (error) {
       this.logger.error("Error updating system setting", { error, key });
       throw error;
