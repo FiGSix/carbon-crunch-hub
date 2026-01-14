@@ -67,7 +67,8 @@ export function SendOutreachDialog({ open, onOpenChange, leads, onComplete }: Se
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const leadIds = leadsWithEmail.map(lead => lead.id);
+      // Send ALL lead IDs - let the server fetch fresh data and validate emails
+      const leadIds = leads.map(lead => lead.id);
       
       const { data, error } = await supabase.functions.invoke('send-cold-outreach', {
         body: {
@@ -83,9 +84,10 @@ export function SendOutreachDialog({ open, onOpenChange, leads, onComplete }: Se
     onSuccess: (data) => {
       setResults(data.results);
       const successCount = data.results.filter((r: { success: boolean }) => r.success).length;
+      const totalAttempted = data.results.length;
       toast({
         title: 'Outreach Complete',
-        description: `Successfully sent ${successCount} of ${leadsWithEmail.length} emails`,
+        description: `Successfully sent ${successCount} of ${totalAttempted} emails`,
       });
       queryClient.invalidateQueries({ queryKey: ['agents', 'leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead-outreach-history'] });
@@ -105,10 +107,10 @@ export function SendOutreachDialog({ open, onOpenChange, leads, onComplete }: Se
   });
 
   const handleSend = () => {
-    if (leadsWithEmail.length === 0) {
+    if (leads.length === 0) {
       toast({
-        title: 'No valid leads',
-        description: 'None of the selected leads have email addresses',
+        title: 'No leads selected',
+        description: 'Please select at least one lead to send outreach',
         variant: 'destructive',
       });
       return;
@@ -252,29 +254,44 @@ export function SendOutreachDialog({ open, onOpenChange, leads, onComplete }: Se
 
           {/* Results Summary */}
           {results && (
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <span className="font-medium">
-                  {results.filter(r => r.success).length} sent successfully
-                </span>
-              </div>
-              {results.filter(r => !r.success).length > 0 && (
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-5 w-5" />
+            <div className="rounded-lg border p-4 space-y-3">
+              {results.filter(r => r.success).length > 0 && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
                   <span className="font-medium">
-                    {results.filter(r => !r.success).length} failed
+                    {results.filter(r => r.success).length} sent successfully
                   </span>
+                </div>
+              )}
+              {results.filter(r => !r.success).length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    <span className="font-medium">
+                      {results.filter(r => !r.success).length} failed
+                    </span>
+                  </div>
+                  {/* Show specific failure reasons */}
+                  <div className="ml-7 space-y-1">
+                    {results.filter(r => !r.success).map(r => {
+                      const lead = leads.find(l => l.id === r.leadId);
+                      return (
+                        <p key={r.leadId} className="text-sm text-muted-foreground">
+                          {lead?.company_name || 'Unknown'}: {r.error || 'Unknown error'}
+                        </p>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Warning for no emails */}
-          {leadsWithEmail.length === 0 && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+          {/* Warning for no emails - show as informational, not blocking */}
+          {leadsWithEmail.length === 0 && !results && (
+            <div className="flex items-center gap-2 rounded-lg border border-yellow-500/50 bg-yellow-50 p-4 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
               <AlertCircle className="h-5 w-5" />
-              <span>None of the selected leads have email addresses</span>
+              <span>Email data may not be loaded locally. The server will check the database for emails.</span>
             </div>
           )}
         </div>
@@ -286,9 +303,9 @@ export function SendOutreachDialog({ open, onOpenChange, leads, onComplete }: Se
           {!results && (
             <Button
               onClick={handleSend}
-              disabled={isSending || leadsWithEmail.length === 0}
+              disabled={isSending || leads.length === 0}
             >
-              {isSending ? 'Sending...' : `Send to ${leadsWithEmail.length} Lead${leadsWithEmail.length !== 1 ? 's' : ''}`}
+              {isSending ? 'Sending...' : `Send to ${leads.length} Lead${leads.length !== 1 ? 's' : ''}`}
             </Button>
           )}
         </DialogFooter>
