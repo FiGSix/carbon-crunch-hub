@@ -51,7 +51,20 @@ serve(async (req) => {
     console.log("Processing auth email:", {
       type: email_action_type,
       email: user.email,
+      token_hash_prefix: token_hash?.substring(0, 8),
     });
+
+    // Map email_action_type to the correct EmailOtpType for verification
+    // Supabase's verifyOtp requires specific types that match what was used internally
+    const otpTypeMap: Record<string, string> = {
+      'signup': 'signup',        // New user signup
+      'invite': 'invite',        // Team invite
+      'recovery': 'recovery',    // Password reset
+      'email_change': 'email_change', // Email change confirmation
+    };
+    
+    // Use the mapped type, defaulting to the original if not found
+    const verifyType = otpTypeMap[email_action_type] || email_action_type;
 
     let html: string;
     let subject: string;
@@ -62,7 +75,7 @@ serve(async (req) => {
       case "invite":
         html = await renderAsync(
           React.createElement(SignupVerificationEmail, {
-            verificationUrl: `${email_data.site_url}/auth/callback?token_hash=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`,
+            verificationUrl: `${email_data.site_url}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${redirect_to}`,
             userEmail: user.email,
           })
         );
