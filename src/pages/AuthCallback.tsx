@@ -32,18 +32,34 @@ const AuthCallback = () => {
       const startTime = Date.now();
       
       try {
-        // Parse URL hash parameters
+        // Parse BOTH hash parameters (Supabase default) AND query parameters (custom email hook)
         const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
+        const hashParams = new URLSearchParams(hash);
+        const queryParams = new URLSearchParams(window.location.search);
         
-        // Phase 5: Extract redirect_to from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirect_to');
+        // Helper to check both sources (query params take precedence for custom email hooks)
+        const getParam = (key: string) => queryParams.get(key) || hashParams.get(key);
 
-        // Check for errors in the URL
-        const errorParam = params.get('error');
-        const errorCode = params.get('error_code');
-        const errorDescription = params.get('error_description');
+        // Get auth parameters from either source
+        const errorParam = getParam('error');
+        const errorCode = getParam('error_code');
+        const errorDescription = getParam('error_description');
+        const type = getParam('type');
+        const tokenHash = getParam('token_hash'); // PKCE format (new)
+        const confirmationToken = getParam('confirmation_token'); // Magic Link format (old)
+        const accessToken = getParam('access_token');
+        const refreshToken = getParam('refresh_token');
+        const redirectTo = getParam('redirect_to');
+
+        // Enhanced logging to debug parameter sources
+        console.log('🔐 Auth callback URL parsing:', {
+          fullUrl: window.location.href,
+          queryString: window.location.search,
+          hashString: window.location.hash,
+          parsedType: type,
+          hasTokenHash: !!tokenHash,
+          tokenHashSource: queryParams.get('token_hash') ? 'query' : hashParams.get('token_hash') ? 'hash' : 'none'
+        });
 
         if (errorParam || errorCode) {
           let errorMessage = 'This link is invalid or has expired.';
@@ -61,13 +77,6 @@ const AuthCallback = () => {
           window.history.replaceState(null, '', window.location.pathname);
           return;
         }
-
-        // Get auth type and tokens
-        const type = params.get('type');
-        const tokenHash = params.get('token_hash'); // PKCE format (new)
-        const confirmationToken = params.get('confirmation_token'); // Magic Link format (old)
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
         
         // Phase 3: Improved logging
         console.log('🔐 Auth callback processing:', {
