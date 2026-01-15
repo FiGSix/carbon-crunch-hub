@@ -102,8 +102,21 @@ const AuthCallback = () => {
             });
 
             if (verifyError) {
-              console.error('Recovery verification failed:', verifyError);
-              setError('Invalid or expired reset link. Please request a new one.');
+              console.error('Recovery verification failed:', {
+                message: verifyError.message,
+                status: verifyError.status,
+                name: verifyError.name,
+                fullError: verifyError
+              });
+              
+              // Show actual error for debugging - can be made user-friendly later
+              const userMessage = verifyError.message.includes('expired') 
+                ? 'This reset link has expired. Please request a new one.'
+                : verifyError.message.includes('invalid') || verifyError.message.includes('not found')
+                  ? 'This link has already been used or is invalid. Please request a new reset link.'
+                  : `Verification failed: ${verifyError.message}`;
+              
+              setError(userMessage);
               setIsProcessing(false);
               return;
             }
