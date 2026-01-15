@@ -91,9 +91,36 @@ const AuthCallback = () => {
 
         // Handle different auth types
         if (type === 'recovery') {
-          // Password recovery - redirect to reset password page with tokens
+          // Password recovery flow
+          // First, try to verify the token_hash if present (new format from edge function)
+          if (tokenHash) {
+            console.log('🔑 Verifying recovery token_hash');
+            
+            const { data, error: verifyError } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: 'recovery'
+            });
+
+            if (verifyError) {
+              console.error('Recovery verification failed:', verifyError);
+              setError('Invalid or expired reset link. Please request a new one.');
+              setIsProcessing(false);
+              return;
+            }
+
+            // Session is automatically set after successful verification
+            console.log('✅ Recovery token verified, redirecting to reset password');
+            
+            // Clear URL params for security
+            window.history.replaceState(null, '', window.location.pathname);
+            
+            // Redirect to reset password page
+            navigate('/reset-password');
+            return;
+          }
+          
+          // Fallback: Old format with access_token and refresh_token in URL
           if (accessToken && refreshToken) {
-            // Set the session first
             const { error: sessionError } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
@@ -105,14 +132,14 @@ const AuthCallback = () => {
               return;
             }
 
-            // Redirect to reset password page
             navigate('/reset-password');
             return;
-          } else {
-            setError('Invalid password reset link. Please request a new one.');
-            setIsProcessing(false);
-            return;
           }
+          
+          // No valid tokens found
+          setError('Invalid password reset link. Please request a new one.');
+          setIsProcessing(false);
+          return;
         } else if (type === 'email' || type === 'signup' || type === 'email_change') {
           // Email confirmation with fallback type verification
           console.log('📧 Email verification attempt:', {
