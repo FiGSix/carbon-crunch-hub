@@ -10,7 +10,8 @@ export function useRegistrationFormLogic(
   proposalId: string,
   clientEmail: string,
   onComplete: () => void,
-  onError?: (errorMessage: string) => void
+  onError?: (errorMessage: string) => void,
+  onRegistrationSuccess?: () => void
 ) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -135,14 +136,18 @@ export function useRegistrationFormLogic(
           userId: data.user.id
         });
         
-        toast({
-          title: "Registration successful!",
-          description: "Your account has been created. Please check your email to confirm.",
-          variant: "default"
-        });
-
-        // Notify the parent component that registration is complete
-        onComplete();
+        // Show success dialog instead of immediate redirect
+        if (onRegistrationSuccess) {
+          onRegistrationSuccess();
+        } else {
+          // Fallback to original behavior if no success callback provided
+          toast({
+            title: "Registration successful!",
+            description: "Your account has been created. Please check your email to confirm.",
+            variant: "default"
+          });
+          onComplete();
+        }
       }
     } catch (error: any) {
       // Log detailed error information for diagnostics

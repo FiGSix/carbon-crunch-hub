@@ -11,9 +11,16 @@ interface RegistrationFormProps {
   clientEmail: string;
   onComplete: () => void;
   onError?: (errorMessage: string) => void;
+  onRegistrationSuccess?: () => void;
 }
 
-export function RegistrationForm({ proposalId, clientEmail, onComplete, onError }: RegistrationFormProps) {
+export function RegistrationForm({ 
+  proposalId, 
+  clientEmail, 
+  onComplete, 
+  onError,
+  onRegistrationSuccess 
+}: RegistrationFormProps) {
   const {
     firstName,
     lastName,
@@ -23,7 +30,7 @@ export function RegistrationForm({ proposalId, clientEmail, onComplete, onError 
     error,
     handleChange,
     handleSignUp
-  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError);
+  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError, onRegistrationSuccess);
 
   return (
     <Card className="w-full max-w-md mx-auto">
