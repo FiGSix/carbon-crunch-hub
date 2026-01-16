@@ -35,10 +35,10 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       logger.info("Starting invitation process for proposal", { proposalId: id });
       
-      // First verify the proposal is in the correct status
+      // First verify the proposal is in the correct status - include client_reference_id for live lookup
       let { data: proposalData, error: proposalError } = await supabase
         .from('proposals')
-        .select('status, content, client_id, invitation_token')
+        .select('status, content, client_id, client_reference_id, invitation_token')
         .eq('id', id)
         .single();
       
@@ -92,7 +92,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         // Refresh proposal data after revival
         const { data: revivedData, error: refetchError } = await supabase
           .from('proposals')
-          .select('status, content, client_id, invitation_token')
+          .select('status, content, client_id, client_reference_id, invitation_token')
           .eq('id', id)
           .single();
           
@@ -124,7 +124,7 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         // Refresh proposal data after status update
         const { data: updatedProposalData, error: refetchError } = await supabase
           .from('proposals')
-          .select('status, content, client_id, invitation_token')
+          .select('status, content, client_id, client_reference_id, invitation_token')
           .eq('id', id)
           .single();
           
@@ -192,15 +192,38 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       const content = proposalData.content as ProposalContent;
       const clientInfo = content?.clientInfo;
       const clientId = proposalData.client_id;
+      const clientReferenceId = proposalData.client_reference_id;
+      
+      // Prioritize live client data over snapshot for email sending
+      let resolvedEmail = clientInfo?.email;
+      let resolvedName = clientInfo?.name || 'Client';
+      
+      if (clientReferenceId) {
+        const { data: liveClient } = await supabase
+          .from('clients')
+          .select('email, first_name, last_name')
+          .eq('id', clientReferenceId)
+          .single();
+        
+        if (liveClient?.email) {
+          logger.info("Using live client email instead of snapshot", {
+            snapshotEmail: clientInfo?.email,
+            liveEmail: liveClient.email
+          });
+          resolvedEmail = liveClient.email;
+          resolvedName = `${liveClient.first_name || ''} ${liveClient.last_name || ''}`.trim() || resolvedName;
+        }
+      }
       
       logger.debug("Proposal data retrieved", { 
         hasClientInfo: !!clientInfo?.email,
         hasClientId: !!clientId,
-        hasClientEmail: !!clientInfo?.email,
+        hasClientReferenceId: !!clientReferenceId,
+        resolvedEmail,
         tokenLength: tokenToUse.length
       });
       
-      if (!clientInfo?.email) {
+      if (!resolvedEmail) {
         return { success: false, error: "No client email found in the proposal" };
       }
       
@@ -211,8 +234,8 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       const response = await supabase.functions.invoke('send-proposal-invitation', {
         body: JSON.stringify({
           proposalId: id,
-          clientEmail: clientInfo.email,
-          clientName: clientInfo.name || 'Client',
+          clientEmail: resolvedEmail,
+          clientName: resolvedName,
           invitationToken: tokenToUse,
           projectName: content?.projectInfo?.name || 'Carbon Credit Project',
           clientId: clientId
