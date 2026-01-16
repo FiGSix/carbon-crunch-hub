@@ -22,67 +22,80 @@ const ResetPassword = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isValidSession, setIsValidSession] = useState(false);
 
-  // Check if we have the required access_token and refresh_token from hash fragment
+  // Check for valid session - either from URL tokens or from AuthCallback redirect
   useEffect(() => {
-    // Parse tokens from URL hash fragment (Supabase sends tokens in #, not ?)
-    const hash = window.location.hash.substring(1); // Remove the '#'
-    const params = new URLSearchParams(hash);
-    
-    // First check for errors in the URL (e.g., expired OTP, access denied)
-    const errorParam = params.get('error');
-    const errorCode = params.get('error_code');
-    const errorDescription = params.get('error_description');
-    
-    if (errorParam || errorCode) {
-      // Map error codes to user-friendly messages
-      let errorMessage = 'This reset link has expired or was already used. Please request a new one.';
+    const checkSession = async () => {
+      // First, check if there's already an active session (from AuthCallback redirect)
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (errorCode === 'otp_expired') {
-        errorMessage = 'This reset link has expired. Please request a new one.';
-      } else if (errorParam === 'access_denied') {
-        errorMessage = 'Access denied. This link may have already been used or is invalid.';
-      } else if (errorDescription) {
-        errorMessage = decodeURIComponent(errorDescription);
+      if (session) {
+        console.log('✅ ResetPassword: Active session found');
+        setIsValidSession(true);
+        // Clear any hash for security
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
       }
       
-      setError(errorMessage);
-      // Clear the hash for security
-      window.history.replaceState(null, '', window.location.pathname);
-      return;
-    }
-    
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const type = params.get('type');
-    
-    // Validate this is a recovery type link
-    if (type !== 'recovery') {
-      setError('Invalid password reset link type. Please request a new one.');
-      return;
-    }
-    
-    if (!accessToken || !refreshToken) {
-      setError('Invalid password reset link. Please request a new one.');
-      return;
-    }
-
-    // Set the session using the tokens from the URL
-    const setSession = async () => {
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken
-      });
+      // Fallback: Parse tokens from URL hash fragment (direct link scenario)
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
       
-      if (error) {
-        setError('Invalid or expired reset link. Please request a new one.');
-      } else {
-        // Clear tokens from URL for security
+      // Check for errors in the URL
+      const errorParam = params.get('error');
+      const errorCode = params.get('error_code');
+      const errorDescription = params.get('error_description');
+      
+      if (errorParam || errorCode) {
+        let errorMessage = 'This reset link has expired or was already used. Please request a new one.';
+        
+        if (errorCode === 'otp_expired') {
+          errorMessage = 'This reset link has expired. Please request a new one.';
+        } else if (errorParam === 'access_denied') {
+          errorMessage = 'Access denied. This link may have already been used or is invalid.';
+        } else if (errorDescription) {
+          errorMessage = decodeURIComponent(errorDescription);
+        }
+        
+        setError(errorMessage);
         window.history.replaceState(null, '', window.location.pathname);
+        return;
       }
+      
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+      
+      // If we have URL tokens, try to set the session
+      if (accessToken && refreshToken) {
+        if (type !== 'recovery') {
+          setError('Invalid password reset link type. Please request a new one.');
+          return;
+        }
+        
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        
+        if (sessionError) {
+          setError('Invalid or expired reset link. Please request a new one.');
+        } else {
+          setIsValidSession(true);
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
+      }
+      
+      // No session and no URL tokens - invalid access
+      console.log('❌ ResetPassword: No valid session or tokens found');
+      setError('Invalid password reset link. Please request a new one.');
     };
 
-    setSession();
+    checkSession();
   }, []);
 
   const validatePassword = (password: string): string | null => {
@@ -143,7 +156,7 @@ const ResetPassword = () => {
     }
   };
 
-  if (error && !password && !confirmPassword) {
+  if (error && !isValidSession) {
     return (
       <LoginLayout>
         <Card className="w-full max-w-md mx-auto">
