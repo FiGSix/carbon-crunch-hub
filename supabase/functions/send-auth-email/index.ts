@@ -285,11 +285,14 @@ serve(async (req) => {
     let subject: string;
 
     // Generate appropriate email based on type
+    // IMPORTANT: URL-encode redirect_to to prevent URL corruption from special characters
+    const encodedRedirectTo = encodeURIComponent(redirect_to || '');
+    
     switch (email_action_type) {
       case "signup":
       case "invite":
         html = generateSignupVerificationEmail(
-          `${siteUrl}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${redirect_to}`,
+          `${siteUrl}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${encodedRedirectTo}`,
           user.email
         );
         subject = "Welcome to Crunch Carbon - Verify Your Email";
@@ -297,7 +300,7 @@ serve(async (req) => {
 
       case "recovery":
         html = generatePasswordResetEmail(
-          `${siteUrl}/auth/callback?token_hash=${token_hash}&type=recovery&redirect_to=${redirect_to}`,
+          `${siteUrl}/auth/callback?token_hash=${token_hash}&type=recovery&redirect_to=${encodedRedirectTo}`,
           user.email
         );
         subject = "Reset Your Crunch Carbon Password";
@@ -305,7 +308,7 @@ serve(async (req) => {
 
       case "email_change":
         html = generateEmailChangeEmail(
-          `${siteUrl}/auth/callback?token_hash=${token_hash}&type=email_change&redirect_to=${redirect_to}`,
+          `${siteUrl}/auth/callback?token_hash=${token_hash}&type=email_change&redirect_to=${encodedRedirectTo}`,
           user.email
         );
         subject = "Confirm Your Email Change";
