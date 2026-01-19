@@ -167,8 +167,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
 
       // Store the Resend message_id for webhook tracking
-      if (emailResponse.id) {
-        console.log(`📧 Storing message_id for webhook tracking: ${emailResponse.id}`);
+      // IMPORTANT: Resend returns { data: { id: "..." }, error: null } structure
+      const emailId = emailResponse.data?.id || emailResponse.id;
+      
+      console.log(`📧 Resend response structure:`, JSON.stringify(emailResponse));
+      
+      if (emailId) {
+        console.log(`📧 Storing message_id for webhook tracking: ${emailId}`);
         
         const { error: logError } = await supabase
           .from('proposal_automation_log')
@@ -176,7 +181,7 @@ const handler = async (req: Request): Promise<Response> => {
             proposal_id: proposalId,
             automation_type: 'email_sent',
             email_type: 'initial_invite',
-            email_message_id: emailResponse.id,
+            email_message_id: emailId,
             details: {
               recipient: clientEmail,
               subject: `Carbon Credit Proposal: ${projectName}`,
@@ -209,7 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
           console.log(`✅ Successfully updated proposal ${proposalId} status to 'sent'`);
         }
       } else {
-        console.warn(`⚠️ No email ID returned from Resend - cannot track email events`);
+        console.error(`❌ No email ID returned from Resend - cannot track email events. Full response:`, JSON.stringify(emailResponse));
       }
 
       // Create a notification for the client if we have their ID
