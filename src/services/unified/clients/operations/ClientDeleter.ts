@@ -10,8 +10,9 @@ export class ClientDeleter {
   static async deleteClient(clientId: string): Promise<{ success: boolean; error?: string }> {
     try {
       devLogger.clients.info(`Attempting to delete client: ${clientId}`);
+      console.log('[ClientDeleter] Starting cascading delete for client', { clientId });
 
-      // Step 1: Soft delete all proposals associated with this client
+      // Step 1: Verify user is authenticated
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
 
@@ -19,20 +20,21 @@ export class ClientDeleter {
         return { success: false, error: 'User not authenticated' };
       }
 
-      const { error: proposalError } = await supabase
+      // Step 2: Delete related proposals (hard delete)
+      const { error: proposalsError } = await supabase
         .from('proposals')
-        .update({ 
-          deleted_at: new Date().toISOString(),
-          deleted_by: userId
-        })
+        .delete()
         .or(`client_id.eq.${clientId},client_reference_id.eq.${clientId}`);
 
-      if (proposalError) {
-        devLogger.clients.error('Error deleting proposals:', proposalError);
-        return { success: false, error: proposalError.message };
+      if (proposalsError) {
+        console.error('[ClientDeleter] Failed to delete related proposals', { clientId, error: proposalsError });
+        return { 
+          success: false, 
+          error: 'Failed to delete client proposals. Please contact support.' 
+        };
       }
 
-      // Step 2: Delete the client record with verification
+      // Step 3: Delete the client record with verification
       const { data: deletedClient, error: clientError } = await supabase
         .from('clients')
         .delete()
