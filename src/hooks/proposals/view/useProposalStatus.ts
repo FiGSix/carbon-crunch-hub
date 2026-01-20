@@ -8,6 +8,10 @@ interface UseProposalStatusOptions {
   proposalClientCompanyId?: string | null;
 }
 
+// All statuses where a client can still take action (approve/reject)
+// These represent stages before the proposal is signed, rejected, or archived
+const ACTIONABLE_STATUSES = ['pending', 'sent', 'delivered', 'opened', 'viewed'];
+
 /**
  * Hook to determine proposal status and user permissions
  * Now includes team member permissions for client companies
@@ -51,14 +55,21 @@ export function useProposalStatus(
     // Client is either direct match, team member with signing rights, or token access
     const isClient = isDirectClient || isClientTeamMember || isTokenAccess;
     
-    // Can take action (approve/reject) if client and proposal is pending
+    // Can take action if:
+    // 1. User is identified as client (direct, team member, or token access)
+    // 2. Proposal is in an actionable status (not signed/rejected/archived)
+    // 3. Not archived
+    // 4. Not already signed
     const canTakeAction = isClient && 
-      proposal.status === 'pending' && 
-      !proposal.archived_at;
+      ACTIONABLE_STATUSES.includes(proposal.status) && 
+      !proposal.archived_at &&
+      !proposal.signed_at;
 
     // Debug logging
     console.log("🔍 useProposalStatus - Status Check", {
       proposalId: proposal.id,
+      proposalStatus: proposal.status,
+      isActionableStatus: ACTIONABLE_STATUSES.includes(proposal.status),
       hasToken: !!token,
       hasUser: !!user,
       userRole,
@@ -69,7 +80,9 @@ export function useProposalStatus(
       tokenAccess: isTokenAccess,
       proposalCompanyId,
       userCompanyId: membership?.clientCompanyId,
-      canSignAgreements: membership?.canSignAgreements
+      canSignAgreements: membership?.canSignAgreements,
+      archivedAt: proposal.archived_at,
+      signedAt: proposal.signed_at
     });
 
     return {
