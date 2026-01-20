@@ -6,13 +6,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Percent, UserCheck } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2 } from 'lucide-react';
 import { EditClientDialog } from './EditClientDialog';
 import { PortfolioClientShareDialog } from './PortfolioClientShareDialog';
 import { EditAssignedAgentDialog } from './EditAssignedAgentDialog';
+import { ClientDeleter } from '@/services/unified/clients/operations/ClientDeleter';
 import { useAuth } from '@/contexts/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface SimpleClientsTable2Props {
   clients: ClientData[];
@@ -32,10 +45,45 @@ export function SimpleClientsTable2({
   onLoadMore
 }: SimpleClientsTable2Props) {
   const { userRole } = useAuth();
+  const { toast } = useToast();
   const isAdmin = userRole === 'admin';
   const [editingClient, setEditingClient] = useState<ClientData | null>(null);
   const [portfolioClient, setPortfolioClient] = useState<ClientData | null>(null);
   const [reassignClient, setReassignClient] = useState<ClientData | null>(null);
+  const [deleteClient, setDeleteClient] = useState<ClientData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteClient) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await ClientDeleter.deleteClient(deleteClient.client_id);
+      
+      if (result.success) {
+        toast({
+          title: "Client deleted",
+          description: `${deleteClient.client_name} has been permanently deleted.`,
+        });
+        setDeleteClient(null);
+        onRefresh();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to delete client",
+          description: result.error || "An unexpected error occurred.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to delete client",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <>
@@ -135,6 +183,18 @@ export function SimpleClientsTable2({
                                 Edit Assigned Agent
                               </DropdownMenuItem>
                             )}
+                            {isAdmin && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => setDeleteClient(client)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Client
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -189,6 +249,35 @@ export function SimpleClientsTable2({
         client={reassignClient}
         onSuccess={onRefresh}
       />
+
+      {/* Delete Client Confirmation Dialog */}
+      <AlertDialog open={!!deleteClient} onOpenChange={(open) => !open && setDeleteClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Client</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deleteClient?.client_name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
