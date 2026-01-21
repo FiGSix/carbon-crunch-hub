@@ -52,26 +52,29 @@ class VintageConfigService {
 
   /**
    * Get the minimum vintage year that is still open for submissions
-   * Returns the earliest year whose deadline hasn't passed, or current year
+   * Uses server-side RPC to ensure consistent results across all users regardless of browser timezone
    */
   async getMinimumVintageYear(): Promise<number> {
-    const currentYear = new Date().getFullYear();
-    const deadlines = await this.getVintageDeadlines();
-    const now = new Date();
+    try {
+      const { data, error } = await supabase.rpc('get_minimum_vintage_year');
 
-    // Check all configured deadlines
-    for (const [yearStr, deadlineStr] of Object.entries(deadlines)) {
-      const year = parseInt(yearStr);
-      const deadline = new Date(deadlineStr);
-
-      // If deadline is in the future and year is less than current year
-      if (deadline > now && year < currentYear) {
-        return year;
+      if (error) {
+        this.logger.error("Error fetching minimum vintage year from RPC", { error });
+        // Fallback to current year on error
+        return new Date().getFullYear();
       }
-    }
 
-    // Default to current year
-    return currentYear;
+      if (data !== null) {
+        this.logger.info("Minimum vintage year from server", { year: data });
+        return data;
+      }
+
+      // Fallback to current year if no data returned
+      return new Date().getFullYear();
+    } catch (error) {
+      this.logger.warn("Failed to get minimum vintage year from RPC, falling back to current year", { error });
+      return new Date().getFullYear();
+    }
   }
 
   /**
