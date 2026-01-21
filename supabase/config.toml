@@ -95,3 +95,6 @@ verify_jwt = true
 
 [functions.test-auth-verification]
 verify_jwt = true
+
+[functions.send-agent-approval-email]
+verify_jwt = true
