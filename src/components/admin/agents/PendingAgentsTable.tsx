@@ -41,7 +41,12 @@ export function PendingAgentsTable() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ agentId, status }: { agentId: string; status: 'active' | 'suspended' }) => {
+    mutationFn: async ({ agentId, status, agentEmail, agentFirstName }: { 
+      agentId: string; 
+      status: 'active' | 'suspended';
+      agentEmail: string;
+      agentFirstName?: string;
+    }) => {
       const { error } = await supabase
         .from('profiles')
         .update({ agent_status: status })
@@ -49,7 +54,7 @@ export function PendingAgentsTable() {
 
       if (error) throw error;
 
-      // Send notification if approved
+      // Send notification and email if approved
       if (status === 'active') {
         await createNotification({
           userId: agentId,
@@ -59,6 +64,24 @@ export function PendingAgentsTable() {
           relatedType: 'agent_approval',
           relatedId: agentId
         });
+
+        // Send approval email
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-agent-approval-email', {
+            body: {
+              agentId,
+              agentEmail,
+              agentFirstName,
+            },
+          });
+
+          if (emailError) {
+            console.error('Failed to send approval email:', emailError);
+            // Don't throw - approval succeeded, email is secondary
+          }
+        } catch (emailErr) {
+          console.error('Error invoking approval email function:', emailErr);
+        }
       }
     },
     onSuccess: (_, variables) => {
@@ -149,14 +172,23 @@ export function PendingAgentsTable() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => updateStatusMutation.mutate({ agentId: agent.id, status: 'active' })}
+                      onClick={() => updateStatusMutation.mutate({ 
+                        agentId: agent.id, 
+                        status: 'active',
+                        agentEmail: agent.email,
+                        agentFirstName: agent.first_name || undefined
+                      })}
                       disabled={updateStatusMutation.isPending}
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Approve Agent
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => updateStatusMutation.mutate({ agentId: agent.id, status: 'suspended' })}
+                      onClick={() => updateStatusMutation.mutate({ 
+                        agentId: agent.id, 
+                        status: 'suspended',
+                        agentEmail: agent.email
+                      })}
                       disabled={updateStatusMutation.isPending}
                       className="text-destructive"
                     >
