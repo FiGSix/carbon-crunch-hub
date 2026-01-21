@@ -2439,6 +2439,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_minimum_vintage_year: { Args: never; Returns: number }
       get_pending_team_invitations: {
         Args: { company_id_param: string }
         Returns: {
