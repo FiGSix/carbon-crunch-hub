@@ -24,8 +24,9 @@ const ForgotPassword = () => {
       throw new Error('Please enter your email address');
     }
 
+    // Phase 5: Standardize redirect to go through /auth/callback for consistency
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
     });
 
     if (error) {
