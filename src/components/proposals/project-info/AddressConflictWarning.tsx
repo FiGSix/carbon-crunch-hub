@@ -38,6 +38,16 @@ export function AddressConflictWarning({
             <p>Client: {conflictResult.conflictingProposal.clientName}</p>
             <p>Created: {new Date(conflictResult.conflictingProposal.createdAt).toLocaleDateString()}</p>
             <p>Status: {conflictResult.conflictingProposal.status}</p>
+            {conflictResult.distanceMeters !== undefined && (
+              <p className="mt-2 text-orange-700 font-medium">
+                Distance: {conflictResult.distanceMeters}m from existing project
+              </p>
+            )}
+            {conflictResult.matchMethod === 'address' && (
+              <p className="mt-1 text-muted-foreground text-xs">
+                (Matched by address - GPS data not available)
+              </p>
+            )}
           </div>
         )}
 
