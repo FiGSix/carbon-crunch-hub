@@ -13,6 +13,9 @@ const corsHeaders = {
 let resend: Resend | null = null;
 let hookSecret: string | null = null;
 
+// Unique identifier to track emails sent by this edge function (not Supabase default)
+const EMAIL_SYSTEM_ID = "CC-EF-V1";
+
 // ============= INLINED EMAIL TEMPLATES =============
 
 function generateSignupVerificationEmail(verificationUrl: string, userEmail: string): string {
@@ -64,6 +67,9 @@ function generateSignupVerificationEmail(verificationUrl: string, userEmail: str
     <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 24px 0 0;">
       Need help? Contact us at support@crunchcarbon.com
     </p>
+    
+    <!-- Tracking ID for debugging dual-email issues -->
+    <p style="color: #e5e5e5; font-size: 10px; margin-top: 40px;">ref:${EMAIL_SYSTEM_ID}</p>
   </div>
 </body>
 </html>`;
@@ -119,6 +125,9 @@ function generatePasswordResetEmail(resetUrl: string, userEmail: string): string
     <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 24px 0 0;">
       Need help? Contact us at support@crunchcarbon.com
     </p>
+    
+    <!-- Tracking ID for debugging dual-email issues -->
+    <p style="color: #e5e5e5; font-size: 10px; margin-top: 40px;">ref:${EMAIL_SYSTEM_ID}</p>
   </div>
 </body>
 </html>`;
@@ -170,6 +179,9 @@ function generateEmailChangeEmail(confirmUrl: string, userEmail: string): string
       Stay secure,<br />
       The Crunch Carbon Team
     </p>
+    
+    <!-- Tracking ID for debugging dual-email issues -->
+    <p style="color: #e5e5e5; font-size: 10px; margin-top: 40px;">ref:${EMAIL_SYSTEM_ID}</p>
   </div>
 </body>
 </html>`;
@@ -178,7 +190,10 @@ function generateEmailChangeEmail(confirmUrl: string, userEmail: string): string
 // ============= MAIN HANDLER =============
 
 serve(async (req) => {
-  console.log("🚀 send-auth-email invoked", { method: req.method, url: req.url });
+  const startTime = Date.now();
+  const requestId = crypto.randomUUID().substring(0, 8);
+  
+  console.log(`🚀 [${requestId}] send-auth-email invoked`, { method: req.method, url: req.url });
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -194,7 +209,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get("RESEND_API_KEY");
     const secret = Deno.env.get("SEND_AUTH_EMAIL_HOOK_SECRET");
     
-    console.log("🔑 Secret check:", { 
+    console.log(`🔑 [${requestId}] Secret check:`, { 
       hasResendKey: !!apiKey, 
       resendKeyPrefix: apiKey?.substring(0, 8),
       hasHookSecret: !!secret,
@@ -203,17 +218,19 @@ serve(async (req) => {
     });
     
     if (!apiKey) {
-      console.error("❌ Missing RESEND_API_KEY!");
+      console.error(`❌ [${requestId}] CRITICAL: Missing RESEND_API_KEY! Supabase may fall back to default mailer.`);
+      // Return 500 to signal failure - this MUST NOT be ignored
       return new Response(
-        JSON.stringify({ error: "Missing RESEND_API_KEY configuration" }),
+        JSON.stringify({ error: "Missing RESEND_API_KEY configuration", critical: true }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
     
     if (!secret) {
-      console.error("❌ Missing SEND_AUTH_EMAIL_HOOK_SECRET!");
+      console.error(`❌ [${requestId}] CRITICAL: Missing SEND_AUTH_EMAIL_HOOK_SECRET! Supabase may fall back to default mailer.`);
+      // Return 500 to signal failure - this MUST NOT be ignored
       return new Response(
-        JSON.stringify({ error: "Missing SEND_AUTH_EMAIL_HOOK_SECRET configuration" }),
+        JSON.stringify({ error: "Missing SEND_AUTH_EMAIL_HOOK_SECRET configuration", critical: true }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -224,14 +241,14 @@ serve(async (req) => {
       ? secret.replace("v1,whsec_", "") 
       : secret;
     
-    console.log("✅ Secrets initialized successfully");
+    console.log(`✅ [${requestId}] Secrets initialized successfully`);
   }
 
   try {
     const payload = await req.text();
     const headers = Object.fromEntries(req.headers);
     
-    console.log("📨 Received webhook payload length:", payload.length);
+    console.log(`📨 [${requestId}] Received webhook payload length:`, payload.length);
     
     // Verify webhook signature
     const wh = new Webhook(hookSecret);
@@ -248,9 +265,10 @@ serve(async (req) => {
     
     try {
       webhookData = wh.verify(payload, headers) as typeof webhookData;
-      console.log("✅ Webhook signature verified");
+      console.log(`✅ [${requestId}] Webhook signature verified`);
     } catch (verifyError: any) {
-      console.error("❌ Webhook verification failed:", verifyError.message);
+      console.error(`❌ [${requestId}] Webhook verification failed:`, verifyError.message);
+      // Return 401 for bad signature - Supabase should NOT fall back
       return new Response(
         JSON.stringify({ error: "Webhook verification failed", details: verifyError.message }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -263,12 +281,14 @@ serve(async (req) => {
     // CRITICAL: Use our actual app URL, not email_data.site_url which returns Supabase's URL
     const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 
-    console.log("📧 Processing auth email:", {
+    console.log(`📧 [${requestId}] Processing auth email:`, {
       type: email_action_type,
       email: user.email,
+      userId: user.id,
       token_hash_prefix: token_hash?.substring(0, 8),
       supabase_site_url: email_data.site_url,
       using_site_url: siteUrl,
+      system_id: EMAIL_SYSTEM_ID,
     });
 
     // Map email_action_type to the correct EmailOtpType for verification
@@ -315,29 +335,55 @@ serve(async (req) => {
         break;
 
       default:
-        console.error("❌ Unsupported email type:", email_action_type);
-        throw new Error(`Unsupported email type: ${email_action_type}`);
+        console.error(`❌ [${requestId}] Unsupported email type:`, email_action_type);
+        // Return 400 for unsupported type - clear error
+        return new Response(
+          JSON.stringify({ error: `Unsupported email type: ${email_action_type}` }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
     }
 
-    console.log("📤 Sending email via Resend...");
+    console.log(`📤 [${requestId}] Sending email via Resend...`);
     
-    // Send email via Resend
+    // Send email via Resend with custom headers for tracking
     const { data, error } = await resend.emails.send({
       from: "Crunch Carbon <noreply@crunchcarbon.com>",
       to: [user.email],
       subject,
       html,
+      headers: {
+        "X-Email-System": EMAIL_SYSTEM_ID,
+        "X-Request-Id": requestId,
+        "X-User-Id": user.id,
+      },
     });
 
     if (error) {
-      console.error("❌ Resend error:", error);
-      throw error;
+      console.error(`❌ [${requestId}] CRITICAL: Resend error:`, error);
+      // Return 500 on Resend failure - this is a critical error
+      return new Response(
+        JSON.stringify({ error: "Email delivery failed", details: error, critical: true }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    console.log("✅ Email sent successfully:", data);
+    const duration = Date.now() - startTime;
+    console.log(`✅ [${requestId}] Email sent successfully in ${duration}ms:`, {
+      emailId: data?.id,
+      to: user.email,
+      type: email_action_type,
+      system: EMAIL_SYSTEM_ID,
+    });
 
+    // Return 200 with success - Supabase will NOT fall back to default mailer
     return new Response(
-      JSON.stringify({ success: true, emailId: data?.id }),
+      JSON.stringify({ 
+        success: true, 
+        emailId: data?.id,
+        system: EMAIL_SYSTEM_ID,
+        requestId,
+        duration,
+      }),
       {
         status: 200,
         headers: {
@@ -347,11 +393,21 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("❌ Error in send-auth-email function:", error.message, error.stack);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [${requestId}] CRITICAL ERROR in send-auth-email (${duration}ms):`, {
+      message: error.message,
+      stack: error.stack,
+      system: EMAIL_SYSTEM_ID,
+    });
+    
+    // Return 500 on any unhandled error - prevents silent fallback
     return new Response(
       JSON.stringify({
         error: error.message,
         stack: error.stack,
+        critical: true,
+        system: EMAIL_SYSTEM_ID,
+        requestId,
       }),
       {
         status: 500,
