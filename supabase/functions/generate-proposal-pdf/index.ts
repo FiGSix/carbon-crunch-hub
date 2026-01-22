@@ -94,11 +94,36 @@ serve(async (req) => {
         if (updateError) {
           console.error('[PDF] Failed to update invitation token:', updateError)
         } else {
-          proposal.invitation_token = newToken
-          proposal.invitation_expires_at = expiresAt.toISOString()
+          // CRITICAL: Re-fetch to confirm the token was saved correctly
+          const { data: refreshedProposal, error: refreshError } = await supabaseAdmin
+            .from('proposals')
+            .select('invitation_token, invitation_expires_at')
+            .eq('id', proposalId)
+            .single()
+          
+          if (refreshError) {
+            console.error('[PDF] Failed to re-fetch proposal after token update:', refreshError)
+            // Fallback to local values
+            proposal.invitation_token = newToken
+            proposal.invitation_expires_at = expiresAt.toISOString()
+          } else if (refreshedProposal) {
+            proposal.invitation_token = refreshedProposal.invitation_token
+            proposal.invitation_expires_at = refreshedProposal.invitation_expires_at
+            console.log(`[PDF] Token confirmed from database:`, {
+              hasToken: !!refreshedProposal.invitation_token,
+              tokenLength: refreshedProposal.invitation_token?.length,
+              expiresAt: refreshedProposal.invitation_expires_at
+            })
+          }
           tokenUpdated = true
-          console.log(`[PDF] Token updated, expires at: ${expiresAt.toISOString()}`)
+          console.log(`[PDF] Token updated, expires at: ${proposal.invitation_expires_at}`)
         }
+      } else {
+        console.log('[PDF] Existing token is valid:', {
+          hasToken: !!proposal.invitation_token,
+          tokenLength: proposal.invitation_token?.length,
+          expiresAt: proposal.invitation_expires_at
+        })
       }
     }
 
@@ -1499,6 +1524,17 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   y -= mm(12);
   
   // Digital Signature Section - for pending and draft proposals
+  console.log('[PDF] Signature section check:', {
+    status: proposal.status,
+    hasInvitationToken: !!proposal.invitation_token,
+    tokenLength: proposal.invitation_token?.length || 0,
+    hasExpiresAt: !!proposal.invitation_expires_at,
+    expiresAt: proposal.invitation_expires_at,
+    willShowSignature: (proposal.status === 'pending' || proposal.status === 'draft') && 
+                       !!proposal.invitation_token && 
+                       !!proposal.invitation_expires_at
+  });
+  
   if ((proposal.status === 'pending' || proposal.status === 'draft') && proposal.invitation_token && proposal.invitation_expires_at) {
     y -= mm(2);
     
