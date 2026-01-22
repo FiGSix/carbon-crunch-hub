@@ -38,8 +38,8 @@ export function ProjectInfoFormWithConflictCheck({
     clearConflict
   } = useAddressConflictCheck();
 
-  // Use the address from projectInfo directly instead of watching form context
-  const address = projectInfo.address;
+  // Use the address and GPS from projectInfo
+  const { address, gpsLat, gpsLng } = projectInfo;
 
   // Debounced conflict check
   const debouncedCheckConflict = useMemo(
@@ -49,14 +49,38 @@ export function ProjectInfoFormWithConflictCheck({
     [checkConflict]
   );
 
-  // Parse address into components for conflict checking
+  // Check for conflicts using GPS (primary) or address (fallback)
   useEffect(() => {
-    if (address && address.trim().length > 10) { // Only check if address is substantial
-      // Simple address parsing - this could be enhanced with a proper address parser
+    // GPS-based check is preferred if coordinates are available
+    if (gpsLat && gpsLng) {
+      // Parse address components for logging/fallback purposes
+      const addressParts = (address || '').split(',').map(part => part.trim());
+      const street = addressParts[0] || '';
+      const city = addressParts[1] || '';
+      const stateZip = addressParts[2] || '';
+      const stateZipParts = stateZip.split(' ');
+      const state = stateZipParts[0] || '';
+      const zipCode = stateZipParts[stateZipParts.length - 1] || '';
+
+      debouncedCheckConflict({
+        street,
+        city,
+        state,
+        zipCode,
+        gpsLat,
+        gpsLng,
+        excludeProposalId: proposalId
+      });
+      return () => {
+        debouncedCheckConflict.cancel();
+      };
+    }
+
+    // Fallback to address-based check if no GPS
+    if (address && address.trim().length > 10) {
       const addressParts = address.split(',').map(part => part.trim());
       
       if (addressParts.length >= 3) {
-        // Assume format: Street, City, State Zip
         const street = addressParts[0] || '';
         const city = addressParts[1] || '';
         const stateZip = addressParts[2] || '';
@@ -81,7 +105,7 @@ export function ProjectInfoFormWithConflictCheck({
     return () => {
       debouncedCheckConflict.cancel();
     };
-  }, [address, proposalId, debouncedCheckConflict, clearConflict]);
+  }, [address, gpsLat, gpsLng, proposalId, debouncedCheckConflict, clearConflict]);
 
   return (
     <div className="space-y-4">
