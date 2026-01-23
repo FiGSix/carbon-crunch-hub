@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     question: "Tell me how I get rewarded for my carbon offset?",
-    answer: "By joining the carbon offset program, we help you harness the benefits of the green energy you are using by offsetting with carbon credits. We group these credits together with others, get them verified and audited by the experts, and then sell them on your behalf. Then, we share the proceeds from the sales with you in the form of a solar service, thus rewarding you for helping the planet!",
+    answer: "By joining our Crunch Carbon programme, you unlock additional value from the solar energy you're already producing and using. We aggregate all the solar systems togther and then create carbon credits. During this process we manage the full verification and audit process, and sale of the credits on your behalf. The proceeds are then shared with you typically in the form of solar related services if you choose or cash back into your pocket. Simply put, you're rewarded for using solar. Simple.",
   },
   {
     question: "The nuts and bolts of how it works?",
