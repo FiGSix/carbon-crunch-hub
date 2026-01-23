@@ -283,7 +283,7 @@ export function TermsAndConditionsSection({ onScrolledToBottom, proposal }: Term
             <section>
               <h4 className="font-semibold mb-2">12. TERMINATION</h4>
               <div className="ml-4 space-y-2 text-sm">
-                <p><strong>12.1</strong> This Agreement may be terminated at any time by either of the parties hereto, provided that such consent to terminate is in writing and is signed by the party who wants to cancel.</p>
+                <p><strong>12.1</strong> This Agreement may be terminated at any time by either of the parties hereto, provided that such termination is in writing and is signed by the party who wants to cancel.</p>
                 <p className="ml-4"><strong>12.1.1</strong> In the case of termination the terminating party must provide 30 days of written notice to the other party.</p>
                 <p className="ml-4"><strong>12.1.2</strong> Data extraction will be terminated as from the last day of the 30-day notice period.</p>
                 <p className="ml-4"><strong>12.1.3</strong> n/a</p>
