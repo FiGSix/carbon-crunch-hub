@@ -26,7 +26,7 @@ const faqs = [
   },
   {
     question: "The nuts and bolts of how it works?",
-    answer: "Homeowners who own their solar systems can join the program. Crunch Carbon, with your permission through a signed agreement, drives the carbon credit generation process. We collect data about your solar system (capacity, specifications, location, costs) and energy generated. With many other homeowners, estates and complexes, we put all these carbon offsets together. Crunch Carbon handles the collection, processing, audit and verification of the solar energy usage data. Once verified, we sell these carbon credits and reward the owners through services offered.",
+    answer: "Businesses, agricultural operations, and other solar system owners including homes or complexes can participate in the programme. With your permission, formalised through a signed agreement, Crunch Carbon manages the full carbon credit generation process on your behalf. We collect the required data on your solar system, including capacity, technical specifications, location, and verified energy generation. Your carbon offsets are then aggregated with those from other businesses, farms, estates, and commercial portfolios. Crunch Carbon oversees the entire process from data collection and processing to independent audit and verification. Once verified, the carbon credits are sold, and participating owners are rewarded through agreed services linked to their solar assets or cash in the back pocket. Some clients even choose to keep the carbon credits.",
   },
   {
     question: "But do I qualify for the program?",
