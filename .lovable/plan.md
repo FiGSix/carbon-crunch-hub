@@ -1,109 +1,93 @@
 
-# Fix Client Search Security for Proposal Creation
+# Restore Dashboard "Pending Approval" Metrics
 
-## Problem
+## Problem Summary
 
-When agents create proposals and search for clients to pre-populate information, they can currently see client details from agents in **different companies**. This is a data leak issue.
+At approximately **12:16 UTC today**, migration `20260123121646` was applied. While this migration correctly added company visibility for agents, it **accidentally corrupted** the business logic for the "Pending Approval" dashboard metrics.
 
-### Security Gaps Found
+### The Error
 
-| Data Source | Current Behavior | Expected Behavior |
-|-------------|------------------|-------------------|
-| `profiles` table (registered clients) | All agents see all client profiles | Agents only see clients linked to their company's proposals |
-| `clients` table (contacts) | Agents see own clients + proposal-linked clients | Same as now, plus team members' clients |
+| Metric | Correct Logic (Before) | Broken Logic (After) |
+|--------|------------------------|---------------------|
+| Card 5: Pending Approval MWp | `signed_at IS NULL AND status IN (pending, draft, sent, delivered, opened, stale)` | `signed_at IS NOT NULL AND admin_validated = true AND NOT audit_ready` |
+| Card 6: Pending Approval Revenue | Same as Card 5 | Same as broken Card 5 |
 
-## Root Cause
+### Impact
 
-The `search_clients` RPC function has two problems:
-1. **Profiles section**: Allows any agent to see any client profile (`current_user_role IN ('admin', 'agent')`)
-2. **Clients section**: Correctly restricts to own clients but doesn't include company team visibility
+| Metric | Before Migration | After Migration |
+|--------|-----------------|-----------------|
+| Pending Approval MWp | **140+ MWp** | **1.55 MWp** |
+
+The migration flipped the logic from "unsigned proposals awaiting client signature" to "already-signed proposals awaiting admin validation" — completely different meanings.
+
+---
 
 ## Solution
 
-Update the `search_clients` RPC function to:
+Create a corrective migration that restores the original "Pending Approval" logic while preserving the company visibility improvements.
 
-1. **Restrict profiles access**: Agents can only see client profiles if:
-   - The client has a proposal owned by the agent, OR
-   - The client has a proposal owned by a team member in the same company
+### Files to Create
 
-2. **Add company visibility to clients**: Agents can see clients if:
-   - They created the client, OR
-   - They have a proposal for the client, OR
-   - A team member in their company created the client or has a proposal for them
+**1. New Migration File**
+`supabase/migrations/[timestamp]_restore_pending_approval_metrics.sql`
 
-## Implementation
+### Changes to the Function
 
-### Migration File
-Create: `supabase/migrations/[timestamp]_fix_client_search_company_visibility.sql`
+The `get_dashboard_metrics_by_stage` function will be restored with:
 
-### Updated Access Logic
-
-For **profiles** (registered clients):
-```sql
--- Old: All agents see all
-current_user_role IN ('admin', 'agent')
-
--- New: Agents only see clients linked to their company's proposals
-current_user_role = 'admin'
-OR (
-  current_user_role = 'agent' 
-  AND p.id IN (
-    SELECT DISTINCT COALESCE(pr.client_id, pr.client_reference_id)
-    FROM proposals pr
-    JOIN company_members cm1 ON cm1.user_id = current_user_id AND cm1.status = 'active'
-    JOIN company_members cm2 ON cm2.company_id = cm1.company_id AND cm2.status = 'active'
-    WHERE pr.agent_id = cm2.user_id
-      AND pr.deleted_at IS NULL
-  )
-)
+**Card 5 - Pending Approval MWp (RESTORED)**
+```text
+Condition: signed_at IS NULL 
+           AND status IN ('pending', 'draft', 'sent', 'delivered', 'opened', 'stale')
+           
+Meaning: All unsigned proposals awaiting client signature action
 ```
 
-For **clients** table (contacts):
-```sql
--- Old: Only own clients or proposal-linked
-c.created_by = current_user_id
-OR c.id IN (SELECT FROM proposals WHERE agent_id = current_user_id...)
-
--- New: Include company team members
-current_user_role = 'admin'
-OR c.created_by = current_user_id
-OR c.id IN (
-  SELECT DISTINCT COALESCE(pr.client_reference_id, pr.client_id)
-  FROM proposals pr
-  JOIN company_members cm1 ON cm1.user_id = current_user_id AND cm1.status = 'active'
-  JOIN company_members cm2 ON cm2.company_id = cm1.company_id AND cm2.status = 'active'
-  WHERE pr.agent_id = cm2.user_id
-    AND pr.deleted_at IS NULL
-    AND COALESCE(pr.client_reference_id, pr.client_id) IS NOT NULL
-)
+**Card 6 - Pending Approval Revenue (RESTORED)**
+```text
+Same condition as Card 5
+Uses role-based revenue calculation (client/agent/admin share percentages)
 ```
 
-## Technical Notes
+**All Other Cards - UNCHANGED**
+- Card 1 (Audit Ready MWp): `signed_at IS NOT NULL AND audit_ready = true`
+- Card 2 (Audit Ready Revenue): Same as Card 1
+- Card 3 (Audit Review Requests): `signed_at IS NOT NULL AND submitted_for_review = true AND NOT audit_ready AND NOT admin_validated`
+- Card 4 (Onboarding MWp): `signed_at IS NOT NULL AND NOT onboarding_complete`
 
-### Consistency with Proposal Visibility
-This fix aligns client search visibility with the proposal visibility rules we just fixed:
-- If you can see a proposal (yours or team member's), you can search for the associated client
-- Prevents cross-company data leakage
+### Company Visibility - PRESERVED
 
-### Performance Consideration
-The company membership subquery uses the same pattern as the proposal RPC functions, which is efficient with existing indexes on `company_members(user_id, status)`.
+The corrective migration will maintain the company membership visibility logic added today, so agents can still see their team members' proposals.
 
-### Audit Logging
-The existing `log_client_access` call will continue to work, providing an audit trail of who searched for which clients.
+---
 
 ## Expected Outcome
 
-| Scenario | Before Fix | After Fix |
-|----------|-----------|-----------|
-| Agent A (Company X) searches "John" | Sees John from Company X AND Company Y | Only sees John from Company X |
-| Agent A searches for team member's client | Works (own proposals only) | Works (team proposals included) |
-| Admin searches for any client | Works | Works (unchanged) |
+After applying this fix:
 
-## Files Changed
-1. New migration: `supabase/migrations/[timestamp]_fix_client_search_company_visibility.sql`
+| Metric | Current Value | After Fix |
+|--------|--------------|-----------|
+| Pending Approval MWp | 1.55 MWp | **140+ MWp** |
+| Pending Approval Revenue | Minimal | Full pipeline revenue |
+| Audit Ready MWp | Unchanged | Unchanged |
+| Onboarding MWp | Unchanged | Unchanged |
 
-## Testing
-After deployment, verify:
-1. Agent from MiSolar cannot see clients belonging to agents from other companies
-2. Agent from MiSolar CAN see clients belonging to their MiSolar team members
-3. Admin still sees all clients
+---
+
+## Technical Details
+
+### Root Cause Analysis
+
+The migration `20260123121646_7678bd60-1b24-4a72-836e-83b712084d07.sql` was generated to add company visibility but:
+
+1. It included a complete rewrite of `get_dashboard_metrics_by_stage`
+2. The rewrite did not reference the existing correct logic from migration `20251217180913`
+3. Cards 5 and 6 were incorrectly redefined with inverted signing conditions
+
+### Correct Business Logic Documentation
+
+Per the memory `workflows/pending-approval-metric-includes-all-unsigned-proposals`:
+
+> The "Pending Approval MWp" and "Pending Approval Revenue" dashboard metrics now include all unsigned proposals awaiting client action, not just draft and pending statuses. Metric includes proposals with status IN ('pending', 'draft', 'sent', 'delivered', 'opened', 'stale').
+
+This confirms the correct logic should use `signed_at IS NULL` with the expanded status list.
