@@ -168,11 +168,11 @@ serve(async (req) => {
           agentCommissionPercentage = agent.commission_override;
           console.log(`✓ Row ${rowNum}: Using commission override: ${agentCommissionPercentage}%`);
         } else {
-          // Fall back to tier-based calculation
+          // Fall back to tier-based calculation (FIXED: was incorrectly 5%/4%, now 4%/7%)
           if (totalPortfolioKwp < 15000) {
-            agentCommissionPercentage = 5; // Below 15 MWp: 5% commission
+            agentCommissionPercentage = 4; // Below 15 MWp: 4% commission (AGENT_COMMISSION_LOW)
           } else {
-            agentCommissionPercentage = 4; // 15 MWp and above: 4% commission
+            agentCommissionPercentage = 7; // 15 MWp and above: 7% commission (AGENT_COMMISSION_HIGH)
           }
           console.log(`✓ Row ${rowNum}: Using tier-based commission: ${agentCommissionPercentage}%`);
         }
