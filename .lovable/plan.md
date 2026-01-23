@@ -1,93 +1,153 @@
 
-# Restore Dashboard "Pending Approval" Metrics
+# Fix Agent Commission Data and Platform Revenue Calculation
 
 ## Problem Summary
 
-At approximately **12:16 UTC today**, migration `20260123121646` was applied. While this migration correctly added company visibility for agents, it **accidentally corrupted** the business logic for the "Pending Approval" dashboard metrics.
+61 proposals have incorrect agent commission percentages stored, causing wrong platform revenue calculations. Additionally, the dashboard RPC function uses hardcoded defaults instead of the actual stored values.
 
-### The Error
+## Two Examples of Agents with Override Issues
 
-| Metric | Correct Logic (Before) | Broken Logic (After) |
-|--------|------------------------|---------------------|
-| Card 5: Pending Approval MWp | `signed_at IS NULL AND status IN (pending, draft, sent, delivered, opened, stale)` | `signed_at IS NOT NULL AND admin_validated = true AND NOT audit_ready` |
-| Card 6: Pending Approval Revenue | Same as Card 5 | Same as broken Card 5 |
+### Example 1: Samantha Basson
+- **Profile Override:** 7%
+- **Stored on Proposals:** 4%
+- **Impact:** 15 proposals underpaying agent by 3%
 
-### Impact
-
-| Metric | Before Migration | After Migration |
-|--------|-----------------|-----------------|
-| Pending Approval MWp | **140+ MWp** | **1.55 MWp** |
-
-The migration flipped the logic from "unsigned proposals awaiting client signature" to "already-signed proposals awaiting admin validation" — completely different meanings.
+### Example 2: Adri-Mari Harrington
+- **Profile Override:** 10%
+- **Stored on Proposals:** 7%
+- **Impact:** 14 proposals underpaying agent by 3%
 
 ---
 
-## Solution
+## Affected Data Summary
 
-Create a corrective migration that restores the original "Pending Approval" logic while preserving the company visibility improvements.
-
-### Files to Create
-
-**1. New Migration File**
-`supabase/migrations/[timestamp]_restore_pending_approval_metrics.sql`
-
-### Changes to the Function
-
-The `get_dashboard_metrics_by_stage` function will be restored with:
-
-**Card 5 - Pending Approval MWp (RESTORED)**
-```text
-Condition: signed_at IS NULL 
-           AND status IN ('pending', 'draft', 'sent', 'delivered', 'opened', 'stale')
-           
-Meaning: All unsigned proposals awaiting client signature action
-```
-
-**Card 6 - Pending Approval Revenue (RESTORED)**
-```text
-Same condition as Card 5
-Uses role-based revenue calculation (client/agent/admin share percentages)
-```
-
-**All Other Cards - UNCHANGED**
-- Card 1 (Audit Ready MWp): `signed_at IS NOT NULL AND audit_ready = true`
-- Card 2 (Audit Ready Revenue): Same as Card 1
-- Card 3 (Audit Review Requests): `signed_at IS NOT NULL AND submitted_for_review = true AND NOT audit_ready AND NOT admin_validated`
-- Card 4 (Onboarding MWp): `signed_at IS NOT NULL AND NOT onboarding_complete`
-
-### Company Visibility - PRESERVED
-
-The corrective migration will maintain the company membership visibility logic added today, so agents can still see their team members' proposals.
+| Agent | Should Be | Stored As | Count |
+|-------|-----------|-----------|-------|
+| Shaun Slabber | 0% | 4%, 5% | 22 |
+| Samantha Basson | 7% | 4% | 15 |
+| Adri-Mari Harrington | 10% | 7% | 14 |
+| Craig Scott | 7% | 4% | 5 |
+| Mitesh Bhawan | 7% | 5% | 2 |
+| MARK WELLS | 7% | 4% | 2 |
+| Jacques Goosen | 7% | 4% | 1 |
+| **Total** | - | - | **61** |
 
 ---
 
-## Expected Outcome
+## Solution: Two-Part Fix
 
-After applying this fix:
+### Part 1: Data Migration - Fix 61 Proposals
 
-| Metric | Current Value | After Fix |
-|--------|--------------|-----------|
-| Pending Approval MWp | 1.55 MWp | **140+ MWp** |
-| Pending Approval Revenue | Minimal | Full pipeline revenue |
-| Audit Ready MWp | Unchanged | Unchanged |
-| Onboarding MWp | Unchanged | Unchanged |
+Create a migration to update stored `agent_commission_percentage` values to match each agent's `commission_override` from their profile:
+
+```text
+UPDATE proposals p
+SET agent_commission_percentage = pr.commission_override
+FROM profiles pr
+WHERE p.agent_id = pr.id
+  AND pr.commission_override IS NOT NULL
+  AND p.agent_commission_percentage != pr.commission_override
+  AND p.deleted_at IS NULL
+```
+
+### Part 2: Fix Dashboard RPC Function
+
+Update `get_dashboard_metrics_by_stage` to:
+1. Use stored `p.client_share_percentage` instead of hardcoded 70%
+2. Use stored `p.agent_commission_percentage` instead of hardcoded 4%
+3. Calculate platform share as: `100 - client_share - agent_commission`
+4. Restore tiered carbon pricing (~R891.71/credit over 6 years)
+
+### Part 3: Fix Bulk Upload Function
+
+Correct the legacy bug in `bulk-upload-legacy-projects/index.ts`:
+- Line 173: Change `5` to `4` for low-tier commission
+- Line 175: Change `4` to `7` for high-tier commission (currently reversed)
 
 ---
 
 ## Technical Details
 
-### Root Cause Analysis
+### Files to Modify
 
-The migration `20260123121646_7678bd60-1b24-4a72-836e-83b712084d07.sql` was generated to add company visibility but:
+| File | Change |
+|------|--------|
+| `supabase/migrations/[timestamp]_fix_agent_commissions.sql` | New migration to fix 61 proposals |
+| `supabase/migrations/[timestamp]_fix_dashboard_revenue.sql` | Fix RPC to use stored values |
+| `supabase/functions/bulk-upload-legacy-projects/index.ts` | Fix hardcoded 5% bug |
 
-1. It included a complete rewrite of `get_dashboard_metrics_by_stage`
-2. The rewrite did not reference the existing correct logic from migration `20251217180913`
-3. Cards 5 and 6 were incorrectly redefined with inverted signing conditions
+### Migration 1: Fix Proposal Data
 
-### Correct Business Logic Documentation
+```sql
+-- Fix all proposals where agent has commission_override
+UPDATE proposals p
+SET 
+  agent_commission_percentage = pr.commission_override,
+  updated_at = now()
+FROM profiles pr
+WHERE p.agent_id = pr.id
+  AND pr.commission_override IS NOT NULL
+  AND p.agent_commission_percentage IS DISTINCT FROM pr.commission_override
+  AND p.deleted_at IS NULL
+  AND p.archived_at IS NULL;
+```
 
-Per the memory `workflows/pending-approval-metric-includes-all-unsigned-proposals`:
+### Migration 2: Fix Dashboard RPC
 
-> The "Pending Approval MWp" and "Pending Approval Revenue" dashboard metrics now include all unsigned proposals awaiting client action, not just draft and pending statuses. Metric includes proposals with status IN ('pending', 'draft', 'sent', 'delivered', 'opened', 'stale').
+The `get_dashboard_metrics_by_stage` function will be updated to:
+- Read `p.client_share_percentage` directly from each proposal
+- Read `p.agent_commission_percentage` directly from each proposal
+- Calculate platform revenue as: `carbon_credits * tiered_price * ((100 - client_share - agent_commission) / 100)`
+- Use the correct tiered carbon prices (R97.34 to R190.55 per year)
 
-This confirms the correct logic should use `signed_at IS NULL` with the expanded status list.
+### Edge Function Fix
+
+```typescript
+// Current (WRONG):
+if (totalPortfolioKwp < 15000) {
+  agentCommissionPercentage = 5; // Should be 4
+} else {
+  agentCommissionPercentage = 4; // Should be 7
+}
+
+// Fixed:
+if (totalPortfolioKwp < 15000) {
+  agentCommissionPercentage = 4; // AGENT_COMMISSION_LOW
+} else {
+  agentCommissionPercentage = 7; // AGENT_COMMISSION_HIGH
+}
+```
+
+---
+
+## Expected Outcomes
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Proposals with correct commission | ~830 | ~891 (all) |
+| Shaun Slabber proposals | 0%/4%/5% mixed | 0% (correct) |
+| Samantha Basson proposals | 4% | 7% (correct) |
+| Adri-Mari Harrington proposals | 7% | 10% (correct) |
+| Pending Approval Revenue | ~R48m | ~R72m |
+| Future bulk uploads | 5% bug | Uses correct 4%/7% |
+
+---
+
+## Verification Queries
+
+After applying fixes, run these queries to verify:
+
+```sql
+-- Verify no more mismatches exist
+SELECT COUNT(*) 
+FROM proposals p
+JOIN profiles pr ON pr.id = p.agent_id
+WHERE pr.commission_override IS NOT NULL
+  AND p.agent_commission_percentage != pr.commission_override
+  AND p.deleted_at IS NULL;
+-- Expected: 0
+
+-- Verify dashboard revenue restored
+SELECT * FROM get_dashboard_metrics_by_stage('admin-user-id');
+-- Expected: Card 6 revenue ~R72m
+```
