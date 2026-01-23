@@ -289,7 +289,7 @@ export async function addCessionAgreementPages(
 
   // === 12. TERMINATION ===
   addHeading('12. TERMINATION', 'section');
-  addClause('12.1', 'This Agreement may be terminated at any time by either of the parties hereto, provided that such consent to terminate is in writing and is signed by the party who wants to cancel.');
+  addClause('12.1', 'This Agreement may be terminated at any time by either of the parties hereto, provided that such termination is in writing and is signed by the party who wants to cancel.');
   addClause('12.1.1', 'In the case of termination the terminating party must provide 30 days of written notice to the other party.', 20);
   addClause('12.1.2', 'Data extraction will be terminated as from the last day of the 30-day notice period.', 20);
   addClause('12.1.3', 'n/a', 20);
