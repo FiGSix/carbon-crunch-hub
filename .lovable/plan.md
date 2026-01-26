@@ -1,71 +1,176 @@
 
+# Improved Error Handling for Proposal Signing
 
-# Fix: Agent Invitation Token Validation Blocked by RLS
+## Problem Analysis
 
-## Root Cause Confirmed
+When clients like Anthony try to sign the Abendruhe proposal and encounter an error (e.g., expired invitation token), they see a generic message:
 
-The `agent_invitations` table **does** contain Mario's invitation (I verified this directly in the database). The problem is that when Mario clicks the invitation link and lands on the registration page:
+**"Edge Function returned a non-2xx status code"**
 
-1. He is **not authenticated** yet (he's trying to register)
-2. The registration form tries to validate the token by querying `agent_invitations`
-3. The current RLS policies only allow **admins** to SELECT from this table
-4. The query returns no results (RLS blocks it)
-5. The code interprets this as "Invalid Invitation"
+This is unhelpful and confusing. The edge function actually returns descriptive error messages like "Invitation link has expired", but the frontend doesn't extract them properly.
 
-## Current RLS Policies on `agent_invitations`
+## Root Cause
 
-| Policy Name | Command | Rule | Problem |
-|------------|---------|------|---------|
-| Admins can view all invitations | SELECT | `is_current_user_admin()` | Requires authentication |
-| Admins can insert invitations | INSERT | `is_current_user_admin()` | OK |
-| System can update invitations | UPDATE | `true` | OK |
+The Supabase JavaScript client throws a `FunctionsHttpError` when an edge function returns a non-2xx status. The actual error details are stored in `error.context` (a Response object), but the frontend only reads `error.message` which contains the generic text.
 
-**Missing: A policy allowing anonymous users to validate pending invitation tokens**
+```text
+Current Flow:
++-------------------+     +-------------------+     +------------------+
+| Edge Function     | --> | Supabase Client   | --> | Frontend         |
+| Returns:          |     | Wraps as:         |     | Displays:        |
+| {error: "Expired"}|     | FunctionsHttpError|     | "non-2xx status" |
+| status: 400       |     | .context=Response |     |                  |
++-------------------+     +-------------------+     +------------------+
+
+Proposed Flow:
++-------------------+     +-------------------+     +------------------+
+| Edge Function     | --> | Supabase Client   | --> | Frontend         |
+| Returns:          |     | Wraps as:         |     | Parses context:  |
+| {error: "Expired"}|     | FunctionsHttpError|     | Shows "Expired"  |
+| status: 400       |     | .context=Response |     |                  |
++-------------------+     +-------------------+     +------------------+
+```
 
 ## Solution
 
-Add an RLS policy that allows anonymous (`anon`) users to read invitation records, but **only** for:
-- Invitations with `status = 'pending'`
-- Invitations that haven't expired (`expires_at > now()`)
+### Phase 1: Create Edge Function Error Parser Utility
 
-This is secure because:
-- The token itself is a 64-character secret - you need to know it to find the record
-- Only pending, non-expired invitations are visible
-- Anonymous users can only SELECT (not INSERT/UPDATE/DELETE)
+Create a reusable utility that extracts meaningful error messages from Supabase edge function errors.
 
-## Database Migration
+**New File: `src/lib/errors/edgeFunctionErrors.ts`**
 
-```sql
--- Allow anonymous users to validate pending invitation tokens during registration
--- This is required because users need to validate their invitation BEFORE they can register/authenticate
--- Security: The 64-character token acts as the secret - you must know it to find the invitation
-CREATE POLICY "Anon can validate pending invitation tokens"
-ON public.agent_invitations
-FOR SELECT
-TO anon
-USING (
-  status = 'pending' 
-  AND expires_at > now()
-);
+This utility will:
+- Check if the error is a `FunctionsHttpError` (has a `context` property that is a Response)
+- Clone and parse the response body to extract the `error` field
+- Return a user-friendly message, with fallbacks
+- Map common error codes to user-friendly messages
+
+### Phase 2: Update ProposalAcceptance Error Handling
+
+Update the catch block in `src/pages/ProposalAcceptance/index.tsx` to use the new utility.
+
+**Changes:**
+- Import the new error parser utility
+- Replace the simple `err.message` access with proper parsing
+- Display the actual error message from the edge function
+
+### Phase 3: Ensure Consistent Error Messages in Edge Function
+
+Review and enhance the `accept-proposal` edge function to ensure all error paths return clear, user-friendly messages.
+
+**Current Error Messages (already good):**
+| Error Scenario | Current Message | User-Friendly? |
+|---------------|-----------------|----------------|
+| Token expired | "Invitation link has expired" | Yes |
+| Already signed | "This proposal has already been signed" | Yes |
+| Rejected | "This proposal has been rejected and cannot be signed" | Yes |
+| No auth | "Authentication required" | Yes |
+| Invalid name | "Please provide a valid name (minimum 2 characters)..." | Yes |
+| DB exception | "Invalid or expired invitation token" | Yes |
+
+**Improvement:** Add a specific error code field for frontend to potentially handle differently (optional enhancement).
+
+## File Changes
+
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/lib/errors/edgeFunctionErrors.ts` | Create | New utility to parse edge function errors |
+| `src/pages/ProposalAcceptance/index.tsx` | Modify | Use new error parser in catch block |
+
+## Technical Details
+
+### New Utility Code Structure
+
+```typescript
+// src/lib/errors/edgeFunctionErrors.ts
+
+export interface EdgeFunctionErrorResponse {
+  error: string;
+  code?: string;
+  details?: string;
+  alreadySigned?: boolean;
+}
+
+/**
+ * Extracts user-friendly error message from Supabase edge function errors.
+ * Handles the FunctionsHttpError which stores the response in .context
+ */
+export async function parseEdgeFunctionError(
+  error: unknown,
+  fallbackMessage: string = "An error occurred. Please try again."
+): Promise<string> {
+  // Check if it's a FunctionsHttpError (has context that is a Response)
+  if (
+    error &&
+    typeof error === 'object' &&
+    'context' in error &&
+    error.context instanceof Response
+  ) {
+    try {
+      // Clone the response before reading (Response body can only be read once)
+      const response = error.context.clone();
+      const data: EdgeFunctionErrorResponse = await response.json();
+      
+      if (data.error) {
+        return data.error;
+      }
+    } catch (parseError) {
+      console.error("Failed to parse edge function error:", parseError);
+    }
+  }
+  
+  // Fallback to standard Error message
+  if (error instanceof Error) {
+    // Don't show the generic Supabase message
+    if (error.message.includes("non-2xx status code")) {
+      return fallbackMessage;
+    }
+    return error.message;
+  }
+  
+  return fallbackMessage;
+}
 ```
 
-## Files Changed
+### Updated Error Handling in ProposalAcceptance
 
-| Type | Change |
-|------|--------|
-| Database Migration | Add new RLS policy for anonymous token validation |
+```typescript
+import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
 
-## Why This Wasn't Caught Before
+// In handleSubmit catch block:
+} catch (err) {
+  console.error("Error submitting agreement:", err);
+  
+  const errorMessage = await parseEdgeFunctionError(
+    err,
+    "Failed to submit agreement. Please try again."
+  );
+  
+  toast({
+    description: errorMessage,
+    variant: "destructive",
+  });
+} finally {
+  setIsSubmitting(false);
+}
+```
 
-1. Testing may have been done while already logged in as admin
-2. Previous invitations may have worked during a period when RLS was configured differently
-3. The error message "Invalid Invitation" doesn't indicate that RLS blocked the query
+## Expected User Experience After Fix
 
-## After This Fix
+| Scenario | Before | After |
+|----------|--------|-------|
+| Expired token | "Edge Function returned a non-2xx status code" | "Invitation link has expired" |
+| Already signed | Generic error | "This proposal has already been signed" |
+| Rejected proposal | Generic error | "This proposal has been rejected and cannot be signed" |
+| Database error | Generic error | "Invalid or expired invitation token" |
+| Network failure | Generic error | "Failed to submit agreement. Please try again." |
 
-1. Mario clicks the invitation link
-2. Registration page loads and validates the token (RLS now allows this)
-3. Form is pre-filled with Mario's details (name, email, company)
-4. Mario completes registration successfully
-5. Invitation is marked as "accepted"
+## Future Enhancements (Optional)
 
+1. **Add error codes** for programmatic handling (e.g., show "Request new link" button for expired tokens)
+2. **Apply pattern globally** to all edge function calls across the app
+3. **Create a hook** like `useEdgeFunctionCall` that wraps invoke with proper error parsing
+
+## Addressing the Immediate Issue
+
+For Anthony and Abendruhe: Once this error handling is in place, the error message will clearly say "Invitation link has expired" instead of the generic message. You would still need to resend the invitation or extend the token expiration to allow them to sign.
