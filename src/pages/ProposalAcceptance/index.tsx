@@ -8,6 +8,7 @@ import { TermsAndConditionsSection } from "./components/TermsAndConditionsSectio
 import { SignatureSection } from "./components/SignatureSection";
 import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
 import { useToast } from "@/hooks/use-toast";
+import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
 
 export default function ProposalAcceptance() {
   const { id } = useParams();
@@ -236,8 +237,14 @@ export default function ProposalAcceptance() {
 
     } catch (err) {
       console.error("Error submitting agreement:", err);
+      
+      const errorMessage = await parseEdgeFunctionError(
+        err,
+        "Failed to submit agreement. Please try again."
+      );
+      
       toast({
-        description: err instanceof Error ? err.message : "Failed to submit agreement. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
