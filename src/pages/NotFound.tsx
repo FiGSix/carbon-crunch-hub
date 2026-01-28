@@ -23,23 +23,16 @@ const NotFound = () => {
         
         {/* Headline */}
         <h1 
-          className="text-2xl md:text-3xl lg:text-4xl leading-tight tracking-tight"
-          style={{ 
-            fontFamily: "'Press Start 2P', monospace",
-            color: '#0B0B0B'
-          }}
+          className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight"
+          style={{ color: '#0B0B0B' }}
         >
           404 - Nothing to crunch here
         </h1>
 
         {/* Sub-headline */}
         <p 
-          className="text-lg md:text-xl lg:text-2xl font-medium"
-          style={{ 
-            fontFamily: "'Press Start 2P', monospace",
-            color: '#0B0B0B',
-            lineHeight: '1.6'
-          }}
+          className="text-xl md:text-2xl lg:text-3xl font-medium"
+          style={{ color: '#0B0B0B', lineHeight: '1.6' }}
         >
           The credits you're looking for aren't here, sadly.
         </p>
@@ -66,7 +59,7 @@ const NotFound = () => {
         <img 
           src={ghostImage} 
           alt="Pixel art ghost illustration"
-          className="w-48 md:w-72 lg:w-96 h-auto object-contain"
+          className="w-64 md:w-96 lg:w-[32rem] max-w-full h-auto object-contain"
         />
       </div>
     </div>
