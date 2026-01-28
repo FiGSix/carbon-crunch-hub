@@ -71,9 +71,10 @@ serve(async (req) => {
 
     console.log(`[PDF] Proposal fetched: ${proposal.title}, status: ${proposal.status}`)
 
-    // CRITICAL: Ensure invitation token exists for pending and draft proposals
+    // CRITICAL: Ensure invitation token exists for draft proposals
+    // Removed 'pending' - now only 'draft' proposals need token generation
     let tokenUpdated = false
-    if (proposal.status === 'pending' || proposal.status === 'draft') {
+    if (proposal.status === 'draft') {
       const now = new Date()
       const tokenExpired = !proposal.invitation_expires_at || new Date(proposal.invitation_expires_at) <= now
       

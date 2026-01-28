@@ -54,8 +54,8 @@ export function useDashboardMetricsByStage() {
       try {
         // Call the optimized database function
         const { data, error } = await supabase.rpc('get_dashboard_metrics_by_stage', {
-          user_id_param: user.id,
-          user_role_param: userRole
+          p_user_id: user.id,
+          p_user_role: userRole
         });
 
         if (error) {

@@ -21,8 +21,11 @@ interface ProposalStatusDropdownProps {
 }
 
 // Map user-friendly labels to database values
+// Removed 'pending' - now uses explicit status values
 const STATUS_OPTIONS = [
-  { value: "pending", label: "Sent" },
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "stale", label: "Stale" },
   { value: "rejected", label: "Declined" },
   { value: "approved", label: "Accepted" },
 ] as const;

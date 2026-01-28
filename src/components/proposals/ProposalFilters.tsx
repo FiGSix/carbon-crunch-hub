@@ -53,8 +53,13 @@ function ProposalFiltersComponent({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Statuses</SelectItem>
+          <SelectItem value="draft">Draft</SelectItem>
+          <SelectItem value="sent">Sent</SelectItem>
+          <SelectItem value="delivered">Delivered</SelectItem>
+          <SelectItem value="opened">Opened</SelectItem>
+          <SelectItem value="viewed">Viewed</SelectItem>
+          <SelectItem value="stale">Stale</SelectItem>
           <SelectItem value="approved">Approved</SelectItem>
-          <SelectItem value="pending">Pending</SelectItem>
           <SelectItem value="rejected">Rejected</SelectItem>
         </SelectContent>
       </Select>
