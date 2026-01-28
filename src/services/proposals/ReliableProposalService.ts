@@ -264,13 +264,10 @@ export class ReliableProposalService {
       () => this.connectionManager.executeWithHealthCheck(async () => {
         const { updateProposalStatus } = await import('./statusUpdateService');
         
-        const updateResult = await updateProposalStatus(proposalId, 'pending', userId);
-        
-        if (!updateResult.success) {
-          throw new Error(`Status update failed: ${updateResult.error}`);
-        }
-
-        return { proposalId, status: 'pending' };
+        // Status remains as 'draft' until proposal is actually sent
+        // The send-proposal-invitation edge function will change status to 'sent'
+        // No longer auto-promoting to 'pending' - that status is removed
+        return { proposalId, status: 'draft' };
       }),
       {
         maxAttempts: 3,

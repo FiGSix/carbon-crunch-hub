@@ -10,7 +10,8 @@ interface UseProposalStatusOptions {
 
 // All statuses where a client can still take action (approve/reject)
 // These represent stages before the proposal is signed, rejected, or archived
-const ACTIONABLE_STATUSES = ['pending', 'sent', 'delivered', 'opened', 'viewed'];
+// Removed 'pending' - now includes 'draft' and 'stale' for full pre-signature coverage
+const ACTIONABLE_STATUSES = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'];
 
 /**
  * Hook to determine proposal status and user permissions

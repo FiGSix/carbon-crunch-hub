@@ -20,7 +20,9 @@ export function useDashboardData(): DashboardData {
   const helpers = useDashboardHelpers(fetchProposals);
 
   // Stable filter predicates
-  const isPending = useCallback((p: any) => p.status === 'pending', []);
+  // Removed 'pending' - now uses full unsigned status chain
+  const UNSIGNED_STATUSES = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'];
+  const isPending = useCallback((p: any) => UNSIGNED_STATUSES.includes(p.status), []);
   const isSigned = useCallback((p: any) => p.status === 'signed', []);
 
   // Calculate recent proposals (last 5)

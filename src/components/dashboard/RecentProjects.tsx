@@ -49,8 +49,8 @@ function RecentProjectsComponent({ proposals = [], loading = false, onRefresh }:
   const recentProjects = useMemo(() => proposals.length > 0 
     ? proposals.slice(0, 4) 
     : [
-        { id: "1", name: "Sunnydale Solar Farm", size: 4.2, client: "Cape Town Energy", date: "2024-01-15", status: "pending", revenue: 120000 },
-        { id: "2", name: "Greenfield Energy", size: 2.8, client: "Johannesburg Power", date: "2024-02-03", status: "pending", revenue: 85000 },
+        { id: "1", name: "Sunnydale Solar Farm", size: 4.2, client: "Cape Town Energy", date: "2024-01-15", status: "sent", revenue: 120000 },
+        { id: "2", name: "Greenfield Energy", size: 2.8, client: "Johannesburg Power", date: "2024-02-03", status: "delivered", revenue: 85000 },
         { id: "3", name: "Eastside Power Plant", size: 3.5, client: "Durban Utilities", date: "2024-03-10", status: "approved", revenue: 110000 },
         { id: "4", name: "Clearwater Solar", size: 2.0, client: "Pretoria Solar", date: "2024-03-22", status: "draft", revenue: 67000 },
       ], [proposals]);

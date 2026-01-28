@@ -372,7 +372,8 @@ serve(async (req) => {
         console.log('✅ Master agreement timestamp set on client');
       }
 
-      // 8. Auto-approve ALL other draft/pending/sent proposals for this client
+      // 8. Auto-approve ALL other draft/sent/delivered/opened/viewed proposals for this client
+      // Removed 'pending' - now includes all pre-signature statuses
       console.log('🔍 Auto-approving other proposals for this client...');
       
       const { data: otherProposals, error: batchUpdateError } = await supabase
@@ -383,7 +384,7 @@ serve(async (req) => {
         })
         .eq('client_reference_id', proposal.client_reference_id)
         .neq('id', proposal.id)  // Exclude current proposal
-        .in('status', ['draft', 'pending', 'sent'])
+        .in('status', ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'])
         .is('deleted_at', null)
         .is('archived_at', null)
         .select('id, title');

@@ -47,9 +47,10 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         return { success: false, error: proposalError.message };
       }
       
-      // Handle stale proposals - revive them by regenerating token and resetting to pending
+      // Handle stale proposals - revive them by regenerating token and resetting to draft
+      // When the email is sent, status will change to 'sent'
       if (proposalData.status === 'stale') {
-        logger.info(`Reviving stale proposal ${id} - generating new token and resetting to pending`);
+        logger.info(`Reviving stale proposal ${id} - generating new token and resetting to draft`);
         
         // Fetch validity period from system_settings
         const { data: timingData } = await supabase
@@ -71,11 +72,12 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
           return { success: false, error: tokenError.message };
         }
         
-        // Update the proposal with new token, expiration, and reset status to pending
+        // Update the proposal with new token, expiration, and reset status to draft
+        // The send-proposal-invitation edge function will change status to 'sent'
         const { error: updateError } = await supabase
           .from('proposals')
           .update({
-            status: 'pending',
+            status: 'draft',
             invitation_token: newToken,
             invitation_expires_at: expirationDate.toISOString(),
             invitation_viewed_at: null,
@@ -106,41 +108,15 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         logger.info(`Stale proposal revived with new token, status now: ${proposalData.status}`);
       }
       
-      // Auto-promote draft proposals to pending when sending first invitation
-      if (proposalData.status === 'draft') {
-        logger.info(`Auto-promoting proposal ${id} from draft to pending for first invitation send`);
-        
-        const { error: updateError } = await supabase
-          .from('proposals')
-          .update({ status: 'pending' })
-          .eq('id', id);
-        
-        if (updateError) {
-          const errorMsg = `Failed to update proposal status to pending: ${updateError.message}`;
-          logger.error(errorMsg);
-          return { success: false, error: errorMsg };
-        }
-        
-        // Refresh proposal data after status update
-        const { data: updatedProposalData, error: refetchError } = await supabase
-          .from('proposals')
-          .select('status, content, client_id, client_reference_id, invitation_token')
-          .eq('id', id)
-          .single();
-          
-        if (refetchError || !updatedProposalData) {
-          const errorMsg = `Failed to refetch proposal after status update: ${refetchError?.message}`;
-          logger.error(errorMsg);
-          return { success: false, error: errorMsg };
-        }
-        
-        proposalData = updatedProposalData;
-        logger.info(`Proposal status updated to: ${proposalData.status}`);
-      }
+      // Draft proposals are allowed - they stay as draft until email is successfully sent
+      // The send-proposal-invitation edge function will change status to 'sent'
+      // No longer auto-promoting to 'pending' - that status is removed
       
-      // Allow pending or sent proposals to send/resend (drafts and stale are already promoted above)
-      if (proposalData.status !== 'pending' && proposalData.status !== 'sent') {
-        const errorMsg = `Proposal must be in 'draft', 'pending', 'sent', or 'stale' status to send invitations. Current status: ${proposalData.status}`;
+      // Allow draft, sent, stale proposals to send/resend
+      // Removed 'pending' - proposals go draft → sent when email is dispatched
+      const allowedStatuses = ['draft', 'sent', 'stale', 'delivered', 'opened', 'viewed'];
+      if (!allowedStatuses.includes(proposalData.status)) {
+        const errorMsg = `Proposal must be in draft, sent, or stale status to send invitations. Current status: ${proposalData.status}`;
         logger.error(errorMsg);
         return { success: false, error: errorMsg };
       }

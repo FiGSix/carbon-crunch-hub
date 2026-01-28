@@ -30,7 +30,8 @@ export async function updateProposalStatus(
     statusLogger.info("Starting status update with audit trail");
 
     // Validate the new status
-    const validStatuses = ['draft', 'pending', 'approved', 'rejected'];
+    // Removed 'pending' - now includes full status lifecycle
+    const validStatuses = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale', 'approved', 'rejected', 'bounced', 'signed'];
     if (!validStatuses.includes(newStatus)) {
       statusLogger.error("Invalid status provided", { newStatus, validStatuses });
       return {

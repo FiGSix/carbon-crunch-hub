@@ -211,17 +211,20 @@ async function processStatusUpdate(
   // Status transition rules based on email events
   switch (eventType) {
     case 'email.delivered':
-      if (['sent', 'pending'].includes(proposal.status)) {
+      // Removed 'pending' - now uses draft/sent only for pre-delivery states
+      if (['sent', 'draft'].includes(proposal.status)) {
         newStatus = 'delivered';
       }
       break;
     case 'email.opened':
-      if (['sent', 'delivered', 'pending'].includes(proposal.status)) {
+      // Removed 'pending' - progression from draft/sent/delivered to opened
+      if (['sent', 'delivered', 'draft'].includes(proposal.status)) {
         newStatus = 'opened';
       }
       break;
     case 'email.clicked':
-      if (['sent', 'delivered', 'opened', 'pending'].includes(proposal.status)) {
+      // Removed 'pending' - full pre-view status chain
+      if (['sent', 'delivered', 'opened', 'draft'].includes(proposal.status)) {
         newStatus = 'viewed'; // Clicking email link = viewing proposal
       }
       break;

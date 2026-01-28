@@ -59,9 +59,14 @@ export function useViewProposalAuth(proposal: ProposalData | null, clientEmail: 
     }
   }, [proposal, authLogger]);
 
+  // All statuses where a client can take action (matches useProposalStatus)
+  // Removed 'pending' - now includes full pre-signature status chain
+  const ACTIONABLE_STATUSES = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'];
+  
   // Determine if we should show the sign-in prompt - token access but not logged in
   const showSignInPrompt = !user && token && clientEmail && 
-    proposal?.status === 'pending' && !proposal?.archived_at && !proposal?.review_later_until;
+    proposal?.status && ACTIONABLE_STATUSES.includes(proposal.status) && 
+    !proposal?.archived_at && !proposal?.review_later_until && !proposal?.signed_at;
 
   return {
     user,
