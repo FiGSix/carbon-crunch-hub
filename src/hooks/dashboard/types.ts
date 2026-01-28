@@ -66,6 +66,9 @@ export interface DashboardMetricsByStage {
   /** Card 4: Onboarding Projects - Total MWp (3 decimals) */
   onboardingMwp: number;
   
+  /** Card 4b: Onboarding Revenue (2025-2030) in Rands */
+  onboardingRevenue: number;
+  
   /** Card 5: Pending Approval - Total MWp (3 decimals) */
   pendingApprovalMwp: number;
   
