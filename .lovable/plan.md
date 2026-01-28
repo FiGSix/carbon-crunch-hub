@@ -1,41 +1,133 @@
 
-# Status Migration Fix - COMPLETED
 
-## Summary
+# 404 Page Design for Crunch Carbon
 
-All issues from the status migration have been fixed:
+## Overview
+Create a full-screen, retro arcade-inspired 404 error page that reinforces trust while maintaining playful confidence. Uses the uploaded pixel-art ghost image as a centered background element with Crunch Yellow (#FFCD03) background.
 
-| Issue | Status | Result |
-|-------|--------|--------|
-| Issue 1: Frontend hook data access | ✅ Fixed | Now correctly handles TABLE return |
-| Issue 2: Revenue calculation | ✅ Fixed | Using R891.71 tiered sum |
-| Issue 3: Onboarding MWp logic | ✅ Fixed | Using `onboarding_complete = false` |
-| Issue 4: Role-based revenue | ✅ Fixed | Admin/Agent/Client see correct shares |
-| Issue 5: Edge functions 'pending' | ✅ Fixed | Now use 'draft' |
-| Issue 7: ProposalInviteButton 'pending' | ✅ Fixed | References removed |
+---
 
-## Verified Results
+## Design Specifications
 
+### Color Palette
+| Element | Color |
+|---------|-------|
+| Background | Crunch Yellow #FFCD03 |
+| Text | Crunch Black #0B0B0B |
+| Button Primary | Crunch Black #0B0B0B |
+| Button Text | Crunch Yellow #FFCD03 |
+| Secondary Link | Crunch Black #0B0B0B (underlined) |
+
+### Typography
+- **Font**: Press Start 2P from Google Fonts (authentic pixel/arcade aesthetic) with Inter fallback
+- **Headline**: 48px (mobile) / 72px (desktop), bold, uppercase tracking
+- **Sub-headline**: 18px (mobile) / 24px (desktop)
+- **Body**: 14px (mobile) / 16px (desktop)
+
+### Layout Structure
+```text
++------------------------------------------+
+|                                          |
+|        [GENEROUS NEGATIVE SPACE]         |
+|                                          |
+|     404 - NOTHING TO CRUNCH HERE         |
+|                                          |
+|   Looks like this page couldn't be       |
+|   verified.                              |
+|                                          |
+|   This route didn't pass our grid        |
+|   audit. The credits you're looking      |
+|   for aren't here.                       |
+|                                          |
+|         [BACK TO HOME BUTTON]            |
+|                                          |
+|         Explore Carbon Credits           |
+|                                          |
+|     [PIXEL GHOST IMAGE - CENTERED]       |
+|                                          |
+|        [GENEROUS NEGATIVE SPACE]         |
+|                                          |
++------------------------------------------+
 ```
-Onboarding MWp: 67.69 (was 56.44 - FIXED)
-Audit Ready Revenue: R 5,297,736 (using R891.71 - FIXED)
-Audit Review Requests: 4
-Pending Approval MWp: 145.07
+
+---
+
+## Copy Hierarchy
+
+1. **Large Headline**: "404 - Nothing to crunch here"
+2. **Sub-headline**: "Looks like this page couldn't be verified."
+3. **Explanatory sentence**: "This route didn't pass our grid audit. The credits you're looking for aren't here."
+4. **Primary CTA**: "Back to Home"
+5. **Secondary link**: "Explore Carbon Credits"
+
+---
+
+## Technical Implementation
+
+### Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `src/assets/404-ghost.png` | Copy uploaded ghost image |
+| `src/pages/NotFound.tsx` | Complete rewrite with new design |
+
+### Component Structure
+
+```typescript
+// NotFound.tsx
+- Full viewport height (min-h-screen)
+- Crunch Yellow background (#FFCD03)
+- Flexbox centered layout
+- Ghost image positioned at bottom center
+- Responsive text sizing
+- No animations
 ```
 
-## Files Modified
+### Font Loading
+Add Press Start 2P font via Google Fonts for the arcade aesthetic:
+```html
+<!-- Add to index.html non-blocking font loader -->
+family=Press+Start+2P&display=swap
+```
 
-- `src/hooks/dashboard/useDashboardMetricsByStage.ts` - Fixed data access, added onboardingRevenue
-- `src/hooks/dashboard/types.ts` - Added onboardingRevenue field
-- `supabase/functions/create-legacy-project/index.ts` - Changed 'pending' to 'draft'
-- `supabase/functions/generate-proposal-pdf/index.ts` - Updated status checks
-- `src/components/proposals/components/ProposalInviteButton.tsx` - Removed 'pending' refs
+### Button Styling
+- Primary button: Black background, yellow text, bold weight
+- Rounded corners (rounded-xl)
+- Hover: Subtle scale or shadow increase
+- No complex animations
 
-## Database Migration Applied
+### Responsive Behavior
+| Breakpoint | Headline | Ghost Size |
+|------------|----------|------------|
+| Mobile (<768px) | 2rem | 200px width |
+| Tablet (768px+) | 3rem | 300px width |
+| Desktop (1024px+) | 4rem | 400px width |
 
-Restored `get_dashboard_metrics_by_stage` with:
-- TABLE return type (compatible with frontend)
-- R891.71 tiered 6-year pricing
-- `onboarding_complete = false` logic
-- Role-based revenue calculations
-- Added `onboarding_revenue` field
+---
+
+## Accessibility
+- High contrast (black on yellow = WCAG AA compliant)
+- Semantic HTML (h1, p, nav elements)
+- Focus-visible states maintained
+- Alt text for ghost image: "Pixel art ghost illustration"
+- Console error logging retained for debugging
+
+---
+
+## Files Changed Summary
+
+1. **Copy image to project**
+   - `user-uploads://Enhanced_Safety_Protection_1.png` to `src/assets/404-ghost.png`
+
+2. **Update font loading** (optional enhancement)
+   - `index.html` - add Press Start 2P to font loader
+
+3. **Rewrite 404 page**
+   - `src/pages/NotFound.tsx` - complete redesign with:
+     - Yellow background (#FFCD03)
+     - Black text (#0B0B0B)
+     - Retro typography
+     - Ghost image centered at bottom
+     - Generous whitespace
+     - Clear CTAs
+
