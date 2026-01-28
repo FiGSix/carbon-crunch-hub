@@ -41,19 +41,7 @@ const NotFound = () => {
             lineHeight: '1.6'
           }}
         >
-          Looks like this page couldn't be verified.
-        </p>
-
-        {/* Explanatory text */}
-        <p 
-          className="text-sm md:text-base max-w-md"
-          style={{ 
-            fontFamily: "Inter, system-ui, sans-serif",
-            color: '#0B0B0B',
-            lineHeight: '1.7'
-          }}
-        >
-          This route didn't pass our grid audit. The credits you're looking for aren't here.
+          The credits you're looking for aren't here, sadly.
         </p>
 
         {/* CTA Section */}
@@ -70,14 +58,6 @@ const NotFound = () => {
             <Link to="/">Back to Home</Link>
           </Button>
 
-          {/* Secondary link */}
-          <Link 
-            to="/carbon-credits"
-            className="text-sm md:text-base font-medium underline underline-offset-4 hover:opacity-80 transition-opacity"
-            style={{ color: '#0B0B0B' }}
-          >
-            Explore Carbon Credits
-          </Link>
         </div>
       </div>
 
