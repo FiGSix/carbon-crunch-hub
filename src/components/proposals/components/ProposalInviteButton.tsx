@@ -105,8 +105,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     }
   };
   
-  // For draft proposals or pending proposals that haven't been sent yet
-  if ((proposal.status === "draft" || proposal.status === "pending") && !proposal.invitation_sent_at) {
+  // For draft proposals that haven't been sent yet (pending was removed from status lifecycle)
+  if (proposal.status === "draft" && !proposal.invitation_sent_at) {
     return (
       <Button
         variant="outline"
@@ -128,8 +128,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     );
   }
   
-  // For pending/sent proposals that have been sent but not viewed
-  if ((proposal.status === "pending" || proposal.status === "sent") && proposal.invitation_sent_at && !proposal.invitation_viewed_at) {
+  // For sent/delivered/opened proposals that have been sent but not viewed
+  if ((proposal.status === "sent" || proposal.status === "delivered" || proposal.status === "opened") && proposal.invitation_sent_at && !proposal.invitation_viewed_at) {
     return (
       <Button
         variant="outline"
@@ -151,8 +151,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     );
   }
   
-  // For pending/sent proposals that have been viewed, allow resending
-  if ((proposal.status === "pending" || proposal.status === "sent") && proposal.invitation_viewed_at) {
+  // For proposals that have been viewed, allow resending
+  if ((proposal.status === "sent" || proposal.status === "viewed") && proposal.invitation_viewed_at) {
     return (
       <Button
         variant="outline"

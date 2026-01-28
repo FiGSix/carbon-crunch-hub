@@ -1524,19 +1524,19 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   drawHeading(page4, 'Acceptance', p4x, y);
   y -= mm(12);
   
-  // Digital Signature Section - for pending and draft proposals
+  // Digital Signature Section - for unsigned proposals (draft, sent, delivered, opened, viewed, stale)
+  const unsignedStatuses = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'];
+  const isUnsigned = unsignedStatuses.includes(proposal.status);
   console.log('[PDF] Signature section check:', {
     status: proposal.status,
     hasInvitationToken: !!proposal.invitation_token,
     tokenLength: proposal.invitation_token?.length || 0,
     hasExpiresAt: !!proposal.invitation_expires_at,
     expiresAt: proposal.invitation_expires_at,
-    willShowSignature: (proposal.status === 'pending' || proposal.status === 'draft') && 
-                       !!proposal.invitation_token && 
-                       !!proposal.invitation_expires_at
+    willShowSignature: isUnsigned && !!proposal.invitation_token && !!proposal.invitation_expires_at
   });
   
-  if ((proposal.status === 'pending' || proposal.status === 'draft') && proposal.invitation_token && proposal.invitation_expires_at) {
+  if (isUnsigned && proposal.invitation_token && proposal.invitation_expires_at) {
     y -= mm(2);
     
     const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';

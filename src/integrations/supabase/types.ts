@@ -2400,7 +2400,15 @@ export type Database = {
       get_current_user_role: { Args: never; Returns: string }
       get_dashboard_metrics_by_stage: {
         Args: { p_user_id?: string; p_user_role?: string }
-        Returns: Json
+        Returns: {
+          audit_ready_mwp: number
+          audit_ready_revenue: number
+          audit_review_requests: number
+          onboarding_mwp: number
+          onboarding_revenue: number
+          pending_approval_mwp: number
+          pending_approval_revenue: number
+        }[]
       }
       get_dashboard_stats_optimized: {
         Args: { user_id_param: string; user_role_param: string }

@@ -108,18 +108,18 @@ Deno.serve(async (req) => {
       title: body.project_title,
       agent_id: agentId,
       client_reference_id: clientId,
-      status: 'pending',
+      status: 'draft',
       system_size_kwp: body.system_size_kwp,
     });
 
-    // Create proposal
+    // Create proposal - use 'draft' as initial status (pending was removed from status lifecycle)
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
       .insert({
         title: body.project_title,
         agent_id: agentId,
         client_reference_id: clientId,
-        status: 'pending',
+        status: 'draft',
         signed_at: body.signed_date,
         system_size_kwp: body.system_size_kwp,
         annual_energy: annualEnergyKwh,
