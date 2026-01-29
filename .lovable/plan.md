@@ -1,77 +1,58 @@
 
 
-# Add Battery Toggle to Onboarding Form
+# Update Invoice Labels in Project Documentation
 
 ## Summary
-Add a "Do you have a battery?" Yes/No toggle to the Battery Details section, similar to the existing Operations & Maintenance section. When "No" is selected, the additional battery fields are hidden.
+Update the invoice upload labels in the Project Documentation section to provide clearer descriptions for each document type.
 
 ---
 
-## Current State
-- **O&M Section:** Has `has_maintenance_agreement` boolean field that conditionally shows term/cost/document fields
-- **Battery Section:** Always shows all fields with "(if you have a battery)" hint in the title
+## Current Labels
+| Position | Current Label |
+|----------|---------------|
+| Invoice 1 | "Invoice 1" |
+| Invoice 2 | "Invoice 2" |
+| Invoice 3 | "Invoice 3" |
+| Invoice 4 | "Invoice 4" |
+
+## New Labels
+| Position | New Label |
+|----------|-----------|
+| Invoice 1 | "Final Invoice (Total Installed Cost)" |
+| Invoice 2 | "Other Project Costs (Any additional invoices or costs spent on project)" |
+| Invoice 3 | "Other Project Costs (Any additional invoices or costs spent on project)" |
+| Invoice 4 | "Proof of Insurance (If you are spending on insurance)" |
 
 ---
 
-## Solution
-
-### 1. Database Migration
-Add a new nullable boolean column to `onboarding_fields`:
-
-```sql
-ALTER TABLE onboarding_fields 
-ADD COLUMN has_battery boolean DEFAULT NULL;
-```
-
-### 2. UI Changes (OnboardingTab.tsx)
-
-Update the Battery Details card to:
-- Add a Yes/No Select dropdown: "Do you have a battery?"
-- Conditionally render battery fields only when `has_battery === true`
-- Update the section status icon logic (similar to O&M pattern)
-
-**New UI Pattern:**
-```text
-┌─────────────────────────────────────────────────┐
-│ Battery Details                           [●]   │
-├─────────────────────────────────────────────────┤
-│ Do you have a battery?                          │
-│ ┌─────────────────────────┐                     │
-│ │ Select...           ▼   │                     │
-│ └─────────────────────────┘                     │
-│                                                 │
-│ [If "Yes" selected, show:]                      │
-│   • Battery Brand                               │
-│   • Total Battery Capacity (kWh)                │
-│   • Total Cost Installed (Rands)                │
-└─────────────────────────────────────────────────┘
-```
-
-### 3. Status Icon Logic
-
-| State | Icon |
-|-------|------|
-| `has_battery` is null/undefined | Orange (incomplete) |
-| `has_battery === false` | Green (complete - no battery needed) |
-| `has_battery === true` and all fields filled | Green (complete) |
-| `has_battery === true` and fields missing | Orange (incomplete) |
-
----
-
-## Files to Modify
+## File to Modify
 
 | File | Changes |
 |------|---------|
-| Database migration | Add `has_battery` boolean column |
-| `src/types/onboarding.ts` | Add `has_battery: boolean \| null` to OnboardingFields interface |
-| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Update Battery Details card with conditional rendering |
+| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Update 4 label props on lines 1181, 1189, 1197, 1205 |
 
 ---
 
-## Expected Behavior
+## Technical Details
 
-1. **New projects:** User must select Yes/No before section is considered complete
-2. **Existing projects (null value):** Section shows as incomplete until user makes a selection
-3. **"No" selected:** Section immediately shows as complete (green checkmark)
-4. **"Yes" selected:** Must fill in battery brand, capacity, and cost for completion
+Simple text updates to the `label` prop of four `OnboardingFileUpload` components:
+
+```tsx
+// Line 1181: Invoice 1 → Final Invoice
+label="Final Invoice (Total Installed Cost)"
+
+// Line 1189: Invoice 2 → Other Costs
+label="Other Project Costs (Any additional invoices or costs spent on project)"
+
+// Line 1197: Invoice 3 → Other Costs
+label="Other Project Costs (Any additional invoices or costs spent on project)"
+
+// Line 1205: Invoice 4 → Insurance
+label="Proof of Insurance (If you are spending on insurance)"
+```
+
+---
+
+## No Database Changes Required
+These are UI-only label updates. The document category remains `"invoice"` for all, so existing uploaded documents will continue to work correctly.
 
