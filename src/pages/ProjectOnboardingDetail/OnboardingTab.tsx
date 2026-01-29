@@ -1178,7 +1178,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             category="invoice"
             documents={documents}
             onUploadComplete={fetchDocuments}
-            label="Invoice 1"
+            label="Final Invoice (Total Installed Cost)"
           />
 
           <OnboardingFileUpload
@@ -1186,7 +1186,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             category="invoice"
             documents={documents}
             onUploadComplete={fetchDocuments}
-            label="Invoice 2"
+            label="Other Project Costs (Any additional invoices or costs spent on project)"
           />
 
           <OnboardingFileUpload
@@ -1194,7 +1194,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             category="invoice"
             documents={documents}
             onUploadComplete={fetchDocuments}
-            label="Invoice 3"
+            label="Other Project Costs (Any additional invoices or costs spent on project)"
           />
 
           <OnboardingFileUpload
@@ -1202,7 +1202,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             category="invoice"
             documents={documents}
             onUploadComplete={fetchDocuments}
-            label="Invoice 4"
+            label="Proof of Insurance (If you are spending on insurance)"
           />
         </CardContent>
       </Card>
