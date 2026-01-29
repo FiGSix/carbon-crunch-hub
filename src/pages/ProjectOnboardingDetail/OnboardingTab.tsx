@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/auth";
 import { getAllAdminUserIds } from "@/services/adminService";
 import { createNotification } from "@/services/notificationService";
 import { logger } from "@/lib/logger";
+import { InverterDetailsRow, type InverterDetail } from "@/components/onboarding/InverterDetailsRow";
 
 interface SolarInstaller {
   id: string;
@@ -39,7 +40,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const [installers, setInstallers] = useState<SolarInstaller[]>([]);
   const [loadingInstallers, setLoadingInstallers] = useState(false);
   const [isPanelTotalManuallyOverridden, setIsPanelTotalManuallyOverridden] = useState(false);
-  const [inverterSerials, setInverterSerials] = useState<string[]>([]);
+  const [inverterDetails, setInverterDetails] = useState<InverterDetail[]>([]);
 
   useEffect(() => {
     fetchDocuments();
@@ -76,27 +77,57 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     }
   }, [formData.panel_size_wp, formData.panel_quantity, isPanelTotalManuallyOverridden]);
 
-  // Initialize and manage inverter serial numbers based on quantity
+  // Initialize and manage inverter details based on quantity
   useEffect(() => {
     const quantity = formData.inverter_quantity || 1;
     
-    // Parse existing serial(s)
-    let existingSerials: string[] = [];
+    // Parse existing data - check for new JSON array format first
+    let existingDetails: InverterDetail[] = [];
+    
     if (formData.inverter_serial) {
       try {
-        // Try parsing as JSON array
         const parsed = JSON.parse(formData.inverter_serial as string);
-        existingSerials = Array.isArray(parsed) ? parsed : [formData.inverter_serial as string];
+        
+        // Check if it's the new format (array of objects with brand/model/etc.)
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'brand' in parsed[0]) {
+          existingDetails = parsed as InverterDetail[];
+        } else if (Array.isArray(parsed)) {
+          // Old format: array of serial strings - migrate to new format
+          existingDetails = parsed.map((serial: string) => ({
+            brand: formData.inverter_brand || '',
+            model: formData.inverter_model || '',
+            capacity_kw: formData.inverter_capacity_kw || null,
+            serial: serial || ''
+          }));
+        }
       } catch {
-        // If not JSON, treat as single serial
-        existingSerials = [formData.inverter_serial as string];
+        // If not JSON, treat as single serial - migrate to new format
+        existingDetails = [{
+          brand: formData.inverter_brand || '',
+          model: formData.inverter_model || '',
+          capacity_kw: formData.inverter_capacity_kw || null,
+          serial: formData.inverter_serial as string || ''
+        }];
       }
     }
     
+    // If no existing details but we have legacy single-value fields, use them
+    if (existingDetails.length === 0 && (formData.inverter_brand || formData.inverter_model)) {
+      existingDetails = [{
+        brand: formData.inverter_brand || '',
+        model: formData.inverter_model || '',
+        capacity_kw: formData.inverter_capacity_kw || null,
+        serial: ''
+      }];
+    }
+    
     // Adjust array size to match quantity
-    const newSerials = Array(quantity).fill('').map((_, i) => existingSerials[i] || '');
-    setInverterSerials(newSerials);
-  }, [formData.inverter_quantity, formData.inverter_serial]);
+    const newDetails: InverterDetail[] = Array(quantity).fill(null).map((_, i) => 
+      existingDetails[i] || { brand: '', model: '', capacity_kw: null, serial: '' }
+    );
+    
+    setInverterDetails(newDetails);
+  }, [formData.inverter_quantity]);
 
   const fetchDocuments = async () => {
     setLoadingDocs(true);
@@ -201,18 +232,18 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSerialChange = (index: number, value: string) => {
-    const newSerials = [...inverterSerials];
-    newSerials[index] = value;
-    setInverterSerials(newSerials);
-    
-    // Store as JSON array if multiple, single string if one
-    const serialValue = newSerials.length === 1 
-      ? newSerials[0] 
-      : JSON.stringify(newSerials);
-    
-    handleInputChange('inverter_serial', serialValue);
-  };
+  const handleInverterDetailChange = useCallback((index: number, field: keyof InverterDetail, value: string | number | null) => {
+    setInverterDetails(prev => {
+      const newDetails = [...prev];
+      newDetails[index] = { ...newDetails[index], [field]: value };
+      
+      // Update formData with serialized inverter details
+      const serializedDetails = JSON.stringify(newDetails);
+      setFormData(prevForm => ({ ...prevForm, inverter_serial: serializedDetails }));
+      
+      return newDetails;
+    });
+  }, []);
 
   const handleSaveDraft = async () => {
     try {
@@ -424,24 +455,15 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   };
 
   const getSectionStatus = (fields: string[]) => {
-    // Special handling for inverter_serial validation
+    // Special handling for inverter_serial validation (now stored as JSON array of objects)
     if (fields.includes('inverter_serial')) {
-      const otherFields = fields.filter(f => f !== 'inverter_serial');
-      const otherFieldsFilled = otherFields.every(field => formData[field as keyof OnboardingFields]);
+      // For inverters, we check the inverterDetails state directly
+      // Each inverter should have brand, model, capacity_kw and serial filled
+      const hasValidInverters = inverterDetails.length > 0 && inverterDetails.every(inv => 
+        inv.brand && inv.model && inv.capacity_kw !== null && inv.serial?.trim()
+      );
       
-      // Check serial numbers
-      let hasAllSerials = false;
-      if (formData.inverter_serial) {
-        try {
-          const parsed = JSON.parse(formData.inverter_serial as string);
-          const serials = Array.isArray(parsed) ? parsed : [formData.inverter_serial as string];
-          hasAllSerials = serials.every(s => s && s.trim().length > 0);
-        } catch {
-          hasAllSerials = (formData.inverter_serial as string).trim().length > 0;
-        }
-      }
-      
-      return otherFieldsFilled && hasAllSerials;
+      return hasValidInverters;
     }
     
     const allFilled = fields.every(field => formData[field as keyof OnboardingFields]);
@@ -737,7 +759,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               <CardTitle>Inverter Details</CardTitle>
               <CardDescription>Information about the inverter installation</CardDescription>
             </div>
-            {getSectionStatus(['inverter_model', 'inverter_serial']) ? (
+            {getSectionStatus(['inverter_serial']) ? (
               <CheckCircle2 className="h-5 w-5 text-green-600" />
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-600" />
@@ -745,102 +767,44 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="inverter_brand">Inverter Brand</Label>
-              <Select
-                value={formData.inverter_brand || ''}
-                onValueChange={(value) => handleInputChange('inverter_brand', value)}
-              >
-                <SelectTrigger id="inverter_brand">
-                  <SelectValue placeholder="Select brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ABB">ABB</SelectItem>
-                  <SelectItem value="Afore">Afore</SelectItem>
-                  <SelectItem value="Alpha ESS">Alpha ESS</SelectItem>
-                  <SelectItem value="Ario">Ario</SelectItem>
-                  <SelectItem value="Atess">Atess</SelectItem>
-                  <SelectItem value="Deye">Deye</SelectItem>
-                  <SelectItem value="Dyness">Dyness</SelectItem>
-                  <SelectItem value="Enphase">Enphase</SelectItem>
-                  <SelectItem value="FoxESS">FoxESS</SelectItem>
-                  <SelectItem value="Fronius">Fronius</SelectItem>
-                  <SelectItem value="GivEnergy">GivEnergy</SelectItem>
-                  <SelectItem value="GoodWe">GoodWe</SelectItem>
-                  <SelectItem value="Growatt">Growatt</SelectItem>
-                  <SelectItem value="Huawei">Huawei</SelectItem>
-                  <SelectItem value="Lux">Lux</SelectItem>
-                  <SelectItem value="Megarevo">Megarevo</SelectItem>
-                  <SelectItem value="SigEnergy">SigEnergy</SelectItem>
-                  <SelectItem value="Sineng">Sineng</SelectItem>
-                  <SelectItem value="SMA">SMA</SelectItem>
-                  <SelectItem value="Solis">Solis</SelectItem>
-                  <SelectItem value="SolarEdge">SolarEdge</SelectItem>
-                  <SelectItem value="Sungrow">Sungrow</SelectItem>
-                  <SelectItem value="SunSynk">SunSynk</SelectItem>
-                  <SelectItem value="Victron">Victron</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="inverter_model">Model</Label>
-              <Input
-                id="inverter_model"
-                value={formData.inverter_model || ''}
-                onChange={(e) => handleInputChange('inverter_model', e.target.value)}
-                placeholder="SolarEdge SE100K"
-              />
-            </div>
-
+          {/* Number of Inverters */}
+          <div className="max-w-xs">
             <div className="space-y-2">
               <Label htmlFor="inverter_quantity">Number of Inverters</Label>
               <Input
                 id="inverter_quantity"
                 type="number"
+                min="1"
+                max="20"
                 value={formData.inverter_quantity || ''}
-                onChange={(e) => handleInputChange('inverter_quantity', parseInt(e.target.value))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val) && val >= 1 && val <= 20) {
+                    handleInputChange('inverter_quantity', val);
+                  } else if (e.target.value === '') {
+                    handleInputChange('inverter_quantity', 1);
+                  }
+                }}
                 placeholder="1"
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="inverter_capacity_kw">Capacity (kW)</Label>
-              <Input
-                id="inverter_capacity_kw"
-                type="number"
-                step="0.01"
-                value={formData.inverter_capacity_kw || ''}
-                onChange={(e) => handleInputChange('inverter_capacity_kw', parseFloat(e.target.value))}
-                placeholder="100"
+          {/* Dynamic Inverter Rows */}
+          <div className="space-y-3">
+            {inverterDetails.map((inverter, index) => (
+              <InverterDetailsRow
+                key={index}
+                index={index}
+                inverter={inverter}
+                onChange={handleInverterDetailChange}
+                showLabels={index === 0}
               />
-            </div>
+            ))}
+          </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label>
-                Serial Number{(formData.inverter_quantity || 1) > 1 ? 's' : ''}
-              </Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {inverterSerials.map((serial, index) => (
-                  <div key={index} className="space-y-1">
-                    {inverterSerials.length > 1 && (
-                      <Label htmlFor={`inverter_serial_${index}`} className="text-xs text-muted-foreground">
-                        Inverter {index + 1}
-                      </Label>
-                    )}
-                    <Input
-                      id={`inverter_serial_${index}`}
-                      value={serial}
-                      onChange={(e) => handleSerialChange(index, e.target.value)}
-                      placeholder={`Serial ${inverterSerials.length > 1 ? index + 1 : ''}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
+          {/* Remaining fields in grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
             <div className="space-y-2">
               <Label htmlFor="inverter_cost">Total Cost Installed incl. VAT & Labour for Inverter(s) (Rands)</Label>
               <Input
