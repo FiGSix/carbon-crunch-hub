@@ -901,69 +901,109 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Battery Details (if you have a battery)</CardTitle>
+              <CardTitle>Battery Details</CardTitle>
               <CardDescription>Information about battery storage if installed</CardDescription>
             </div>
-            {formData.battery_brand ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-muted-foreground" />
-            )}
+            {(() => {
+              if (formData.has_battery === null || formData.has_battery === undefined) {
+                return <AlertCircle className="h-5 w-5 text-orange-600" />;
+              } else if (formData.has_battery === false) {
+                return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+              } else {
+                const hasRequiredFields = !!(
+                  formData.battery_brand &&
+                  formData.battery_capacity_kwh &&
+                  formData.battery_cost
+                );
+                return hasRequiredFields ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                );
+              }
+            })()}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="battery_brand">Battery Brand</Label>
-              <Select
-                value={formData.battery_brand || ''}
-                onValueChange={(value) => handleInputChange('battery_brand', value)}
-              >
-                <SelectTrigger id="battery_brand">
-                  <SelectValue placeholder="Select brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Alpha-ESS">Alpha-ESS</SelectItem>
-                  <SelectItem value="Dyness">Dyness</SelectItem>
-                  <SelectItem value="Fox ESS">Fox ESS</SelectItem>
-                  <SelectItem value="Freedom Won">Freedom Won</SelectItem>
-                  <SelectItem value="Greenrich">Greenrich</SelectItem>
-                  <SelectItem value="Hubble Energy">Hubble Energy</SelectItem>
-                  <SelectItem value="i-G3N">i-G3N</SelectItem>
-                  <SelectItem value="Pylontech">Pylontech</SelectItem>
-                  <SelectItem value="Revov">Revov</SelectItem>
-                  <SelectItem value="Solar MD">Solar MD</SelectItem>
-                  <SelectItem value="Sunsynk">Sunsynk</SelectItem>
-                  <SelectItem value="Volta">Volta</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_capacity_kwh">Total Battery Capacity (kWh)</Label>
-              <Input
-                id="battery_capacity_kwh"
-                type="number"
-                step="0.01"
-                value={formData.battery_capacity_kwh || ''}
-                onChange={(e) => handleInputChange('battery_capacity_kwh', parseFloat(e.target.value))}
-                placeholder="13.5"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="battery_cost">Total Cost Installed incl. VAT & Labour for Batteries (Rands)</Label>
-              <Input
-                id="battery_cost"
-                type="number"
-                step="0.01"
-                value={formData.battery_cost || ''}
-                onChange={(e) => handleInputChange('battery_cost', parseFloat(e.target.value))}
-                placeholder="80000"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="has_battery">Do you have a battery?</Label>
+            <Select
+              value={formData.has_battery === null || formData.has_battery === undefined ? '' : String(formData.has_battery)}
+              onValueChange={(value) => handleInputChange('has_battery', value === 'true')}
+            >
+              <SelectTrigger id="has_battery">
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {formData.has_battery === true && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="battery_brand">
+                  Battery Brand
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Select
+                  value={formData.battery_brand || ''}
+                  onValueChange={(value) => handleInputChange('battery_brand', value)}
+                >
+                  <SelectTrigger id="battery_brand">
+                    <SelectValue placeholder="Select brand" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="Alpha-ESS">Alpha-ESS</SelectItem>
+                    <SelectItem value="Dyness">Dyness</SelectItem>
+                    <SelectItem value="Fox ESS">Fox ESS</SelectItem>
+                    <SelectItem value="Freedom Won">Freedom Won</SelectItem>
+                    <SelectItem value="Greenrich">Greenrich</SelectItem>
+                    <SelectItem value="Hubble Energy">Hubble Energy</SelectItem>
+                    <SelectItem value="i-G3N">i-G3N</SelectItem>
+                    <SelectItem value="Pylontech">Pylontech</SelectItem>
+                    <SelectItem value="Revov">Revov</SelectItem>
+                    <SelectItem value="Solar MD">Solar MD</SelectItem>
+                    <SelectItem value="Sunsynk">Sunsynk</SelectItem>
+                    <SelectItem value="Volta">Volta</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="battery_capacity_kwh">
+                  Total Battery Capacity (kWh)
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Input
+                  id="battery_capacity_kwh"
+                  type="number"
+                  step="0.01"
+                  value={formData.battery_capacity_kwh || ''}
+                  onChange={(e) => handleInputChange('battery_capacity_kwh', parseFloat(e.target.value))}
+                  placeholder="13.5"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="battery_cost">
+                  Total Cost Installed incl. VAT & Labour for Batteries (Rands)
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Input
+                  id="battery_cost"
+                  type="number"
+                  step="0.01"
+                  value={formData.battery_cost || ''}
+                  onChange={(e) => handleInputChange('battery_cost', parseFloat(e.target.value))}
+                  placeholder="80000"
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
