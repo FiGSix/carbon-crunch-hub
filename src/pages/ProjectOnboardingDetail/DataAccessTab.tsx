@@ -354,6 +354,7 @@ useEffect(() => {
                 <SelectItem value="Megarevo">Megarevo</SelectItem>
                 <SelectItem value="Meteo Control">Meteo Control</SelectItem>
                 <SelectItem value="SigEnergy">SigEnergy</SelectItem>
+                <SelectItem value="Sineng">Sineng</SelectItem>
                 <SelectItem value="Sivula">Sivula</SelectItem>
                 <SelectItem value="SMA">SMA</SelectItem>
                 <SelectItem value="Solis">Solis</SelectItem>
