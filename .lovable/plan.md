@@ -1,52 +1,44 @@
 
-
-# Add Sineng to Inverter Brand Dropdowns
+# Remove "First Yr Est. Revenue" Column from Proposal Management
 
 ## Summary
-Add "Sineng" as a new inverter brand option to both dropdown menus in the onboarding section. Note that "Ario" is already present in both dropdowns.
+Remove the "First Yr Est. Revenue" column from the Proposal Management table for all users, as it's not providing meaningful value.
 
 ---
 
 ## Current State
+The table currently displays this column for all users (admin, agent, client) showing a calculated revenue estimate based on carbon credits.
 
-| Dropdown Location | Ario | Sineng |
-|-------------------|------|--------|
-| Inverter Details (OnboardingTab.tsx) | Present | Missing |
-| Data Access Provider (DataAccessTab.tsx) | Present | Missing |
+| Project Name | Client | Date | Size | Status | Agent* | Client Share* | **First Yr Est. Revenue** | Actions |
+|--------------|--------|------|------|--------|--------|---------------|---------------------------|---------|
+
+*Admin-only columns
 
 ---
 
 ## Changes Required
 
-### 1. OnboardingTab.tsx - Inverter Brand Dropdown
-Add "Sineng" in alphabetical order between "SigEnergy" and "SMA" (around line 776):
+### File: `src/components/proposals/ProposalList.tsx`
 
-```tsx
-<SelectItem value="SigEnergy">SigEnergy</SelectItem>
-<SelectItem value="Sineng">Sineng</SelectItem>  // NEW
-<SelectItem value="SMA">SMA</SelectItem>
-```
-
-### 2. DataAccessTab.tsx - Data Access Provider Dropdown
-Add "Sineng" in alphabetical order between "SigEnergy" and "Sivula" (around line 357):
-
-```tsx
-<SelectItem value="SigEnergy">SigEnergy</SelectItem>
-<SelectItem value="Sineng">Sineng</SelectItem>  // NEW
-<SelectItem value="Sivula">Sivula</SelectItem>
-```
+| Location | What to Remove |
+|----------|----------------|
+| Lines 42-45 | Remove `formattedRevenue` useMemo hook (no longer needed) |
+| Line 127 | Remove `<TableCell className="text-center">{formattedRevenue}</TableCell>` |
+| Line 141 | Remove `prevProps.proposal.revenue === nextProps.proposal.revenue` from memo comparison |
+| Line 220 | Remove `<TableHead className="text-center">First Yr Est. Revenue</TableHead>` |
 
 ---
 
-## Files to Modify
+## Result
 
-| File | Change |
-|------|--------|
-| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Add Sineng after SigEnergy (line 776) |
-| `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx` | Add Sineng after SigEnergy (line 357) |
+After removal, the table will have these columns:
+
+| Project Name | Client | Date | Size | Status | Agent* | Client Share* | Actions |
+|--------------|--------|------|------|--------|--------|---------------|---------|
+
+*Admin-only columns
 
 ---
 
 ## No Database Changes Required
-This is a UI-only update to add a new option to existing dropdown menus.
-
+This is a UI-only change. The `revenue` field still exists in the data model but simply won't be displayed in this table.
