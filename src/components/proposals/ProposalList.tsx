@@ -39,11 +39,6 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
     [proposal.size]
   );
   
-  const formattedRevenue = useMemo(
-    () => `R ${proposal.revenue.toLocaleString()}`,
-    [proposal.revenue]
-  );
-
   return (
     <TableRow className={isCurrentUser ? "bg-carbon-green-50" : ""}>
       <TableCell className="font-medium">{proposal.name}</TableCell>
@@ -124,7 +119,6 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
           <ClientShareCell proposal={proposal} />
         </TableCell>
       )}
-      <TableCell className="text-center">{formattedRevenue}</TableCell>
       <TableCell className="text-right">
         <ProposalActionButtons 
           proposal={proposal} 
@@ -138,7 +132,6 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
   return (
     prevProps.proposal.id === nextProps.proposal.id &&
     prevProps.proposal.status === nextProps.proposal.status &&
-    prevProps.proposal.revenue === nextProps.proposal.revenue &&
     prevProps.proposal.last_email_event_type === nextProps.proposal.last_email_event_type &&
     prevProps.proposal.engagement_count === nextProps.proposal.engagement_count &&
     prevProps.userRole === nextProps.userRole &&
@@ -217,7 +210,6 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
             {userRole === "admin" && <TableHead>Client Share</TableHead>}
-            <TableHead className="text-center">First Yr Est. Revenue</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
