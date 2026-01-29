@@ -17,6 +17,64 @@ interface BulkMoveResult {
   results: Array<{ proposalId: string; title: string; status: string }>;
 }
 
+// Helper function to get agent installer info
+async function getAgentInstallerInfo(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  agentId: string | null
+): Promise<{ installerCompanyName: string; installerEmail: string }> {
+  const defaultValue = { installerCompanyName: 'To be confirmed', installerEmail: 'To be confirmed' };
+  
+  if (!agentId) {
+    return defaultValue;
+  }
+
+  try {
+    // Get company name from companies table via company_members (priority)
+    const { data: companyData } = await supabaseAdmin
+      .from('company_members')
+      .select('companies(company_name)')
+      .eq('user_id', agentId)
+      .eq('status', 'active')
+      .limit(1)
+      .single();
+
+    let companyName = (companyData?.companies as { company_name: string } | null)?.company_name;
+
+    // Fallback to profile company_name if no team membership
+    if (!companyName) {
+      const { data: profileData } = await supabaseAdmin
+        .from('profiles')
+        .select('company_name')
+        .eq('id', agentId)
+        .single();
+      
+      companyName = profileData?.company_name;
+    }
+
+    // Get agent email
+    const { data: emailData } = await supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('id', agentId)
+      .single();
+
+    const agentEmail = emailData?.email;
+
+    // Check if Crunch Carbon - default to "To be confirmed"
+    if (!companyName || companyName.toLowerCase().includes('crunch carbon')) {
+      return defaultValue;
+    }
+
+    return {
+      installerCompanyName: companyName || 'To be confirmed',
+      installerEmail: agentEmail || 'To be confirmed'
+    };
+  } catch (error) {
+    console.error('Error fetching agent installer info:', error);
+    return defaultValue;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -95,7 +153,7 @@ Deno.serve(async (req) => {
         // Get proposal details first
         const { data: proposal, error: fetchError } = await supabaseAdmin
           .from('proposals')
-          .select('id, title, status, deleted_at, archived_at')
+          .select('id, title, status, deleted_at, archived_at, agent_id')
           .eq('id', proposalId)
           .single();
 
@@ -106,6 +164,10 @@ Deno.serve(async (req) => {
         if (proposal.deleted_at || proposal.archived_at) {
           throw new Error('Cannot move deleted or archived proposal');
         }
+
+        // Get agent installer info
+        const installerInfo = await getAgentInstallerInfo(supabaseAdmin, proposal.agent_id);
+        console.log(`Agent installer info for proposal ${proposalId}:`, installerInfo);
 
         // Update proposal status and set signed_at
         const { error: updateError } = await supabaseAdmin
@@ -122,7 +184,7 @@ Deno.serve(async (req) => {
         }
 
         // Create or update project_onboarding record
-        const { error: onboardingError } = await supabaseAdmin
+        const { data: onboardingRecord, error: onboardingError } = await supabaseAdmin
           .from('project_onboarding')
           .upsert({
             proposal_id: proposalId,
@@ -133,10 +195,42 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'proposal_id'
-          });
+          })
+          .select('id')
+          .single();
 
         if (onboardingError) {
           throw new Error(`Failed to create onboarding record: ${onboardingError.message}`);
+        }
+
+        // Get the project_id for onboarding_fields
+        let projectId = onboardingRecord?.id;
+        if (!projectId) {
+          const { data: existingOnboarding } = await supabaseAdmin
+            .from('project_onboarding')
+            .select('id')
+            .eq('proposal_id', proposalId)
+            .single();
+          projectId = existingOnboarding?.id;
+        }
+
+        // Create or update onboarding_fields with installer info
+        if (projectId) {
+          const { error: fieldsError } = await supabaseAdmin
+            .from('onboarding_fields')
+            .upsert({
+              project_id: projectId,
+              installer_company_name: installerInfo.installerCompanyName,
+              installer_email: installerInfo.installerEmail,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'project_id'
+            });
+
+          if (fieldsError) {
+            console.error(`Failed to update onboarding_fields for project ${projectId}:`, fieldsError);
+            // Don't fail the entire operation, just log the error
+          }
         }
 
         // Log the automation action
@@ -152,6 +246,8 @@ Deno.serve(async (req) => {
             details: {
               action: 'bulk_move_to_onboarding',
               performed_by: user.id,
+              installer_company_name: installerInfo.installerCompanyName,
+              installer_email: installerInfo.installerEmail,
               timestamp: new Date().toISOString()
             }
           });
