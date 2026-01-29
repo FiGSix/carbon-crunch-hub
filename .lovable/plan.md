@@ -1,58 +1,52 @@
 
 
-# Update Invoice Labels in Project Documentation
+# Add Sineng to Inverter Brand Dropdowns
 
 ## Summary
-Update the invoice upload labels in the Project Documentation section to provide clearer descriptions for each document type.
+Add "Sineng" as a new inverter brand option to both dropdown menus in the onboarding section. Note that "Ario" is already present in both dropdowns.
 
 ---
 
-## Current Labels
-| Position | Current Label |
-|----------|---------------|
-| Invoice 1 | "Invoice 1" |
-| Invoice 2 | "Invoice 2" |
-| Invoice 3 | "Invoice 3" |
-| Invoice 4 | "Invoice 4" |
+## Current State
 
-## New Labels
-| Position | New Label |
-|----------|-----------|
-| Invoice 1 | "Final Invoice (Total Installed Cost)" |
-| Invoice 2 | "Other Project Costs (Any additional invoices or costs spent on project)" |
-| Invoice 3 | "Other Project Costs (Any additional invoices or costs spent on project)" |
-| Invoice 4 | "Proof of Insurance (If you are spending on insurance)" |
+| Dropdown Location | Ario | Sineng |
+|-------------------|------|--------|
+| Inverter Details (OnboardingTab.tsx) | Present | Missing |
+| Data Access Provider (DataAccessTab.tsx) | Present | Missing |
 
 ---
 
-## File to Modify
+## Changes Required
 
-| File | Changes |
-|------|---------|
-| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Update 4 label props on lines 1181, 1189, 1197, 1205 |
-
----
-
-## Technical Details
-
-Simple text updates to the `label` prop of four `OnboardingFileUpload` components:
+### 1. OnboardingTab.tsx - Inverter Brand Dropdown
+Add "Sineng" in alphabetical order between "SigEnergy" and "SMA" (around line 776):
 
 ```tsx
-// Line 1181: Invoice 1 → Final Invoice
-label="Final Invoice (Total Installed Cost)"
+<SelectItem value="SigEnergy">SigEnergy</SelectItem>
+<SelectItem value="Sineng">Sineng</SelectItem>  // NEW
+<SelectItem value="SMA">SMA</SelectItem>
+```
 
-// Line 1189: Invoice 2 → Other Costs
-label="Other Project Costs (Any additional invoices or costs spent on project)"
+### 2. DataAccessTab.tsx - Data Access Provider Dropdown
+Add "Sineng" in alphabetical order between "SigEnergy" and "Sivula" (around line 357):
 
-// Line 1197: Invoice 3 → Other Costs
-label="Other Project Costs (Any additional invoices or costs spent on project)"
-
-// Line 1205: Invoice 4 → Insurance
-label="Proof of Insurance (If you are spending on insurance)"
+```tsx
+<SelectItem value="SigEnergy">SigEnergy</SelectItem>
+<SelectItem value="Sineng">Sineng</SelectItem>  // NEW
+<SelectItem value="Sivula">Sivula</SelectItem>
 ```
 
 ---
 
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Add Sineng after SigEnergy (line 776) |
+| `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx` | Add Sineng after SigEnergy (line 357) |
+
+---
+
 ## No Database Changes Required
-These are UI-only label updates. The document category remains `"invoice"` for all, so existing uploaded documents will continue to work correctly.
+This is a UI-only update to add a new option to existing dropdown menus.
 
