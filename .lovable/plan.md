@@ -1,44 +1,105 @@
 
-# Remove "First Yr Est. Revenue" Column from Proposal Management
+# Dynamic Inverter Details Form
 
 ## Summary
-Remove the "First Yr Est. Revenue" column from the Proposal Management table for all users, as it's not providing meaningful value.
+Change the Inverter Details section to display dynamic rows based on "Number of Inverters". Each row will have its own Brand dropdown, Model input, Capacity (kW) input, and Serial Number input.
 
 ---
 
-## Current State
-The table currently displays this column for all users (admin, agent, client) showing a calculated revenue estimate based on carbon credits.
-
-| Project Name | Client | Date | Size | Status | Agent* | Client Share* | **First Yr Est. Revenue** | Actions |
-|--------------|--------|------|------|--------|--------|---------------|---------------------------|---------|
-
-*Admin-only columns
-
----
-
-## Changes Required
-
-### File: `src/components/proposals/ProposalList.tsx`
-
-| Location | What to Remove |
-|----------|----------------|
-| Lines 42-45 | Remove `formattedRevenue` useMemo hook (no longer needed) |
-| Line 127 | Remove `<TableCell className="text-center">{formattedRevenue}</TableCell>` |
-| Line 141 | Remove `prevProps.proposal.revenue === nextProps.proposal.revenue` from memo comparison |
-| Line 220 | Remove `<TableHead className="text-center">First Yr Est. Revenue</TableHead>` |
+## Current Layout
+| Field | Description |
+|-------|-------------|
+| Inverter Brand | Single dropdown (shared for all) |
+| Model | Single input (shared for all) |
+| Number of Inverters | Controls how many serial fields show |
+| Capacity (kW) | Single input (shared for all) |
+| Serial Numbers | Multiple inputs based on quantity |
 
 ---
 
-## Result
+## New Layout
 
-After removal, the table will have these columns:
+**Number of Inverters** field stays at the top. Based on this value (e.g., 3), display 3 rows:
 
-| Project Name | Client | Date | Size | Status | Agent* | Client Share* | Actions |
-|--------------|--------|------|------|--------|--------|---------------|---------|
+| Inverter | Brand (dropdown) | Model | Capacity (kW) | Serial Number |
+|----------|------------------|-------|---------------|---------------|
+| 1 | [Select brand] | [Input] | [Input] | [Input] |
+| 2 | [Select brand] | [Input] | [Input] | [Input] |
+| 3 | [Select brand] | [Input] | [Input] | [Input] |
 
-*Admin-only columns
+Followed by the existing "Total Cost Installed" field and "Data Collector" fields.
 
 ---
 
-## No Database Changes Required
-This is a UI-only change. The `revenue` field still exists in the data model but simply won't be displayed in this table.
+## Technical Approach
+
+### Data Storage Strategy
+Store inverter details as a JSON array in the existing `inverter_serial` text field (which already supports JSON):
+
+```json
+[
+  {"brand": "Huawei", "model": "SUN2000", "capacity_kw": 10, "serial": "ABC123"},
+  {"brand": "Huawei", "model": "SUN2000", "capacity_kw": 10, "serial": "ABC124"},
+  {"brand": "SMA", "model": "Sunny Boy", "capacity_kw": 5, "serial": "XYZ789"}
+]
+```
+
+This approach:
+- Requires no database migrations
+- Uses existing column that already stores JSON arrays
+- Maintains backward compatibility with existing data
+
+### File Changes
+
+| File | Changes |
+|------|---------|
+| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Refactor Inverter Details section |
+
+### Implementation Details
+
+1. **New State Structure**
+```tsx
+interface InverterDetail {
+  brand: string;
+  model: string;
+  capacity_kw: number | null;
+  serial: string;
+}
+const [inverterDetails, setInverterDetails] = useState<InverterDetail[]>([]);
+```
+
+2. **Update useEffect** - Parse existing data on load
+   - Handle backward compatibility: if old format (single brand/model/capacity), convert to new format
+   - If already JSON array format, use directly
+
+3. **Replace Current Form Fields** with dynamic rows
+   - Keep "Number of Inverters" input at top
+   - Render array of inverter rows based on quantity
+   - Each row has: Brand dropdown, Model input, Capacity input, Serial input
+
+4. **Update Save Logic**
+   - Serialize `inverterDetails` array to JSON string
+   - Store in `inverter_serial` field
+   - Clear old single-value fields (`inverter_brand`, `inverter_model`, `inverter_capacity_kw`) or leave for backward compatibility
+
+### UI Layout (per row)
+```text
++------------------+------------------+---------------+------------------+
+| Inverter 1       |                  |               |                  |
+| [Brand dropdown] | [Model input]    | [Capacity kW] | [Serial Number]  |
++------------------+------------------+---------------+------------------+
+```
+
+---
+
+## Backward Compatibility
+
+For existing projects with old data format:
+- If `inverter_brand`, `inverter_model`, `inverter_capacity_kw` have values but `inverter_serial` is simple string/array
+- Convert to new format: create array of objects using shared brand/model/capacity with individual serials
+- This ensures existing data continues to work
+
+---
+
+## No Database Migration Required
+All changes are UI-only, reusing the existing `inverter_serial` text column for structured JSON storage.
