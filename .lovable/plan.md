@@ -1,91 +1,77 @@
 
 
-# Backfill Installer Fields for Existing Onboarding Projects
+# Add Battery Toggle to Onboarding Form
 
 ## Summary
-Create a one-time database migration to populate `installer_company_name` and `installer_email` for all **177 existing onboarding records** that currently have NULL values.
+Add a "Do you have a battery?" Yes/No toggle to the Battery Details section, similar to the existing Operations & Maintenance section. When "No" is selected, the additional battery fields are hidden.
 
 ---
 
-## Data Analysis
-
-| Category | Count | Action |
-|----------|-------|--------|
-| Crunch Carbon agents | 115 | Set to "To be confirmed" |
-| External agents (Rentech, Solar Giant, Nuvo, etc.) | 62 | Use agent's company + email |
-| No agent assigned | 0 | Would be "To be confirmed" |
-| **Total** | **177** | — |
+## Current State
+- **O&M Section:** Has `has_maintenance_agreement` boolean field that conditionally shows term/cost/document fields
+- **Battery Section:** Always shows all fields with "(if you have a battery)" hint in the title
 
 ---
 
-## Business Rules Applied
+## Solution
 
-1. **Crunch Carbon agents** → `installer_company_name = 'To be confirmed'`, `installer_email = 'To be confirmed'`
-2. **External agents** → Use team company name (priority) or profile company name, plus agent email
-3. **No agent** → "To be confirmed" for both fields
-
----
-
-## Migration SQL
+### 1. Database Migration
+Add a new nullable boolean column to `onboarding_fields`:
 
 ```sql
--- Backfill installer fields for existing onboarding projects
--- Only updates records where installer_company_name is NULL or empty
-
-UPDATE onboarding_fields of
-SET 
-  installer_company_name = CASE
-    -- No agent OR Crunch Carbon agent
-    WHEN p.agent_id IS NULL 
-      OR COALESCE(c.company_name, prof.company_name, '') ILIKE '%crunch carbon%'
-    THEN 'To be confirmed'
-    -- External agent: use team company (priority) or profile company
-    ELSE COALESCE(c.company_name, prof.company_name, 'To be confirmed')
-  END,
-  installer_email = CASE
-    -- No agent OR Crunch Carbon agent
-    WHEN p.agent_id IS NULL 
-      OR COALESCE(c.company_name, prof.company_name, '') ILIKE '%crunch carbon%'
-    THEN 'To be confirmed'
-    -- External agent: use agent's email
-    ELSE COALESCE(prof.email, 'To be confirmed')
-  END,
-  updated_at = NOW()
-FROM project_onboarding po
-JOIN proposals p ON p.id = po.proposal_id
-LEFT JOIN profiles prof ON prof.id = p.agent_id
-LEFT JOIN company_members cm ON cm.user_id = p.agent_id AND cm.status = 'active'
-LEFT JOIN companies c ON c.id = cm.company_id
-WHERE po.id = of.project_id
-  AND (of.installer_company_name IS NULL OR of.installer_company_name = '');
+ALTER TABLE onboarding_fields 
+ADD COLUMN has_battery boolean DEFAULT NULL;
 ```
 
+### 2. UI Changes (OnboardingTab.tsx)
+
+Update the Battery Details card to:
+- Add a Yes/No Select dropdown: "Do you have a battery?"
+- Conditionally render battery fields only when `has_battery === true`
+- Update the section status icon logic (similar to O&M pattern)
+
+**New UI Pattern:**
+```text
+┌─────────────────────────────────────────────────┐
+│ Battery Details                           [●]   │
+├─────────────────────────────────────────────────┤
+│ Do you have a battery?                          │
+│ ┌─────────────────────────┐                     │
+│ │ Select...           ▼   │                     │
+│ └─────────────────────────┘                     │
+│                                                 │
+│ [If "Yes" selected, show:]                      │
+│   • Battery Brand                               │
+│   • Total Battery Capacity (kWh)                │
+│   • Total Cost Installed (Rands)                │
+└─────────────────────────────────────────────────┘
+```
+
+### 3. Status Icon Logic
+
+| State | Icon |
+|-------|------|
+| `has_battery` is null/undefined | Orange (incomplete) |
+| `has_battery === false` | Green (complete - no battery needed) |
+| `has_battery === true` and all fields filled | Green (complete) |
+| `has_battery === true` and fields missing | Orange (incomplete) |
+
 ---
 
-## Expected Results After Migration
+## Files to Modify
 
-| Agent/Company | installer_company_name | installer_email |
-|---------------|------------------------|-----------------|
-| Shaun Slabber (Crunch Carbon) | To be confirmed | To be confirmed |
-| Joe Micciarelli (Rentech) | Rentech | joem@auto-x.co.za |
-| Shaun (Nuvo Consulting) | Nuvo Consulting | shaun@nuvoconsulting.com |
-| Connor Gibbs (Renen Energy) | Renen Energy PTY Ltd | amped@renen.co.za |
-| Johan Greyling (Solar Giant) | Solargiant Energy (Pty) Ltd | hendri@solargiant.co.za |
-| Flip Opperman (PV Solution) | PV Solution Services Pty Ltd | info@pvsolution.co.za |
+| File | Changes |
+|------|---------|
+| Database migration | Add `has_battery` boolean column |
+| `src/types/onboarding.ts` | Add `has_battery: boolean \| null` to OnboardingFields interface |
+| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Update Battery Details card with conditional rendering |
 
 ---
 
-## Safety Measures
+## Expected Behavior
 
-- **Only updates NULL or empty fields** — won't overwrite any existing data
-- **One-time migration** — runs once, future proposals handled by trigger
-- **Reversible** — can set back to NULL if needed (though not recommended)
-
----
-
-## Files to Create
-
-| Resource | Purpose |
-|----------|---------|
-| Database migration | One-time UPDATE statement to backfill 177 records |
+1. **New projects:** User must select Yes/No before section is considered complete
+2. **Existing projects (null value):** Section shows as incomplete until user makes a selection
+3. **"No" selected:** Section immediately shows as complete (green checkmark)
+4. **"Yes" selected:** Must fill in battery brand, capacity, and cost for completion
 
