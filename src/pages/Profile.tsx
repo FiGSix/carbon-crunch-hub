@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/auth';
 import { ProfileForm } from '@/components/profile/ProfileForm';
-import { AgentReferralSection } from '@/components/profile/AgentReferralSection';
+import { ClientReferralSection } from '@/components/profile/ClientReferralSection';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const Profile = () => {
@@ -27,9 +27,9 @@ const Profile = () => {
             isAgent={isAgent}
           />
 
-          {/* Agent Referral Section - Only for agents and admins */}
+          {/* Client Referral Section - Only for agents and admins */}
           {(isAgent || isAdmin) && (
-            <AgentReferralSection />
+            <ClientReferralSection />
           )}
         </div>
       </div>
