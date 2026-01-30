@@ -2,20 +2,20 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, MessageCircle, Users2 } from "lucide-react";
+import { Copy, Check, MessageCircle, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 
-export function AgentReferralSection() {
+export function ClientReferralSection() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  // Generate agent referral link
-  const referralLink = `${window.location.origin}/agents?ref=${profile?.id}`;
+  // Generate client referral link
+  const referralLink = `${window.location.origin}/calculator?ref=${profile?.id}`;
 
-  // WhatsApp message content for agent recruitment
-  const whatsappMessage = `Hey! I'm working with Crunch Carbon as an agent in the solar industry. It's a great opportunity to build a business helping clients monetize their solar systems through carbon credits. If you work with commercial solar, check it out: ${referralLink}`;
+  // WhatsApp message content for client referral
+  const whatsappMessage = `Howzit! I've been working with Crunch Carbon to help solar owners monetize their systems through carbon credits. It's free and easy to get started. Check it out: ${referralLink}`;
 
   const handleCopyLink = async () => {
     try {
@@ -44,11 +44,11 @@ export function AgentReferralSection() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Users2 className="h-5 w-5 text-primary" />
-          <CardTitle>Refer an Agent</CardTitle>
+          <UserPlus className="h-5 w-5 text-primary" />
+          <CardTitle>Refer a Client</CardTitle>
         </div>
         <CardDescription>
-          Invite other agents to join the Crunch Carbon network
+          Invite clients to monetize their solar systems with Crunch Carbon
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
