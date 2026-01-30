@@ -1,45 +1,83 @@
 
-
-# Restore Gordon Millar as an Agent
+# Update Profile Referral Section: Agent to Client
 
 ## Summary
-Set `deleted_at = NULL` on Gordon Millar's profile to fully restore his agent status. This will make him visible in the Agent Management table and allow his team members at MiSolar to see his proposals.
+Change the "Refer an Agent" section on the Profile page to "Refer a Client" instead. This aligns with the existing client referral functionality already available on the `/referral` page.
 
 ---
 
-## Current Status
+## Current vs New
 
-| Field | Value |
-|-------|-------|
-| ID | `eef71a05-2dc0-421f-9e54-0a897c17020b` |
-| Email | gordon@misolar.co.za |
-| Name | Gordon Millar |
-| Role | agent |
-| Agent Status | active |
-| **Deleted At** | **2025-11-25** (needs to be cleared) |
+| Aspect | Current | New |
+|--------|---------|-----|
+| Title | "Refer an Agent" | "Refer a Client" |
+| Description | "Invite other agents to join..." | "Invite clients to join..." |
+| Referral Link | `/agents?ref={userId}` | `/calculator?ref={userId}` |
+| WhatsApp Message | Agent recruitment focused | Client-focused (solar benefits) |
+| Icon | Users2 | UserPlus (more appropriate for adding clients) |
 
 ---
 
-## Action Required
+## File Changes
 
-Run this SQL update:
+| File | Changes |
+|------|---------|
+| `src/components/profile/AgentReferralSection.tsx` | Update text, link, and messaging |
 
-```sql
-UPDATE profiles 
-SET deleted_at = NULL 
-WHERE id = 'eef71a05-2dc0-421f-9e54-0a897c17020b';
+---
+
+## Implementation Details
+
+### 1. Update Component Content
+
+**Before:**
+```tsx
+<CardTitle>Refer an Agent</CardTitle>
+<CardDescription>
+  Invite other agents to join the Crunch Carbon network
+</CardDescription>
+```
+
+**After:**
+```tsx
+<CardTitle>Refer a Client</CardTitle>
+<CardDescription>
+  Invite clients to monetize their solar systems with Crunch Carbon
+</CardDescription>
+```
+
+### 2. Update Referral Link
+```tsx
+// Before
+const referralLink = `${window.location.origin}/agents?ref=${profile?.id}`;
+
+// After
+const referralLink = `${window.location.origin}/calculator?ref=${profile?.id}`;
+```
+
+### 3. Update WhatsApp Message
+```tsx
+// Before (agent recruitment)
+const whatsappMessage = `Hey! I'm working with Crunch Carbon as an agent...`;
+
+// After (client-focused)
+const whatsappMessage = `Howzit! I've been working with Crunch Carbon to help solar owners monetize their systems through carbon credits. It's free and easy to get started. Check it out: ${referralLink}`;
+```
+
+### 4. Update Icon
+```tsx
+// Change from Users2 to UserPlus
+import { Copy, Check, MessageCircle, UserPlus } from "lucide-react";
+
+<UserPlus className="h-5 w-5 text-primary" />
 ```
 
 ---
 
-## Result
-Once restored:
-- Gordon will appear in the Agent Management table
-- His team members at MiSolar Trading Pty Ltd will be able to see his proposals
-- He will be able to log in and use the system normally
+## Optional: Rename Component File
+Consider renaming `AgentReferralSection.tsx` to `ClientReferralSection.tsx` for clarity. This would also require updating the import in `Profile.tsx`.
 
 ---
 
-## No Code Changes Required
-This is a data update only using the Supabase insert/update tool.
-
+## No Database Changes Required
+This is a UI-only text and link update.
