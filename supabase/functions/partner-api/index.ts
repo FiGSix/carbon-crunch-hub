@@ -35,16 +35,23 @@ import {
   validateCreateWebhook,
   validateUUID
 } from '../_shared/partner-validation.ts';
+import { OPENAPI_SPEC, SDK_EXAMPLES } from '../_shared/partner-openapi.ts';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const API_VERSION = 'v1';
+const API_BUILD_DATE = '2026-02-01';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SITE_URL = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+
+// Idempotency cache (in-memory, per worker instance)
+// In production, use Redis or similar for distributed idempotency
+const idempotencyCache = new Map<string, { response: Response; expiresAt: number }>();
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Carbon Calculation Constants (from src/services/calculations/carbon/constants.ts)
 const ANNUAL_GENERATION_FACTOR = 1642.50; // kWh per kWp per year
@@ -157,9 +164,23 @@ serve(async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const path = url.pathname.replace(/^\/partner-api/, '');
     
-    // Health check (no auth required)
+    // Public endpoints (no auth required)
+    // Health check
     if (path === '/health' || path === '/v1/health') {
-      return successResponse({ status: 'ok', version: API_VERSION }, requestId);
+      return handleHealthCheck(requestId);
+    }
+    
+    // OpenAPI spec
+    if (path === '/openapi.json' || path === '/v1/openapi.json') {
+      return new Response(JSON.stringify(OPENAPI_SPEC), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // SDK examples
+    if (path === '/sdk-examples' || path === '/v1/sdk-examples') {
+      return successResponse({ examples: SDK_EXAMPLES }, requestId);
     }
     
     // Extract and validate API key
@@ -294,6 +315,88 @@ async function routeRequest(
 }
 
 // =============================================================================
+// Handlers - Health & Documentation
+// =============================================================================
+
+async function handleHealthCheck(requestId: string): Promise<Response> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  let dbStatus = 'unknown';
+  let dbLatencyMs = 0;
+  
+  try {
+    const startTime = Date.now();
+    const { error } = await supabase.from('partners').select('id').limit(1);
+    dbLatencyMs = Date.now() - startTime;
+    dbStatus = error ? 'error' : 'connected';
+  } catch {
+    dbStatus = 'error';
+  }
+  
+  const healthData = {
+    status: dbStatus === 'connected' ? 'healthy' : 'degraded',
+    version: API_VERSION,
+    build_date: API_BUILD_DATE,
+    timestamp: new Date().toISOString(),
+    services: {
+      database: {
+        status: dbStatus,
+        latency_ms: dbLatencyMs,
+      },
+      email: {
+        status: RESEND_API_KEY ? 'configured' : 'not_configured',
+      },
+    },
+    endpoints: {
+      openapi: '/v1/openapi.json',
+      sdk_examples: '/v1/sdk-examples',
+    },
+  };
+  
+  return successResponse(healthData, requestId, { 
+    status: dbStatus === 'connected' ? 200 : 503 
+  });
+}
+
+// =============================================================================
+// Idempotency Helpers
+// =============================================================================
+
+function getIdempotencyKey(req: Request, auth: PartnerAuthInfo): string | null {
+  const key = req.headers.get('X-Idempotency-Key');
+  if (!key) return null;
+  // Namespace by partner to prevent cross-partner collisions
+  return `${auth.partnerId}:${key}`;
+}
+
+function getCachedIdempotentResponse(key: string): Response | null {
+  const cached = idempotencyCache.get(key);
+  if (!cached) return null;
+  
+  // Check expiration
+  if (Date.now() > cached.expiresAt) {
+    idempotencyCache.delete(key);
+    return null;
+  }
+  
+  // Clone response since body can only be consumed once
+  return cached.response.clone();
+}
+
+function cacheIdempotentResponse(key: string, response: Response): void {
+  // Cleanup old entries (simple LRU-ish approach)
+  if (idempotencyCache.size > 10000) {
+    const oldestKey = idempotencyCache.keys().next().value;
+    if (oldestKey) idempotencyCache.delete(oldestKey);
+  }
+  
+  idempotencyCache.set(key, {
+    response: response.clone(),
+    expiresAt: Date.now() + IDEMPOTENCY_TTL_MS,
+  });
+}
+
+// =============================================================================
 // Handlers - Proposals
 // =============================================================================
 
@@ -304,6 +407,16 @@ async function handleCreateProposal(
   requestId: string
 ): Promise<Response> {
   try {
+    // Check for idempotency key
+    const idempotencyKey = getIdempotencyKey(req, auth);
+    if (idempotencyKey) {
+      const cachedResponse = getCachedIdempotentResponse(idempotencyKey);
+      if (cachedResponse) {
+        console.log(`[PartnerAPI] ${requestId} - Returning cached idempotent response`);
+        return cachedResponse;
+      }
+    }
+    
     const body = await req.json();
     const validation = validateCreateProposal(body);
     
@@ -541,7 +654,7 @@ async function handleCreateProposal(
       }
     }
     
-    return successResponse({
+    const response = successResponse({
       proposal_id: proposal.id,
       client_id: clientId,
       partner_reference_id: data.partner_reference_id,
@@ -556,6 +669,13 @@ async function handleCreateProposal(
       email_sent: emailSent,
       email_queued_at: emailQueuedAt,
     }, requestId);
+    
+    // Cache response for idempotency
+    if (idempotencyKey) {
+      cacheIdempotentResponse(idempotencyKey, response);
+    }
+    
+    return response;
     
   } catch (error) {
     console.error('[PartnerAPI] handleCreateProposal error:', error);
