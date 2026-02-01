@@ -16,7 +16,8 @@ import {
   Database,
   Mail,
   Scale,
-  Calculator
+  Calculator,
+  Code2
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -142,6 +143,12 @@ export function DashboardSidebar() {
       name: "Legal Documents",
       href: "/admin/legal-documents",
       icon: Scale,
+      roles: ["admin"]
+    },
+    {
+      name: "Partner API",
+      href: "/admin/partners",
+      icon: Code2,
       roles: ["admin"]
     },
     {

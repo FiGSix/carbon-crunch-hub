@@ -1571,6 +1571,72 @@ export type Database = {
           },
         ]
       }
+      partner_invitations: {
+        Row: {
+          accepted_at: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string | null
+          email: string
+          environment: string
+          expires_at: string
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          notes: string | null
+          partner_id: string | null
+          requested_scopes: Json | null
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string | null
+          email: string
+          environment?: string
+          expires_at: string
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          notes?: string | null
+          partner_id?: string | null
+          requested_scopes?: Json | null
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string
+          environment?: string
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          notes?: string | null
+          partner_id?: string | null
+          requested_scopes?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invitations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_webhook_deliveries: {
         Row: {
           attempt: number | null
