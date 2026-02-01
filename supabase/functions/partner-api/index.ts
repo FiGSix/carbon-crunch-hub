@@ -363,14 +363,14 @@ async function handleCreateProposal(
       );
     }
     
-    // Find or create client
-    const { data: clientId, error: clientError } = await supabase.rpc('find_or_create_client_by_email', {
+    // Find or create client using Partner API specific RPC (no agent required)
+    const { data: clientId, error: clientError } = await supabase.rpc('find_or_create_client_for_partner_api', {
       p_email: data.client.email,
       p_first_name: data.client.first_name,
       p_last_name: data.client.last_name,
       p_phone: data.client.phone || null,
       p_company_name: data.client.company_name || null,
-      p_created_by: null, // API-created, no agent
+      p_partner_id: auth.partnerId,
     });
     
     if (clientError) {
