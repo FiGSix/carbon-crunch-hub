@@ -1914,12 +1914,71 @@ async function handleClientProjects(
 }
 
 // =============================================================================
-// Handlers - Webhooks (Stub implementations for Phase 4)
+// Handlers - Webhooks (Phase 4 - Full Implementation)
 // =============================================================================
+
+// Valid webhook events
+const VALID_WEBHOOK_EVENTS = [
+  'webhook.verification',
+  'proposal.created',
+  'proposal.viewed',
+  'proposal.signed',
+  'proposal.rejected',
+  'proposal.expired',
+  'project.onboarding_complete',
+  'project.audit_ready',
+  'data_access.verified',
+] as const;
+
+// Generate a secure signing secret
+function generateSigningSecret(): string {
+  const randomBytes = new Uint8Array(32);
+  crypto.getRandomValues(randomBytes);
+  const hex = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `whsec_${hex}`;
+}
+
+// Simple encryption for webhook secrets (in production, use Vault)
+async function encryptSecret(secret: string): Promise<string> {
+  // For now, use base64 encoding with a prefix to indicate it's "encrypted"
+  // In production, this should use Supabase Vault or proper encryption
+  const encoded = btoa(secret);
+  return `enc_v1_${encoded}`;
+}
+
+async function decryptSecret(encrypted: string): Promise<string> {
+  if (encrypted.startsWith('enc_v1_')) {
+    return atob(encrypted.substring(7));
+  }
+  return encrypted;
+}
+
+// Generate HMAC-SHA256 signature for webhook payload
+async function generateWebhookSignature(payload: string, secret: string, timestamp: number): Promise<string> {
+  const signedPayload = `${timestamp}.${payload}`;
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(signedPayload);
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  const signatureHex = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  return `t=${timestamp},v1=${signatureHex}`;
+}
 
 async function handleCreateWebhook(
   req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   _params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1931,26 +1990,101 @@ async function handleCreateWebhook(
     return validationErrorResponse(requestId, firstError.message, firstError.field, firstError.received);
   }
   
+  const data = validation.data!;
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Validate that all events are valid
+  const invalidEvents = data.events.filter(e => !VALID_WEBHOOK_EVENTS.includes(e as typeof VALID_WEBHOOK_EVENTS[number]));
+  if (invalidEvents.length > 0) {
+    return validationErrorResponse(requestId, `Invalid events: ${invalidEvents.join(', ')}`, 'events', invalidEvents);
+  }
+  
+  // Check for existing webhook with same URL
+  const { data: existing } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id')
+    .eq('partner_id', auth.partnerId)
+    .eq('url', data.url)
+    .eq('is_active', true)
+    .single();
+  
+  if (existing) {
+    return validationErrorResponse(requestId, 'Webhook with this URL already exists', 'url', data.url);
+  }
+  
+  // Generate or use provided secret
+  const signingSecret = data.secret || generateSigningSecret();
+  const encryptedSecret = await encryptSecret(signingSecret);
+  
+  const webhookId = crypto.randomUUID();
+  
+  // Insert webhook subscription
+  const { error: insertError } = await supabase
+    .from('partner_webhook_subscriptions')
+    .insert({
+      id: webhookId,
+      partner_id: auth.partnerId,
+      url: data.url,
+      events: data.events,
+      signing_secret_encrypted: encryptedSecret,
+      is_active: true,
+      is_verified: false,
+      consecutive_failures: 0,
+      created_at: new Date().toISOString(),
+    });
+  
+  if (insertError) {
+    console.error('[PartnerAPI] handleCreateWebhook insert error:', insertError);
+    return internalErrorResponse(requestId);
+  }
+  
   return successResponse({
-    webhook_id: crypto.randomUUID(),
-    events: validation.data!.events,
-    secret: `whsec_${crypto.randomUUID().replace(/-/g, '')}`,
+    webhook_id: webhookId,
+    url: data.url,
+    events: data.events,
+    secret: signingSecret, // Only returned on creation
     verification_pending: true,
   }, requestId, { status: 201 });
 }
 
 async function handleListWebhooks(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   _params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
-  return successResponse({ webhooks: [] }, requestId);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  const { data: webhooks, error } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id, url, events, is_active, is_verified, consecutive_failures, last_triggered_at, disabled_at, disabled_reason, created_at')
+    .eq('partner_id', auth.partnerId)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('[PartnerAPI] handleListWebhooks error:', error);
+    return internalErrorResponse(requestId);
+  }
+  
+  const formattedWebhooks = (webhooks || []).map(w => ({
+    webhook_id: w.id,
+    url: w.url,
+    events: w.events,
+    is_active: w.is_active,
+    is_verified: w.is_verified,
+    consecutive_failures: w.consecutive_failures,
+    last_triggered_at: w.last_triggered_at,
+    disabled_at: w.disabled_at,
+    disabled_reason: w.disabled_reason,
+    created_at: w.created_at,
+  }));
+  
+  return successResponse({ webhooks: formattedWebhooks }, requestId);
 }
 
 async function handleGetWebhook(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1959,12 +2093,37 @@ async function handleGetWebhook(
     return validationErrorResponse(requestId, 'Invalid webhook ID format', 'webhook_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Webhook');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  const { data: webhook, error } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id, url, events, is_active, is_verified, consecutive_failures, last_triggered_at, disabled_at, disabled_reason, verified_at, created_at')
+    .eq('id', params.id)
+    .eq('partner_id', auth.partnerId)
+    .single();
+  
+  if (error || !webhook) {
+    return notFoundResponse(requestId, 'Webhook');
+  }
+  
+  return successResponse({
+    webhook_id: webhook.id,
+    url: webhook.url,
+    events: webhook.events,
+    is_active: webhook.is_active,
+    is_verified: webhook.is_verified,
+    verified_at: webhook.verified_at,
+    consecutive_failures: webhook.consecutive_failures,
+    last_triggered_at: webhook.last_triggered_at,
+    disabled_at: webhook.disabled_at,
+    disabled_reason: webhook.disabled_reason,
+    created_at: webhook.created_at,
+  }, requestId);
 }
 
 async function handleDeleteWebhook(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1973,12 +2132,37 @@ async function handleDeleteWebhook(
     return validationErrorResponse(requestId, 'Invalid webhook ID format', 'webhook_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Webhook');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify ownership
+  const { data: webhook } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id')
+    .eq('id', params.id)
+    .eq('partner_id', auth.partnerId)
+    .single();
+  
+  if (!webhook) {
+    return notFoundResponse(requestId, 'Webhook');
+  }
+  
+  // Delete the webhook (cascade will handle deliveries via FK)
+  const { error } = await supabase
+    .from('partner_webhook_subscriptions')
+    .delete()
+    .eq('id', params.id);
+  
+  if (error) {
+    console.error('[PartnerAPI] handleDeleteWebhook error:', error);
+    return internalErrorResponse(requestId);
+  }
+  
+  return new Response(null, { status: 204, headers: corsHeaders });
 }
 
 async function handleVerifyWebhook(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1987,12 +2171,149 @@ async function handleVerifyWebhook(
     return validationErrorResponse(requestId, 'Invalid webhook ID format', 'webhook_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Webhook');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Get the webhook
+  const { data: webhook, error: fetchError } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id, url, signing_secret_encrypted, is_verified')
+    .eq('id', params.id)
+    .eq('partner_id', auth.partnerId)
+    .single();
+  
+  if (fetchError || !webhook) {
+    return notFoundResponse(requestId, 'Webhook');
+  }
+  
+  if (webhook.is_verified) {
+    return successResponse({
+      webhook_id: webhook.id,
+      already_verified: true,
+      message: 'Webhook is already verified',
+    }, requestId);
+  }
+  
+  // Decrypt the signing secret
+  const signingSecret = await decryptSecret(webhook.signing_secret_encrypted);
+  
+  // Create verification payload
+  const verificationChallenge = crypto.randomUUID();
+  const timestamp = Math.floor(Date.now() / 1000);
+  const verificationPayload = JSON.stringify({
+    event: 'webhook.verification',
+    challenge: verificationChallenge,
+    timestamp: new Date().toISOString(),
+  });
+  
+  const signature = await generateWebhookSignature(verificationPayload, signingSecret, timestamp);
+  
+  // Send verification request
+  const deliveryId = crypto.randomUUID();
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch(webhook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CC-Webhook-Signature': signature,
+        'X-CC-Webhook-Id': webhook.id,
+        'X-CC-Delivery-Id': deliveryId,
+        'X-CC-Attempt': '1',
+        'User-Agent': 'CrunchCarbon-Webhooks/1.0',
+      },
+      body: verificationPayload,
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+    
+    const responseTime = Date.now() - startTime;
+    let responseBody = '';
+    try {
+      responseBody = await response.text();
+    } catch {
+      responseBody = '';
+    }
+    
+    // Log the delivery attempt
+    await supabase.from('partner_webhook_deliveries').insert({
+      id: deliveryId,
+      webhook_id: webhook.id,
+      event: 'webhook.verification',
+      payload: JSON.parse(verificationPayload),
+      status: response.ok ? 'delivered' : 'failed',
+      attempt: 1,
+      sent_at: new Date().toISOString(),
+      response_status: response.status,
+      response_body: responseBody.substring(0, 1000), // Limit response body
+      response_time_ms: responseTime,
+    });
+    
+    if (!response.ok) {
+      return successResponse({
+        webhook_id: webhook.id,
+        verified: false,
+        error: `Verification failed with status ${response.status}`,
+        response_body: responseBody.substring(0, 500),
+      }, requestId);
+    }
+    
+    // Check if response contains the challenge
+    let parsedResponse: Record<string, unknown> = {};
+    try {
+      parsedResponse = JSON.parse(responseBody);
+    } catch {
+      parsedResponse = {};
+    }
+    
+    const verified = parsedResponse.challenge === verificationChallenge;
+    
+    if (verified) {
+      // Update webhook as verified
+      await supabase
+        .from('partner_webhook_subscriptions')
+        .update({
+          is_verified: true,
+          verified_at: new Date().toISOString(),
+        })
+        .eq('id', webhook.id);
+    }
+    
+    return successResponse({
+      webhook_id: webhook.id,
+      verified,
+      message: verified 
+        ? 'Webhook verified successfully' 
+        : 'Verification failed: challenge response mismatch',
+    }, requestId);
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log failed delivery
+    await supabase.from('partner_webhook_deliveries').insert({
+      id: deliveryId,
+      webhook_id: webhook.id,
+      event: 'webhook.verification',
+      payload: JSON.parse(verificationPayload),
+      status: 'failed',
+      attempt: 1,
+      sent_at: new Date().toISOString(),
+      response_status: null,
+      response_body: errorMessage,
+      response_time_ms: Date.now() - startTime,
+    });
+    
+    return successResponse({
+      webhook_id: webhook.id,
+      verified: false,
+      error: `Connection failed: ${errorMessage}`,
+    }, requestId);
+  }
 }
 
 async function handleWebhookDeliveries(
-  _req: Request,
-  _auth: PartnerAuthInfo,
+  req: Request,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -2001,5 +2322,208 @@ async function handleWebhookDeliveries(
     return validationErrorResponse(requestId, 'Invalid webhook ID format', 'webhook_id', params.id);
   }
   
-  return successResponse({ deliveries: [] }, requestId);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify ownership
+  const { data: webhook } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id')
+    .eq('id', params.id)
+    .eq('partner_id', auth.partnerId)
+    .single();
+  
+  if (!webhook) {
+    return notFoundResponse(requestId, 'Webhook');
+  }
+  
+  // Parse query params for pagination
+  const url = new URL(req.url);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
+  const cursor = url.searchParams.get('cursor');
+  const status = url.searchParams.get('status');
+  const event = url.searchParams.get('event');
+  
+  // Build query
+  let query = supabase
+    .from('partner_webhook_deliveries')
+    .select('id, event, status, attempt, sent_at, response_status, response_time_ms, next_retry_at')
+    .eq('webhook_id', params.id)
+    .order('sent_at', { ascending: false })
+    .limit(limit + 1); // Get one extra to check for more
+  
+  if (cursor) {
+    query = query.lt('sent_at', cursor);
+  }
+  
+  if (status) {
+    query = query.eq('status', status);
+  }
+  
+  if (event) {
+    query = query.eq('event', event);
+  }
+  
+  const { data: deliveries, error } = await query;
+  
+  if (error) {
+    console.error('[PartnerAPI] handleWebhookDeliveries error:', error);
+    return internalErrorResponse(requestId);
+  }
+  
+  const hasMore = deliveries && deliveries.length > limit;
+  const results = (deliveries || []).slice(0, limit);
+  
+  const formattedDeliveries = results.map(d => ({
+    delivery_id: d.id,
+    event: d.event,
+    status: d.status,
+    attempt: d.attempt,
+    sent_at: d.sent_at,
+    response_status: d.response_status,
+    response_time_ms: d.response_time_ms,
+    next_retry_at: d.next_retry_at,
+  }));
+  
+  return successResponse({
+    deliveries: formattedDeliveries,
+    pagination: {
+      has_more: hasMore,
+      next_cursor: hasMore && results.length > 0 ? results[results.length - 1].sent_at : undefined,
+    },
+  }, requestId);
+}
+
+// =============================================================================
+// Webhook Dispatch Helper (for use by other parts of the system)
+// =============================================================================
+
+export async function dispatchWebhookEvent(
+  partnerId: string,
+  event: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Find all active, verified webhooks for this partner that subscribe to this event
+  const { data: webhooks } = await supabase
+    .from('partner_webhook_subscriptions')
+    .select('id, url, signing_secret_encrypted, events')
+    .eq('partner_id', partnerId)
+    .eq('is_active', true)
+    .eq('is_verified', true)
+    .contains('events', [event]);
+  
+  if (!webhooks || webhooks.length === 0) {
+    return;
+  }
+  
+  const timestamp = Math.floor(Date.now() / 1000);
+  const fullPayload = JSON.stringify({
+    event,
+    data: payload,
+    timestamp: new Date().toISOString(),
+  });
+  
+  // Send to each webhook
+  for (const webhook of webhooks) {
+    const deliveryId = crypto.randomUUID();
+    const signingSecret = await decryptSecret(webhook.signing_secret_encrypted);
+    const signature = await generateWebhookSignature(fullPayload, signingSecret, timestamp);
+    
+    const startTime = Date.now();
+    
+    try {
+      const response = await fetch(webhook.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CC-Webhook-Signature': signature,
+          'X-CC-Webhook-Id': webhook.id,
+          'X-CC-Delivery-Id': deliveryId,
+          'X-CC-Attempt': '1',
+          'User-Agent': 'CrunchCarbon-Webhooks/1.0',
+        },
+        body: fullPayload,
+        signal: AbortSignal.timeout(30000),
+      });
+      
+      const responseTime = Date.now() - startTime;
+      let responseBody = '';
+      try {
+        responseBody = await response.text();
+      } catch {
+        responseBody = '';
+      }
+      
+      const status = response.ok ? 'delivered' : 'failed';
+      
+      // Log delivery
+      await supabase.from('partner_webhook_deliveries').insert({
+        id: deliveryId,
+        webhook_id: webhook.id,
+        event,
+        payload: JSON.parse(fullPayload),
+        status,
+        attempt: 1,
+        sent_at: new Date().toISOString(),
+        response_status: response.status,
+        response_body: responseBody.substring(0, 1000),
+        response_time_ms: responseTime,
+        next_retry_at: status === 'failed' ? new Date(Date.now() + 60000).toISOString() : null, // 1 min retry
+      });
+      
+      // Update webhook stats
+      if (response.ok) {
+        await supabase
+          .from('partner_webhook_subscriptions')
+          .update({
+            last_triggered_at: new Date().toISOString(),
+            consecutive_failures: 0,
+          })
+          .eq('id', webhook.id);
+      } else {
+        const { data: current } = await supabase
+          .from('partner_webhook_subscriptions')
+          .select('consecutive_failures')
+          .eq('id', webhook.id)
+          .single();
+        
+        const newFailures = (current?.consecutive_failures || 0) + 1;
+        
+        const updateData: Record<string, unknown> = {
+          last_triggered_at: new Date().toISOString(),
+          consecutive_failures: newFailures,
+        };
+        
+        // Disable webhook after 10 consecutive failures
+        if (newFailures >= 10) {
+          updateData.is_active = false;
+          updateData.disabled_at = new Date().toISOString();
+          updateData.disabled_reason = 'Too many consecutive failures (10+)';
+        }
+        
+        await supabase
+          .from('partner_webhook_subscriptions')
+          .update(updateData)
+          .eq('id', webhook.id);
+      }
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      await supabase.from('partner_webhook_deliveries').insert({
+        id: deliveryId,
+        webhook_id: webhook.id,
+        event,
+        payload: JSON.parse(fullPayload),
+        status: 'failed',
+        attempt: 1,
+        sent_at: new Date().toISOString(),
+        response_status: null,
+        response_body: errorMessage,
+        response_time_ms: Date.now() - startTime,
+        next_retry_at: new Date(Date.now() + 60000).toISOString(),
+      });
+    }
+  }
 }
