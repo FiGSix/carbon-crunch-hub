@@ -43,6 +43,73 @@ import {
 const API_VERSION = 'v1';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SITE_URL = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+
+// =============================================================================
+// Email Template Helper
+// =============================================================================
+
+interface EmailTemplateParams {
+  clientName: string;
+  projectName: string;
+  invitationLink: string;
+  systemSize?: string;
+  carbonCredits?: number;
+  partnerName?: string;
+  partnerLogoUrl?: string;
+}
+
+function generateProposalEmailHtml(params: EmailTemplateParams): string {
+  const { clientName, projectName, invitationLink, systemSize, carbonCredits, partnerName, partnerLogoUrl } = params;
+  
+  const partnerAttribution = partnerName 
+    ? `<p style="color: #666; font-size: 14px; margin-top: 20px;">Created in partnership with <strong>${partnerName}</strong></p>`
+    : '';
+  
+  const systemInfo = systemSize && carbonCredits
+    ? `<p style="color: #333; margin: 10px 0;"><strong>System Size:</strong> ${systemSize}<br><strong>Estimated Carbon Credits:</strong> ${carbonCredits} per year</p>`
+    : '';
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <img src="https://crunchcarbon.com/crunch-carbon-logo.png" alt="Crunch Carbon" style="height: 40px;" />
+  </div>
+  
+  <h1 style="color: #16a34a; font-size: 24px;">Carbon Credit Proposal</h1>
+  
+  <p>Dear ${clientName},</p>
+  
+  <p>You have been invited to review and accept a carbon credit proposal for <strong>${projectName}</strong>.</p>
+  
+  ${systemInfo}
+  
+  <p>By participating in Crunch Carbon's carbon credit program, you can monetize the environmental benefits of your solar installation.</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${invitationLink}" style="background-color: #16a34a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Proposal</a>
+  </div>
+  
+  <p style="color: #666; font-size: 14px;">This link will expire in 10 days. If you have any questions, please contact us at support@crunchcarbon.com.</p>
+  
+  ${partnerAttribution}
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  
+  <p style="color: #999; font-size: 12px; text-align: center;">
+    Crunch Carbon | Monetizing Solar Energy's Environmental Impact<br>
+    <a href="https://crunchcarbon.com" style="color: #16a34a;">crunchcarbon.com</a>
+  </p>
+</body>
+</html>`;
+}
 
 // =============================================================================
 // Route Definitions
@@ -296,11 +363,34 @@ async function handleCreateProposal(
       return internalErrorResponse(requestId);
     }
     
-    // Calculate estimates (simplified for now)
+    // Calculate estimates using proper formulas
     const systemSizeKWp = data.project.system_size_kwp;
-    const creditsPerYear = Math.round(systemSizeKWp * 1.2); // Simplified calculation
-    const clientSharePercentage = systemSizeKWp < 5000 ? 60.2 : systemSizeKWp < 10000 ? 63 : 66.5;
-    const revenue6yr = Math.round(creditsPerYear * 6 * 148 * (clientSharePercentage / 100));
+    // Carbon credits = kWp * 1.6 MWh/kWp * 0.92 tCO2e/MWh (South Africa grid factor)
+    const annualEnergy = systemSizeKWp * 1.6; // MWh
+    const creditsPerYear = Math.round(annualEnergy * 0.92);
+    
+    // Get client portfolio for tier calculation
+    const { data: clientPortfolio } = await supabase
+      .from('proposals')
+      .select('system_size_kwp')
+      .eq('client_reference_id', clientId)
+      .is('deleted_at', null)
+      .not('system_size_kwp', 'is', null);
+    
+    const existingPortfolioKWp = clientPortfolio?.reduce((sum, p) => sum + (p.system_size_kwp || 0), 0) || 0;
+    const totalPortfolioKWp = existingPortfolioKWp + systemSizeKWp;
+    
+    // Calculate client share percentage based on total portfolio tier
+    let clientSharePercentage: number;
+    if (totalPortfolioKWp < 5000) clientSharePercentage = 60.20;
+    else if (totalPortfolioKWp < 10000) clientSharePercentage = 63;
+    else if (totalPortfolioKWp < 20000) clientSharePercentage = 66.5;
+    else if (totalPortfolioKWp < 30000) clientSharePercentage = 68.25;
+    else clientSharePercentage = 70;
+    
+    // Calculate 6-year revenue (average carbon price ~R148)
+    const avgCarbonPrice = 148;
+    const revenue6yr = Math.round(creditsPerYear * 6 * avgCarbonPrice * (clientSharePercentage / 100));
     
     // Generate invitation token
     const invitationToken = crypto.randomUUID();
@@ -347,48 +437,89 @@ async function handleCreateProposal(
       console.error('[PartnerAPI] Proposal creation error:', proposalError);
       return internalErrorResponse(requestId);
     }
-    
+
+    // Build acceptance URL - use the proposal view with token
+    const acceptanceUrl = `${SITE_URL}/proposals/${proposal.id}?token=${invitationToken}`;
+
     // Send email if requested
     let emailSent = false;
     let emailQueuedAt: string | undefined;
     
-    if (data.send_email !== false) {
-      // Update status to 'sent'
-      await supabase
-        .from('proposals')
-        .update({ status: 'sent' })
-        .eq('id', proposal.id);
-      
-      // Get partner attribution for email
-      const { data: partnerInfo } = await supabase.rpc('get_partner_attribution', {
-        p_partner_id: auth.partnerId,
-      });
-      
-      // Send email via existing edge function
+    if (data.send_email !== false && RESEND_API_KEY) {
       try {
-        const { error: emailError } = await supabase.functions.invoke('send-proposal-invitation', {
-          body: {
-            proposalId: proposal.id,
-            clientEmail: data.client.email,
-            clientName: `${data.client.first_name} ${data.client.last_name}`,
-            invitationToken: invitationToken,
-            projectName: data.project.name || 'Solar Project',
-            partnerName: partnerInfo?.[0]?.partner_name,
-            partnerLogoUrl: partnerInfo?.[0]?.logo_url,
-          },
+        // Get partner attribution for email
+        const { data: partnerInfo } = await supabase.rpc('get_partner_attribution', {
+          p_partner_id: auth.partnerId,
         });
         
-        if (!emailError) {
+        const partnerName = partnerInfo?.[0]?.partner_name;
+        const partnerLogoUrl = partnerInfo?.[0]?.logo_url;
+        
+        // Send email directly using Resend API (bypasses JWT auth requirement)
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Crunch Carbon <noreply@crunchcarbon.com>',
+            to: data.client.email,
+            subject: `Carbon Credit Proposal: ${data.project.name || 'Solar Project'}`,
+            html: generateProposalEmailHtml({
+              clientName: `${data.client.first_name} ${data.client.last_name}`,
+              projectName: data.project.name || 'Solar Project',
+              invitationLink: acceptanceUrl,
+              systemSize: `${Math.round(systemSizeKWp)} kWp`,
+              carbonCredits: creditsPerYear,
+              partnerName,
+              partnerLogoUrl,
+            }),
+          }),
+        });
+        
+        if (emailResponse.ok) {
+          const emailData = await emailResponse.json();
           emailSent = true;
           emailQueuedAt = new Date().toISOString();
+          
+          // Update proposal status and log email
+          await supabase
+            .from('proposals')
+            .update({ 
+              status: 'sent',
+              invitation_sent_at: emailQueuedAt,
+              last_email_event_type: 'email.sent',
+              last_email_sent_at: emailQueuedAt,
+            })
+            .eq('id', proposal.id);
+          
+          // Log for webhook tracking
+          if (emailData.id) {
+            await supabase
+              .from('proposal_automation_log')
+              .insert({
+                proposal_id: proposal.id,
+                automation_type: 'email_sent',
+                email_type: 'partner_api_invite',
+                email_message_id: emailData.id,
+                details: {
+                  recipient: data.client.email,
+                  partner_id: auth.partnerId,
+                  partner_name: partnerName,
+                },
+              });
+          }
+          
+          console.log(`[PartnerAPI] Email sent successfully: ${emailData.id}`);
+        } else {
+          const errorText = await emailResponse.text();
+          console.error('[PartnerAPI] Email send failed:', errorText);
         }
       } catch (e) {
         console.error('[PartnerAPI] Email send error:', e);
       }
     }
-    
-    // Build acceptance URL
-    const acceptanceUrl = `${SUPABASE_URL.replace('.supabase.co', '')}/accept/${invitationToken}`;
     
     return successResponse({
       proposal_id: proposal.id,
@@ -644,13 +775,15 @@ async function handleSendAcceptanceLink(
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
     
-    // Update proposal
+    // Build acceptance URL
+    const acceptanceUrl = `${SITE_URL}/proposals/${proposal.id}?token=${invitationToken}`;
+    
+    // Update proposal with new token
     await supabase
       .from('proposals')
       .update({
         invitation_token: invitationToken,
         invitation_expires_at: expiresAt.toISOString(),
-        status: 'sent',
       })
       .eq('id', params.id);
     
@@ -658,30 +791,82 @@ async function handleSendAcceptanceLink(
     const clientEmail = proposal.clients?.email;
     const clientName = `${proposal.clients?.first_name || ''} ${proposal.clients?.last_name || ''}`.trim();
     
-    const { data: partnerInfo } = await supabase.rpc('get_partner_attribution', {
-      p_partner_id: auth.partnerId,
-    });
+    let emailSent = false;
     
-    await supabase.functions.invoke('send-proposal-invitation', {
-      body: {
-        proposalId: proposal.id,
-        clientEmail,
-        clientName,
-        invitationToken,
-        projectName: proposal.title,
-        partnerName: partnerInfo?.[0]?.partner_name,
-        partnerLogoUrl: partnerInfo?.[0]?.logo_url,
-      },
-    });
-    
-    const acceptanceUrl = `${SUPABASE_URL.replace('.supabase.co', '')}/accept/${invitationToken}`;
+    if (clientEmail && RESEND_API_KEY) {
+      try {
+        const { data: partnerInfo } = await supabase.rpc('get_partner_attribution', {
+          p_partner_id: auth.partnerId,
+        });
+        
+        const partnerName = partnerInfo?.[0]?.partner_name;
+        const partnerLogoUrl = partnerInfo?.[0]?.logo_url;
+        
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Crunch Carbon <noreply@crunchcarbon.com>',
+            to: clientEmail,
+            subject: `Carbon Credit Proposal: ${proposal.title}`,
+            html: generateProposalEmailHtml({
+              clientName: clientName || 'Valued Customer',
+              projectName: proposal.title,
+              invitationLink: acceptanceUrl,
+              systemSize: proposal.system_size_kwp ? `${Math.round(proposal.system_size_kwp)} kWp` : undefined,
+              carbonCredits: proposal.carbon_credits ? Math.round(proposal.carbon_credits) : undefined,
+              partnerName,
+              partnerLogoUrl,
+            }),
+          }),
+        });
+        
+        if (emailResponse.ok) {
+          const emailData = await emailResponse.json();
+          emailSent = true;
+          
+          // Update proposal status
+          await supabase
+            .from('proposals')
+            .update({ 
+              status: 'sent',
+              invitation_sent_at: new Date().toISOString(),
+              last_email_event_type: 'email.sent',
+              last_email_sent_at: new Date().toISOString(),
+            })
+            .eq('id', params.id);
+          
+          // Log for webhook tracking
+          if (emailData.id) {
+            await supabase
+              .from('proposal_automation_log')
+              .insert({
+                proposal_id: proposal.id,
+                automation_type: 'email_sent',
+                email_type: 'partner_api_resend',
+                email_message_id: emailData.id,
+                details: {
+                  recipient: clientEmail,
+                  partner_id: auth.partnerId,
+                  resend: true,
+                },
+              });
+          }
+        }
+      } catch (e) {
+        console.error('[PartnerAPI] Email send error:', e);
+      }
+    }
     
     return successResponse({
       proposal_id: proposal.id,
       acceptance_url: acceptanceUrl,
       expires_at: expiresAt.toISOString(),
-      email_sent: true,
-      email_queued_at: new Date().toISOString(),
+      email_sent: emailSent,
+      email_queued_at: emailSent ? new Date().toISOString() : undefined,
     }, requestId);
     
   } catch (error) {
