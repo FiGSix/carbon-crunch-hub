@@ -1290,6 +1290,10 @@ async function handleUpdateOnboarding(
       fieldsUpdate.maintenance_cost_annual = data.installation.maintenance_cost_annual;
       updatedFields.push('maintenance_cost_annual');
     }
+    if ('commissioning_date' in data.installation) {
+      fieldsUpdate.commissioning_date = data.installation.commissioning_date;
+      updatedFields.push('commissioning_date');
+    }
   }
   
   // Installer fields
@@ -1522,6 +1526,28 @@ async function handleDocumentPresign(
     return internalErrorResponse(requestId);
   }
   
+  // Note: We need to get a user ID for uploaded_by. Since Partner API doesn't have a user,
+  // we'll look up the client's user_id from the associated proposal/client
+  const proposal = ownership.proposal!;
+  const clientId = proposal.client_reference_id as string;
+  
+  // Get client's user_id (may be null)
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('user_id')
+    .eq('id', clientId)
+    .single();
+  
+  const uploadedByUserId = clientData?.user_id || null;
+  
+  // If no user_id available, we can't insert with foreign key constraint
+  // Store partner_id in metadata instead for tracking
+  if (!uploadedByUserId) {
+    // Insert without uploaded_by (it's not nullable in the schema, so we need to handle this)
+    console.error('[PartnerAPI] handleDocumentPresign: No user_id available for client, cannot insert document');
+    return validationErrorResponse(requestId, 'Client does not have an associated user account. Documents must be uploaded via the portal.', 'client');
+  }
+  
   // Create pending document record
   const { error: docError } = await supabase
     .from('onboarding_documents')
@@ -1533,8 +1559,8 @@ async function handleDocumentPresign(
       file_url: filePath, // Will be updated on confirm
       file_size_bytes: data.file_size_bytes,
       mime_type: data.content_type,
-      uploaded_by: auth.partnerId, // Use partner ID as uploader
-      metadata: data.metadata || {},
+      uploaded_by: uploadedByUserId,
+      metadata: { ...data.metadata, partner_id: auth.partnerId, uploaded_via: 'partner_api' },
     });
   
   if (docError) {
@@ -1649,6 +1675,23 @@ async function handleDocumentUrl(
   const documentId = crypto.randomUUID();
   const fileName = body.file_name || body.file_url.split('/').pop() || 'document';
   
+  // Get client's user_id for uploaded_by (required field with FK constraint)
+  const proposal = ownership.proposal!;
+  const clientId = proposal.client_reference_id as string;
+  
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('user_id')
+    .eq('id', clientId)
+    .single();
+  
+  const uploadedByUserId = clientData?.user_id || null;
+  
+  if (!uploadedByUserId) {
+    console.error('[PartnerAPI] handleDocumentUrl: No user_id available for client');
+    return validationErrorResponse(requestId, 'Client does not have an associated user account. Documents must be uploaded via the portal.', 'client');
+  }
+  
   // Insert document record with external URL
   const { error: docError } = await supabase
     .from('onboarding_documents')
@@ -1660,8 +1703,8 @@ async function handleDocumentUrl(
       file_url: body.file_url,
       file_size_bytes: body.file_size_bytes || null,
       mime_type: body.content_type || null,
-      uploaded_by: auth.partnerId,
-      metadata: body.metadata || {},
+      uploaded_by: uploadedByUserId,
+      metadata: { ...body.metadata, partner_id: auth.partnerId, uploaded_via: 'partner_api' },
     });
   
   if (docError) {
@@ -1714,6 +1757,19 @@ async function handleConfigureDataAccess(
     .eq('project_id', params.id)
     .single();
   
+  // Get client's user_id for configured_by (FK constraint to profiles)
+  const proposal = ownership.proposal!;
+  const clientId = proposal.client_reference_id as string;
+  
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('user_id')
+    .eq('id', clientId)
+    .single();
+  
+  const configuredByUserId = clientData?.user_id || null;
+  
+  // configured_by is nullable, so we can proceed even without a user
   const configData = {
     provider: data.provider,
     credential_method: data.credential_method === 'delegated_access' ? 'delegated_account' : 'api_key',
@@ -1723,7 +1779,7 @@ async function handleConfigureDataAccess(
     granted_by_email: data.delegated_access?.granted_by_email || null,
     granted_by_role: data.delegated_access?.granted_by_role || null,
     last_test_status: 'pending',
-    configured_by: auth.partnerId,
+    configured_by: configuredByUserId, // Use client's user_id, or null if not available
     updated_at: new Date().toISOString(),
   };
   

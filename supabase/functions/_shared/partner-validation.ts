@@ -290,6 +290,14 @@ export function validateUpdateOnboarding(body: unknown): ValidationResult<Update
         validated.installation.maintenance_cost_annual = val;
       }
     }
+    if (installation.commissioning_date !== undefined) {
+      const dateStr = String(installation.commissioning_date);
+      if (!isValidDate(dateStr)) {
+        errors.push({ field: 'installation.commissioning_date', message: 'Must be a valid date (YYYY-MM-DD)', received: installation.commissioning_date });
+      } else {
+        (validated.installation as Record<string, unknown>).commissioning_date = dateStr;
+      }
+    }
   }
   
   // Validate installer fields
