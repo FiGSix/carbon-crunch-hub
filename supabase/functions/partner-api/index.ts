@@ -46,6 +46,21 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SITE_URL = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
+// Carbon Calculation Constants (from src/services/calculations/carbon/constants.ts)
+const ANNUAL_GENERATION_FACTOR = 1642.50; // kWh per kWp per year
+const EMISSION_FACTOR = 1.0334; // tCO₂e per MWh
+
+// Carbon prices per year (from system_settings / memory)
+const CARBON_PRICES: Record<string, number> = {
+  '2025': 97.34,
+  '2026': 127.03,
+  '2027': 143.12,
+  '2028': 158.79,
+  '2029': 174.88,
+  '2030': 190.55,
+};
+const SIX_YEAR_PRICE_SUM = 891.71; // Sum of all year prices for 6-year revenue calculation
+
 // =============================================================================
 // Email Template Helper
 // =============================================================================
@@ -363,11 +378,12 @@ async function handleCreateProposal(
       return internalErrorResponse(requestId);
     }
     
-    // Calculate estimates using proper formulas
+    // Calculate estimates using CORRECT formulas (matching src/services/calculations/carbon)
     const systemSizeKWp = data.project.system_size_kwp;
-    // Carbon credits = kWp * 1.6 MWh/kWp * 0.92 tCO2e/MWh (South Africa grid factor)
-    const annualEnergy = systemSizeKWp * 1.6; // MWh
-    const creditsPerYear = Math.round(annualEnergy * 0.92);
+    // Annual energy in kWh = kWp × generation factor
+    const annualEnergyKWh = systemSizeKWp * ANNUAL_GENERATION_FACTOR;
+    // Carbon credits (tCO₂e) = (kWh / 1000) × emission factor
+    const creditsPerYear = (annualEnergyKWh / 1000) * EMISSION_FACTOR;
     
     // Get client portfolio for tier calculation
     const { data: clientPortfolio } = await supabase
@@ -380,24 +396,26 @@ async function handleCreateProposal(
     const existingPortfolioKWp = clientPortfolio?.reduce((sum, p) => sum + (p.system_size_kwp || 0), 0) || 0;
     const totalPortfolioKWp = existingPortfolioKWp + systemSizeKWp;
     
-    // Calculate client share percentage based on total portfolio tier
+    // Calculate client share percentage based on total portfolio tier (MWp)
+    const totalPortfolioMWp = totalPortfolioKWp / 1000;
     let clientSharePercentage: number;
-    if (totalPortfolioKWp < 5000) clientSharePercentage = 60.20;
-    else if (totalPortfolioKWp < 10000) clientSharePercentage = 63;
-    else if (totalPortfolioKWp < 20000) clientSharePercentage = 66.5;
-    else if (totalPortfolioKWp < 30000) clientSharePercentage = 68.25;
+    if (totalPortfolioMWp <= 5) clientSharePercentage = 60.20;
+    else if (totalPortfolioMWp <= 10) clientSharePercentage = 63;
+    else if (totalPortfolioMWp <= 20) clientSharePercentage = 66.5;
+    else if (totalPortfolioMWp <= 30) clientSharePercentage = 68.25;
     else clientSharePercentage = 70;
     
-    // Calculate 6-year revenue (average carbon price ~R148)
-    const avgCarbonPrice = 148;
-    const revenue6yr = Math.round(creditsPerYear * 6 * avgCarbonPrice * (clientSharePercentage / 100));
+    // Calculate 6-year revenue using actual carbon prices
+    const revenue6yr = Math.round(
+      creditsPerYear * SIX_YEAR_PRICE_SUM * (clientSharePercentage / 100)
+    );
     
     // Generate invitation token
     const invitationToken = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 10);
     
-    // Create proposal
+    // Create proposal with all calculated fields
     const proposalData = {
       title: data.project.name || `Solar Project - ${data.project.address}`,
       agent_id: null, // API-created, no agent
@@ -410,6 +428,8 @@ async function handleCreateProposal(
       invitation_token: invitationToken,
       invitation_expires_at: expiresAt.toISOString(),
       system_size_kwp: systemSizeKWp,
+      annual_energy: annualEnergyKWh,
+      carbon_credits: creditsPerYear,
       client_share_percentage: clientSharePercentage,
       project_info: {
         name: data.project.name,
@@ -471,7 +491,7 @@ async function handleCreateProposal(
               projectName: data.project.name || 'Solar Project',
               invitationLink: acceptanceUrl,
               systemSize: `${Math.round(systemSizeKWp)} kWp`,
-              carbonCredits: creditsPerYear,
+              carbonCredits: Math.round(creditsPerYear),
               partnerName,
               partnerLogoUrl,
             }),
@@ -526,7 +546,8 @@ async function handleCreateProposal(
       client_id: clientId,
       partner_reference_id: data.partner_reference_id,
       estimates: {
-        credits_per_year: creditsPerYear,
+        annual_energy_kwh: Math.round(annualEnergyKWh),
+        credits_per_year: Math.round(creditsPerYear * 100) / 100, // 2 decimal places
         revenue_6yr_total: revenue6yr,
         client_share_percentage: clientSharePercentage,
       },
@@ -570,7 +591,7 @@ async function handleListProposals(
         signed_at,
         client_reference_id,
         clients!client_reference_id (email),
-        project_onboarding!inner (id)
+        project_onboarding (id)
       `)
       .eq('partner_id', auth.partnerId)
       .is('deleted_at', null)
@@ -704,6 +725,13 @@ async function handleGetProposal(
     return notFoundResponse(requestId, 'Proposal');
   }
   
+  // Calculate estimates using stored values or recalculate from system size
+  const systemSizeKWp = data.system_size_kwp || 0;
+  const annualEnergyKWh = data.annual_energy || systemSizeKWp * ANNUAL_GENERATION_FACTOR;
+  const creditsPerYear = data.carbon_credits || (annualEnergyKWh / 1000) * EMISSION_FACTOR;
+  const clientShare = data.client_share_percentage || 60.20;
+  const revenue6yr = Math.round(creditsPerYear * SIX_YEAR_PRICE_SUM * (clientShare / 100));
+  
   return successResponse({
     proposal_id: data.id,
     partner_reference_id: data.partner_reference_id,
@@ -719,9 +747,10 @@ async function handleGetProposal(
     },
     project: data.project_info,
     estimates: {
-      credits_per_year: Math.round((data.system_size_kwp || 0) * 1.2),
-      revenue_6yr_total: Math.round((data.system_size_kwp || 0) * 1.2 * 6 * 148 * ((data.client_share_percentage || 60) / 100)),
-      client_share_percentage: data.client_share_percentage,
+      annual_energy_kwh: Math.round(annualEnergyKWh),
+      credits_per_year: Math.round(creditsPerYear * 100) / 100,
+      revenue_6yr_total: revenue6yr,
+      client_share_percentage: clientShare,
     },
   }, requestId);
 }
