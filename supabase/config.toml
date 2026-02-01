@@ -98,3 +98,6 @@ verify_jwt = true
 
 [functions.send-agent-approval-email]
 verify_jwt = true
+
+[functions.partner-api]
+verify_jwt = false

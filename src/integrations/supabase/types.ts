@@ -694,6 +694,8 @@ export type Database = {
           credential_method: string
           delegated_email: string | null
           first_data_ingested_at: string | null
+          granted_by_email: string | null
+          granted_by_role: string | null
           id: string
           last_test_at: string | null
           last_test_error: string | null
@@ -711,6 +713,8 @@ export type Database = {
           credential_method: string
           delegated_email?: string | null
           first_data_ingested_at?: string | null
+          granted_by_email?: string | null
+          granted_by_role?: string | null
           id?: string
           last_test_at?: string | null
           last_test_error?: string | null
@@ -728,6 +732,8 @@ export type Database = {
           credential_method?: string
           delegated_email?: string | null
           first_data_ingested_at?: string | null
+          granted_by_email?: string | null
+          granted_by_role?: string | null
           id?: string
           last_test_at?: string | null
           last_test_error?: string | null
@@ -1128,6 +1134,7 @@ export type Database = {
           file_url: string
           id: string
           is_validated: boolean | null
+          metadata: Json | null
           mime_type: string | null
           project_id: string
           replaces_doc_id: string | null
@@ -1145,6 +1152,7 @@ export type Database = {
           file_url: string
           id?: string
           is_validated?: boolean | null
+          metadata?: Json | null
           mime_type?: string | null
           project_id: string
           replaces_doc_id?: string | null
@@ -1162,6 +1170,7 @@ export type Database = {
           file_url?: string
           id?: string
           is_validated?: boolean | null
+          metadata?: Json | null
           mime_type?: string | null
           project_id?: string
           replaces_doc_id?: string | null
@@ -1446,6 +1455,264 @@ export type Database = {
           },
         ]
       }
+      partner_api_keys: {
+        Row: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at: string | null
+          environment: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_used_at: string | null
+          partner_id: string
+          rate_limit_per_day: number | null
+          rate_limit_per_minute: number | null
+          request_count: number | null
+          scopes: Json
+        }
+        Insert: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at?: string | null
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          partner_id: string
+          rate_limit_per_day?: number | null
+          rate_limit_per_minute?: number | null
+          request_count?: number | null
+          scopes?: Json
+        }
+        Update: {
+          api_key_hash?: string
+          api_key_prefix?: string
+          created_at?: string | null
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          partner_id?: string
+          rate_limit_per_day?: number | null
+          rate_limit_per_minute?: number | null
+          request_count?: number | null
+          scopes?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_api_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string | null
+          duration_ms: number | null
+          id: string
+          ip_address: unknown
+          method: string
+          partner_id: string | null
+          path: string
+          request_body_sanitized: Json | null
+          request_id: string
+          response_body: Json | null
+          status_code: number
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          id?: string
+          ip_address?: unknown
+          method: string
+          partner_id?: string | null
+          path: string
+          request_body_sanitized?: Json | null
+          request_id: string
+          response_body?: Json | null
+          status_code: number
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          id?: string
+          ip_address?: unknown
+          method?: string
+          partner_id?: string | null
+          path?: string
+          request_body_sanitized?: Json | null
+          request_id?: string
+          response_body?: Json | null
+          status_code?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_api_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "partner_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_api_logs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_webhook_deliveries: {
+        Row: {
+          attempt: number | null
+          created_at: string | null
+          event: string
+          id: string
+          next_retry_at: string | null
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          response_time_ms: number | null
+          sent_at: string | null
+          status: string
+          webhook_id: string
+        }
+        Insert: {
+          attempt?: number | null
+          created_at?: string | null
+          event: string
+          id?: string
+          next_retry_at?: string | null
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          response_time_ms?: number | null
+          sent_at?: string | null
+          status?: string
+          webhook_id: string
+        }
+        Update: {
+          attempt?: number | null
+          created_at?: string | null
+          event?: string
+          id?: string
+          next_retry_at?: string | null
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          response_time_ms?: number | null
+          sent_at?: string | null
+          status?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "partner_webhook_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_webhook_subscriptions: {
+        Row: {
+          consecutive_failures: number | null
+          created_at: string | null
+          disabled_at: string | null
+          disabled_reason: string | null
+          events: string[]
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          last_triggered_at: string | null
+          partner_id: string
+          signing_secret_encrypted: string
+          url: string
+          verified_at: string | null
+        }
+        Insert: {
+          consecutive_failures?: number | null
+          created_at?: string | null
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          events: string[]
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          last_triggered_at?: string | null
+          partner_id: string
+          signing_secret_encrypted: string
+          url: string
+          verified_at?: string | null
+        }
+        Update: {
+          consecutive_failures?: number | null
+          created_at?: string | null
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          last_triggered_at?: string | null
+          partner_id?: string
+          signing_secret_encrypted?: string
+          url?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_webhook_subscriptions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          contact_email: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          support_email: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          support_email?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          support_email?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           access_level: string | null
@@ -1563,6 +1830,7 @@ export type Database = {
           submitted_for_review: boolean | null
           submitted_for_review_at: string | null
           updated_at: string
+          version: number | null
         }
         Insert: {
           admin_validated?: boolean | null
@@ -1585,6 +1853,7 @@ export type Database = {
           submitted_for_review?: boolean | null
           submitted_for_review_at?: string | null
           updated_at?: string
+          version?: number | null
         }
         Update: {
           admin_validated?: boolean | null
@@ -1607,6 +1876,7 @@ export type Database = {
           submitted_for_review?: boolean | null
           submitted_for_review_at?: string | null
           updated_at?: string
+          version?: number | null
         }
         Relationships: [
           {
@@ -1788,6 +2058,8 @@ export type Database = {
           client_share_override_set_by: string | null
           client_share_percentage: number | null
           company_id: string | null
+          consent_obtained_at: string | null
+          consent_source: string | null
           content: Json
           created_at: string
           deleted_at: string | null
@@ -1803,6 +2075,8 @@ export type Database = {
           last_email_sent_at: string | null
           last_engagement_at: string | null
           last_modified_by: string | null
+          partner_id: string | null
+          partner_reference_id: string | null
           pdf_generated_at: string | null
           pdf_url: string | null
           pdf_version: number | null
@@ -1833,6 +2107,8 @@ export type Database = {
           client_share_override_set_by?: string | null
           client_share_percentage?: number | null
           company_id?: string | null
+          consent_obtained_at?: string | null
+          consent_source?: string | null
           content?: Json
           created_at?: string
           deleted_at?: string | null
@@ -1848,6 +2124,8 @@ export type Database = {
           last_email_sent_at?: string | null
           last_engagement_at?: string | null
           last_modified_by?: string | null
+          partner_id?: string | null
+          partner_reference_id?: string | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
           pdf_version?: number | null
@@ -1878,6 +2156,8 @@ export type Database = {
           client_share_override_set_by?: string | null
           client_share_percentage?: number | null
           company_id?: string | null
+          consent_obtained_at?: string | null
+          consent_source?: string | null
           content?: Json
           created_at?: string
           deleted_at?: string | null
@@ -1893,6 +2173,8 @@ export type Database = {
           last_email_sent_at?: string | null
           last_engagement_at?: string | null
           last_modified_by?: string | null
+          partner_id?: string | null
+          partner_reference_id?: string | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
           pdf_version?: number | null
@@ -1946,6 +2228,13 @@ export type Database = {
             columns: ["last_modified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2215,6 +2504,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_proposal_duplicates: {
+        Args: {
+          p_address: string
+          p_client_email: string
+          p_commissioning_date: string
+          p_partner_id: string
+        }
+        Returns: {
+          created_at: string
+          partner_reference_id: string
+          proposal_id: string
+          status: string
+        }[]
+      }
       create_agent_user: {
         Args: {
           access_level_param?: string
@@ -2444,6 +2747,14 @@ export type Database = {
         }[]
       }
       get_minimum_vintage_year: { Args: never; Returns: number }
+      get_partner_attribution: {
+        Args: { p_partner_id: string }
+        Returns: {
+          logo_url: string
+          partner_name: string
+          support_email: string
+        }[]
+      }
       get_pending_team_invitations: {
         Args: { company_id_param: string }
         Returns: {
@@ -2659,6 +2970,10 @@ export type Database = {
           test_name: string
         }[]
       }
+      update_partner_api_key_usage: {
+        Args: { p_api_key_id: string }
+        Returns: undefined
+      }
       update_proposal_status_with_log: {
         Args: {
           is_automated?: boolean
@@ -2692,6 +3007,20 @@ export type Database = {
       validate_onboarding_completion: {
         Args: { project_id_param: string }
         Returns: boolean
+      }
+      validate_partner_api_key: {
+        Args: { p_api_key_prefix: string }
+        Returns: {
+          api_key_hash: string
+          api_key_id: string
+          environment: string
+          is_active: boolean
+          partner_id: string
+          partner_name: string
+          rate_limit_per_day: number
+          rate_limit_per_minute: number
+          scopes: Json
+        }[]
       }
       validate_token_direct: {
         Args: { token_param: string }
