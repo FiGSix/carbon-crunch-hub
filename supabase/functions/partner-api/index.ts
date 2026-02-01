@@ -905,21 +905,197 @@ async function handleSendAcceptanceLink(
 }
 
 // =============================================================================
-// Handlers - Projects (Stub implementations for Phase 3)
+// Handlers - Projects (Phase 3 - Full Implementation)
 // =============================================================================
 
+// Required onboarding fields for audit readiness
+const REQUIRED_ONBOARDING_FIELDS = [
+  'system_address',
+  'commissioning_date',
+  'panel_total_kwp',
+  'inverter_serial',
+  'installer_company_name',
+  'installer_email',
+];
+
+// Helper: Calculate completion percentage
+function calculateCompletion(fields: Record<string, unknown> | null): { 
+  fields_complete: number; 
+  fields_required: number; 
+  percentage: number; 
+  missing_fields: string[] 
+} {
+  if (!fields) {
+    return { 
+      fields_complete: 0, 
+      fields_required: REQUIRED_ONBOARDING_FIELDS.length, 
+      percentage: 0, 
+      missing_fields: [...REQUIRED_ONBOARDING_FIELDS] 
+    };
+  }
+  
+  const missing: string[] = [];
+  let complete = 0;
+  
+  for (const field of REQUIRED_ONBOARDING_FIELDS) {
+    const value = fields[field];
+    if (value !== null && value !== undefined && value !== '') {
+      complete++;
+    } else {
+      missing.push(field);
+    }
+  }
+  
+  return {
+    fields_complete: complete,
+    fields_required: REQUIRED_ONBOARDING_FIELDS.length,
+    percentage: Math.round((complete / REQUIRED_ONBOARDING_FIELDS.length) * 100),
+    missing_fields: missing,
+  };
+}
+
+// Helper: Check partner owns project (via proposal)
+async function partnerOwnsProject(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  partnerId: string
+): Promise<{ owns: boolean; proposal?: Record<string, unknown>; project?: Record<string, unknown> }> {
+  const { data: project, error } = await supabase
+    .from('project_onboarding')
+    .select(`
+      id,
+      proposal_id,
+      onboarding_complete,
+      submitted_for_review,
+      admin_validated,
+      audit_ready,
+      data_access_verified,
+      version,
+      proposals!inner (
+        id,
+        partner_id,
+        partner_reference_id,
+        status,
+        system_size_kwp,
+        client_reference_id,
+        clients!client_reference_id (email, first_name, last_name, company_name)
+      )
+    `)
+    .eq('id', projectId)
+    .single();
+  
+  if (error || !project) {
+    return { owns: false };
+  }
+  
+  const proposal = project.proposals as Record<string, unknown>;
+  if (proposal.partner_id !== partnerId) {
+    return { owns: false };
+  }
+  
+  return { owns: true, proposal, project };
+}
+
 async function handleListProjects(
-  _req: Request,
-  _auth: PartnerAuthInfo,
+  req: Request,
+  auth: PartnerAuthInfo,
   _params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
-  return successResponse({ projects: [], pagination: { has_more: false } }, requestId);
+  try {
+    const url = new URL(req.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
+    const cursor = url.searchParams.get('cursor');
+    const status = url.searchParams.get('status'); // e.g., 'onboarding', 'audit_ready', 'submitted'
+    
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    let query = supabase
+      .from('project_onboarding')
+      .select(`
+        id,
+        proposal_id,
+        onboarding_complete,
+        submitted_for_review,
+        admin_validated,
+        audit_ready,
+        data_access_verified,
+        created_at,
+        updated_at,
+        proposals!inner (
+          id,
+          partner_id,
+          partner_reference_id,
+          title,
+          system_size_kwp,
+          clients!client_reference_id (email, first_name, last_name)
+        )
+      `)
+      .eq('proposals.partner_id', auth.partnerId)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1);
+    
+    if (cursor) {
+      query = query.lt('created_at', cursor);
+    }
+    
+    // Filter by status
+    if (status === 'audit_ready') {
+      query = query.eq('audit_ready', true);
+    } else if (status === 'submitted') {
+      query = query.eq('submitted_for_review', true).eq('admin_validated', false);
+    } else if (status === 'onboarding') {
+      query = query.eq('onboarding_complete', false);
+    }
+    
+    const { data: projects, error } = await query;
+    
+    if (error) {
+      console.error('[PartnerAPI] handleListProjects error:', error);
+      return internalErrorResponse(requestId);
+    }
+    
+    const hasMore = (projects?.length || 0) > limit;
+    const items = (projects || []).slice(0, limit);
+    
+    const formattedProjects = items.map(p => {
+      const proposal = p.proposals as Record<string, unknown>;
+      const client = proposal.clients as Record<string, unknown>;
+      return {
+        project_id: p.id,
+        proposal_id: p.proposal_id,
+        partner_reference_id: proposal.partner_reference_id,
+        title: proposal.title,
+        client_email: client?.email,
+        system_size_kwp: proposal.system_size_kwp,
+        status: {
+          onboarding_complete: p.onboarding_complete,
+          submitted_for_review: p.submitted_for_review,
+          admin_validated: p.admin_validated,
+          audit_ready: p.audit_ready,
+        },
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+      };
+    });
+    
+    return successResponse({
+      projects: formattedProjects,
+      pagination: {
+        has_more: hasMore,
+        next_cursor: hasMore && items.length > 0 ? items[items.length - 1].created_at : undefined,
+      },
+    }, requestId);
+    
+  } catch (error) {
+    console.error('[PartnerAPI] handleListProjects error:', error);
+    return internalErrorResponse(requestId);
+  }
 }
 
 async function handleGetProject(
-  _req: Request,
-  _auth: PartnerAuthInfo,
+  req: Request,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -928,12 +1104,97 @@ async function handleGetProject(
     return validationErrorResponse(requestId, 'Invalid project ID format', 'project_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  const project = ownership.project!;
+  const proposal = ownership.proposal!;
+  
+  // Get onboarding fields
+  const { data: fields } = await supabase
+    .from('onboarding_fields')
+    .select('*')
+    .eq('project_id', params.id)
+    .single();
+  
+  // Get documents
+  const { data: documents } = await supabase
+    .from('onboarding_documents')
+    .select('category, is_validated')
+    .eq('project_id', params.id);
+  
+  // Get data access config
+  const { data: dataAccess } = await supabase
+    .from('data_access_config')
+    .select('provider, last_test_status')
+    .eq('project_id', params.id)
+    .single();
+  
+  const completion = calculateCompletion(fields);
+  
+  // Document status
+  const cocUploaded = documents?.some(d => d.category === 'coc') || false;
+  const invoiceUploaded = documents?.some(d => d.category === 'invoice') || false;
+  
+  // Build ETag from version
+  const etag = `"v${project.version || 1}"`;
+  
+  // Check If-None-Match header
+  const ifNoneMatch = req.headers.get('If-None-Match');
+  if (ifNoneMatch === etag) {
+    return new Response(null, { 
+      status: 304, 
+      headers: { ...corsHeaders, 'ETag': etag } 
+    });
+  }
+  
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        project_id: params.id,
+        proposal_id: project.proposal_id,
+        partner_reference_id: proposal.partner_reference_id,
+        version: project.version || 1,
+        status: {
+          onboarding_complete: project.onboarding_complete,
+          submitted_for_review: project.submitted_for_review,
+          admin_validated: project.admin_validated,
+          audit_ready: project.audit_ready,
+        },
+        completion,
+        documents: {
+          coc_uploaded: cocUploaded,
+          invoice_uploaded: invoiceUploaded,
+        },
+        data_access: {
+          configured: !!dataAccess,
+          provider: dataAccess?.provider,
+          status: dataAccess?.last_test_status === 'success' ? 'verified' : 
+                  dataAccess?.last_test_status === 'failed' ? 'failed' : 'pending',
+        },
+      },
+      request_id: requestId,
+    }),
+    { 
+      status: 200, 
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'ETag': etag,
+      } 
+    }
+  );
 }
 
 async function handleUpdateOnboarding(
   req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -950,12 +1211,174 @@ async function handleUpdateOnboarding(
     return validationErrorResponse(requestId, firstError.message, firstError.field, firstError.received);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  const project = ownership.project!;
+  
+  // Check ETag for optimistic concurrency
+  const ifMatch = req.headers.get('If-Match');
+  const currentVersion = project.version || 1;
+  const expectedEtag = `"v${currentVersion}"`;
+  
+  if (ifMatch && ifMatch !== expectedEtag) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: { 
+          code: 'CONCURRENCY_CONFLICT', 
+          message: 'Version mismatch. Fetch latest version and retry.',
+          expected_version: currentVersion,
+        },
+        request_id: requestId,
+      }),
+      { status: 412, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+  
+  // Map API fields to database columns
+  const data = validation.data!;
+  const fieldsUpdate: Record<string, unknown> = {};
+  const updatedFields: string[] = [];
+  const skippedFields: string[] = [];
+  
+  // System fields
+  if (data.system) {
+    const systemMappings: Record<string, string> = {
+      inverter_brand: 'inverter_brand',
+      inverter_model: 'inverter_model',
+      inverter_serial: 'inverter_serial',
+      inverter_capacity_kw: 'inverter_capacity_kw',
+      inverter_quantity: 'inverter_quantity',
+      panel_brand: 'panel_brand',
+      panel_quantity: 'panel_quantity',
+      panel_size_wp: 'panel_size_wp',
+      panel_total_kwp: 'panel_total_kwp',
+      has_battery: 'has_battery',
+      battery_brand: 'battery_brand',
+      battery_capacity_kwh: 'battery_capacity_kwh',
+    };
+    
+    for (const [apiField, dbField] of Object.entries(systemMappings)) {
+      if (apiField in data.system) {
+        fieldsUpdate[dbField] = data.system[apiField as keyof typeof data.system];
+        updatedFields.push(dbField);
+      }
+    }
+  }
+  
+  // Installation fields
+  if (data.installation) {
+    if ('total_capex' in data.installation) {
+      fieldsUpdate.total_capex = data.installation.total_capex;
+      updatedFields.push('total_capex');
+    }
+    if ('ownership_type' in data.installation) {
+      fieldsUpdate.ownership_type = data.installation.ownership_type;
+      updatedFields.push('ownership_type');
+    }
+    if ('has_maintenance_agreement' in data.installation) {
+      fieldsUpdate.has_maintenance_agreement = data.installation.has_maintenance_agreement;
+      updatedFields.push('has_maintenance_agreement');
+    }
+    if ('maintenance_cost_annual' in data.installation) {
+      fieldsUpdate.maintenance_cost_annual = data.installation.maintenance_cost_annual;
+      updatedFields.push('maintenance_cost_annual');
+    }
+  }
+  
+  // Installer fields
+  if (data.installer) {
+    if ('company_name' in data.installer) {
+      fieldsUpdate.installer_company_name = data.installer.company_name;
+      updatedFields.push('installer_company_name');
+    }
+    if ('email' in data.installer) {
+      fieldsUpdate.installer_email = data.installer.email;
+      updatedFields.push('installer_email');
+    }
+  }
+  
+  // Location fields
+  if (data.location) {
+    if ('address' in data.location) {
+      fieldsUpdate.system_address = data.location.address;
+      updatedFields.push('system_address');
+    }
+    if ('gps_lat' in data.location) {
+      fieldsUpdate.system_gps_lat = data.location.gps_lat;
+      updatedFields.push('system_gps_lat');
+    }
+    if ('gps_lng' in data.location) {
+      fieldsUpdate.system_gps_lng = data.location.gps_lng;
+      updatedFields.push('system_gps_lng');
+    }
+  }
+  
+  if (updatedFields.length === 0) {
+    return validationErrorResponse(requestId, 'No valid fields to update', 'body');
+  }
+  
+  // Update onboarding_fields
+  fieldsUpdate.updated_at = new Date().toISOString();
+  
+  const { error: fieldsError } = await supabase
+    .from('onboarding_fields')
+    .update(fieldsUpdate)
+    .eq('project_id', params.id);
+  
+  if (fieldsError) {
+    console.error('[PartnerAPI] handleUpdateOnboarding fields error:', fieldsError);
+    return internalErrorResponse(requestId);
+  }
+  
+  // Increment version
+  const newVersion = currentVersion + 1;
+  await supabase
+    .from('project_onboarding')
+    .update({ version: newVersion, updated_at: new Date().toISOString() })
+    .eq('id', params.id);
+  
+  // Get updated fields to recalculate completion
+  const { data: updatedFieldsData } = await supabase
+    .from('onboarding_fields')
+    .select('*')
+    .eq('project_id', params.id)
+    .single();
+  
+  const completion = calculateCompletion(updatedFieldsData);
+  
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        project_id: params.id,
+        version: newVersion,
+        completion,
+        updated_fields: updatedFields,
+        skipped_fields: skippedFields,
+      },
+      request_id: requestId,
+    }),
+    { 
+      status: 200, 
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'ETag': `"v${newVersion}"`,
+      } 
+    }
+  );
 }
 
 async function handleSubmitOnboarding(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -964,12 +1387,101 @@ async function handleSubmitOnboarding(
     return validationErrorResponse(requestId, 'Invalid project ID format', 'project_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  const project = ownership.project!;
+  
+  // Check if already submitted
+  if (project.submitted_for_review) {
+    return validationErrorResponse(requestId, 'Project has already been submitted for review', 'project_id');
+  }
+  
+  // Get onboarding fields to check completion
+  const { data: fields } = await supabase
+    .from('onboarding_fields')
+    .select('*')
+    .eq('project_id', params.id)
+    .single();
+  
+  const completion = calculateCompletion(fields);
+  
+  if (completion.missing_fields.length > 0) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'INCOMPLETE_ONBOARDING',
+          message: 'Cannot submit - required fields are missing',
+          missing_fields: completion.missing_fields,
+        },
+        request_id: requestId,
+      }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+  
+  // Check for required documents
+  const { data: documents } = await supabase
+    .from('onboarding_documents')
+    .select('category')
+    .eq('project_id', params.id);
+  
+  const cocUploaded = documents?.some(d => d.category === 'coc') || false;
+  const invoiceUploaded = documents?.some(d => d.category === 'invoice') || false;
+  
+  if (!cocUploaded || !invoiceUploaded) {
+    const missingDocs: string[] = [];
+    if (!cocUploaded) missingDocs.push('coc');
+    if (!invoiceUploaded) missingDocs.push('invoice');
+    
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'MISSING_DOCUMENTS',
+          message: 'Cannot submit - required documents are missing',
+          missing_documents: missingDocs,
+        },
+        request_id: requestId,
+      }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+  
+  // Submit for review
+  const { error } = await supabase
+    .from('project_onboarding')
+    .update({
+      submitted_for_review: true,
+      submitted_for_review_at: new Date().toISOString(),
+      onboarding_complete: true,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.id);
+  
+  if (error) {
+    console.error('[PartnerAPI] handleSubmitOnboarding error:', error);
+    return internalErrorResponse(requestId);
+  }
+  
+  return successResponse({
+    project_id: params.id,
+    submitted: true,
+    submitted_at: new Date().toISOString(),
+    next_steps: 'Crunch Carbon will review and validate your submission. You will be notified when audit ready.',
+  }, requestId);
 }
 
 async function handleDocumentPresign(
   req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -986,26 +1498,126 @@ async function handleDocumentPresign(
     return validationErrorResponse(requestId, firstError.message, firstError.field, firstError.received);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  const data = validation.data!;
+  const documentId = crypto.randomUUID();
+  const timestamp = Date.now();
+  const filePath = `partner-uploads/${auth.partnerId}/${params.id}/${timestamp}/${data.file_name}`;
+  
+  // Create signed upload URL
+  const { data: signedUrl, error: signError } = await supabase
+    .storage
+    .from('onboarding-documents')
+    .createSignedUploadUrl(filePath);
+  
+  if (signError || !signedUrl) {
+    console.error('[PartnerAPI] handleDocumentPresign signedUrl error:', signError);
+    return internalErrorResponse(requestId);
+  }
+  
+  // Create pending document record
+  const { error: docError } = await supabase
+    .from('onboarding_documents')
+    .insert({
+      id: documentId,
+      project_id: params.id,
+      category: data.category,
+      file_name: data.file_name,
+      file_url: filePath, // Will be updated on confirm
+      file_size_bytes: data.file_size_bytes,
+      mime_type: data.content_type,
+      uploaded_by: auth.partnerId, // Use partner ID as uploader
+      metadata: data.metadata || {},
+    });
+  
+  if (docError) {
+    console.error('[PartnerAPI] handleDocumentPresign doc insert error:', docError);
+    return internalErrorResponse(requestId);
+  }
+  
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  
+  return successResponse({
+    upload_url: signedUrl.signedUrl,
+    upload_expires_at: expiresAt.toISOString(),
+    document_id: documentId,
+    upload_headers: {
+      'Content-Type': data.content_type,
+    },
+  }, requestId, { status: 201 });
 }
 
 async function handleDocumentConfirm(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
-  const uuidValidation = validateUUID(params.id, 'project_id');
-  if (!uuidValidation.success) {
+  const projectValidation = validateUUID(params.id, 'project_id');
+  if (!projectValidation.success) {
     return validationErrorResponse(requestId, 'Invalid project ID format', 'project_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  const docValidation = validateUUID(params.id2, 'document_id');
+  if (!docValidation.success) {
+    return validationErrorResponse(requestId, 'Invalid document ID format', 'document_id', params.id2);
+  }
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  // Get the document
+  const { data: doc, error: docError } = await supabase
+    .from('onboarding_documents')
+    .select('*')
+    .eq('id', params.id2)
+    .eq('project_id', params.id)
+    .single();
+  
+  if (docError || !doc) {
+    return notFoundResponse(requestId, 'Document');
+  }
+  
+  // Get public URL for the uploaded file
+  const { data: publicUrlData } = supabase
+    .storage
+    .from('onboarding-documents')
+    .getPublicUrl(doc.file_url);
+  
+  // Update document with final URL
+  await supabase
+    .from('onboarding_documents')
+    .update({
+      file_url: publicUrlData.publicUrl,
+      uploaded_at: new Date().toISOString(),
+    })
+    .eq('id', params.id2);
+  
+  return successResponse({
+    document_id: doc.id,
+    category: doc.category,
+    file_url: publicUrlData.publicUrl,
+    uploaded_at: new Date().toISOString(),
+    virus_scan_status: 'pending', // Placeholder for future implementation
+    metadata: doc.metadata,
+  }, requestId);
 }
 
 async function handleDocumentUrl(
-  _req: Request,
-  _auth: PartnerAuthInfo,
+  req: Request,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1014,12 +1626,60 @@ async function handleDocumentUrl(
     return validationErrorResponse(requestId, 'Invalid project ID format', 'project_id', params.id);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  // Parse body for URL-based upload
+  const body = await req.json();
+  
+  if (!body.category || !body.file_url) {
+    return validationErrorResponse(requestId, 'category and file_url are required', 'body');
+  }
+  
+  const validCategories = ['coc', 'invoice', 'installation_photo', 'panel_layout', 'other'];
+  if (!validCategories.includes(body.category)) {
+    return validationErrorResponse(requestId, 'Invalid category', 'category', body.category);
+  }
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  const documentId = crypto.randomUUID();
+  const fileName = body.file_name || body.file_url.split('/').pop() || 'document';
+  
+  // Insert document record with external URL
+  const { error: docError } = await supabase
+    .from('onboarding_documents')
+    .insert({
+      id: documentId,
+      project_id: params.id,
+      category: body.category,
+      file_name: fileName,
+      file_url: body.file_url,
+      file_size_bytes: body.file_size_bytes || null,
+      mime_type: body.content_type || null,
+      uploaded_by: auth.partnerId,
+      metadata: body.metadata || {},
+    });
+  
+  if (docError) {
+    console.error('[PartnerAPI] handleDocumentUrl insert error:', docError);
+    return internalErrorResponse(requestId);
+  }
+  
+  return successResponse({
+    document_id: documentId,
+    category: body.category,
+    file_url: body.file_url,
+    uploaded_at: new Date().toISOString(),
+  }, requestId, { status: 201 });
 }
 
 async function handleConfigureDataAccess(
   req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1036,16 +1696,98 @@ async function handleConfigureDataAccess(
     return validationErrorResponse(requestId, firstError.message, firstError.field, firstError.received);
   }
   
-  return notFoundResponse(requestId, 'Project');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Verify partner ownership
+  const ownership = await partnerOwnsProject(supabase, params.id, auth.partnerId);
+  if (!ownership.owns) {
+    return notFoundResponse(requestId, 'Project');
+  }
+  
+  const data = validation.data!;
+  const dataAccessId = crypto.randomUUID();
+  
+  // Check if config already exists
+  const { data: existing } = await supabase
+    .from('data_access_config')
+    .select('id')
+    .eq('project_id', params.id)
+    .single();
+  
+  const configData = {
+    provider: data.provider,
+    credential_method: data.credential_method === 'delegated_access' ? 'delegated_account' : 'api_key',
+    site_id: data.site_id || null,
+    portal_url: data.portal_url || null,
+    delegated_email: data.delegated_access?.granted_by_email || null,
+    granted_by_email: data.delegated_access?.granted_by_email || null,
+    granted_by_role: data.delegated_access?.granted_by_role || null,
+    last_test_status: 'pending',
+    configured_by: auth.partnerId,
+    updated_at: new Date().toISOString(),
+  };
+  
+  if (existing) {
+    // Update existing config
+    const { error } = await supabase
+      .from('data_access_config')
+      .update(configData)
+      .eq('id', existing.id);
+    
+    if (error) {
+      console.error('[PartnerAPI] handleConfigureDataAccess update error:', error);
+      return internalErrorResponse(requestId);
+    }
+    
+    return successResponse({
+      data_access_id: existing.id,
+      provider: data.provider,
+      status: 'pending_verification',
+      next_steps: data.credential_method === 'delegated_access' ? {
+        delegated_email: 'monitoring@crunchcarbon.com',
+        instructions: `Please grant viewer access to monitoring@crunchcarbon.com on your ${data.provider} portal.`,
+        instructions_url: `https://crunchcarbon.com/help/data-access/${data.provider.toLowerCase()}`,
+      } : undefined,
+      instructions_sent: false,
+    }, requestId);
+    
+  } else {
+    // Insert new config
+    const { error } = await supabase
+      .from('data_access_config')
+      .insert({
+        id: dataAccessId,
+        project_id: params.id,
+        ...configData,
+        created_at: new Date().toISOString(),
+      });
+    
+    if (error) {
+      console.error('[PartnerAPI] handleConfigureDataAccess insert error:', error);
+      return internalErrorResponse(requestId);
+    }
+    
+    return successResponse({
+      data_access_id: dataAccessId,
+      provider: data.provider,
+      status: 'pending_verification',
+      next_steps: data.credential_method === 'delegated_access' ? {
+        delegated_email: 'monitoring@crunchcarbon.com',
+        instructions: `Please grant viewer access to monitoring@crunchcarbon.com on your ${data.provider} portal.`,
+        instructions_url: `https://crunchcarbon.com/help/data-access/${data.provider.toLowerCase()}`,
+      } : undefined,
+      instructions_sent: false,
+    }, requestId, { status: 201 });
+  }
 }
 
 // =============================================================================
-// Handlers - Clients (Stub implementations for Phase 3)
+// Handlers - Clients (Phase 3 - Full Implementation)
 // =============================================================================
 
 async function handleClientProjects(
   _req: Request,
-  _auth: PartnerAuthInfo,
+  auth: PartnerAuthInfo,
   params: Record<string, string>,
   requestId: string
 ): Promise<Response> {
@@ -1055,10 +1797,63 @@ async function handleClientProjects(
     return validationErrorResponse(requestId, 'Invalid email format', 'email', email);
   }
   
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Find client by email
+  const { data: client, error: clientError } = await supabase
+    .from('clients')
+    .select('id, email, first_name, last_name, company_name')
+    .ilike('email', email)
+    .single();
+  
+  if (clientError || !client) {
+    return successResponse({
+      client: null,
+      projects: [],
+      total_kwp: 0,
+    }, requestId);
+  }
+  
+  // Get all projects for this client where partner owns the proposal
+  const { data: proposals } = await supabase
+    .from('proposals')
+    .select(`
+      id,
+      partner_reference_id,
+      title,
+      status,
+      system_size_kwp,
+      signed_at,
+      project_info,
+      project_onboarding (id)
+    `)
+    .eq('client_reference_id', client.id)
+    .eq('partner_id', auth.partnerId)
+    .is('deleted_at', null)
+    .in('status', ['accepted', 'approved'])
+    .order('signed_at', { ascending: false });
+  
+  const projects = (proposals || []).map(p => ({
+    project_id: (p.project_onboarding as Record<string, unknown>[])?.[0]?.id,
+    proposal_id: p.id,
+    partner_reference_id: p.partner_reference_id,
+    address: (p.project_info as Record<string, unknown>)?.address,
+    system_size_kwp: p.system_size_kwp,
+    status: p.status,
+    signed_at: p.signed_at,
+  })).filter(p => p.project_id); // Only include projects with onboarding records
+  
+  const totalKwp = projects.reduce((sum, p) => sum + (p.system_size_kwp || 0), 0);
+  
   return successResponse({
-    client: null,
-    projects: [],
-    total_kwp: 0,
+    client: {
+      email: client.email,
+      first_name: client.first_name,
+      last_name: client.last_name,
+      company_name: client.company_name,
+    },
+    projects,
+    total_kwp: totalKwp,
   }, requestId);
 }
 
