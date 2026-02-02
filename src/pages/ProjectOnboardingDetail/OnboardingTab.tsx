@@ -15,6 +15,7 @@ import { getAllAdminUserIds } from "@/services/adminService";
 import { createNotification } from "@/services/notificationService";
 import { logger } from "@/lib/logger";
 import { InverterDetailsRow, type InverterDetail } from "@/components/onboarding/InverterDetailsRow";
+import { PanelArrayDetailsRow, type PanelArrayDetail } from "@/components/onboarding/PanelArrayDetailsRow";
 
 interface SolarInstaller {
   id: string;
@@ -39,8 +40,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [installers, setInstallers] = useState<SolarInstaller[]>([]);
   const [loadingInstallers, setLoadingInstallers] = useState(false);
-  const [isPanelTotalManuallyOverridden, setIsPanelTotalManuallyOverridden] = useState(false);
   const [inverterDetails, setInverterDetails] = useState<InverterDetail[]>([]);
+  const [panelArrayDetails, setPanelArrayDetails] = useState<PanelArrayDetail[]>([]);
+  const [panelArrayCount, setPanelArrayCount] = useState<number>(1);
 
   useEffect(() => {
     fetchDocuments();
@@ -66,16 +68,6 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     }
   }, [formData.inverter_cost, formData.battery_cost, formData.panel_cost]);
 
-  // Auto-calculate panel_total_kwp from panel_size_wp and panel_quantity
-  useEffect(() => {
-    if (!isPanelTotalManuallyOverridden && formData.panel_size_wp && formData.panel_quantity) {
-      const calculatedKwp = (formData.panel_size_wp * formData.panel_quantity) / 1000;
-      setFormData(prev => ({ 
-        ...prev, 
-        panel_total_kwp: parseFloat(calculatedKwp.toFixed(2)) 
-      }));
-    }
-  }, [formData.panel_size_wp, formData.panel_quantity, isPanelTotalManuallyOverridden]);
 
   // Initialize and manage inverter details based on quantity
   useEffect(() => {
@@ -128,6 +120,55 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     
     setInverterDetails(newDetails);
   }, [formData.inverter_quantity]);
+
+  // Initialize and manage panel array details based on panelArrayCount
+  useEffect(() => {
+    const count = panelArrayCount;
+    
+    // Parse existing data - check for new JSON array format first
+    let existingDetails: PanelArrayDetail[] = [];
+    
+    if (formData.panel_brand) {
+      try {
+        const parsed = JSON.parse(formData.panel_brand as string);
+        
+        // Check if it's the new format (array of objects with brand/size_wp/etc.)
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'brand' in parsed[0]) {
+          existingDetails = parsed as PanelArrayDetail[];
+          // Update panelArrayCount to match existing data if this is initial load
+          if (parsed.length !== panelArrayCount && panelArrayDetails.length === 0) {
+            setPanelArrayCount(parsed.length);
+            return; // Let the effect run again with correct count
+          }
+        }
+      } catch {
+        // If not JSON, treat as legacy single brand value - migrate to new format
+        existingDetails = [{
+          brand: formData.panel_brand as string || '',
+          size_wp: formData.panel_size_wp || null,
+          quantity: formData.panel_quantity || null,
+          total_kwp: formData.panel_total_kwp || null
+        }];
+      }
+    }
+    
+    // If no existing details but we have legacy single-value fields, use them
+    if (existingDetails.length === 0 && (formData.panel_size_wp || formData.panel_quantity)) {
+      existingDetails = [{
+        brand: '',
+        size_wp: formData.panel_size_wp || null,
+        quantity: formData.panel_quantity || null,
+        total_kwp: formData.panel_total_kwp || null
+      }];
+    }
+    
+    // Adjust array size to match count
+    const newDetails: PanelArrayDetail[] = Array(count).fill(null).map((_, i) => 
+      existingDetails[i] || { brand: '', size_wp: null, quantity: null, total_kwp: null }
+    );
+    
+    setPanelArrayDetails(newDetails);
+  }, [panelArrayCount]);
 
   const fetchDocuments = async () => {
     setLoadingDocs(true);
@@ -240,6 +281,40 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       // Update formData with serialized inverter details
       const serializedDetails = JSON.stringify(newDetails);
       setFormData(prevForm => ({ ...prevForm, inverter_serial: serializedDetails }));
+      
+      return newDetails;
+    });
+  }, []);
+
+  const handlePanelArrayDetailChange = useCallback((index: number, field: keyof PanelArrayDetail, value: string | number | null) => {
+    setPanelArrayDetails(prev => {
+      const newDetails = [...prev];
+      newDetails[index] = { ...newDetails[index], [field]: value };
+      
+      // Auto-calculate total_kwp for this array
+      if (field === 'size_wp' || field === 'quantity') {
+        const size = field === 'size_wp' ? (value as number) : newDetails[index].size_wp;
+        const qty = field === 'quantity' ? (value as number) : newDetails[index].quantity;
+        if (size && qty) {
+          newDetails[index].total_kwp = parseFloat(((size * qty) / 1000).toFixed(2));
+        } else {
+          newDetails[index].total_kwp = null;
+        }
+      }
+      
+      // Serialize and store in panel_brand
+      const serializedDetails = JSON.stringify(newDetails);
+      
+      // Calculate aggregate totals
+      const totalQuantity = newDetails.reduce((sum, arr) => sum + (arr.quantity || 0), 0);
+      const totalKwp = newDetails.reduce((sum, arr) => sum + (arr.total_kwp || 0), 0);
+      
+      setFormData(prevForm => ({ 
+        ...prevForm, 
+        panel_brand: serializedDetails,
+        panel_quantity: totalQuantity,
+        panel_total_kwp: parseFloat(totalKwp.toFixed(2))
+      }));
       
       return newDetails;
     });
@@ -980,82 +1055,68 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               <CardTitle>Panel Details</CardTitle>
               <CardDescription>Information about the solar panels</CardDescription>
             </div>
-            {getSectionStatus(['panel_brand', 'panel_quantity', 'panel_total_kwp']) ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-            )}
+            {(() => {
+              // Check if at least one array has all required fields filled
+              const hasValidArrays = panelArrayDetails.length > 0 && panelArrayDetails.some(arr => 
+                arr.brand && arr.size_wp !== null && arr.quantity !== null && arr.total_kwp !== null
+              );
+              return hasValidArrays ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+              );
+            })()}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="panel_brand">Panel Brand / Manufacturer</Label>
-              <Select
-                value={formData.panel_brand || ''}
-                onValueChange={(value) => handleInputChange('panel_brand', value)}
-              >
-                <SelectTrigger id="panel_brand">
-                  <SelectValue placeholder="Select panel brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="JA Solar">JA Solar</SelectItem>
-                  <SelectItem value="Jinko Solar">Jinko Solar</SelectItem>
-                  <SelectItem value="Longi Solar">Longi Solar</SelectItem>
-                  <SelectItem value="Canadian Solar">Canadian Solar</SelectItem>
-                  <SelectItem value="Trina Solar">Trina Solar</SelectItem>
-                  <SelectItem value="Q Cells">Q Cells</SelectItem>
-                  <SelectItem value="REC Solar">REC Solar</SelectItem>
-                  <SelectItem value="Sunpower">Sunpower</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Number of Arrays selector */}
+          <div className="space-y-2">
+            <Label htmlFor="panel_array_count">Number of Panel Arrays</Label>
+            <Input
+              id="panel_array_count"
+              type="number"
+              min="1"
+              max="10"
+              value={panelArrayCount}
+              onChange={(e) => {
+                const value = Math.min(10, Math.max(1, parseInt(e.target.value) || 1));
+                setPanelArrayCount(value);
+              }}
+              className="w-32"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="panel_size_wp">Size (Wp)</Label>
-              <Input
-                id="panel_size_wp"
-                type="number"
-                step="1"
-                value={formData.panel_size_wp || ''}
-                onChange={(e) => {
-                  setIsPanelTotalManuallyOverridden(false);
-                  handleInputChange('panel_size_wp', parseFloat(e.target.value));
-                }}
-                placeholder="550"
+          {/* Dynamic panel array rows */}
+          <div className="space-y-3">
+            {panelArrayDetails.map((panel, index) => (
+              <PanelArrayDetailsRow
+                key={index}
+                index={index}
+                panel={panel}
+                onChange={handlePanelArrayDetailChange}
+                showLabels={index === 0}
               />
-            </div>
+            ))}
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="panel_quantity">Number of Solar Panels</Label>
-              <Input
-                id="panel_quantity"
-                type="number"
-                value={formData.panel_quantity || ''}
-                onChange={(e) => {
-                  setIsPanelTotalManuallyOverridden(false);
-                  handleInputChange('panel_quantity', parseInt(e.target.value));
-                }}
-                placeholder="200"
-              />
+          {/* Aggregate totals display */}
+          {panelArrayDetails.length > 0 && (
+            <div className="pt-4 border-t">
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="bg-muted/50 px-3 py-2 rounded-md">
+                  <span className="text-muted-foreground">Total Panels:</span>{" "}
+                  <span className="font-medium">{formData.panel_quantity || 0}</span>
+                </div>
+                <div className="bg-muted/50 px-3 py-2 rounded-md">
+                  <span className="text-muted-foreground">Total System:</span>{" "}
+                  <span className="font-medium">{formData.panel_total_kwp || 0} kWp</span>
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="panel_total_kwp">Total Solar Array Size (kWp)</Label>
-              <Input
-                id="panel_total_kwp"
-                type="number"
-                step="0.01"
-                value={formData.panel_total_kwp || ''}
-                onChange={(e) => {
-                  setIsPanelTotalManuallyOverridden(true);
-                  handleInputChange('panel_total_kwp', parseFloat(e.target.value));
-                }}
-                placeholder="110"
-              />
-            </div>
-
+          {/* Panel cost input */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
             <div className="space-y-2">
               <Label htmlFor="panel_cost">Total Cost Installed incl. VAT & Labour for Solar Panels (Rands)</Label>
               <Input
