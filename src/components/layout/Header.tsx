@@ -205,11 +205,6 @@ const navItems = [
     description: "Return to our homepage" 
   },
   { 
-    label: "How It Works", 
-    href: "/#how-it-works",
-    description: "Learn about our process" 
-  },
-  { 
     label: "For Home Owners", 
     href: "/home-owners",
     description: "Monetize your solar system" 
