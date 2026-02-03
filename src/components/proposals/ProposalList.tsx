@@ -86,6 +86,10 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
                 <XCircle className="h-3 w-3" />
                 Rejected
               </Badge>
+            ) : proposal.status === 'stale' ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-gray-100 text-gray-500 border-gray-300">
+                Stale
+              </Badge>
             ) : proposal.last_email_event_type ? (
               <EmailEngagementBadge 
                 eventType={proposal.last_email_event_type} 
@@ -134,6 +138,10 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
     prevProps.proposal.status === nextProps.proposal.status &&
     prevProps.proposal.last_email_event_type === nextProps.proposal.last_email_event_type &&
     prevProps.proposal.engagement_count === nextProps.proposal.engagement_count &&
+    prevProps.proposal.audit_ready === nextProps.proposal.audit_ready &&
+    prevProps.proposal.submitted_for_review === nextProps.proposal.submitted_for_review &&
+    prevProps.proposal.onboarding_complete === nextProps.proposal.onboarding_complete &&
+    prevProps.proposal.signed_at === nextProps.proposal.signed_at &&
     prevProps.userRole === nextProps.userRole &&
     prevProps.isCurrentUser === nextProps.isCurrentUser
   );
