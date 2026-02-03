@@ -1,195 +1,175 @@
 
 
-# Fix Expired Token Access for Admins and Agents
-
-## Overview
-
-Modify the proposal acceptance page to allow admins AND agents to view proposals even when the invitation token has expired. The fallback will use RLS-based authentication, granting access to any proposal the user would normally have access to.
+# Backfill Stale Proposal Statuses - Implementation Plan
 
 ## Problem Summary
 
-When a user visits a proposal acceptance link (`/proposals/:id/accept?token=...`) with an expired token:
-- **Currently**: Everyone sees "Error Loading Proposal" 
-- **After fix**: Admins and agents with RLS access can view the proposal with a warning banner
+There are **70 proposals** that should be marked as "stale" but are still showing statuses like "sent", "delivered", "opened", or "viewed". This is happening because:
 
-## Two-Part Solution
+1. **No cron job exists** - The `proposal-automation` edge function isn't scheduled to run automatically
+2. **The automation hasn't been triggered** - No logs exist for this function, indicating it hasn't run recently
 
-### Part 1: PDF Generation Token Renewal
+### Current Database State
 
-**File:** `supabase/functions/generate-proposal-pdf/index.ts`
+| Status | Count | Should Be |
+|--------|-------|-----------|
+| draft | 630 | No change |
+| sent | 64 | ~44 should be stale |
+| stale | 60 | Correct |
+| delivered | 27 | ~22 should be stale |
+| bounced | 1 | No change |
 
-Update the token renewal logic to work for **all unsigned proposals** (not just drafts):
+**Total proposals that need status update: 70**
 
-**Current Logic:**
+These are proposals where:
+- `invitation_sent_at` exists (email was sent)
+- No activity for 10+ days (`last_engagement_at` is null or stale)
+- Not signed (`signed_at` is null)
+- Status is still "sent", "delivered", "opened", or "viewed"
+
+---
+
+## Solution: Two Parts
+
+### Part 1: Create a Backfill Edge Function
+
+Create a new edge function `backfill-stale-proposals` that:
+1. Finds all proposals matching the stale criteria (10+ days no engagement)
+2. Updates their status to "stale" 
+3. Logs each update using the existing `update_proposal_status_with_log` RPC
+4. Returns a summary of what was updated
+
+This is a one-time fix that can also be re-run anytime.
+
+### Part 2: Schedule Proposal Automation (Cron Job)
+
+Set up a PostgreSQL cron job to run the `proposal-automation` function daily so this doesn't happen again. The automation already handles:
+- Sending reminder emails
+- Sending graceful exit emails
+- Marking proposals as stale
+
+---
+
+## Implementation Details
+
+### Part 1: Backfill Edge Function
+
+**New File:** `supabase/functions/backfill-stale-proposals/index.ts`
+
 ```typescript
-if (proposal.status === 'draft') {
-  // Only generates new token for draft proposals
-}
-```
+serve(async (req: Request) => {
+  // 1. Query proposals that should be stale
+  const { data: proposals } = await supabase
+    .from('proposals')
+    .select('id, title, status, invitation_sent_at, last_engagement_at')
+    .in('status', ['sent', 'delivered', 'opened', 'viewed'])
+    .is('deleted_at', null)
+    .is('signed_at', null)
+    .not('invitation_sent_at', 'is', null);
 
-**New Logic:**
-```typescript
-// Generate tokens for ANY unsigned proposal with expired/missing token
-const isUnsigned = !proposal.signed_at;
-if (isUnsigned) {
+  // 2. Filter to those 10+ days inactive
+  const staleDays = 10;
   const now = new Date();
-  const tokenExpired = !proposal.invitation_expires_at || 
-                       new Date(proposal.invitation_expires_at) <= now;
-  
-  if (!proposal.invitation_token || tokenExpired) {
-    console.log('[PDF] Generating new invitation token for unsigned proposal');
-    
-    const newToken = crypto.randomUUID().replace(/-/g, '') + 
-                     crypto.randomUUID().replace(/-/g, '');
-    const expiresAt = new Date(now.getTime() + 240 * 60 * 60 * 1000); // 10 days
-    
-    // Update token in database
-    await supabaseAdmin
-      .from('proposals')
-      .update({
-        invitation_token: newToken,
-        invitation_expires_at: expiresAt.toISOString()
-      })
-      .eq('id', proposalId);
-    
-    // Use the new token in the PDF
-    proposal.invitation_token = newToken;
-    proposal.invitation_expires_at = expiresAt.toISOString();
+  const staleProposals = proposals.filter(p => {
+    const lastActivity = p.last_engagement_at || p.invitation_sent_at;
+    const daysSince = (now - new Date(lastActivity)) / (1000 * 60 * 60 * 24);
+    return daysSince >= staleDays;
+  });
+
+  // 3. Update each to stale with proper logging
+  for (const proposal of staleProposals) {
+    await supabase.rpc('update_proposal_status_with_log', {
+      proposal_id: proposal.id,
+      new_status: 'stale',
+      trigger_event: 'backfill_stale_status',
+      is_automated: true
+    });
   }
-}
+
+  return { updated: staleProposals.length };
+});
 ```
 
-This ensures that regenerating any unsigned proposal's PDF will create a fresh working token.
+**Config Update:** `supabase/config.toml`
 
----
-
-### Part 2: Frontend Fallback for Expired Tokens
-
-**File:** `src/pages/ProposalAcceptance/index.tsx`
-
-#### Changes:
-
-1. **Add new state for expired token tracking**
-```typescript
-const [tokenExpired, setTokenExpired] = useState(false);
+```toml
+[functions.backfill-stale-proposals]
+verify_jwt = true
 ```
 
-2. **Modify `fetchProposalByToken` with fallback logic**
+### Part 2: Schedule Cron Job for Proposal Automation
 
-When token-based fetch fails due to expiration:
-- Check if user is authenticated
-- Check if user is admin OR agent
-- If admin/agent, try RLS-based authenticated fetch
-- Set `tokenExpired` flag to show warning banner
+Use the Supabase SQL editor to create a daily cron job:
 
-```typescript
-const fetchProposalByToken = async () => {
-  try {
-    setLoading(true);
-    
-    const { data, error } = await supabase
-      .rpc('get_proposal_by_token_direct', { token_param: token });
-
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      throw new Error("Proposal not found or invitation has expired");
-    }
-
-    // ... existing success handling
-  } catch (err) {
-    console.error("Error fetching proposal by token:", err);
-    
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const isExpiredError = errorMessage.includes('expired') || 
-                           errorMessage.includes('Invalid or expired');
-    
-    // Check if user is authenticated admin or agent
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (isExpiredError && user && id) {
-      // Check user's role from user_roles table (secure approach)
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      const hasAgentOrAdminRole = roles?.some(r => 
-        r.role === 'admin' || r.role === 'agent'
-      );
-      
-      if (hasAgentOrAdminRole) {
-        console.log("Token expired but user is admin/agent, using RLS access");
-        setTokenExpired(true);
-        // fetchProposalAuthenticated will use RLS to check access
-        await fetchProposalAuthenticated();
-        return;
-      }
-    }
-    
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
-```
-
-3. **Add warning banner component**
-
-Display when admin/agent views proposal via expired token:
-
-```tsx
-import { AlertTriangle } from "lucide-react";
-
-// After loading check, before error check in the render:
-{tokenExpired && (
-  <div className="container max-w-4xl mx-auto px-4 pt-4">
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
-      <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-      <div>
-        <p className="text-amber-800 font-medium">Invitation Link Expired</p>
-        <p className="text-amber-700 text-sm">
-          The client's invitation token has expired. You're viewing this proposal 
-          with your account privileges. To send a new working link to the client, 
-          regenerate the PDF which will create a fresh token.
-        </p>
-      </div>
-    </div>
-  </div>
-)}
+```sql
+SELECT cron.schedule(
+  'run-proposal-automation-daily',
+  '0 8 * * *',  -- Run daily at 8 AM UTC
+  $$
+  SELECT net.http_post(
+    url := 'https://uyjryuopuqgmsvayiccl.supabase.co/functions/v1/proposal-automation',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <anon_key>"}'::jsonb,
+    body := '{}'::jsonb
+  ) AS request_id;
+  $$
+);
 ```
 
 ---
 
-## Access Control Matrix
+## Files to Create/Modify
 
-| User Type | Token Valid | Token Expired | Result |
-|-----------|-------------|---------------|--------|
-| **Admin** (Shaun) | ✅ Works | ✅ RLS fallback + warning | Can always view |
-| **Agent** (Nicole - owns proposal) | ✅ Works | ✅ RLS fallback + warning | Can view her proposals |
-| **Agent** (Teammate) | ✅ Works | ✅ RLS fallback + warning | Can view company proposals |
-| **Client** | ✅ Works | ❌ Error | Needs new link from agent |
-| **Anonymous** | ✅ Works | ❌ Error | No fallback access |
-
-The RLS policies for proposals already handle company-aware visibility for agents, so the `fetchProposalAuthenticated` function will correctly determine access.
+| File | Action | Purpose |
+|------|--------|---------|
+| `supabase/functions/backfill-stale-proposals/index.ts` | Create | New edge function for one-time backfill |
+| `supabase/config.toml` | Modify | Add function config for backfill |
 
 ---
 
-## Files to Modify
+## Execution Plan
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/generate-proposal-pdf/index.ts` | Update token renewal from `draft` only to all unsigned proposals |
-| `src/pages/ProposalAcceptance/index.tsx` | Add agent/admin fallback logic and warning banner |
+1. **Create backfill function** - Deploy new edge function
+2. **Run backfill** - Call the function to update the 70 stale proposals
+3. **Set up cron job** - Use SQL editor to schedule daily automation (this requires running SQL directly in Supabase dashboard)
 
 ---
 
-## Testing Scenarios
+## Expected Results
 
-After implementation, verify:
+After running the backfill:
 
-1. **Nicole (Agent) clicks expired link for her proposal** → Shows proposal with warning banner
-2. **Nicole's teammate clicks expired link** → Shows proposal with warning banner (company-aware access)
-3. **Admin clicks any expired link** → Shows proposal with warning banner
-4. **Client clicks expired link** → Shows "Error Loading Proposal" (correct - they need a fresh link)
-5. **Force regenerate PDF** → New PDF has fresh 10-day token that works
+| Status | Before | After |
+|--------|--------|-------|
+| sent | 64 | ~20 |
+| delivered | 27 | ~5 |
+| stale | 60 | ~130 |
+
+---
+
+## Alternative: Quick One-Time Fix
+
+If you prefer a quick fix without creating a new function, I can provide SQL to run directly in the Supabase SQL Editor:
+
+```sql
+-- Preview what will be updated
+SELECT id, title, status, 
+       EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) as days_inactive
+FROM proposals
+WHERE deleted_at IS NULL 
+  AND signed_at IS NULL
+  AND status IN ('sent', 'delivered', 'opened', 'viewed')
+  AND invitation_sent_at IS NOT NULL
+  AND EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) >= 10;
+
+-- Then run the update
+UPDATE proposals
+SET status = 'stale'
+WHERE deleted_at IS NULL 
+  AND signed_at IS NULL
+  AND status IN ('sent', 'delivered', 'opened', 'viewed')
+  AND invitation_sent_at IS NOT NULL
+  AND EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) >= 10;
+```
+
+This direct SQL approach is faster but doesn't create individual status change logs.
 
