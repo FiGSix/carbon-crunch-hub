@@ -1,114 +1,88 @@
 
 
-# Backfill Stale Proposal Statuses - Implementation Plan
+# Implement Status-Only Stale Proposal Cron Job
 
-## Problem Summary
+## Overview
 
-There are **70 proposals** that should be marked as "stale" but are still showing statuses like "sent", "delivered", "opened", or "viewed". This is happening because:
-
-1. **No cron job exists** - The `proposal-automation` edge function isn't scheduled to run automatically
-2. **The automation hasn't been triggered** - No logs exist for this function, indicating it hasn't run recently
-
-### Current Database State
-
-| Status | Count | Should Be |
-|--------|-------|-----------|
-| draft | 630 | No change |
-| sent | 64 | ~44 should be stale |
-| stale | 60 | Correct |
-| delivered | 27 | ~22 should be stale |
-| bounced | 1 | No change |
-
-**Total proposals that need status update: 70**
-
-These are proposals where:
-- `invitation_sent_at` exists (email was sent)
-- No activity for 10+ days (`last_engagement_at` is null or stale)
-- Not signed (`signed_at` is null)
-- Status is still "sent", "delivered", "opened", or "viewed"
+Replace the email automation cron job with a simple status update job that only marks proposals as "stale" after 10 days of inactivity - no emails sent.
 
 ---
 
-## Solution: Two Parts
+## Step 1: Delete Email Automation Cron Job
 
-### Part 1: Create a Backfill Edge Function
+Run SQL to remove Job #6 (`run-proposal-automation-daily`):
 
-Create a new edge function `backfill-stale-proposals` that:
-1. Finds all proposals matching the stale criteria (10+ days no engagement)
-2. Updates their status to "stale" 
-3. Logs each update using the existing `update_proposal_status_with_log` RPC
-4. Returns a summary of what was updated
-
-This is a one-time fix that can also be re-run anytime.
-
-### Part 2: Schedule Proposal Automation (Cron Job)
-
-Set up a PostgreSQL cron job to run the `proposal-automation` function daily so this doesn't happen again. The automation already handles:
-- Sending reminder emails
-- Sending graceful exit emails
-- Marking proposals as stale
-
----
-
-## Implementation Details
-
-### Part 1: Backfill Edge Function
-
-**New File:** `supabase/functions/backfill-stale-proposals/index.ts`
-
-```typescript
-serve(async (req: Request) => {
-  // 1. Query proposals that should be stale
-  const { data: proposals } = await supabase
-    .from('proposals')
-    .select('id, title, status, invitation_sent_at, last_engagement_at')
-    .in('status', ['sent', 'delivered', 'opened', 'viewed'])
-    .is('deleted_at', null)
-    .is('signed_at', null)
-    .not('invitation_sent_at', 'is', null);
-
-  // 2. Filter to those 10+ days inactive
-  const staleDays = 10;
-  const now = new Date();
-  const staleProposals = proposals.filter(p => {
-    const lastActivity = p.last_engagement_at || p.invitation_sent_at;
-    const daysSince = (now - new Date(lastActivity)) / (1000 * 60 * 60 * 24);
-    return daysSince >= staleDays;
-  });
-
-  // 3. Update each to stale with proper logging
-  for (const proposal of staleProposals) {
-    await supabase.rpc('update_proposal_status_with_log', {
-      proposal_id: proposal.id,
-      new_status: 'stale',
-      trigger_event: 'backfill_stale_status',
-      is_automated: true
-    });
-  }
-
-  return { updated: staleProposals.length };
-});
+```sql
+SELECT cron.unschedule(6);
 ```
 
-**Config Update:** `supabase/config.toml`
+This removes the cron job that was triggering the `proposal-automation` function (which sends emails).
+
+---
+
+## Step 2: Modify Edge Function for Cron Access
+
+**File:** `supabase/functions/backfill-stale-proposals/index.ts`
+
+Update the authentication logic to support **both** cron secret (for scheduled runs) and admin auth (for manual runs):
+
+```typescript
+// Check for cron secret first (for scheduled runs)
+const cronSecret = Deno.env.get('CRON_SECRET');
+const providedSecret = req.headers.get('x-cron-secret');
+const isCronJob = cronSecret && providedSecret === cronSecret;
+
+if (!isCronJob) {
+  // Require admin auth for manual runs
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'No authorization' }), { status: 401 });
+  }
+  // ... existing admin auth check ...
+}
+
+// Proceed with status updates (same logic as current)
+```
+
+---
+
+## Step 3: Update Config to Allow Cron Calls
+
+**File:** `supabase/config.toml`
+
+Change `verify_jwt = true` to `verify_jwt = false`:
 
 ```toml
 [functions.backfill-stale-proposals]
-verify_jwt = true
+verify_jwt = false
 ```
 
-### Part 2: Schedule Cron Job for Proposal Automation
+This allows the cron job to call the function without a JWT (secured by cron secret instead).
 
-Use the Supabase SQL editor to create a daily cron job:
+---
+
+## Step 4: Add Cron Secret
+
+You'll need to add a secret in **Supabase Dashboard > Edge Functions > Secrets**:
+
+| Key | Value |
+|-----|-------|
+| `CRON_SECRET` | `stale-proposal-update-2024-secure` (or generate your own UUID) |
+
+---
+
+## Step 5: Create New Status-Only Cron Job
+
+Run SQL to schedule daily status updates at 8 AM UTC:
 
 ```sql
 SELECT cron.schedule(
-  'run-proposal-automation-daily',
-  '0 8 * * *',  -- Run daily at 8 AM UTC
+  'update-stale-proposal-statuses',
+  '0 8 * * *',
   $$
   SELECT net.http_post(
-    url := 'https://uyjryuopuqgmsvayiccl.supabase.co/functions/v1/proposal-automation',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <anon_key>"}'::jsonb,
+    url := 'https://uyjryuopuqgmsvayiccl.supabase.co/functions/v1/backfill-stale-proposals',
+    headers := '{"Content-Type": "application/json", "x-cron-secret": "stale-proposal-update-2024-secure"}'::jsonb,
     body := '{}'::jsonb
   ) AS request_id;
   $$
@@ -117,53 +91,13 @@ SELECT cron.schedule(
 
 ---
 
-## Files to Create/Modify
+## Step 6: Run Initial Backfill
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `supabase/functions/backfill-stale-proposals/index.ts` | Create | New edge function for one-time backfill |
-| `supabase/config.toml` | Modify | Add function config for backfill |
-
----
-
-## Execution Plan
-
-1. **Create backfill function** - Deploy new edge function
-2. **Run backfill** - Call the function to update the 70 stale proposals
-3. **Set up cron job** - Use SQL editor to schedule daily automation (this requires running SQL directly in Supabase dashboard)
-
----
-
-## Expected Results
-
-After running the backfill:
-
-| Status | Before | After |
-|--------|--------|-------|
-| sent | 64 | ~20 |
-| delivered | 27 | ~5 |
-| stale | 60 | ~130 |
-
----
-
-## Alternative: Quick One-Time Fix
-
-If you prefer a quick fix without creating a new function, I can provide SQL to run directly in the Supabase SQL Editor:
+Execute one-time SQL to update the ~70 currently stale proposals:
 
 ```sql
--- Preview what will be updated
-SELECT id, title, status, 
-       EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) as days_inactive
-FROM proposals
-WHERE deleted_at IS NULL 
-  AND signed_at IS NULL
-  AND status IN ('sent', 'delivered', 'opened', 'viewed')
-  AND invitation_sent_at IS NOT NULL
-  AND EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) >= 10;
-
--- Then run the update
 UPDATE proposals
-SET status = 'stale'
+SET status = 'stale', updated_at = NOW()
 WHERE deleted_at IS NULL 
   AND signed_at IS NULL
   AND status IN ('sent', 'delivered', 'opened', 'viewed')
@@ -171,5 +105,31 @@ WHERE deleted_at IS NULL
   AND EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) >= 10;
 ```
 
-This direct SQL approach is faster but doesn't create individual status change logs.
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `supabase/functions/backfill-stale-proposals/index.ts` | Add cron secret authentication alongside admin auth |
+| `supabase/config.toml` | Set `verify_jwt = false` for backfill function |
+
+---
+
+## SQL Commands (Run in Supabase Dashboard)
+
+1. Delete old cron job: `SELECT cron.unschedule(6);`
+2. Create new cron job (after secret is added)
+3. Run initial backfill update
+
+---
+
+## Result
+
+| Before | After |
+|--------|-------|
+| Email automation cron (Job #6) | ❌ Deleted |
+| Status update cron | ✅ Created (`update-stale-proposal-statuses`) |
+| ~70 stale proposals showing "sent"/"delivered" | ✅ Updated to "stale" |
+| Weekly roundup emails (Job #5) | ✅ Unchanged |
 
