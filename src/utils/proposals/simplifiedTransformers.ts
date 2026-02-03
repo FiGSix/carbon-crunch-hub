@@ -111,7 +111,13 @@ export function transformToProposalListItems(
       isMultiPhase: proposal.content?.projectInfo?.isMultiPhase || proposal.project_info?.isMultiPhase || false,
       phases: proposal.content?.projectInfo?.phases || proposal.project_info?.phases || undefined,
       last_email_event_type: proposal.last_email_event_type,
-      last_email_sent_at: proposal.last_email_sent_at
+      last_email_sent_at: proposal.last_email_sent_at,
+      engagement_count: proposal.engagement_count,
+      last_engagement_at: proposal.last_engagement_at,
+      onboarding_complete: proposal.onboarding_complete,
+      submitted_for_review: proposal.submitted_for_review,
+      admin_validated: proposal.admin_validated,
+      audit_ready: proposal.audit_ready
     };
   });
 }
