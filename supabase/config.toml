@@ -106,4 +106,4 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.backfill-stale-proposals]
-verify_jwt = true
+verify_jwt = false
