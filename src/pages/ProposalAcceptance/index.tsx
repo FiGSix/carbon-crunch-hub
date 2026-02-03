@@ -9,6 +9,7 @@ import { SignatureSection } from "./components/SignatureSection";
 import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
 import { useToast } from "@/hooks/use-toast";
 import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
+import { AlertTriangle } from "lucide-react";
 
 export default function ProposalAcceptance() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ export default function ProposalAcceptance() {
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [tokenExpired, setTokenExpired] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -83,7 +85,37 @@ export default function ProposalAcceptance() {
       }
     } catch (err) {
       console.error("Error fetching proposal by token:", err);
-      setError(err instanceof Error ? err.message : "Failed to load proposal");
+      
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const isExpiredError = errorMessage.includes('expired') || 
+                             errorMessage.includes('Invalid or expired');
+      
+      // Check if user is authenticated admin or agent - can fallback to RLS access
+      if (isExpiredError && id) {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Check user's role from user_roles table (secure approach)
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+          
+          const hasAgentOrAdminRole = roles?.some(r => 
+            r.role === 'admin' || r.role === 'agent'
+          );
+          
+          if (hasAgentOrAdminRole) {
+            console.log("Token expired but user is admin/agent, using RLS access");
+            setTokenExpired(true);
+            // fetchProposalAuthenticated will use RLS to check access
+            await fetchProposalAuthenticated();
+            return;
+          }
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -256,6 +288,23 @@ export default function ProposalAcceptance() {
     return <PageLoading minimal />;
   }
 
+  // Warning banner for expired token access (admin/agent fallback)
+  const ExpiredTokenBanner = () => (
+    <div className="container max-w-4xl mx-auto px-4 pt-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+        <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+        <div>
+          <p className="text-amber-800 font-medium">Invitation Link Expired</p>
+          <p className="text-amber-700 text-sm">
+            The client's invitation token has expired. You're viewing this proposal 
+            with your account privileges. To send a new working link to the client, 
+            regenerate the PDF which will create a fresh token.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   if (error) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-12">
@@ -281,93 +330,99 @@ export default function ProposalAcceptance() {
   // Simplified flow for returning clients with existing agreement
   if (hasExistingAgreement) {
     return (
+      <>
+        {tokenExpired && <ExpiredTokenBanner />}
+        <div className="container max-w-4xl mx-auto px-4 py-12">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Project Added to Your Agreement</h1>
+            <p className="text-muted-foreground">
+              You already have a signed Cession Agreement. This project has been automatically added.
+            </p>
+          </div>
+
+          <div className="space-y-8">
+            <ProposalSummarySection proposal={proposal} />
+            
+            <div className="bg-accent/50 border border-accent rounded-lg p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2">Automatically Added</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Per Clause 5.6 of your existing Cession Agreement, new projects are automatically included 
+                    without requiring a new signature. This project has been added to your portfolio and is ready 
+                    for onboarding.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => navigate('/dashboard')}
+                      className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      View Dashboard
+                    </button>
+                    <button
+                      onClick={() => navigate(`/proposals/${proposal.id}`)}
+                      className="px-6 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                    >
+                      View Project Details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Original signature flow for new clients
+  return (
+    <>
+      {tokenExpired && <ExpiredTokenBanner />}
       <div className="container max-w-4xl mx-auto px-4 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Project Added to Your Agreement</h1>
+          <h1 className="text-3xl font-bold mb-2">Proposal & Cession Agreement</h1>
           <p className="text-muted-foreground">
-            You already have a signed Cession Agreement. This project has been automatically added.
+            Please review the proposal details and terms carefully before signing.
           </p>
         </div>
 
         <div className="space-y-8">
           <ProposalSummarySection proposal={proposal} />
           
-          <div className="bg-accent/50 border border-accent rounded-lg p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2">Automatically Added</h3>
-                <p className="text-muted-foreground mb-4">
-                  Per Clause 5.6 of your existing Cession Agreement, new projects are automatically included 
-                  without requiring a new signature. This project has been added to your portfolio and is ready 
-                  for onboarding.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => navigate('/dashboard')}
-                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    View Dashboard
-                  </button>
-                  <button
-                    onClick={() => navigate(`/proposals/${proposal.id}`)}
-                    className="px-6 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
-                  >
-                    View Project Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <TermsAndConditionsSection 
+            onScrolledToBottom={() => setHasScrolledToBottom(true)}
+            proposal={proposal}
+          />
+          
+          <SignatureSection
+            hasScrolledToBottom={hasScrolledToBottom}
+            hasAgreed={hasAgreed}
+            onAgreeChange={setHasAgreed}
+            typedName={typedName}
+            onTypedNameChange={setTypedName}
+            signatureImage={signatureImage}
+            onSignatureImageChange={setSignatureImage}
+            clientName={getClientName()}
+            isValid={validateTypedName()}
+            canSubmit={canSubmit}
+            isSubmitting={isSubmitting}
+            onSubmit={handleSubmit}
+          />
         </div>
-      </div>
-    );
-  }
 
-  // Original signature flow for new clients
-  return (
-    <div className="container max-w-4xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Proposal & Cession Agreement</h1>
-        <p className="text-muted-foreground">
-          Please review the proposal details and terms carefully before signing.
-        </p>
-      </div>
-
-      <div className="space-y-8">
-        <ProposalSummarySection proposal={proposal} />
-        
-        <TermsAndConditionsSection 
-          onScrolledToBottom={() => setHasScrolledToBottom(true)}
-          proposal={proposal}
-        />
-        
-        <SignatureSection
-          hasScrolledToBottom={hasScrolledToBottom}
-          hasAgreed={hasAgreed}
-          onAgreeChange={setHasAgreed}
-          typedName={typedName}
-          onTypedNameChange={setTypedName}
-          signatureImage={signatureImage}
-          onSignatureImageChange={setSignatureImage}
-          clientName={getClientName()}
-          isValid={validateTypedName()}
-          canSubmit={canSubmit}
-          isSubmitting={isSubmitting}
-          onSubmit={handleSubmit}
+        <PostSignatureOnboardingModal
+          open={showOnboardingModal}
+          onOpenChange={setShowOnboardingModal}
+          proposalId={proposal.id}
+          token={token}
         />
       </div>
-
-      <PostSignatureOnboardingModal
-        open={showOnboardingModal}
-        onOpenChange={setShowOnboardingModal}
-        proposalId={proposal.id}
-        token={token}
-      />
-    </div>
+    </>
   );
 }
