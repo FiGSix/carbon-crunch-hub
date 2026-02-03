@@ -1,135 +1,154 @@
 
 
-# Implement Status-Only Stale Proposal Cron Job
+## Summary
 
-## Overview
-
-Replace the email automation cron job with a simple status update job that only marks proposals as "stale" after 10 days of inactivity - no emails sent.
+The proposal list UI is failing to display several important statuses including **"Stale"**, **"Audit Ready"**, **"Review"**, and **"Onboarding"**. This is caused by two interconnected issues in the data pipeline.
 
 ---
 
-## Step 1: Delete Email Automation Cron Job
+## Root Cause Analysis
 
-Run SQL to remove Job #6 (`run-proposal-automation-daily`):
+### Issue 1: Missing Fields in Data Transformer
+The `simplifiedTransformers.ts` file does not include critical onboarding and engagement fields when transforming proposal data:
 
-```sql
-SELECT cron.unschedule(6);
+**Missing from the return object (line 80-115):**
+- `engagement_count`
+- `last_engagement_at` 
+- `onboarding_complete`
+- `submitted_for_review`
+- `admin_validated`
+- `audit_ready`
+
+The data **is fetched** from the database via the query builder (which correctly joins `project_onboarding`), but it gets **dropped during transformation**.
+
+### Issue 2: Missing "Stale" Status Check in UI
+The `ProposalList.tsx` status badge logic (lines 62-102) uses a priority chain that **never checks for `status === 'stale'`**:
+
+```
+Current priority order:
+1. audit_ready → "Audit"
+2. submitted_for_review → "Review"  
+3. onboarding_complete → "Onboarding"
+4. signed_at → "Signed"
+5. status === 'approved' → "Approved"
+6. status === 'rejected' → "Rejected"
+7. last_email_event_type → Email badge (Delivered/Opened/Clicked)
+8. invitation_sent_at → "Sent"
+9. default → "Draft"
 ```
 
-This removes the cron job that was triggering the `proposal-automation` function (which sends emails).
+When `status === 'stale'` but `last_email_event_type` exists (80 of 130 stale proposals), the email badge takes priority. The remaining 50 stale proposals fall through to "Draft".
+
+### Issue 3: Incomplete Memo Comparison
+The `MemoizedProposalRow` comparison function (lines 130-139) doesn't check for changes in `audit_ready`, `submitted_for_review`, or `onboarding_complete`, which could cause stale UI when these values update.
 
 ---
 
-## Step 2: Modify Edge Function for Cron Access
+## Database Status Summary
 
-**File:** `supabase/functions/backfill-stale-proposals/index.ts`
+| Status | Count | With Email Tracking |
+|--------|-------|---------------------|
+| draft | 643 | 1 |
+| **stale** | **130** | **80** |
+| approved | 78 | 26 |
+| signed | 38 | 0 |
+| delivered | 16 | 16 |
+| sent | 5 | 0 |
+| bounced | 1 | 1 |
 
-Update the authentication logic to support **both** cron secret (for scheduled runs) and admin auth (for manual runs):
+| Onboarding Status | Count |
+|-------------------|-------|
+| **audit_ready = true** | **20** |
+| submitted_for_review = true | 8+ |
+| onboarding_complete = true | 12+ |
+
+---
+
+## Solution
+
+### Step 1: Update Data Transformer
+
+**File:** `src/utils/proposals/simplifiedTransformers.ts`
+
+Add the missing fields to the returned object in `transformToProposalListItems`:
 
 ```typescript
-// Check for cron secret first (for scheduled runs)
-const cronSecret = Deno.env.get('CRON_SECRET');
-const providedSecret = req.headers.get('x-cron-secret');
-const isCronJob = cronSecret && providedSecret === cronSecret;
-
-if (!isCronJob) {
-  // Require admin auth for manual runs
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'No authorization' }), { status: 401 });
-  }
-  // ... existing admin auth check ...
-}
-
-// Proceed with status updates (same logic as current)
+// Add after line 114 (last_email_sent_at):
+engagement_count: proposal.engagement_count,
+last_engagement_at: proposal.last_engagement_at,
+onboarding_complete: proposal.onboarding_complete,
+submitted_for_review: proposal.submitted_for_review,
+admin_validated: proposal.admin_validated,
+audit_ready: proposal.audit_ready,
 ```
 
----
+### Step 2: Fix Status Badge Priority Order
 
-## Step 3: Update Config to Allow Cron Calls
+**File:** `src/components/proposals/ProposalList.tsx`
 
-**File:** `supabase/config.toml`
+Update the conditional chain (lines 62-102) to check for `stale` status **before** email engagement:
 
-Change `verify_jwt = true` to `verify_jwt = false`:
-
-```toml
-[functions.backfill-stale-proposals]
-verify_jwt = false
+```text
+New priority order:
+1. audit_ready → "Audit"
+2. submitted_for_review → "Review"  
+3. onboarding_complete → "Onboarding"
+4. signed_at → "Signed"
+5. status === 'approved' → "Approved"
+6. status === 'rejected' → "Rejected"
+7. ★ NEW: status === 'stale' → "Stale" (gray badge)
+8. last_email_event_type → Email badge
+9. invitation_sent_at → "Sent"
+10. default → "Draft"
 ```
 
-This allows the cron job to call the function without a JWT (secured by cron secret instead).
+Add the stale status check after the `rejected` check:
 
----
+```tsx
+) : proposal.status === 'stale' ? (
+  <Badge variant="outline" className="gap-1 text-xs bg-gray-100 text-gray-500 border-gray-300">
+    Stale
+  </Badge>
+)
+```
 
-## Step 4: Add Cron Secret
+### Step 3: Update Memo Comparison Function
 
-You'll need to add a secret in **Supabase Dashboard > Edge Functions > Secrets**:
+**File:** `src/components/proposals/ProposalList.tsx`
 
-| Key | Value |
-|-----|-------|
-| `CRON_SECRET` | `stale-proposal-update-2024-secure` (or generate your own UUID) |
+Extend the comparison function (lines 130-139) to include onboarding fields:
 
----
-
-## Step 5: Create New Status-Only Cron Job
-
-Run SQL to schedule daily status updates at 8 AM UTC:
-
-```sql
-SELECT cron.schedule(
-  'update-stale-proposal-statuses',
-  '0 8 * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://uyjryuopuqgmsvayiccl.supabase.co/functions/v1/backfill-stale-proposals',
-    headers := '{"Content-Type": "application/json", "x-cron-secret": "stale-proposal-update-2024-secure"}'::jsonb,
-    body := '{}'::jsonb
-  ) AS request_id;
-  $$
+```typescript
+return (
+  prevProps.proposal.id === nextProps.proposal.id &&
+  prevProps.proposal.status === nextProps.proposal.status &&
+  prevProps.proposal.last_email_event_type === nextProps.proposal.last_email_event_type &&
+  prevProps.proposal.engagement_count === nextProps.proposal.engagement_count &&
+  prevProps.proposal.audit_ready === nextProps.proposal.audit_ready &&
+  prevProps.proposal.submitted_for_review === nextProps.proposal.submitted_for_review &&
+  prevProps.proposal.onboarding_complete === nextProps.proposal.onboarding_complete &&
+  prevProps.proposal.signed_at === nextProps.proposal.signed_at &&
+  prevProps.userRole === nextProps.userRole &&
+  prevProps.isCurrentUser === nextProps.isCurrentUser
 );
-```
-
----
-
-## Step 6: Run Initial Backfill
-
-Execute one-time SQL to update the ~70 currently stale proposals:
-
-```sql
-UPDATE proposals
-SET status = 'stale', updated_at = NOW()
-WHERE deleted_at IS NULL 
-  AND signed_at IS NULL
-  AND status IN ('sent', 'delivered', 'opened', 'viewed')
-  AND invitation_sent_at IS NOT NULL
-  AND EXTRACT(DAY FROM (NOW() - COALESCE(last_engagement_at, invitation_sent_at))) >= 10;
 ```
 
 ---
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `supabase/functions/backfill-stale-proposals/index.ts` | Add cron secret authentication alongside admin auth |
-| `supabase/config.toml` | Set `verify_jwt = false` for backfill function |
+| File | Changes |
+|------|---------|
+| `src/utils/proposals/simplifiedTransformers.ts` | Add 6 missing fields to return object |
+| `src/components/proposals/ProposalList.tsx` | Add stale status check + update memo comparison |
 
 ---
 
-## SQL Commands (Run in Supabase Dashboard)
+## Expected Results After Fix
 
-1. Delete old cron job: `SELECT cron.unschedule(6);`
-2. Create new cron job (after secret is added)
-3. Run initial backfill update
-
----
-
-## Result
-
-| Before | After |
-|--------|-------|
-| Email automation cron (Job #6) | ❌ Deleted |
-| Status update cron | ✅ Created (`update-stale-proposal-statuses`) |
-| ~70 stale proposals showing "sent"/"delivered" | ✅ Updated to "stale" |
-| Weekly roundup emails (Job #5) | ✅ Unchanged |
+- **130 stale proposals** will display "Stale" badge (gray)
+- **20 audit_ready proposals** will display "Audit" badge (indigo)
+- **8+ submitted_for_review proposals** will display "Review" badge (violet)
+- All onboarding statuses will render correctly
+- Component will properly re-render when these fields change
 
