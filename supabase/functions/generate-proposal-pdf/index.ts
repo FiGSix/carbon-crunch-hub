@@ -71,15 +71,16 @@ serve(async (req) => {
 
     console.log(`[PDF] Proposal fetched: ${proposal.title}, status: ${proposal.status}`)
 
-    // CRITICAL: Ensure invitation token exists for draft proposals
-    // Removed 'pending' - now only 'draft' proposals need token generation
+    // CRITICAL: Ensure invitation token exists for ANY unsigned proposal
+    // Token renewal now works for all statuses (draft, sent, pending, etc.) as long as proposal is unsigned
     let tokenUpdated = false
-    if (proposal.status === 'draft') {
+    const isUnsigned = !proposal.signed_at
+    if (isUnsigned) {
       const now = new Date()
       const tokenExpired = !proposal.invitation_expires_at || new Date(proposal.invitation_expires_at) <= now
       
       if (!proposal.invitation_token || tokenExpired) {
-        console.log('[PDF] Generating new invitation token for pending proposal')
+        console.log(`[PDF] Generating new invitation token for unsigned proposal (status: ${proposal.status})`)
         
         const newToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
         const expiresAt = new Date(now.getTime() + 240 * 60 * 60 * 1000) // 10 days
@@ -117,7 +118,7 @@ serve(async (req) => {
             })
           }
           tokenUpdated = true
-          console.log(`[PDF] Token updated, expires at: ${proposal.invitation_expires_at}`)
+          console.log(`[PDF] Token updated for ${proposal.status} proposal, expires at: ${proposal.invitation_expires_at}`)
         }
       } else {
         console.log('[PDF] Existing token is valid:', {
@@ -126,6 +127,8 @@ serve(async (req) => {
           expiresAt: proposal.invitation_expires_at
         })
       }
+    } else {
+      console.log('[PDF] Proposal already signed, skipping token renewal')
     }
 
     // Check if PDF exists and is current (unless force regenerating or token was just updated)
