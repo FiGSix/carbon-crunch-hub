@@ -106,7 +106,7 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
             )}
             
             {/* View count badge (supplementary info) */}
-            {proposal.engagement_count && proposal.engagement_count > 0 && !proposal.signed_at && proposal.status !== 'approved' && proposal.status !== 'rejected' && (
+            {proposal.engagement_count > 0 && !proposal.signed_at && proposal.status !== 'approved' && proposal.status !== 'rejected' && (
               <ProposalEngagementBadge 
                 engagementCount={proposal.engagement_count}
                 last_engagement_at={proposal.last_engagement_at}
