@@ -1,50 +1,142 @@
 
 
-## Problem
+## Problem Summary
 
-Every status badge shows a "0" next to it (e.g., "Sent 0", "Delivered 0"). This is caused by a common React conditional rendering bug.
+Philip Henning's project cannot be marked "ready for audit" because the validation function is checking for a legacy `inverter_model` field that is `NULL`, even though the inverter data is correctly stored in the new JSON format.
+
+---
 
 ## Root Cause
 
-In `ProposalList.tsx` line 109, the code uses:
+### Data Structure Mismatch
 
-```tsx
-{proposal.engagement_count && proposal.engagement_count > 0 && ... && (
-  <ProposalEngagementBadge ... />
-)}
+The onboarding form now stores inverter details as a JSON array in `inverter_serial`:
+
+```json
+[{"brand":"SunSynk","model":"SUNSYNK-8K-SG01LP1","capacity_kw":8,"serial":"2305278188"}]
 ```
 
-When `engagement_count` is `0`:
-- `proposal.engagement_count` evaluates to `0` (falsy)
-- JavaScript short-circuits and returns `0`
-- **React renders `0` as literal text** instead of rendering nothing
+But the validation function checks for the legacy `inverter_model` text field which is never populated.
 
-This is a well-known React pitfall - when using `&&` for conditional rendering, if the left operand is a falsy number (`0`), React will display it.
+### Philip Henning's Project Status
+
+| Field | Value | Validation |
+|-------|-------|------------|
+| `system_address` | "20 Bruidslelie Crescent..." | PASS |
+| `commissioning_date` | 2023-10-01 | PASS |
+| `inverter_serial` (JSON) | Contains model "SUNSYNK-8K-SG01LP1" | - |
+| `inverter_model` (legacy) | NULL | **FAIL** |
+| `panel_brand` | JSON array with "Canadian Solar" | PASS |
+| `total_capex` | 201000 | PASS |
+| Documents | 1 CoC + 4 invoices | PASS |
+
+---
 
 ## Solution
 
-Change the conditional to explicitly check for a boolean instead of relying on truthy/falsy evaluation:
+Update the `validate_onboarding_completion` database function to extract the inverter model from the JSON field instead of checking the legacy text field.
 
-**File:** `src/components/proposals/ProposalList.tsx`
+### Current Validation Logic (Failing)
 
-**Line 109 - Current:**
-```tsx
-{proposal.engagement_count && proposal.engagement_count > 0 && !proposal.signed_at && ...
+```sql
+inverter_model IS NOT NULL
 ```
 
-**Line 109 - Fixed:**
-```tsx
-{proposal.engagement_count > 0 && !proposal.signed_at && ...
+### Updated Validation Logic
+
+```sql
+-- Extract model from JSON array if inverter_serial contains JSON
+(
+  inverter_model IS NOT NULL 
+  OR (
+    inverter_serial IS NOT NULL 
+    AND inverter_serial LIKE '[%' 
+    AND (inverter_serial::jsonb -> 0 ->> 'model') IS NOT NULL
+  )
+)
 ```
 
-By removing `proposal.engagement_count &&` and only keeping `proposal.engagement_count > 0`, the expression will evaluate to `false` (not `0`) when the count is zero, and React will correctly render nothing.
+This handles both:
+- Legacy projects with `inverter_model` as text
+- New projects with inverter data stored as JSON in `inverter_serial`
+
+---
 
 ## Technical Details
 
-| Expression | When count = 0 | React renders |
-|------------|----------------|---------------|
-| `count && count > 0` | `0` (falsy number) | "0" |
-| `count > 0` | `false` (boolean) | nothing |
+### Database Migration
 
-This is a one-line fix.
+A single SQL migration will update the validation function:
+
+```sql
+CREATE OR REPLACE FUNCTION public.validate_onboarding_completion(project_id_param uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  required_fields_complete BOOLEAN;
+  required_docs_present BOOLEAN;
+BEGIN
+  SELECT (
+    system_address IS NOT NULL AND
+    commissioning_date IS NOT NULL AND
+    -- Check for inverter model in either legacy field OR JSON array
+    (
+      inverter_model IS NOT NULL 
+      OR (
+        inverter_serial IS NOT NULL 
+        AND inverter_serial LIKE '[%' 
+        AND (inverter_serial::jsonb -> 0 ->> 'model') IS NOT NULL
+        AND (inverter_serial::jsonb -> 0 ->> 'model') != ''
+      )
+    ) AND
+    -- Check for inverter serial in either JSON array or legacy field
+    (
+      inverter_serial IS NOT NULL 
+      AND (
+        (inverter_serial LIKE '[%' AND (inverter_serial::jsonb -> 0 ->> 'serial') IS NOT NULL)
+        OR inverter_serial NOT LIKE '[%'
+      )
+    ) AND
+    -- Check for panel brand in either JSON array or legacy text
+    (
+      panel_brand IS NOT NULL 
+      AND (
+        (panel_brand LIKE '[%' AND (panel_brand::jsonb -> 0 ->> 'brand') IS NOT NULL)
+        OR panel_brand NOT LIKE '[%'
+      )
+    ) AND
+    total_capex > 0
+  ) INTO required_fields_complete
+  FROM onboarding_fields
+  WHERE project_id = project_id_param;
+  
+  SELECT (
+    EXISTS(SELECT 1 FROM onboarding_documents WHERE project_id = project_id_param AND category = 'coc') AND
+    EXISTS(SELECT 1 FROM onboarding_documents WHERE project_id = project_id_param AND category = 'invoice')
+  ) INTO required_docs_present;
+  
+  RETURN COALESCE(required_fields_complete, false) AND COALESCE(required_docs_present, false);
+END;
+$function$;
+```
+
+---
+
+## Files Changed
+
+| Location | Change |
+|----------|--------|
+| Database function | Update `validate_onboarding_completion` to handle JSON format |
+
+---
+
+## Expected Result
+
+After this fix:
+- Philip Henning's project will pass validation immediately
+- All new projects using the JSON format will validate correctly
+- Legacy projects with text fields will continue to work
 
