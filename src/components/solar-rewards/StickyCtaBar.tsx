@@ -1,0 +1,50 @@
+ import { useState, useEffect } from "react";
+ import { motion, AnimatePresence } from "framer-motion";
+ import { Button } from "@/components/ui/button";
+ import { Calculator } from "lucide-react";
+ 
+ interface StickyCtaBarProps {
+   onCTAClick: () => void;
+ }
+ 
+ export function StickyCtaBar({ onCTAClick }: StickyCtaBarProps) {
+   const [isVisible, setIsVisible] = useState(false);
+ 
+   useEffect(() => {
+     const handleScroll = () => {
+       // Show after scrolling 400px
+       setIsVisible(window.scrollY > 400);
+     };
+ 
+     window.addEventListener("scroll", handleScroll, { passive: true });
+     return () => window.removeEventListener("scroll", handleScroll);
+   }, []);
+ 
+   return (
+     <AnimatePresence>
+       {isVisible && (
+         <motion.div
+           initial={{ y: 100, opacity: 0 }}
+           animate={{ y: 0, opacity: 1 }}
+           exit={{ y: 100, opacity: 0 }}
+           transition={{ type: "spring", stiffness: 300, damping: 30 }}
+           className="fixed bottom-0 left-0 right-0 z-50 p-4 md:hidden"
+         >
+           <div className="bg-background/95 backdrop-blur-md border border-border rounded-xl shadow-lg p-3">
+             <Button 
+               onClick={onCTAClick}
+               className="w-full h-12 text-base font-semibold gap-2"
+               size="lg"
+             >
+               <Calculator className="w-5 h-5" />
+               Calculate My Earnings
+             </Button>
+             <p className="text-xs text-center text-muted-foreground mt-2">
+               Free • 30 seconds • No commitment
+             </p>
+           </div>
+         </motion.div>
+       )}
+     </AnimatePresence>
+   );
+ }
