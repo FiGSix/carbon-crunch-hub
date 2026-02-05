@@ -2,141 +2,140 @@
 
 ## Problem Summary
 
-Philip Henning's project cannot be marked "ready for audit" because the validation function is checking for a legacy `inverter_model` field that is `NULL`, even though the inverter data is correctly stored in the new JSON format.
+PDF regeneration does not update the proposal status, leaving revived proposals stuck in "stale" status even though they have a fresh token and the agent clearly intends to re-engage with the client.
 
 ---
 
-## Root Cause
+## Current Behavior
 
-### Data Structure Mismatch
+| Action | Status Update | Token Renewal | `invitation_sent_at` |
+|--------|--------------|---------------|---------------------|
+| PDF Regeneration | ❌ None | ✅ Auto (if expired) | ❌ None |
+| Email Resend | ✅ → `sent` | ✅ Fresh | ✅ Updated |
 
-The onboarding form now stores inverter details as a JSON array in `inverter_serial`:
+The PDF regeneration updates `pdf_generated_at` and `pdf_version` but never touches `status` or `invitation_sent_at`.
 
-```json
-[{"brand":"SunSynk","model":"SUNSYNK-8K-SG01LP1","capacity_kw":8,"serial":"2305278188"}]
+---
+
+## Proposed Solution
+
+When the `generate-proposal-pdf` edge function regenerates a PDF for a stale proposal, it should:
+
+1. **Update status from `stale` to `sent`** - reflecting that the agent has actively re-engaged
+2. **Update `invitation_sent_at` to now** - resetting the 10-day stale timer
+3. **Log this as a "pdf_regeneration" activity** - for audit trail
+
+### Why `sent` and not `draft`?
+
+- `draft` implies the proposal hasn't been shared with the client yet
+- When an agent regenerates a PDF to manually send to a client, the proposal IS being sent
+- Using `sent` keeps the status flow consistent and prevents the stale cron from immediately re-marking it
+
+---
+
+## File Changes
+
+| File | Change |
+|------|--------|
+| `supabase/functions/generate-proposal-pdf/index.ts` | Add status transition from `stale` → `sent` when PDF is regenerated |
+
+---
+
+## Technical Implementation
+
+### Current PDF Metadata Update (Lines 179-186)
+
+```typescript
+const { error: updateError } = await supabaseAdmin
+  .from('proposals')
+  .update({
+    pdf_url: publicUrl,
+    pdf_generated_at: new Date().toISOString(),
+    pdf_version: (proposal.pdf_version || 1) + 1
+  })
+  .eq('id', proposalId)
 ```
 
-But the validation function checks for the legacy `inverter_model` text field which is never populated.
+### Proposed Enhanced Update
 
-### Philip Henning's Project Status
+```typescript
+// Build update payload with PDF metadata
+const updatePayload: Record<string, any> = {
+  pdf_url: publicUrl,
+  pdf_generated_at: new Date().toISOString(),
+  pdf_version: (proposal.pdf_version || 1) + 1
+};
 
-| Field | Value | Validation |
-|-------|-------|------------|
-| `system_address` | "20 Bruidslelie Crescent..." | PASS |
-| `commissioning_date` | 2023-10-01 | PASS |
-| `inverter_serial` (JSON) | Contains model "SUNSYNK-8K-SG01LP1" | - |
-| `inverter_model` (legacy) | NULL | **FAIL** |
-| `panel_brand` | JSON array with "Canadian Solar" | PASS |
-| `total_capex` | 201000 | PASS |
-| Documents | 1 CoC + 4 invoices | PASS |
+// If proposal was stale, revive it when PDF is regenerated
+// This signals the agent has actively re-engaged with this proposal
+if (proposal.status === 'stale') {
+  console.log(`[PDF] Reviving stale proposal ${proposalId} - agent regenerated PDF`);
+  updatePayload.status = 'sent';
+  updatePayload.invitation_sent_at = new Date().toISOString();
+  updatePayload.last_email_sent_at = new Date().toISOString();
+}
+
+const { error: updateError } = await supabaseAdmin
+  .from('proposals')
+  .update(updatePayload)
+  .eq('id', proposalId)
+
+if (!updateError && proposal.status === 'stale') {
+  console.log(`[PDF] Successfully revived proposal from stale to sent`);
+}
+```
 
 ---
 
-## Solution
+## Status Flow Diagram
 
-Update the `validate_onboarding_completion` database function to extract the inverter model from the JSON field instead of checking the legacy text field.
+```text
+Before Fix:
+  stale → [PDF regenerate] → stale (stuck!)
+             ↓
+        [Email resend] → sent (works)
 
-### Current Validation Logic (Failing)
+After Fix:
+  stale → [PDF regenerate] → sent ✓
+        → [Email resend]   → sent ✓
+```
+
+---
+
+## Edge Cases Considered
+
+| Scenario | Behavior |
+|----------|----------|
+| Stale + PDF regenerate | → `sent` ✓ |
+| Draft + PDF regenerate | No status change (stays `draft`) |
+| Sent + PDF regenerate | No status change (stays `sent`) |
+| Signed + PDF regenerate | No status change (already completed) |
+
+The logic only activates for `stale` status, preserving existing behavior for all other statuses.
+
+---
+
+## Manual Fix for Ivan Smith
+
+After deploying this fix, Nicole can either:
+1. Click "Resend" to trigger an email (which will also update status)
+2. Or you can run a quick manual SQL update:
 
 ```sql
-inverter_model IS NOT NULL
+UPDATE proposals 
+SET 
+  status = 'sent',
+  invitation_sent_at = NOW(),
+  last_email_sent_at = NOW()
+WHERE id = 'eb24af09-9fc8-400f-89df-3712d990586c';
 ```
-
-### Updated Validation Logic
-
-```sql
--- Extract model from JSON array if inverter_serial contains JSON
-(
-  inverter_model IS NOT NULL 
-  OR (
-    inverter_serial IS NOT NULL 
-    AND inverter_serial LIKE '[%' 
-    AND (inverter_serial::jsonb -> 0 ->> 'model') IS NOT NULL
-  )
-)
-```
-
-This handles both:
-- Legacy projects with `inverter_model` as text
-- New projects with inverter data stored as JSON in `inverter_serial`
-
----
-
-## Technical Details
-
-### Database Migration
-
-A single SQL migration will update the validation function:
-
-```sql
-CREATE OR REPLACE FUNCTION public.validate_onboarding_completion(project_id_param uuid)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-DECLARE
-  required_fields_complete BOOLEAN;
-  required_docs_present BOOLEAN;
-BEGIN
-  SELECT (
-    system_address IS NOT NULL AND
-    commissioning_date IS NOT NULL AND
-    -- Check for inverter model in either legacy field OR JSON array
-    (
-      inverter_model IS NOT NULL 
-      OR (
-        inverter_serial IS NOT NULL 
-        AND inverter_serial LIKE '[%' 
-        AND (inverter_serial::jsonb -> 0 ->> 'model') IS NOT NULL
-        AND (inverter_serial::jsonb -> 0 ->> 'model') != ''
-      )
-    ) AND
-    -- Check for inverter serial in either JSON array or legacy field
-    (
-      inverter_serial IS NOT NULL 
-      AND (
-        (inverter_serial LIKE '[%' AND (inverter_serial::jsonb -> 0 ->> 'serial') IS NOT NULL)
-        OR inverter_serial NOT LIKE '[%'
-      )
-    ) AND
-    -- Check for panel brand in either JSON array or legacy text
-    (
-      panel_brand IS NOT NULL 
-      AND (
-        (panel_brand LIKE '[%' AND (panel_brand::jsonb -> 0 ->> 'brand') IS NOT NULL)
-        OR panel_brand NOT LIKE '[%'
-      )
-    ) AND
-    total_capex > 0
-  ) INTO required_fields_complete
-  FROM onboarding_fields
-  WHERE project_id = project_id_param;
-  
-  SELECT (
-    EXISTS(SELECT 1 FROM onboarding_documents WHERE project_id = project_id_param AND category = 'coc') AND
-    EXISTS(SELECT 1 FROM onboarding_documents WHERE project_id = project_id_param AND category = 'invoice')
-  ) INTO required_docs_present;
-  
-  RETURN COALESCE(required_fields_complete, false) AND COALESCE(required_docs_present, false);
-END;
-$function$;
-```
-
----
-
-## Files Changed
-
-| Location | Change |
-|----------|--------|
-| Database function | Update `validate_onboarding_completion` to handle JSON format |
 
 ---
 
 ## Expected Result
 
 After this fix:
-- Philip Henning's project will pass validation immediately
-- All new projects using the JSON format will validate correctly
-- Legacy projects with text fields will continue to work
+- Regenerating a PDF for a stale proposal immediately moves it to `sent` status
+- The 10-day stale timer resets
+- Agents can confidently use either PDF download or email resend to revive stale proposals
 
