@@ -13,6 +13,8 @@ import { QuickCalculatorModal } from "./solar-rewards/QuickCalculatorModal";
 import { EligibilityModal } from "./solar-rewards/EligibilityModal";
  import { ImpactStats } from "./solar-rewards/ImpactStats";
  import { StickyCtaBar } from "@/components/solar-rewards/StickyCtaBar";
+ import { FAQSection } from "./solar-rewards/FAQSection";
+ import { LiveActivityNotification } from "@/components/solar-rewards/LiveActivityNotification";
 
 const SolarRewards = () => {
   const [showCalculator, setShowCalculator] = useState(false);
@@ -79,6 +81,7 @@ const SolarRewards = () => {
         <ValueCards />
         <EarningsEstimator onCalculateClick={() => setShowCalculator(true)} />
         <QualificationSection onCheckEligibility={() => setShowEligibility(true)} />
+         <FAQSection />
         <TrustSection />
         <FinalCTA onCTAClick={() => setShowCalculator(true)} />
       </main>
@@ -100,6 +103,8 @@ const SolarRewards = () => {
       />
        
        <StickyCtaBar onCTAClick={() => setShowCalculator(true)} />
+       
+       <LiveActivityNotification />
     </div>
   );
 };
