@@ -1,246 +1,191 @@
 
 
-## Summary
+## Partner Logo Trust Bar Implementation
 
-Transform the `/home-owners` (Solar Rewards) page from a static informational layout into a high-converting landing page using proven conversion optimization techniques. The page has good content but lacks engagement triggers, urgency signals, and interactive elements that compel immediate action.
-
----
-
-## Current State Analysis
-
-### What's Working
-- Clear value proposition ("Your solar system can earn you money")
-- Good CTA button text ("Get My Free Solar Credit Estimate")
-- Eligibility quiz with modal flow
-- Benefits and trust signals are present
-- Mobile-responsive layout
-
-### What's Missing
-- **No social proof above the fold** - visitors need immediate trust signals
-- **No urgency or scarcity** - nothing compelling immediate action
-- **Static statistics** - no animated counters to grab attention
-- **No live activity indicators** - no sense of active community
-- **Missing testimonials with faces** - no relatable homeowner stories
-- **No sticky CTA** - user loses the action button when scrolling
-- **No FAQ section** - common objections go unanswered
-- **Static earnings preview** - no interactive mini-calculator
+Create a professional logo trust bar on the `/home-owners` page featuring 15 industry partners with updated company descriptions, greyscale styling, and responsive scrolling animation for mobile.
 
 ---
 
-## Proposed Changes Overview
+## Partner List (15 Total)
 
-| Priority | Component | Impact |
-|----------|-----------|--------|
-| 1 | Hero Section - Add social proof bar + urgency text | High |
-| 2 | Animated Statistics Section | High |
-| 3 | Sticky CTA Bar (mobile) | High |
-| 4 | Live Activity Notification | Medium |
-| 5 | Testimonials with photos | Medium |
-| 6 | FAQ Section | Medium |
-| 7 | Interactive Earnings Preview | Medium |
+| Partner | Category | Logo File |
+|---------|----------|-----------|
+| Moolman Group | Property Developer | 2.png |
+| Blume | Energy Development Partner | 4.png |
+| RISE | Renewable Energy Fund | 6.png |
+| MPower | Energy Developer | 18.png |
+| AlphaESS | Global Original Equipment Manufacturer | 32.png |
+| Carbon Disclosure SA | Carbon Credit Partner | 34.png |
+| i-G3N | Energy Storage Manufacturer | 36.png |
+| GridVolt | Solar Installer | 38.png |
+| PV Solutions | Solar Installer | headerlogo.png |
+| Solar Giant | Solar Installer | SG_logo.avif |
+| Rentech | Solar Installer | Rentech-White-1.svg |
+| Renen Solar | Solar Installer | renen_solar.png |
+| MiSolar | Solar Installer | misolar.avif |
+| Oryx Renewables | Solar Installer | oryx-renewables-white-2.png |
+| The Greenway Solar | Solar Installer | The-Greenway-Solar-Logo-Colour.svg |
 
----
-
-## Detailed Implementation
-
-### 1. Hero Section Overhaul
-
-**Add social proof bar immediately below headline:**
-
-```text
-[Avatar stack of 5 users] "1,247+ homeowners earning with Crunch Carbon"
-```
-
-**Add urgency micro-copy below the CTA button:**
-
-```text
-"47 homeowners joined this week"
-```
-
-**Files:** `src/pages/solar-rewards/HeroSection.tsx`
+*Note: Infoled logo (infoled.png) was uploaded but not included in the partner list - will be excluded.*
 
 ---
 
-### 2. Animated Statistics Section
+## Design Approach
 
-Create a dedicated impact section with large animated counters that count up when scrolled into view:
+**Visual Style:**
+- All logos rendered in greyscale using CSS filter
+- Subtle hover effect: transition to full color/opacity
+- Clean horizontal layout with centered alignment
+- Section headline: "Trusted by Leading Solar Industry Partners"
+- Smooth infinite scroll animation on mobile devices
 
-| Metric | Display Value |
-|--------|---------------|
-| Homeowners Registered | 1,500+ |
-| Total Earnings Paid | R1.2M+ |
-| CO2 Offset | 28,000+ tons |
-| Average Annual Payout | R800+ |
-
-**New Files:** 
-- `src/components/solar-rewards/AnimatedCounter.tsx`
-- `src/pages/solar-rewards/ImpactStats.tsx`
+**Placement:** Between HeroSection and ImpactStats to establish credibility immediately after the hero call-to-action.
 
 ---
 
-### 3. Sticky CTA Bar
-
-Add a sticky bottom bar on mobile that appears after scrolling past the hero section (400px threshold):
-
-```text
-[Calculate My Earnings] - always visible when scrolling
-```
-
-Smooth slide-up animation with backdrop blur.
-
-**New File:** `src/components/solar-rewards/StickyCtaBar.tsx`
-
----
-
-### 4. Live Activity Notification
-
-Create a subtle, animated toast-style notification that rotates through recent signups:
-
-```text
-" John from Cape Town just registered - 2 mins ago"
-```
-
-- Rotates every 5 seconds
-- Uses simulated data (can connect to real data later)
-- Positioned in bottom-left corner
-- Fades in/out smoothly
-
-**New File:** `src/components/solar-rewards/LiveActivityNotification.tsx`
-
----
-
-### 5. Testimonials Section with Photos
-
-Add a new testimonials section featuring homeowner stories:
-
-- Profile photos (or avatar initials)
-- Name, location, system size
-- Specific earning amounts where possible
-- Star ratings
-- Quote about their experience
-
-**New File:** `src/pages/solar-rewards/TestimonialsSection.tsx`
-
----
-
-### 6. FAQ Section
-
-Add collapsible FAQ section addressing common objections:
-
-| Question | Purpose |
-|----------|---------|
-| "Is this really free?" | Removes payment concern |
-| "How much can I realistically earn?" | Sets expectations |
-| "What happens to my data?" | Privacy concern |
-| "How long until I get paid?" | Timeline clarity |
-| "What if I sell my house?" | Long-term concern |
-
-Uses Radix Accordion component for smooth expand/collapse.
-
-**New File:** `src/pages/solar-rewards/FAQSection.tsx`
-
----
-
-### 7. Interactive Earnings Preview (Mini Calculator)
-
-Replace the static "How Much Can I Earn?" section with an interactive preview:
-
-```text
-"A typical 5kWp system earns ~R800/year"
-[Slider: 2kWp -------- 15kWp]
-→ Shows live earnings estimate as slider moves
-[Get Detailed Calculation] button
-```
-
-This gives instant gratification before opening the full modal.
-
-**File:** `src/pages/solar-rewards/EarningsEstimator.tsx` (update)
-
----
-
-## File Changes Summary
+## File Changes
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/pages/solar-rewards/HeroSection.tsx` | Update | Add social proof bar, avatar stack, urgency text |
-| `src/pages/solar-rewards/EarningsEstimator.tsx` | Update | Add interactive slider with live preview |
-| `src/pages/solar-rewards/ImpactStats.tsx` | New | Animated statistics section |
-| `src/pages/solar-rewards/TestimonialsSection.tsx` | New | Photo testimonials with quotes |
-| `src/pages/solar-rewards/FAQSection.tsx` | New | Collapsible FAQ accordion |
-| `src/components/solar-rewards/AnimatedCounter.tsx` | New | Reusable counter animation component |
-| `src/components/solar-rewards/StickyCtaBar.tsx` | New | Mobile sticky CTA bar |
-| `src/components/solar-rewards/LiveActivityNotification.tsx` | New | Rotating activity notifications |
-| `src/components/solar-rewards/AvatarStack.tsx` | New | Overlapping avatar display |
-| `src/pages/SolarRewards.tsx` | Update | Integrate new sections |
+| `public/partner-logos/` | Create folder | Store all 15 partner logo images |
+| `public/partner-logos/*.png/svg/avif` | Copy | All 15 logos from user uploads |
+| `src/pages/solar-rewards/PartnerLogos.tsx` | Create | New responsive logo bar component |
+| `src/pages/SolarRewards.tsx` | Update | Import and add PartnerLogos after HeroSection |
 
 ---
 
-## Technical Implementation Details
+## Component Structure
 
-### Animated Counter Component
+```text
+PartnerLogos Component
+├── Section headline: "Trusted by Leading Solar Industry Partners"
+├── Desktop (lg+): CSS Grid with 5 columns, 3 rows
+├── Tablet (md): CSS Grid with 4 columns
+└── Mobile (sm): Infinite horizontal scroll carousel
+    ├── Duplicated logo set for seamless loop
+    └── Fade gradients on left/right edges
+```
 
-```typescript
-// Uses framer-motion's useInView hook
-// Counts from 0 to target when visible
-// Supports prefix (R) and suffix (+, tons)
+---
 
-interface AnimatedCounterProps {
-  target: number;
-  prefix?: string;
-  suffix?: string;
-  duration?: number;
+## Layout Specifications
+
+**Desktop (lg and above):**
+- 5 logos per row (3 rows for 15 logos)
+- Max height: 48px per logo
+- Grayscale filter with hover:grayscale-0 transition
+- Gap: 8-12 units between logos
+
+**Tablet (md):**
+- 4 logos per row
+- Proportionally scaled logos
+- Same hover effects
+
+**Mobile (sm and below):**
+- Single row infinite horizontal scroll
+- CSS animation: 45s linear infinite (slower for more logos)
+- Duplicated logos for seamless loop effect
+- Fade gradients on edges using pseudo-elements
+- Pauses on hover/touch
+
+---
+
+## Greyscale Styling
+
+```text
+CSS Classes Applied:
+- filter: grayscale(100%)
+- opacity: 0.7
+- transition: all 0.3s ease
+
+Hover State:
+- filter: grayscale(0%)
+- opacity: 1
+```
+
+This ensures visual consistency across logos with different color schemes while allowing the brand colors to show on interaction.
+
+---
+
+## Animation Implementation
+
+```text
+@keyframes scroll-logos {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-scroll-logos {
+  animation: scroll-logos 45s linear infinite;
+}
+
+/* Pause on hover for accessibility */
+.animate-scroll-logos:hover {
+  animation-play-state: paused;
 }
 ```
 
-### Live Activity Notification
+The logo array is duplicated in the DOM so when the first set scrolls away, the second set seamlessly continues.
 
-```typescript
-// Rotating array of activities
-// Uses useState + useEffect with setInterval
-// Fades in/out every 5 seconds
-// Positioned fixed bottom-left
+---
 
-const activities = [
-  { name: "John", city: "Cape Town", time: "2 mins ago" },
-  { name: "Sarah", city: "Johannesburg", time: "5 mins ago" },
-  // ...more entries
-];
-```
+## Page Flow After Implementation
 
-### Sticky CTA Bar
-
-```typescript
-// Uses scroll position detection
-// Appears after 400px scroll
-// Smooth slide-up with framer-motion
-// Hidden on desktop (optional)
+```text
+Header
+  ↓
+HeroSection (with AvatarStack + urgency text)
+  ↓
+PartnerLogos (NEW - 15 industry partners)
+  ↓
+ImpactStats (animated counters)
+  ↓
+HowItWorks
+  ↓
+... rest of page
 ```
 
 ---
 
-## Expected Impact
+## Implementation Steps
 
-| Metric | Expected Improvement |
-|--------|---------------------|
-| Time on page | +40% (more interactive elements) |
-| CTA clicks | +60% (sticky bar + urgency signals) |
-| Form completions | +35% (trust signals + social proof) |
-| Bounce rate | -25% (engaging first fold + FAQ) |
+1. Create `public/partner-logos/` directory
+2. Copy all 15 logo files from user-uploads to the new directory with clean naming:
+   - moolman-group.png
+   - blume.png
+   - rise.png
+   - mpower.png
+   - alpha-ess.png
+   - cdsa.png
+   - i-g3n.png
+   - gridvolt.png
+   - pv-solutions.png
+   - solar-giant.avif
+   - rentech.svg
+   - renen-solar.png
+   - misolar.avif
+   - oryx-renewables.png
+   - greenway-solar.svg
+
+3. Create `src/pages/solar-rewards/PartnerLogos.tsx` with:
+   - Partner data array with names and logo paths
+   - Responsive grid for desktop/tablet
+   - Infinite scroll carousel for mobile
+   - Greyscale styling with hover effects
+   - Tailwind CSS keyframe animation
+
+4. Update `src/pages/SolarRewards.tsx`:
+   - Import PartnerLogos component
+   - Add between HeroSection and ImpactStats
 
 ---
 
-## Implementation Priority
+## Expected Result
 
-**Phase 1 (High Impact, Quick Wins):**
-1. Hero Section social proof + urgency text
-2. Animated statistics section
-3. Sticky CTA bar
-
-**Phase 2 (Medium Impact):**
-4. Live activity notification
-5. FAQ section
-
-**Phase 3 (Polish):**
-6. Photo testimonials
-7. Interactive earnings slider
+A polished, professional logo section that:
+- Displays all 15 industry partners in consistent greyscale
+- Provides smooth scrolling animation on mobile devices
+- Reveals brand colors on hover interaction
+- Establishes immediate credibility with recognized partner brands
+- Groups partners logically (equipment manufacturers, installers, energy developers)
 
