@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+ import { AvatarStack } from "@/components/solar-rewards/AvatarStack";
 
 interface HeroSectionProps {
   onCTAClick: () => void;
@@ -48,6 +49,17 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
             <span className="text-crunch-yellow font-semibold">Crunch Carbon</span> turns your clean energy into verified carbon credits, sell them and share the proceeds.
           </motion.p>
           
+           <motion.div
+             variants={{
+               initial: { opacity: 0, y: 20 },
+               animate: { opacity: 1, y: 0 }
+             }}
+             transition={{ duration: 0.4, ease: "easeOut" }}
+             className="flex justify-center mb-8"
+           >
+             <AvatarStack count={1247} />
+           </motion.div>
+           
           <motion.div
             variants={{
               initial: { opacity: 0, y: 20 },
@@ -74,6 +86,17 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
           >
             Takes 30 seconds. No costs. No commitments.
           </motion.p>
+           
+           <motion.p 
+             variants={{
+               initial: { opacity: 0, y: 20 },
+               animate: { opacity: 1, y: 0 }
+             }}
+             transition={{ duration: 0.4, ease: "easeOut" }}
+             className="text-sm text-crunch-yellow font-medium mt-2"
+           >
+             🔥 47 homeowners joined this week
+           </motion.p>
         </motion.div>
       </div>
     </section>

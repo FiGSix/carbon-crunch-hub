@@ -11,6 +11,8 @@ import { FinalCTA } from "./solar-rewards/FinalCTA";
 import { useState, useEffect } from "react";
 import { QuickCalculatorModal } from "./solar-rewards/QuickCalculatorModal";
 import { EligibilityModal } from "./solar-rewards/EligibilityModal";
+ import { ImpactStats } from "./solar-rewards/ImpactStats";
+ import { StickyCtaBar } from "@/components/solar-rewards/StickyCtaBar";
 
 const SolarRewards = () => {
   const [showCalculator, setShowCalculator] = useState(false);
@@ -71,6 +73,7 @@ const SolarRewards = () => {
       
       <main className="flex-1">
         <HeroSection onCTAClick={() => setShowCalculator(true)} />
+         <ImpactStats />
         <HowItWorks onCheckEligibility={() => setShowEligibility(true)} />
         <BenefitsSection />
         <ValueCards />
@@ -95,6 +98,8 @@ const SolarRewards = () => {
           setShowCalculator(true);
         }}
       />
+       
+       <StickyCtaBar onCTAClick={() => setShowCalculator(true)} />
     </div>
   );
 };
