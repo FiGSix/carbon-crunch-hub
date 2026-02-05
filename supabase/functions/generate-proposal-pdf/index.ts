@@ -175,18 +175,33 @@ serve(async (req) => {
       .from('proposal-pdfs')
       .getPublicUrl(fileName)
 
-    // Update proposal with PDF metadata
+    // Build update payload with PDF metadata
+    const updatePayload: Record<string, any> = {
+      pdf_url: publicUrl,
+      pdf_generated_at: new Date().toISOString(),
+      pdf_version: (proposal.pdf_version || 1) + 1
+    }
+
+    // If proposal was stale, revive it when PDF is regenerated
+    // This signals the agent has actively re-engaged with this proposal
+    const wasStale = proposal.status === 'stale'
+    if (wasStale) {
+      console.log(`[PDF] Reviving stale proposal ${proposalId} - agent regenerated PDF`)
+      updatePayload.status = 'sent'
+      updatePayload.invitation_sent_at = new Date().toISOString()
+      updatePayload.last_email_sent_at = new Date().toISOString()
+    }
+
+    // Update proposal with PDF metadata (and status revival if stale)
     const { error: updateError } = await supabaseAdmin
       .from('proposals')
-      .update({
-        pdf_url: publicUrl,
-        pdf_generated_at: new Date().toISOString(),
-        pdf_version: (proposal.pdf_version || 1) + 1
-      })
+      .update(updatePayload)
       .eq('id', proposalId)
 
     if (updateError) {
       console.error('Error updating proposal with PDF metadata:', updateError)
+    } else if (wasStale) {
+      console.log(`[PDF] Successfully revived proposal from stale to sent`)
     }
 
     return new Response(
