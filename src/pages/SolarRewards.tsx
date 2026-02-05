@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { HeroSection } from "./solar-rewards/HeroSection";
+ import { PartnerLogos } from "./solar-rewards/PartnerLogos";
 import { HowItWorks } from "./solar-rewards/HowItWorks";
 import { BenefitsSection } from "./solar-rewards/BenefitsSection";
 import { ValueCards } from "./solar-rewards/ValueCards";
@@ -76,6 +77,7 @@ const SolarRewards = () => {
       
       <main className="flex-1">
         <HeroSection onCTAClick={() => setShowCalculator(true)} />
+         <PartnerLogos />
          <ImpactStats />
         <HowItWorks onCheckEligibility={() => setShowEligibility(true)} />
         <BenefitsSection />
