@@ -46,14 +46,14 @@ export function EarningsEstimator({ onCalculateClick }: EarningsEstimatorProps) 
                value={systemSize}
                onValueChange={setSystemSize}
                min={2}
-               max={15}
+               max={50}
                step={0.5}
                className="mb-6"
              />
              
              <div className="flex justify-between text-xs text-muted-foreground mb-6">
                <span>2 kWp</span>
-               <span>15 kWp</span>
+               <span>50 kWp</span>
              </div>
              
              <div className="bg-primary/5 rounded-lg p-4">
