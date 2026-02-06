@@ -41,7 +41,7 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
       correctAnswer: false
     },
     {
-      question: "Is the system smaller than 30 kWp?",
+      question: "Is the system smaller than 50 kWp?",
       correctAnswer: true
     },
     {
@@ -289,7 +289,7 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
                 type="number"
                 step="0.01"
                 min="0.1"
-                max="30"
+                max="50"
                 value={formData.systemSize}
                 onChange={(e) => setFormData({...formData, systemSize: e.target.value})}
                 required
@@ -349,7 +349,7 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
               <p className="text-muted-foreground">
                 {failedStep === 0 && "Currently, we only work with solar systems in South Africa."}
                 {failedStep === 1 && "You must NOT be registered for any other Greenhouse Gas Emissions program to qualify."}
-                {failedStep === 2 && "Systems over 30 kWp require a different registration process. Contact us for enterprise solutions."}
+                {failedStep === 2 && "Systems over 50 kWp require a different registration process. Contact us for enterprise solutions."}
                 {failedStep === 3 && "Your system must have been commissioned on or after September 15, 2022."}
                 {failedStep === 4 && "You must have legal ownership of the system or green attributes."}
                 {failedStep === 5 && "Participation in South African Government Funding Initiatives affects eligibility."}
