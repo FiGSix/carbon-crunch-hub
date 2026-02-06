@@ -33,7 +33,7 @@ export function ValueCards() {
     },
     {
       icon: Zap,
-      title: "Solarboost",
+      title: "PVBiz",
       description: "Trade credits for solar maintenance & upgrades",
       link: "#",
       isExternal: false
