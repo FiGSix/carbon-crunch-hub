@@ -34,7 +34,7 @@ export function ValueCards() {
     {
       icon: Zap,
       title: "PVBiz",
-      description: "Trade credits for solar maintenance & upgrades",
+      description: "Get real-time insights and smart notifications",
       link: "#",
       isExternal: false
     },
