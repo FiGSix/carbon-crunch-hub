@@ -9,7 +9,7 @@ export function QualificationSection({ onCheckEligibility }: QualificationSectio
   const requirements = [
     "System is in South Africa",
     "You own the solar system",
-    "System is smaller than 15kWp (typical for homes)",
+    "System is smaller than 50kWp (typical for homes)",
     "Not part of another carbon programme"
   ];
 
