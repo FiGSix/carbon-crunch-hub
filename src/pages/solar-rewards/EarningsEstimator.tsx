@@ -57,7 +57,7 @@ export function EarningsEstimator({ onCalculateClick }: EarningsEstimatorProps) 
              </div>
              
              <div className="bg-primary/5 rounded-lg p-4">
-               <p className="text-sm text-muted-foreground mb-1">Estimated annual earnings</p>
+               <p className="text-sm text-muted-foreground mb-1">Estimated averaged annual earnings</p>
                <p className="text-3xl md:text-4xl font-bold text-primary">
                  R{estimatedEarnings.toLocaleString()}
                  <span className="text-lg font-normal text-muted-foreground">/year</span>
