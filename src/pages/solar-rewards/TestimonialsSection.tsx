@@ -9,7 +9,7 @@
      earnings: "R1,280",
      initials: "JM",
      avatarBg: "bg-blue-500",
-     quote: "I was skeptical at first, but the signup was so easy. Got my first payout after 12 months and it's been consistent ever since. Free money from my solar panels!",
+     quote: "I was skeptical at first, but the signup was so easy. Free money from my solar panels!",
      rating: 5,
    },
    {
