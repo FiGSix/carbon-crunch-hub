@@ -44,9 +44,9 @@
            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
              Real Impact, Real Results
            </h2>
-           <p className="text-muted-foreground max-w-2xl mx-auto">
-             Join thousands of South African homeowners already earning from their solar systems
-           </p>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Join hundreds of South African homeowners already earning from their solar systems
+            </p>
          </div>
          
          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
