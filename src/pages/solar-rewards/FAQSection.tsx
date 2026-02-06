@@ -21,7 +21,7 @@
    },
    {
      question: "How long until I get paid?",
-     answer: "Carbon credits are verified and sold in annual cycles. After your first year of data collection, you'll receive your first payout. Payments are made annually, typically within 60 days of the verification period ending."
+     answer: "Carbon credits are verified and sold in annual cycles. After your first year of data collection, you'll receive your first payout. Payments are made annually, after the verification, issuance and sale of the carbon credits."
    },
    {
      question: "What if I sell my house?",
