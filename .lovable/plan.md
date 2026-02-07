@@ -1,226 +1,139 @@
 
-# Improve Validation for Onboarding and Data Access Sections
+# Fix: Audit Validation Failing for Legacy Inverter Data Format
 
-## Overview
+## Problem Summary
 
-After reviewing the codebase, I've identified several validation gaps in the Onboarding and Data Access sections that need addressing. Currently, validation is minimal and inconsistent:
+**FLM Penny Lane** and **FLM Lords view** cannot be validated as "audit ready" because their inverter data is stored in an **old format** that the validation RPC function doesn't recognize.
 
-**Current Issues Found:**
+### Data Format Mismatch
 
-1. **Onboarding Tab**: No real-time field validation - users only see errors when submitting
-2. **Data Access Tab**: Basic validation exists but lacks proper user feedback and input sanitization
-3. **No Zod schema validation** for onboarding forms (unlike other parts of the app like Contact, Partner Invitation)
-4. **Missing validation** for email format (installer email), phone formats, GPS coordinates, dates
-5. **No inline error messages** - just section-level icons (green check/orange alert)
-6. **Inconsistent required field indicators** - some fields have asterisks, others don't
+| Field | Old Format (Current Data) | New Format (Expected) |
+|-------|---------------------------|----------------------|
+| `inverter_serial` | `["S/N: 11822223B160027", "S/N: ..."]` | `[{"brand": "Solis", "model": "...", "serial": "..."}]` |
 
----
-
-## Technical Implementation Plan
-
-### Phase 1: Create Onboarding Validation Schema
-
-Create a comprehensive Zod validation schema for onboarding fields:
-
-**New file: `src/lib/validation/onboardingSchema.ts`**
-
-```text
-+----------------------------------+
-|   Onboarding Validation Schema   |
-+----------------------------------+
-|  - System Details section        |
-|  - Inverter Details section      |
-|  - Panel Details section         |
-|  - Battery Details (conditional) |
-|  - Financial section             |
-|  - O&M section (conditional)     |
-+----------------------------------+
-```
-
-**Fields to validate:**
-- `system_address`: Required, min 5 chars
-- `commissioning_date`: Required, valid date, not in future, after Sept 15, 2022
-- `installer_email`: Optional, but must be valid email format if provided
-- `system_gps_lat`: Optional, must be valid latitude (-90 to 90)
-- `system_gps_lng`: Optional, must be valid longitude (-180 to 180)
-- `inverter_quantity`: Required, 1-20 range
-- `inverter_cost`, `panel_cost`, `battery_cost`: Positive numbers
-- `total_capex`: Must be greater than 0
-- Inverter details array: Each must have brand, model, capacity_kw, serial
-- Panel details array: Each must have brand, size_wp, quantity
-
-### Phase 2: Create Data Access Validation Schema
-
-Create validation for data access configuration:
-
-**New file: `src/lib/validation/dataAccessSchema.ts`**
-
-**Fields to validate:**
-- `provider`: Required, from predefined list
-- `site_id`: Optional, max 100 chars
-- `portal_url`: Optional, valid URL format
-- `delegated_email`: Valid email format (defaults to data@crunchcarbon.com)
-- `api_key_encrypted`: Required if method is "api_key"
-
-### Phase 3: Create Validation Hooks
-
-**New file: `src/hooks/useOnboardingValidation.ts`**
-
-This hook will:
-- Provide real-time field validation
-- Track field-level errors
-- Track touched/dirty state
-- Provide section-level validation status
-- Return specific error messages
-
-**New file: `src/hooks/useDataAccessValidation.ts`**
-
-Similar hook for data access form.
-
-### Phase 4: Update OnboardingTab Component
-
-Modify `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`:
-
-1. **Add inline error messages** below each input field
-2. **Show validation on blur** (when user leaves a field)
-3. **Prevent submission** until required fields are valid
-4. **Visual feedback**: Red border on invalid fields
-5. **Clear error indicators**: Required field asterisks consistently applied
-
-Example field update:
-```tsx
-<div className="space-y-2">
-  <Label htmlFor="system_address">
-    System Address <span className="text-destructive">*</span>
-  </Label>
-  <Input
-    id="system_address"
-    value={formData.system_address || ''}
-    onChange={(e) => handleInputChange('system_address', e.target.value)}
-    onBlur={() => validateField('system_address')}
-    className={errors.system_address ? 'border-destructive' : ''}
-  />
-  {errors.system_address && (
-    <p className="text-sm text-destructive">{errors.system_address}</p>
-  )}
-</div>
-```
-
-### Phase 5: Update DataAccessTab Component
-
-Modify `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx`:
-
-1. **Inline error messages** for each field
-2. **URL validation** for portal URL with proper feedback
-3. **Email validation** for delegated email
-4. **Visual feedback** on invalid fields
-5. **Validation on blur** before submission
-
-### Phase 6: Create Validation Summary Component
-
-**New file: `src/components/onboarding/ValidationSummary.tsx`**
-
-A component to show a summary of all validation errors before submission:
-
-```text
-+------------------------------------------+
-|  ⚠️ Please fix the following issues:    |
-|                                          |
-|  System Details:                         |
-|  • System address is required            |
-|  • Commissioning date is required        |
-|                                          |
-|  Inverter Details:                       |
-|  • Serial number is required for all     |
-|    inverters                             |
-+------------------------------------------+
-```
-
-### Phase 7: Update InverterDetailsRow and PanelArrayDetailsRow
-
-Add validation feedback to dynamic row components:
-
-- Pass validation errors as props
-- Show red borders on invalid fields
-- Show specific error messages per field
+The validation function `validate_onboarding_completion` tries to extract `model` and `serial` from JSON objects, but finds `null` because the data is just strings.
 
 ---
 
-## Files to Create
+## Solution
 
-| File | Purpose |
-|------|---------|
-| `src/lib/validation/onboardingSchema.ts` | Zod schemas for onboarding fields |
-| `src/lib/validation/dataAccessSchema.ts` | Zod schemas for data access config |
-| `src/hooks/useOnboardingValidation.ts` | Validation hook for onboarding form |
-| `src/hooks/useDataAccessValidation.ts` | Validation hook for data access form |
-| `src/components/onboarding/ValidationSummary.tsx` | Summary of validation errors |
+There are two approaches to fix this:
+
+### Option A: Update RPC to Handle Both Formats (Recommended)
+
+Modify the `validate_onboarding_completion` RPC function to detect and accept both the old string array format AND the new object array format.
+
+**Changes:**
+- Check if `inverter_serial[0]` is a string (old format) or object (new format)
+- For old format: validate that the string is non-empty AND legacy `inverter_model` field is populated
+- For new format: validate using object key extraction (current logic)
+
+### Option B: Auto-migrate Data on Page Load
+
+Modify the OnboardingTab to automatically save the migrated data format when legacy data is detected.
+
+**Downside:** Requires user to open the page for each project to trigger migration.
+
+---
+
+## Recommended Implementation (Option A)
+
+Update the RPC function to be backwards-compatible:
+
+```sql
+-- Updated validate_onboarding_completion function
+DECLARE
+  required_fields_complete BOOLEAN;
+  required_docs_present BOOLEAN;
+  serial_data JSONB;
+  is_new_format BOOLEAN;
+BEGIN
+  -- Get the inverter_serial as JSONB for inspection
+  SELECT inverter_serial::jsonb INTO serial_data
+  FROM onboarding_fields
+  WHERE project_id = project_id_param
+  AND inverter_serial IS NOT NULL 
+  AND inverter_serial LIKE '[%';
+  
+  -- Detect format: new format has objects, old format has strings
+  is_new_format := serial_data IS NOT NULL 
+    AND jsonb_typeof(serial_data -> 0) = 'object';
+
+  SELECT (
+    system_address IS NOT NULL AND
+    commissioning_date IS NOT NULL AND
+    -- Inverter model validation (format-aware)
+    (
+      inverter_model IS NOT NULL 
+      OR (
+        is_new_format 
+        AND (serial_data -> 0 ->> 'model') IS NOT NULL
+        AND (serial_data -> 0 ->> 'model') != ''
+      )
+    ) AND
+    -- Inverter serial validation (format-aware)
+    (
+      inverter_serial IS NOT NULL 
+      AND (
+        -- New format: check object has serial key
+        (is_new_format AND (serial_data -> 0 ->> 'serial') IS NOT NULL)
+        -- Old format: check it's a non-empty string array with legacy model field
+        OR (
+          NOT is_new_format 
+          AND inverter_serial LIKE '[%' 
+          AND inverter_model IS NOT NULL
+          AND jsonb_array_length(serial_data) > 0
+          AND (serial_data ->> 0) IS NOT NULL
+        )
+        -- Single legacy string
+        OR (inverter_serial NOT LIKE '[%' AND inverter_serial != '')
+      )
+    ) AND
+    -- Panel brand check (unchanged)
+    (
+      panel_brand IS NOT NULL 
+      AND (
+        (panel_brand LIKE '[%' AND (panel_brand::jsonb -> 0 ->> 'brand') IS NOT NULL)
+        OR panel_brand NOT LIKE '[%'
+      )
+    ) AND
+    total_capex > 0
+  ) INTO required_fields_complete
+  FROM onboarding_fields
+  WHERE project_id = project_id_param;
+  
+  -- Document check (unchanged)
+  SELECT (
+    EXISTS(SELECT 1 FROM onboarding_documents WHERE project_id = project_id_param AND category = 'coc') AND
+    EXISTS(SELECT 1 FROM onboarding_documents WHERE project_id = project_id_param AND category = 'invoice')
+  ) INTO required_docs_present;
+  
+  RETURN COALESCE(required_fields_complete, false) AND COALESCE(required_docs_present, false);
+END;
+```
+
+---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Add validation, inline errors, visual feedback |
-| `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx` | Add validation, inline errors, visual feedback |
-| `src/components/onboarding/InverterDetailsRow.tsx` | Add error prop, visual validation states |
-| `src/components/onboarding/PanelArrayDetailsRow.tsx` | Add error prop, visual validation states |
+| File | Change |
+|------|--------|
+| `supabase/migrations/xxx_fix_validation_legacy_format.sql` | Update `validate_onboarding_completion` RPC to handle both formats |
 
 ---
 
-## Validation Rules Summary
+## Testing Plan
 
-### System Details
-| Field | Required | Validation |
-|-------|----------|------------|
-| System Name | No | Max 100 chars |
-| System Address | Yes | Min 5 chars |
-| Commissioning Date | Yes | Valid date, not future, after Sept 2022 |
-| Installer Email | No | Valid email format if provided |
-| GPS Latitude | No | -90 to 90 if provided |
-| GPS Longitude | No | -180 to 180 if provided |
-
-### Inverter Details
-| Field | Required | Validation |
-|-------|----------|------------|
-| Number of Inverters | Yes | 1-20 |
-| Brand (per inverter) | Yes | From predefined list |
-| Model (per inverter) | Yes | Min 1 char |
-| Capacity kW (per inverter) | Yes | Positive number |
-| Serial (per inverter) | Yes | Min 3 chars |
-| Total Inverter Cost | No | Positive number if provided |
-
-### Panel Details
-| Field | Required | Validation |
-|-------|----------|------------|
-| Brand (per array) | Yes | From predefined list |
-| Size Wp (per array) | Yes | 50-1000 Wp range |
-| Quantity (per array) | Yes | 1-1000 |
-
-### Battery Details (if has_battery = true)
-| Field | Required | Validation |
-|-------|----------|------------|
-| Brand | Yes | From predefined list |
-| Capacity kWh | Yes | Positive number, max 1000 |
-| Cost | Yes | Positive number |
-
-### Data Access
-| Field | Required | Validation |
-|-------|----------|------------|
-| Provider | Yes | From predefined list |
-| Site ID | No | Max 100 chars |
-| Portal URL | No | Valid URL format |
-| Delegated Email | Conditional | Valid email |
-| API Key | Conditional | Min 10 chars if method=api_key |
+After implementation:
+1. Verify FLM Penny Lane validation returns `true`
+2. Verify FLM Lords view validation returns `true`
+3. Verify new format projects still validate correctly
+4. Verify projects missing required fields still fail validation
 
 ---
 
-## User Experience Improvements
+## Additional Notes
 
-1. **Real-time feedback**: Errors shown as user types/leaves fields
-2. **Clear visual indicators**: Red borders and error text
-3. **Consistent required markers**: Asterisks on all required fields
-4. **Validation summary**: Before submission, show all issues
-5. **Smart defaults**: Pre-fill delegated email, auto-calculate totals
-6. **Helpful messages**: Specific, actionable error messages
-7. **Prevent bad submissions**: Button disabled until form is valid
-
+- Both projects have all required data - the issue is purely a **format detection problem**
+- The frontend already handles migration correctly when users edit/save
+- This RPC fix ensures backwards compatibility without requiring manual data fixes
