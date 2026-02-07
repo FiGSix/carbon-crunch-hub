@@ -13,6 +13,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { DataAccessConfig } from "@/types/onboarding";
 import { getErrorMessage } from "@/lib/utils";
 import { format } from "date-fns";
+import { useDataAccessValidation } from "@/hooks/useDataAccessValidation";
+import { FormError } from "@/components/ui/form-error";
+import { ValidationSummary } from "@/components/onboarding/ValidationSummary";
+import { cn } from "@/lib/utils";
 
 interface DataAccessTabProps {
   projectId: string;
@@ -28,39 +32,21 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  
+  const { 
+    errors, 
+    touched, 
+    validateFieldOnBlur, 
+    validateAll, 
+    hasErrors 
+  } = useDataAccessValidation();
 
-// Simple client-side validation
-const getValidationErrors = (cfg: Partial<DataAccessConfig>): string[] => {
-  const errors: string[] = [];
-  if (!cfg.provider || String(cfg.provider).trim() === '') {
-    errors.push('Provider is required');
-  }
-  const method = (cfg.credential_method ?? 'delegated_account') as 'delegated_account' | 'api_key';
-  if (!method) {
-    errors.push('Credential method is required');
-  }
-  if (method === 'delegated_account') {
-    const email = cfg.delegated_email && String(cfg.delegated_email).trim() !== '' ? cfg.delegated_email : 'data@crunchcarbon.com';
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      errors.push('Delegated email is invalid');
-    }
-  }
-  if (method === 'api_key') {
-    if (!cfg.api_key_encrypted || String(cfg.api_key_encrypted).trim() === '') {
-      errors.push('API key is required for API Key method');
-    }
-  }
-  return errors;
-};
-
-useEffect(() => {
-  fetchConfig();
-}, [projectId]);
+  useEffect(() => {
+    fetchConfig();
+  }, [projectId]);
 
   const fetchConfig = async () => {
     try {
-      // Check if user is admin
       const { data: { user } } = await supabase.auth.getUser();
       const { data: profile } = await supabase
         .from('profiles')
@@ -73,7 +59,6 @@ useEffect(() => {
       let data, error;
 
       if (isAdmin) {
-        // Admins can see all fields including credentials
         const result = await supabase
           .from('data_access_config')
           .select('*')
@@ -82,7 +67,6 @@ useEffect(() => {
         data = result.data;
         error = result.error;
       } else {
-        // Non-admins use secure function (no credential exposure)
         const result = await supabase
           .rpc('get_data_access_status', { project_id_param: projectId })
           .single();
@@ -99,7 +83,6 @@ useEffect(() => {
         });
       }
 
-      // Check submission status from project_onboarding table
       const { data: onboardingData } = await supabase
         .from('project_onboarding')
         .select('data_access_verified, data_access_verified_at')
@@ -113,6 +96,14 @@ useEffect(() => {
     } catch (error) {
       console.error('Error fetching config:', error);
     }
+  };
+
+  const handleFieldChange = (field: keyof DataAccessConfig, value: any) => {
+    setConfig(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFieldBlur = (field: string) => {
+    validateFieldOnBlur(field, config[field as keyof DataAccessConfig], config);
   };
 
   const handleSaveDraft = async () => {
@@ -167,12 +158,12 @@ useEffect(() => {
     try {
       setIsSubmitting(true);
 
-      // Validate client-side
-      const validationErrors = getValidationErrors(config);
-      if (validationErrors.length > 0) {
+      // Validate all fields
+      const validationErrors = validateAll(config);
+      if (Object.keys(validationErrors).length > 0) {
         toast({
-          title: "Please fix the following",
-          description: validationErrors[0],
+          title: "Validation Error",
+          description: "Please fix the highlighted errors before submitting",
           variant: "destructive",
         });
         return;
@@ -198,7 +189,6 @@ useEffect(() => {
         payload.api_key_encrypted = null;
       }
 
-      // Step 1: Save configuration to data_access_config
       const { error: configError } = await supabase
         .from('data_access_config')
         .upsert(payload, { onConflict: 'project_id' });
@@ -208,7 +198,6 @@ useEffect(() => {
         throw new Error('Failed to save configuration');
       }
 
-      // Step 2: Update verification status in project_onboarding
       const { error: verificationError } = await supabase
         .from('project_onboarding')
         .update({
@@ -222,7 +211,6 @@ useEffect(() => {
         throw new Error('Failed to submit for audit');
       }
 
-      // Log activity
       const { error: activityError } = await supabase
         .from('onboarding_activity_log')
         .insert({
@@ -238,7 +226,6 @@ useEffect(() => {
 
       if (activityError) console.error('Failed to log activity:', activityError);
 
-      // Notify all admins
       const { data: adminProfiles, error: adminError } = await supabase
         .from('profiles')
         .select('id')
@@ -279,6 +266,7 @@ useEffect(() => {
     }
   };
 
+  const canSubmit = config.provider && !hasErrors && !isSubmitted;
 
   return (
     <div className="space-y-6">
@@ -312,10 +300,18 @@ useEffect(() => {
               </p>
             </div>
           )}
+
+          {/* Validation Summary */}
+          {hasErrors && Object.keys(touched).length > 0 && (
+            <ValidationSummary errors={errors} />
+          )}
+
           {/* Provider */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor="provider">Data Access Provider (required)</Label>
+              <Label htmlFor="provider">
+                Data Access Provider <span className="text-destructive">*</span>
+              </Label>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -329,9 +325,12 @@ useEffect(() => {
             </div>
             <Select
               value={config.provider || ''}
-              onValueChange={(value) => setConfig(prev => ({ ...prev, provider: value }))}
+              onValueChange={(value) => {
+                handleFieldChange('provider', value);
+                validateFieldOnBlur('provider', value, config);
+              }}
             >
-              <SelectTrigger>
+              <SelectTrigger className={cn(touched.provider && errors.provider && "border-destructive")}>
                 <SelectValue placeholder="Select provider" />
               </SelectTrigger>
               <SelectContent>
@@ -366,6 +365,7 @@ useEffect(() => {
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
+            <FormError message={touched.provider ? errors.provider : undefined} />
           </div>
 
           {/* Site ID and Portal URL */}
@@ -375,9 +375,13 @@ useEffect(() => {
               <Input
                 id="site_id"
                 value={config.site_id || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, site_id: e.target.value }))}
+                onChange={(e) => handleFieldChange('site_id', e.target.value)}
+                onBlur={() => handleFieldBlur('site_id')}
                 placeholder="1234567"
+                maxLength={100}
+                className={cn(touched.site_id && errors.site_id && "border-destructive")}
               />
+              <FormError message={touched.site_id ? errors.site_id : undefined} />
             </div>
 
             <div className="space-y-2">
@@ -385,9 +389,12 @@ useEffect(() => {
               <Input
                 id="portal_url"
                 value={config.portal_url || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, portal_url: e.target.value }))}
+                onChange={(e) => handleFieldChange('portal_url', e.target.value)}
+                onBlur={() => handleFieldBlur('portal_url')}
                 placeholder="https://monitoring.provider.com"
+                className={cn(touched.portal_url && errors.portal_url && "border-destructive")}
               />
+              <FormError message={touched.portal_url ? errors.portal_url : undefined} />
             </div>
           </div>
 
@@ -396,7 +403,7 @@ useEffect(() => {
             <Label>Credential Method</Label>
             <RadioGroup
               value={config.credential_method || 'delegated_account'}
-              onValueChange={(value) => setConfig(prev => ({ ...prev, credential_method: value as any }))}
+              onValueChange={(value) => handleFieldChange('credential_method', value as any)}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="delegated_account" id="delegated" />
@@ -419,22 +426,31 @@ useEffect(() => {
               <Label htmlFor="delegated_email">Delegated Email</Label>
               <Input
                 id="delegated_email"
+                type="email"
                 value={config.delegated_email || 'data@crunchcarbon.com'}
-                onChange={(e) => setConfig(prev => ({ ...prev, delegated_email: e.target.value }))}
+                onChange={(e) => handleFieldChange('delegated_email', e.target.value)}
+                onBlur={() => handleFieldBlur('delegated_email')}
+                className={cn(touched.delegated_email && errors.delegated_email && "border-destructive")}
               />
+              <FormError message={touched.delegated_email ? errors.delegated_email : undefined} />
             </div>
           )}
 
           {config.credential_method === 'api_key' && (
             <div className="space-y-2">
-              <Label htmlFor="api_key">API Key</Label>
+              <Label htmlFor="api_key">
+                API Key <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="api_key"
                 type="password"
                 value={config.api_key_encrypted || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, api_key_encrypted: e.target.value }))}
-                placeholder="Enter API key"
+                onChange={(e) => handleFieldChange('api_key_encrypted', e.target.value)}
+                onBlur={() => handleFieldBlur('api_key_encrypted')}
+                placeholder="Enter API key (minimum 10 characters)"
+                className={cn(touched.api_key_encrypted && errors.api_key_encrypted && "border-destructive")}
               />
+              <FormError message={touched.api_key_encrypted ? errors.api_key_encrypted : undefined} />
             </div>
           )}
 
@@ -450,7 +466,7 @@ useEffect(() => {
             </Button>
             <Button 
               onClick={handleSubmitForAudit} 
-              disabled={isSubmitting || isSavingDraft || getValidationErrors(config).length > 0 || isSubmitted}
+              disabled={isSubmitting || isSavingDraft || !canSubmit}
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit for Audit
