@@ -47,7 +47,11 @@ export const validateDataAccessField = (fieldName: string, value: any, formData?
       case "portal_url":
         if (value && typeof value === "string" && value.trim() !== "") {
           try {
-            new URL(value);
+            const url = new URL(value);
+            // Only allow http and https protocols
+            if (!['http:', 'https:'].includes(url.protocol)) {
+              return "Please enter a valid URL (e.g., https://example.com)";
+            }
           } catch {
             return "Please enter a valid URL (e.g., https://example.com)";
           }
