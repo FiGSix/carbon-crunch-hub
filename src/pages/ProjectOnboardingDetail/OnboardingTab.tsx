@@ -16,6 +16,10 @@ import { createNotification } from "@/services/notificationService";
 import { logger } from "@/lib/logger";
 import { InverterDetailsRow, type InverterDetail } from "@/components/onboarding/InverterDetailsRow";
 import { PanelArrayDetailsRow, type PanelArrayDetail } from "@/components/onboarding/PanelArrayDetailsRow";
+import { useOnboardingValidation } from "@/hooks/useOnboardingValidation";
+import { FormError } from "@/components/ui/form-error";
+import { ValidationSummary } from "@/components/onboarding/ValidationSummary";
+import { cn } from "@/lib/utils";
 
 interface SolarInstaller {
   id: string;
@@ -43,6 +47,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const [inverterDetails, setInverterDetails] = useState<InverterDetail[]>([]);
   const [panelArrayDetails, setPanelArrayDetails] = useState<PanelArrayDetail[]>([]);
   const [panelArrayCount, setPanelArrayCount] = useState<number>(1);
+  const [showValidationSummary, setShowValidationSummary] = useState(false);
+  
+  const { 
+    errors, 
+    touched, 
+    validateFieldOnBlur, 
+    validateInverters, 
+    validatePanelArrays, 
+    getAllErrors,
+    hasErrors 
+  } = useOnboardingValidation();
 
   useEffect(() => {
     fetchDocuments();
@@ -273,6 +288,10 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleFieldBlur = (field: keyof OnboardingFields) => {
+    validateFieldOnBlur(field, formData[field], formData);
+  };
+
   const handleInverterDetailChange = useCallback((index: number, field: keyof InverterDetail, value: string | number | null) => {
     setInverterDetails(prev => {
       const newDetails = [...prev];
@@ -285,6 +304,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       return newDetails;
     });
   }, []);
+
+  const handleInverterDetailBlur = useCallback((index: number, field: keyof InverterDetail) => {
+    // Validate all inverters on blur
+    validateInverters(inverterDetails);
+  }, [inverterDetails, validateInverters]);
+
+  const handlePanelArrayDetailBlur = useCallback((index: number, field: keyof PanelArrayDetail) => {
+    // Validate all panel arrays on blur
+    validatePanelArrays(panelArrayDetails);
+  }, [panelArrayDetails, validatePanelArrays]);
 
   const handlePanelArrayDetailChange = useCallback((index: number, field: keyof PanelArrayDetail, value: string | number | null) => {
     setPanelArrayDetails(prev => {
@@ -395,6 +424,18 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         toast({
           title: "Error",
           description: "User not authenticated",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Client-side validation first
+      const allErrors = getAllErrors(formData, inverterDetails, panelArrayDetails);
+      if (Object.keys(allErrors).length > 0) {
+        setShowValidationSummary(true);
+        toast({
+          title: "Validation Failed",
+          description: "Please fix the highlighted errors before submitting",
           variant: "destructive",
         });
         return;
@@ -592,13 +633,18 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="system_address">System Address</Label>
+              <Label htmlFor="system_address">
+                System Address <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="system_address"
                 value={formData.system_address || ''}
                 onChange={(e) => handleInputChange('system_address', e.target.value)}
+                onBlur={() => handleFieldBlur('system_address')}
                 placeholder="123 Main Street"
+                className={cn(touched.system_address && errors.system_address && "border-destructive")}
               />
+              <FormError message={touched.system_address ? errors.system_address : undefined} />
             </div>
 
             {/* Multi-Phase Commission Dates Display */}
@@ -654,7 +700,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             {(!proposal?.content?.projectInfo?.isMultiPhase) && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="commissioning_date">Commissioning or Installation Date</Label>
+                  <Label htmlFor="commissioning_date">
+                    Commissioning or Installation Date <span className="text-destructive">*</span>
+                  </Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -671,8 +719,12 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                   type="date"
                   value={formData.commissioning_date || ''}
                   onChange={(e) => handleInputChange('commissioning_date', e.target.value)}
+                  onBlur={() => handleFieldBlur('commissioning_date')}
                   max={new Date().toISOString().split('T')[0]}
+                  min="2022-09-15"
+                  className={cn(touched.commissioning_date && errors.commissioning_date && "border-destructive")}
                 />
+                <FormError message={touched.commissioning_date ? errors.commissioning_date : undefined} />
               </div>
             )}
 
@@ -712,8 +764,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 type="email"
                 value={formData.installer_email || ''}
                 onChange={(e) => handleInputChange('installer_email', e.target.value)}
+                onBlur={() => handleFieldBlur('installer_email')}
                 placeholder="installer@example.com"
+                className={cn(touched.installer_email && errors.installer_email && "border-destructive")}
               />
+              <FormError message={touched.installer_email ? errors.installer_email : undefined} />
               {(!formData.installer_id || formData.installer_id === 'new') && formData.installer_company_name && formData.installer_email && (
                 <Button
                   type="button"
@@ -735,8 +790,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 step="0.000001"
                 value={formData.system_gps_lat || ''}
                 onChange={(e) => handleInputChange('system_gps_lat', parseFloat(e.target.value))}
+                onBlur={() => handleFieldBlur('system_gps_lat')}
                 placeholder="-26.2041"
+                className={cn(touched.system_gps_lat && errors.system_gps_lat && "border-destructive")}
               />
+              <FormError message={touched.system_gps_lat ? errors.system_gps_lat : undefined} />
             </div>
 
             <div className="space-y-2">
@@ -747,8 +805,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 step="0.000001"
                 value={formData.system_gps_lng || ''}
                 onChange={(e) => handleInputChange('system_gps_lng', parseFloat(e.target.value))}
+                onBlur={() => handleFieldBlur('system_gps_lng')}
                 placeholder="28.0473"
+                className={cn(touched.system_gps_lng && errors.system_gps_lng && "border-destructive")}
               />
+              <FormError message={touched.system_gps_lng ? errors.system_gps_lng : undefined} />
             </div>
 
             <div className="space-y-2">
@@ -845,7 +906,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           {/* Number of Inverters */}
           <div className="max-w-xs">
             <div className="space-y-2">
-              <Label htmlFor="inverter_quantity">Number of Inverters</Label>
+              <Label htmlFor="inverter_quantity">
+                Number of Inverters <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="inverter_quantity"
                 type="number"
@@ -860,8 +923,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                     handleInputChange('inverter_quantity', 1);
                   }
                 }}
+                onBlur={() => handleFieldBlur('inverter_quantity')}
                 placeholder="1"
+                className={cn(touched.inverter_quantity && errors.inverter_quantity && "border-destructive")}
               />
+              <FormError message={touched.inverter_quantity ? errors.inverter_quantity : undefined} />
             </div>
           </div>
 
@@ -873,7 +939,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 index={index}
                 inverter={inverter}
                 onChange={handleInverterDetailChange}
+                onBlur={handleInverterDetailBlur}
                 showLabels={index === 0}
+                errors={errors}
               />
             ))}
           </div>
@@ -1094,7 +1162,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 index={index}
                 panel={panel}
                 onChange={handlePanelArrayDetailChange}
+                onBlur={handlePanelArrayDetailBlur}
                 showLabels={index === 0}
+                errors={errors}
               />
             ))}
           </div>
@@ -1328,6 +1398,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           )}
         </CardContent>
       </Card>
+
+      {/* Validation Summary - shown when trying to submit with errors */}
+      {showValidationSummary && hasErrors && (
+        <ValidationSummary 
+          errors={getAllErrors(formData, inverterDetails, panelArrayDetails)} 
+          title="Please fix the following issues before submitting"
+        />
+      )}
 
       {/* Actions */}
       <div className="flex gap-3">
