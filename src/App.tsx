@@ -137,7 +137,7 @@ function App() {
                   {/* Public routes - wrapped with page error boundaries */}
                   <Route path="/" element={
                     <PageErrorBoundary pageName="Home">
-                      <SimplifiedIndex />
+                      <Suspense fallback={<PageLoader />}><Index /></Suspense>
                     </PageErrorBoundary>
                   } />
                   {/* Development-only test route */}
@@ -168,9 +168,9 @@ function App() {
                       } 
                   />
                 )}
-                  <Route path="/original" element={
-                    <PageErrorBoundary pageName="Original Index">
-                      <Suspense fallback={<PageLoader />}><Index /></Suspense>
+                  <Route path="/debug-home" element={
+                    <PageErrorBoundary pageName="Debug Home">
+                      <SimplifiedIndex />
                     </PageErrorBoundary>
                   } />
                   <Route path="/about" element={
