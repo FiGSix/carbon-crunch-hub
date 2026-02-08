@@ -4,7 +4,7 @@
 
 ## What We Do
 
-Crunch Carbon helps South African homeowners and businesses monetize their solar panels by converting clean energy generation into verified carbon credits. We handle all the complexity - registration, verification, and credit sales - so you can earn passive income from your existing solar investment.
+Crunch Carbon helps South African homeowners and businesses monetise their solar panels by converting clean energy generation into verified carbon credits. We handle all the complexity - registration, verification, and credit sales - so you can earn passive income from your existing solar investment.
 
 ## For Homeowners
 
@@ -22,7 +22,7 @@ Earn R600-R1,000+ annually from a typical 5kWp residential solar system.
 
 Earn R10,000-R100,000+ annually from commercial and industrial solar systems (50kWp to 1MW+).
 
-- **Additional revenue stream** - Monetize your solar investment
+- **Additional revenue stream** - Monetise your solar investment
 - **ESG reporting** - Carbon offset certificates for sustainability reports
 - **Multi-site aggregation** - Manage all sites from one dashboard
 - **Zero operational burden** - We handle everything
@@ -42,7 +42,7 @@ Earn R10,000-R100,000+ annually from commercial and industrial solar systems (50
 
 ## For Solar Installers & Agents
 
-Partner with us to offer carbon credit monetization to your clients.
+Partner with us to offer carbon credit monetisation to your clients.
 
 - **Earn commissions** on every client referral
 - **Add value** to your solar installations

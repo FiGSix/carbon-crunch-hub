@@ -29,7 +29,7 @@
      earnings: "R1,950",
      initials: "TM",
      avatarBg: "bg-amber-500",
-     quote: "As a business owner with a larger system, the annual payout is significant. Crunch Carbon made it effortless to monetize my investment further.",
+     quote: "As a business owner with a larger system, the annual payout is significant. Crunch Carbon made it effortless to monetise my investment further.",
      rating: 5,
    },
  ];

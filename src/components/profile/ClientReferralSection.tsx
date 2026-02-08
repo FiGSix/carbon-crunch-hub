@@ -15,7 +15,7 @@ export function ClientReferralSection() {
   const referralLink = `${window.location.origin}/calculator?ref=${profile?.id}`;
 
   // WhatsApp message content for client referral
-  const whatsappMessage = `Howzit! I've been working with Crunch Carbon to help solar owners monetize their systems through carbon credits. It's free and easy to get started. Check it out: ${referralLink}`;
+  const whatsappMessage = `Howzit! I've been working with Crunch Carbon to help solar owners monetise their systems through carbon credits. It's free and easy to get started. Check it out: ${referralLink}`;
 
   const handleCopyLink = async () => {
     try {
@@ -48,7 +48,7 @@ export function ClientReferralSection() {
           <CardTitle>Refer a Client</CardTitle>
         </div>
         <CardDescription>
-          Invite clients to monetize their solar systems with Crunch Carbon
+          Invite clients to monetise their solar systems with Crunch Carbon
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

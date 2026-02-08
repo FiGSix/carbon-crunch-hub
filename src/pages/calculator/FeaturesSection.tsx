@@ -19,13 +19,13 @@ export const FeaturesSection = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           <FeatureCard 
             title="Quantify Your Impact" 
-            description="Visualize exactly how much carbon you're preventing from entering the atmosphere with your solar installation."
+            description="Visualise exactly how much carbon you're preventing from entering the atmosphere with your solar installation."
             icon={BarChart3}
           />
           
           <FeatureCard 
             title="Discover Credit Potential" 
-            description="Learn how your clean energy generation can be converted into valuable carbon credits that you can monetize."
+            description="Learn how your clean energy generation can be converted into valuable carbon credits that you can monetise."
             icon={TreePine}
           />
           
