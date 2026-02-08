@@ -24,7 +24,7 @@ const SolarRewards = () => {
 
   useEffect(() => {
     // Set page title
-    document.title = "For Home Owners - Monetize Your Solar System | Crunch Carbon Hub";
+    document.title = "For Home Owners - Monetise Your Solar System | Crunch Carbon Hub";
     
     // Set meta description
     const metaDescription = document.querySelector('meta[name="description"]');
@@ -40,11 +40,11 @@ const SolarRewards = () => {
     // Set meta keywords
     const metaKeywords = document.querySelector('meta[name="keywords"]');
     if (metaKeywords) {
-      metaKeywords.setAttribute('content', 'solar rewards, monetize solar panels, solar data, home owners, solar system earnings, carbon credits, solar investment');
+      metaKeywords.setAttribute('content', 'solar rewards, monetise solar panels, solar data, home owners, solar system earnings, carbon credits, solar investment');
     } else {
       const meta = document.createElement('meta');
       meta.name = 'keywords';
-      meta.content = 'solar rewards, monetize solar panels, solar data, home owners, solar system earnings, carbon credits, solar investment';
+      meta.content = 'solar rewards, monetise solar panels, solar data, home owners, solar system earnings, carbon credits, solar investment';
       document.head.appendChild(meta);
     }
 
@@ -61,7 +61,7 @@ const SolarRewards = () => {
       }
     };
 
-    updateOrCreateOGTag('og:title', 'For Home Owners - Monetize Your Solar System');
+    updateOrCreateOGTag('og:title', 'For Home Owners - Monetise Your Solar System');
     updateOrCreateOGTag('og:description', 'Turn your solar panels into a revenue stream. Earn cash, support charities, or access premium services.');
     updateOrCreateOGTag('og:type', 'website');
 

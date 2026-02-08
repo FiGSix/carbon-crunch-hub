@@ -267,7 +267,7 @@ const Agents = () => {
                   Want to offer more. Earn more. And do more for the planet?
                 </h2>
                 <p className="text-xl text-crunch-black/80">
-                  Partner with Crunch Carbon today and start generating additional revenue while helping your clients maximize their renewable energy investments.
+                  Partner with Crunch Carbon today and start generating additional revenue while helping your clients maximise their renewable energy investments.
                 </p>
                 <div className="space-y-4">
                   {steps.map((step, index) => (

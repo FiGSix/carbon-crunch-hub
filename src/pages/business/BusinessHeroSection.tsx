@@ -33,7 +33,7 @@ export function BusinessHeroSection({ onCalculateClick, onConsultationClick }: B
             </div>
 
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6 leading-tight">
-              Monetize Your{" "}
+              Monetise Your{" "}
               <span className="text-primary">Commercial Solar</span>{" "}
               Investment
             </h1>

@@ -42,7 +42,7 @@ export function BusinessSegments() {
             Who Is This For?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Commercial and industrial solar owners across all sectors can monetize their generation through carbon credits.
+            Commercial and industrial solar owners across all sectors can monetise their generation through carbon credits.
           </p>
         </motion.div>
 

@@ -23,7 +23,7 @@ const valueProps = [
   {
     icon: Layers,
     title: "Multi-Site Aggregation",
-    description: "Manage all your solar sites from one dashboard. Combine smaller sites to maximize credit value through portfolio aggregation.",
+    description: "Manage all your solar sites from one dashboard. Combine smaller sites to maximise credit value through portfolio aggregation.",
     highlight: "Single point of contact",
   },
 ];

@@ -22,11 +22,11 @@ const Business = () => {
     // Set meta description
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
-      metaDescription.setAttribute('content', 'Monetize your commercial or industrial solar system with verified carbon credits. Earn R10,000-R100,000+ annually. ESG reporting, multi-site aggregation, zero operational burden.');
+      metaDescription.setAttribute('content', 'Monetise your commercial or industrial solar system with verified carbon credits. Earn R10,000-R100,000+ annually. ESG reporting, multi-site aggregation, zero operational burden.');
     } else {
       const meta = document.createElement('meta');
       meta.name = 'description';
-      meta.content = 'Monetize your commercial or industrial solar system with verified carbon credits. Earn R10,000-R100,000+ annually. ESG reporting, multi-site aggregation, zero operational burden.';
+      meta.content = 'Monetise your commercial or industrial solar system with verified carbon credits. Earn R10,000-R100,000+ annually. ESG reporting, multi-site aggregation, zero operational burden.';
       document.head.appendChild(meta);
     }
 
@@ -55,7 +55,7 @@ const Business = () => {
     };
 
     updateOrCreateOGTag('og:title', 'For Business - Commercial Solar Carbon Credits');
-    updateOrCreateOGTag('og:description', 'Monetize your commercial or industrial solar system. Earn R10,000-R100,000+ annually with verified carbon credits.');
+    updateOrCreateOGTag('og:description', 'Monetise your commercial or industrial solar system. Earn R10,000-R100,000+ annually with verified carbon credits.');
     updateOrCreateOGTag('og:type', 'website');
 
     // Cleanup function to restore default title when component unmounts

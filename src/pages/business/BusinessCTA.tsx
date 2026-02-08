@@ -24,11 +24,11 @@ export function BusinessCTA({ onConsultationClick }: BusinessCTAProps) {
           </div>
 
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Ready to Monetize Your Commercial Solar?
+            Ready to Monetise Your Commercial Solar?
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join hundreds of businesses already earning from their solar investments. 
-            Start today or speak with our enterprise team for a customized solution.
+            Start today or speak with our enterprise team for a customised solution.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
