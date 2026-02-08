@@ -1,117 +1,69 @@
 
 
-# Landing Page SEO, AI Discoverability & Conversion Optimization Plan
+# Fix: Switch Homepage to Use Updated Index Component
 
-## Status: ✅ COMPLETED (2026-02-08)
+## Problem Summary
 
----
+The routing configuration in `App.tsx` is rendering `SimplifiedIndex` (a debugging page) instead of the fully updated `Index` component with all the new SEO and conversion optimizations.
 
-## Overview
+## Solution
 
-This plan enhanced the homepage and landing pages to improve SEO rankings, visibility in AI platforms (ChatGPT, Gemini, Perplexity), build trust, and increase conversions for both homeowners and agents.
-
----
-
-## Phase 1: AI Discoverability ✅
-
-### Created `/public/llms.txt` ✅
-
-A file that helps AI assistants understand and cite your content accurately.
-
-### Created `/public/llms-full.txt` ✅
-
-Extended version with full FAQ content for deep AI understanding.
+Update `App.tsx` to use the updated `Index` component for the homepage route (`/`).
 
 ---
 
-## Phase 2: SEO Enhancements ✅
+## Files to Modify
 
-### Updated `index.html` Meta Tags ✅
+### `src/App.tsx`
 
-| Element | Old | New |
-|---------|-----|-----|
-| Title | "Crunch Carbon Hub" | "Crunch Carbon - Turn Solar Energy into Cash with Carbon Credits in South Africa" |
-| Description | "Turning Solar Energy into Carbon Credits and Cash." | "Monetize your solar panels with verified carbon credits. South African homeowners earn R600-R1,000+ annually. Free setup, Verra-certified." |
+**Change 1: Update the homepage route (line 138-142)**
 
-### Added Schema.org Structured Data ✅
+From:
+```tsx
+<Route path="/" element={
+  <PageErrorBoundary pageName="Home">
+    <SimplifiedIndex />
+  </PageErrorBoundary>
+} />
+```
 
-- Organization schema
-- Service (carbon credit monetization)
-- FAQPage (with common questions)
-- HowTo (how it works steps)
-- LocalBusiness (South Africa location)
+To:
+```tsx
+<Route path="/" element={
+  <PageErrorBoundary pageName="Home">
+    <Suspense fallback={<PageLoader />}><Index /></Suspense>
+  </PageErrorBoundary>
+} />
+```
 
-### Updated `public/sitemap.xml` ✅
+**Change 2: Remove the `/original` route (line 171-175)** since it's no longer needed once the main route uses `Index`.
 
-- Added `/home-owners`
-- Added `/game`
-- Updated all `lastmod` dates to 2026-02-08
-
----
-
-## Phase 3: Homepage Redesign ✅
-
-### Hero Section Updates ✅
-
-Updated copy from generic "Carbon Made Simple" to value-focused "Turn Your Solar System Into Cash" with specific earnings (R600-R1,000+).
-
-### New Audience Selector Component ✅
-
-Created visual split below hero to route homeowners vs solar professionals to their relevant paths.
-
-### Trust Badges Component ✅
-
-Created reusable horizontal badge strip: Verra Certified, CDSA Affiliated, Data Encrypted, 1,500+ Systems.
+**Change 3: Optionally keep `SimplifiedIndex` available at `/debug-home`** for future debugging purposes.
 
 ---
 
-## Phase 4: Page Flow Optimization ✅
+## Implementation Details
 
-### Updated Section Order ✅
-
-1. Header
-2. HeroSection (updated copy)
-3. AudienceSelector (NEW)
-4. CalculatorPromo (NEW)
-5. HowItWorksSection
-6. SocialProofSection (with trust badges)
-7. TestimonialsSection
-8. SecuritySection (NEW)
-9. CTASection (updated copy)
-10. Footer
+| Item | Action |
+|------|--------|
+| Import cleanup | Remove `SimplifiedIndex` from immediate imports if no longer used |
+| Route swap | Replace `SimplifiedIndex` with `Index` + `Suspense` wrapper at `/` |
+| `/original` route | Remove or rename to `/debug-home` |
+| Lazy loading | Keep `Index` as a lazy-loaded component for optimal performance |
 
 ---
 
-## Phase 5: CTA & Copy Improvements ✅
+## Expected Result
 
-### CTASection Updates ✅
+After this change:
+- Homepage (`/`) will display the updated `Index` with:
+  - New value-focused HeroSection
+  - AudienceSelector (Homeowner vs Agent routing)
+  - CalculatorPromo section
+  - SecuritySection
+  - Trust badges
+  - Updated CTASection with urgency messaging
+  - Sticky mobile CTA
+- All SEO optimizations will be visible
+- All new components will render correctly
 
-Added stronger value proposition with specific earnings and social proof.
-
-### Sticky Mobile CTA ✅
-
-Extended the sticky CTA pattern from `/home-owners` to the main homepage.
-
----
-
-## Files Created ✅
-
-| File | Purpose |
-|------|---------|
-| `public/llms.txt` | AI discoverability |
-| `public/llms-full.txt` | Extended AI content |
-| `src/components/home/AudienceSelector.tsx` | Homeowner vs Agent routing |
-| `src/components/common/TrustBadges.tsx` | Certification badges |
-| `src/components/home/CalculatorPromo.tsx` | Calculator CTA section |
-| `src/components/home/SecuritySection.tsx` | Data privacy section |
-
-## Files Modified ✅
-
-| File | Changes |
-|------|---------|
-| `index.html` | Enhanced meta tags, Schema.org JSON-LD |
-| `src/pages/Index.tsx` | New section order, added components, sticky CTA |
-| `src/pages/home/HeroSection.tsx` | Value-focused copy |
-| `src/pages/home/CTASection.tsx` | Stronger CTA copy |
-| `src/pages/home/SocialProofSection.tsx` | Added trust badges, semantic tokens |
-| `public/sitemap.xml` | Added missing pages, updated dates |
