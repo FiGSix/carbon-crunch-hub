@@ -27,16 +27,16 @@ export const HeroSection = () => {
             duration: 0.5,
             delay: 0.2
           }} className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
-              <span className="text-sm font-medium text-muted-foreground">Renewable Energy Monetised</span>
+              <span className="text-sm font-medium text-muted-foreground">1,500+ Solar Systems Already Earning</span>
             </SafeMotionDiv>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
-              <span className="text-foreground">Carbon Made</span>{" "}
-              <span className="text-primary drop-shadow-sm">Simple</span>
+              <span className="text-foreground">Turn Your Solar System</span>{" "}
+              <span className="text-primary drop-shadow-sm">Into Cash</span>
             </h1>
             
-            <p className="text-xl font-bold text-foreground max-w-xl">
-              Your Launchpad for Lightning-Fast Carbon Proposals
+            <p className="text-xl text-muted-foreground max-w-xl">
+              South African homeowners earn <span className="font-bold text-foreground">R600-R1,000+ per year</span> from verified carbon credits. Free to join.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -46,7 +46,7 @@ export const HeroSection = () => {
                   className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg py-6 px-8 w-full sm:w-auto rounded-2xl shadow-sm hover:shadow-lg group transition-all duration-300" 
                   size="lg"
                 >
-                  <span>Get Started</span> 
+                  <span>Start Earning</span>
                   <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </SafeMotionDiv>
@@ -57,14 +57,14 @@ export const HeroSection = () => {
                   className="text-foreground text-lg py-6 px-8 w-full sm:w-auto rounded-2xl transition-all duration-300" 
                   size="lg"
                 >
-                  Calculate Your Potential
+                  Calculate My Earnings
                 </Button>
               </SafeMotionDiv>
             </div>
             
             <div className="flex items-center text-muted-foreground pt-2">
               <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-              <span className="text-sm">Get setup in minutes. Proposals out like lightning.</span>
+              <span className="text-sm">Free setup • Verra certified • Annual payouts</span>
             </div>
           </SafeMotionDiv>
           
