@@ -205,7 +205,7 @@ const navItems = [
     description: "Return to our homepage" 
   },
   { 
-    label: "For Home Owners", 
+    label: "For Homes", 
     href: "/home-owners",
     description: "Monetise your solar system" 
   },
