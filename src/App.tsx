@@ -46,6 +46,7 @@ const Calculator = createOptimizedLazyComponent(() => import("./pages/Calculator
 const QuickCalc = createOptimizedLazyComponent(() => import("./pages/QuickCalc"), "QuickCalc");
 const SolarRewards = createOptimizedLazyComponent(() => import("./pages/SolarRewards"), "SolarRewards");
 const Agents = createOptimizedLazyComponent(() => import("./pages/Agents"), "Agents");
+const Business = createOptimizedLazyComponent(() => import("./pages/Business"), "Business");
 const VerifyEmail = createOptimizedLazyComponent(() => import("./pages/VerifyEmail"), "VerifyEmail");
 const ForceLogout = createOptimizedLazyComponent(() => import("./pages/ForceLogout"), "ForceLogout");
 const TestingSuite = createOptimizedLazyComponent(() => import("./pages/TestingSuite"), "TestingSuite");
@@ -210,6 +211,11 @@ function App() {
                   <Route path="/agents" element={
                     <PageErrorBoundary pageName="Agents">
                       <Suspense fallback={<PageLoader />}><Agents /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/business" element={
+                    <PageErrorBoundary pageName="Business">
+                      <Suspense fallback={<PageLoader />}><Business /></Suspense>
                     </PageErrorBoundary>
                   } />
                   <Route path="/why-choose-us" element={

@@ -210,6 +210,11 @@ const navItems = [
     description: "Monetize your solar system" 
   },
   { 
+    label: "For Business", 
+    href: "/business",
+    description: "Commercial & industrial solar" 
+  },
+  { 
     label: "Calculator", 
     href: "/calculator",
     description: "Calculate your potential earnings" 
