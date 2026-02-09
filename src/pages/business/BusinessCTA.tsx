@@ -35,9 +35,9 @@ export function BusinessCTA({ onConsultationClick }: BusinessCTAProps) {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-8 py-6 text-lg font-medium shadow-md hover:shadow-lg transition-all"
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/calculator")}
             >
-              Get Started Free
+              Tell Us About Your Solar System
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button
