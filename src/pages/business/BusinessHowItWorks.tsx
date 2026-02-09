@@ -23,8 +23,8 @@ const steps = [
   {
     icon: Wallet,
     step: "4",
-    title: "Annual Payouts + ESG Reports",
-    description: "Receive your carbon credit earnings annually, plus official documentation for sustainability reporting.",
+    title: "Annual Payouts or Carbon Credits",
+    description: "Receive your carbon credit earnings or Carbon Credits annually to apply against your Carbon Taxes or Net Zero targets for sustainability reporting.",
   },
 ];
 

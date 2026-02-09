@@ -101,7 +101,7 @@ export function BusinessHeroSection({ onCalculateClick, onConsultationClick }: B
                 </div>
                 <div className="bg-primary/10 border border-primary/20 rounded-2xl p-6">
                   <p className="text-3xl font-bold text-primary">1MW+</p>
-                  <p className="text-sm text-foreground mt-1">No maximum size</p>
+                  <p className="text-sm text-foreground mt-1">maximum 15MWp per project</p>
                 </div>
               </div>
             </div>
