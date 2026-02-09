@@ -1,36 +1,82 @@
 
-
-# Update Navigation Label: "For Home Owners" to "For Homes"
+# Update Business Page Content
 
 ## Overview
 
-A simple text update to change the navigation label from "For Home Owners" to "For Homes" for a cleaner, more concise presentation.
+Three updates to the Business landing page:
+1. Update system size limit text
+2. Update Annual Payouts section content
+3. Update CTA button to redirect to the calculator with better messaging
 
 ---
 
-## File to Modify
+## Changes Required
 
-### `src/components/layout/Header.tsx`
+### 1. BusinessHeroSection.tsx (Line 104)
 
-**Change (line 208):**
+**Current:**
+```
+No maximum size
+```
 
-| Before | After |
-|--------|-------|
-| `label: "For Home Owners"` | `label: "For Homes"` |
+**Updated:**
+```
+maximum 15MWp per project
+```
+
+---
+
+### 2. BusinessHowItWorks.tsx (Lines 26-27)
+
+**Current:**
+```
+title: "Annual Payouts + ESG Reports"
+description: "Receive your carbon credit earnings annually, plus official documentation for sustainability reporting."
+```
+
+**Updated:**
+```
+title: "Annual Payouts or Carbon Credits"
+description: "Receive your carbon credit earnings or Carbon Credits annually to apply against your Carbon Taxes or Net Zero targets for sustainability reporting."
+```
+
+---
+
+### 3. BusinessCTA.tsx (Lines 38-41)
+
+**Current:**
+```tsx
+onClick={() => navigate("/register")}
+>
+  Get Started Free
+```
+
+**Updated:**
+```tsx
+onClick={() => navigate("/calculator")}
+>
+  Tell Us About Your Solar System
+```
+
+This redirects users to the `/calculator` page which has the "Tell Us About Your Solar System" form - a more natural entry point for capturing system details.
+
+---
+
+## Files to Modify
+
+| File | Line(s) | Change |
+|------|---------|--------|
+| `src/pages/business/BusinessHeroSection.tsx` | 104 | "No maximum size" → "maximum 15MWp per project" |
+| `src/pages/business/BusinessHowItWorks.tsx` | 26-27 | Title and description update |
+| `src/pages/business/BusinessCTA.tsx` | 38-41 | Button text and route update |
 
 ---
 
 ## Impact
 
-This change will update:
-- Desktop navigation menu
-- Mobile slide-out menu
+These changes update:
+- Visual content card in the hero section
+- Step 4 of the "How It Works" section
+- Primary CTA button at bottom of page (redirects to calculator instead of registration)
 
-Both menus use the same `navItems` array, so a single change updates both.
-
----
-
-## No Other Files Affected
-
-The `/home-owners` route path remains unchanged - only the display label is updated.
-
+No other pages or components are affected.
