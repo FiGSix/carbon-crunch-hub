@@ -1,110 +1,88 @@
 
-# Client Self-Service: Submit a Project
 
-## What This Does
+# Show All Users Including Potential Clients in Admin User Management
 
-Gives clients the same proposal creation experience as agents, minus the "Client Info" step (since they ARE the client). The flow becomes:
+## The Problem
 
-**Eligibility → Project Info → Summary**
+The admin user list currently queries only the `profiles` table, which contains **102 signed-up users**. However, the `clients` table has **220 records**, of which **178 are potential clients** (added by agents but not yet signed up). These people are invisible in the admin user management view.
 
-Clients see a "Submit a Project" link in their sidebar. The resulting proposal is created in `draft` status for admin review, with no agent involvement.
+## The Solution
 
-## Steps (3-step flow)
+Merge data from both `profiles` (signed-up users) and `clients` (where `user_id IS NULL` -- potential clients) into a single unified list. Add a new filter to distinguish between signed-up users and potential clients.
 
-1. **Eligibility** -- Same checklist as agents (is the project in South Africa, commissioned after 2022, etc.)
-2. **Project Info** -- Reuses the existing `ProjectInfoStep` component (name, address, GPS, system size, commissioning date, multi-phase support)
-3. **Summary** -- Shows project details, carbon credit estimates, and revenue projections. Submit button creates the proposal.
+## What Changes
 
-## How It Works
+### Updated User List
 
-- The client's own `clients` record is looked up automatically via their `user_id`
-- Their name/email/company is populated from their profile -- no manual entry needed
-- `agent_id` is set to a configurable "Crunch Carbon Direct" admin user ID (stored as `VITE_CRUNCH_DIRECT_AGENT_ID` env var) to maintain compatibility with existing queries that assume `agent_id` is present
-- Agent commission is set to 0% for direct client submissions
-- Proposal is created with `status: 'draft'` for admin review
+The table will show two categories of people:
 
-## Files to Create
+| Source | Count | What They Are |
+|--------|-------|---------------|
+| `profiles` table | 102 | Signed-up users (agents, clients, admins) |
+| `clients` table (no `user_id`) | 178 | Potential clients added by agents, not yet signed up |
 
-| File | Purpose |
-|------|---------|
-| `src/pages/SubmitProject.tsx` | Page wrapper -- 3-step form using DashboardLayout |
-| `src/components/client/submit-project/ClientProposalStepper.tsx` | 3-step stepper (Eligibility, Project Info, Summary) |
-| `src/components/client/submit-project/ClientSummaryStep.tsx` | Summary step adapted for client context (no client info section, submit calls client-specific service) |
-| `src/services/proposals/clientProjectSubmission.ts` | Service: looks up client record by user_id, calculates carbon values, inserts proposal with agent_id set to system account, 0% agent commission |
+Potential clients will appear with:
+- A **"Potential Client"** badge instead of a role badge
+- A **"Not Signed Up"** status badge
+- Their name, email, and company from the `clients` table
+- Limited actions (no role management, but can view/delete)
 
-## Files to Modify
+### New Filter Option
 
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Add `/submit-project` route (lazy-loaded, wrapped in PrivateRoute) |
-| `src/components/layout/DashboardSidebar.tsx` | Add "Submit a Project" nav item for `client` role |
-| `src/types/proposals.ts` | Add `"client_project"` to `FormStep` type as a union variant for the client-specific steps |
+Add a **"User Type"** filter alongside the existing Role and Company filters:
+- **All Users** (default)
+- **Signed Up** -- only profiles
+- **Potential Clients** -- only clients without accounts
 
-## Database Migration
+### Export Update
 
-A new RLS INSERT policy on `proposals` to allow clients to insert:
-
-```sql
-CREATE POLICY "clients_can_submit_projects"
-ON public.proposals
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  -- User must have client role and not be soft-deleted
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE id = auth.uid()
-    AND role = 'client'
-    AND deleted_at IS NULL
-  )
-  -- Client must have a linked clients record
-  AND client_id = auth.uid()
-);
-```
-
-This sits alongside the existing `proposals_insert_unified` policy (which requires `agent_id = auth.uid()`). Both policies are checked -- either one passing allows the insert.
-
-## Reuse Strategy
-
-- **EligibilityStep** -- reused as-is from `src/components/proposals/EligibilityStep.tsx`
-- **ProjectInfoStep** -- reused as-is from `src/components/proposals/ProjectInfoStep.tsx`
-- **SummaryStep sections** -- reuses `ProjectInformationSection`, `CarbonCreditSection`, and `RevenueDistributionSection` from the existing summary. Skips `ClientInformationSection` (or shows it read-only with auto-populated data)
-- **Carbon calculation utilities** -- reuses `UnifiedCarbonService`, `normalizeToKWp`, `calculateAnnualEnergy`, `calculateCarbonCredits`
+The CSV export will include potential clients too, with a "Status" column indicating whether they are signed up or not.
 
 ## Technical Details
 
-### Client Project Submission Service
+### Files to Modify
 
-The new `clientProjectSubmission.ts` service will:
+**`src/components/admin/users/UserManagementTable.tsx`**
+- Extend the query to also fetch from the `clients` table where `user_id IS NULL`
+- Map potential clients into the same `UserWithRoles` interface with `role: 'potential_client'` and `agent_status: 'not_signed_up'`
+- Deduplicate by email (in case a client record exists for a signed-up user)
+- Add a "User Type" filter (all / signed_up / potential)
+- Update the role badge logic to handle `'potential_client'`
 
-1. Look up the client's `clients` record via `user_id = auth.uid()`
-2. Build `ClientInformation` from the client record (name, email, company)
-3. Calculate system values using existing carbon utilities
-4. Get client portfolio size for tier-based pricing
-5. Set `agent_commission_percentage = 0` (no agent)
-6. Set `agent_id` to a system/admin account ID (prevents NULL issues across codebase)
-7. Insert proposal with `status: 'draft'`
-8. Create admin notification about the new client submission
+**`src/components/admin/users/ExportUsersButton.tsx`**
+- Add a "Status" column to the CSV (e.g., "Signed Up" vs "Potential Client")
 
-### Navigation
-
-Add to sidebar after "Project Onboarding":
+### Query Approach
 
 ```text
-{
-  name: "Submit a Project",
-  href: "/submit-project",
-  icon: FileText,
-  roles: ["client"]
-}
+1. Fetch all profiles (existing query, unchanged)
+2. Fetch clients WHERE user_id IS NULL (new query)
+3. Map potential clients into UserWithRoles format:
+   - id: client record id
+   - email: from clients table
+   - first_name / last_name: from clients table
+   - role: "potential_client"
+   - agent_status: null
+   - company_name: from clients table
+   - created_at: from clients table
+4. Merge both arrays
+5. Apply filters (search, role, company, user type)
 ```
 
-### Form Step Flow
+### Interface Update
 
-The `SubmitProject.tsx` page manages a simplified 3-step state machine:
+Extend `UserWithRoles` with an optional `source` field:
 
 ```text
-"eligibility" --> "project" --> "summary"
+source?: 'profile' | 'client_record'
 ```
 
-No "client" step. The `prevStep`/`nextStep` functions skip straight between eligibility and project.
+This lets the UI know which actions are available (e.g., "Manage Roles" only for signed-up users).
+
+### Action Menu for Potential Clients
+
+Potential clients will have a simplified action menu:
+- **View** -- see their details
+- **Delete** -- remove the client record
+- No "Manage Roles" or "Promote to Admin" (they don't have accounts)
+
