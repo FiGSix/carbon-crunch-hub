@@ -33,6 +33,9 @@ verify_jwt = true
 [functions.send-client-team-invitation]
 verify_jwt = true
 
+[functions.send-client-invitation]
+verify_jwt = true
+
 [functions.manage-user-role]
 verify_jwt = true
 
