@@ -1,88 +1,184 @@
 
 
-# Show All Users Including Potential Clients in Admin User Management
+# Invite Clients to Join the Platform
 
-## The Problem
+## Overview
 
-The admin user list currently queries only the `profiles` table, which contains **102 signed-up users**. However, the `clients` table has **220 records**, of which **178 are potential clients** (added by agents but not yet signed up). These people are invisible in the admin user management view.
+Build a client invitation system modeled after the existing agent invitation flow (`agent_invitations` table + `send-agent-invitation` edge function), but adapted for client role signups. Any authenticated user (agent, client, or admin) can invite someone to join as a client.
 
-## The Solution
+## What Users See
 
-Merge data from both `profiles` (signed-up users) and `clients` (where `user_id IS NULL` -- potential clients) into a single unified list. Add a new filter to distinguish between signed-up users and potential clients.
+- **Agents**: A new "Invite Client" button on their dashboard (or within their client management area) lets them invite prospects by email
+- **Clients**: The existing "Refer a Client" section on their profile gets upgraded from a passive link to a proper email invitation with tracking
+- **Admins**: Can invite clients from the admin user management page
 
-## What Changes
+The invited person receives a branded email with a registration link (`/register?role=client&token=...`). The invitation expires in 48 hours and is tracked in a new `client_invitations` table.
 
-### Updated User List
+## Database
 
-The table will show two categories of people:
+### New Table: `client_invitations`
 
-| Source | Count | What They Are |
-|--------|-------|---------------|
-| `profiles` table | 102 | Signed-up users (agents, clients, admins) |
-| `clients` table (no `user_id`) | 178 | Potential clients added by agents, not yet signed up |
+Mirrors the `agent_invitations` table structure:
 
-Potential clients will appear with:
-- A **"Potential Client"** badge instead of a role badge
-- A **"Not Signed Up"** status badge
-- Their name, email, and company from the `clients` table
-- Limited actions (no role management, but can view/delete)
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | UUID (PK) | Primary key |
+| email | TEXT (unique) | Invitee email |
+| first_name | TEXT | Optional first name |
+| last_name | TEXT | Optional last name |
+| company_name | TEXT | Optional company name |
+| invitation_token | TEXT (unique) | 64-char secure token |
+| invited_by | UUID (FK profiles) | Who sent the invite |
+| status | TEXT | pending / accepted / expired |
+| expires_at | TIMESTAMPTZ | 48-hour expiry |
+| created_at | TIMESTAMPTZ | When created |
 
-### New Filter Option
+RLS policies:
+- Authenticated users can INSERT (anyone can invite)
+- Authenticated users can SELECT their own invitations (where `invited_by = auth.uid()`)
+- Admins can SELECT all
+- Anon can SELECT by token (for registration validation)
+- Authenticated can UPDATE (for status changes)
 
-Add a **"User Type"** filter alongside the existing Role and Company filters:
-- **All Users** (default)
-- **Signed Up** -- only profiles
-- **Potential Clients** -- only clients without accounts
+A trigger will automatically mark invitations as `accepted` when a new client profile is created with a matching email.
 
-### Export Update
+### Registration Page Update
 
-The CSV export will include potential clients too, with a "Status" column indicating whether they are signed up or not.
+The existing `/register` page already accepts `?role=agent&token=...` for agent invitations. It needs to also handle `?role=client&token=...`, validating against the `client_invitations` table instead of `agent_invitations`.
 
-## Technical Details
+## Edge Function: `send-client-invitation`
 
-### Files to Modify
+Modeled directly on `send-agent-invitation`, but:
+- Any authenticated user can call it (not admin-only)
+- Creates a record in `client_invitations` (not `agent_invitations`)
+- Registration link points to `/register?role=client&token=...`
+- Email template is client-focused (mentions monetising solar systems, carbon credits)
+- Supports resend of pending invitations
+- Checks for existing profiles and duplicate invitations
 
-**`src/components/admin/users/UserManagementTable.tsx`**
-- Extend the query to also fetch from the `clients` table where `user_id IS NULL`
-- Map potential clients into the same `UserWithRoles` interface with `role: 'potential_client'` and `agent_status: 'not_signed_up'`
-- Deduplicate by email (in case a client record exists for a signed-up user)
-- Add a "User Type" filter (all / signed_up / potential)
-- Update the role badge logic to handle `'potential_client'`
+## Frontend Changes
 
-**`src/components/admin/users/ExportUsersButton.tsx`**
-- Add a "Status" column to the CSV (e.g., "Signed Up" vs "Potential Client")
+### 1. Upgrade ClientReferralSection (for clients)
 
-### Query Approach
+Replace the passive referral link with a proper invitation form:
+- Email input field
+- Optional first/last name fields
+- "Send Invitation" button that calls `send-client-invitation`
+- Shows list of pending invitations sent by this user
+- Resend option for pending invitations
 
-```text
-1. Fetch all profiles (existing query, unchanged)
-2. Fetch clients WHERE user_id IS NULL (new query)
-3. Map potential clients into UserWithRoles format:
-   - id: client record id
-   - email: from clients table
-   - first_name / last_name: from clients table
-   - role: "potential_client"
-   - agent_status: null
-   - company_name: from clients table
-   - created_at: from clients table
-4. Merge both arrays
-5. Apply filters (search, role, company, user type)
+### 2. Agent "Invite Client" Button
+
+Add an "Invite Client" action to the agent's client management area. This opens a dialog (reusing the same pattern as `InviteTeamMemberDialog`) that calls `send-client-invitation`.
+
+### 3. Admin "Invite Client" Button
+
+Add to the `UserManagementHeader` component, alongside any existing invite actions, a button to invite clients.
+
+### 4. Registration Page Update
+
+Update the registration flow to validate `client_invitations` tokens when `role=client` is in the URL params.
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/send-client-invitation/index.ts` | Edge function: validates auth, creates invitation record, sends branded email via Resend |
+| `src/components/client/InviteClientDialog.tsx` | Reusable dialog component for inviting a client (email + optional name) |
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/components/profile/ClientReferralSection.tsx` | Replace passive referral link with invitation form + pending invitations list |
+| `src/components/layout/DashboardSidebar.tsx` | (Optional) Add "Invite Client" nav item for agents |
+| `src/pages/Register.tsx` | Handle `role=client&token=...` by validating against `client_invitations` table |
+| `src/components/admin/users/UserManagementHeader.tsx` | Add "Invite Client" button for admins |
+| `supabase/config.toml` | Add `send-client-invitation` function config with `verify_jwt = false` |
+
+## Database Migration
+
+```sql
+-- Create client_invitations table
+CREATE TABLE public.client_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  company_name TEXT,
+  invitation_token TEXT NOT NULL UNIQUE,
+  invited_by UUID REFERENCES public.profiles(id) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT unique_pending_client_email UNIQUE (email)
+);
+
+ALTER TABLE public.client_invitations ENABLE ROW LEVEL SECURITY;
+
+-- Anyone authenticated can invite
+CREATE POLICY "Authenticated users can insert client invitations"
+  ON public.client_invitations FOR INSERT
+  TO authenticated
+  WITH CHECK (invited_by = auth.uid());
+
+-- Users can see their own invitations
+CREATE POLICY "Users can view own sent invitations"
+  ON public.client_invitations FOR SELECT
+  TO authenticated
+  USING (invited_by = auth.uid());
+
+-- Admins can see all
+CREATE POLICY "Admins can view all client invitations"
+  ON public.client_invitations FOR SELECT
+  TO authenticated
+  USING (public.is_current_user_admin());
+
+-- Anon can validate tokens (for registration)
+CREATE POLICY "Anon can validate pending client invitation tokens"
+  ON public.client_invitations FOR SELECT
+  TO anon
+  USING (status = 'pending' AND expires_at > now());
+
+-- Allow status updates
+CREATE POLICY "System can update client invitations"
+  ON public.client_invitations FOR UPDATE
+  TO authenticated
+  USING (true);
+
+-- Indexes
+CREATE INDEX idx_client_invitations_token ON public.client_invitations(invitation_token);
+CREATE INDEX idx_client_invitations_email ON public.client_invitations(email);
+CREATE INDEX idx_client_invitations_status ON public.client_invitations(status);
+CREATE INDEX idx_client_invitations_invited_by ON public.client_invitations(invited_by);
+
+-- Auto-accept invitation when client profile is created
+CREATE OR REPLACE FUNCTION public.handle_client_invitation_acceptance()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.role = 'client' THEN
+    UPDATE public.client_invitations
+    SET status = 'accepted'
+    WHERE LOWER(email) = LOWER(NEW.email)
+    AND status = 'pending';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_client_profile_created_accept_invitation
+  AFTER INSERT ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_client_invitation_acceptance();
 ```
 
-### Interface Update
+## Email Template
 
-Extend `UserWithRoles` with an optional `source` field:
+The invitation email will follow the same branded HTML template as agent invitations but with client-focused messaging:
 
-```text
-source?: 'profile' | 'client_record'
-```
-
-This lets the UI know which actions are available (e.g., "Manage Roles" only for signed-up users).
-
-### Action Menu for Potential Clients
-
-Potential clients will have a simplified action menu:
-- **View** -- see their details
-- **Delete** -- remove the client record
-- No "Manage Roles" or "Promote to Admin" (they don't have accounts)
+- Header: "You're Invited!"
+- Benefits: Monetise your solar system, earn carbon credits, track your projects, free to join
+- CTA button: "Accept Invitation" linking to `/register?role=client&token=...`
+- 48-hour expiry notice
+- CrunchCarbon branding consistent with existing emails
 
