@@ -371,6 +371,53 @@ export type Database = {
           },
         ]
       }
+      client_invitations: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          first_name: string | null
+          id: string
+          invitation_token: string
+          invited_by: string
+          last_name: string | null
+          status: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          first_name?: string | null
+          id?: string
+          invitation_token: string
+          invited_by: string
+          last_name?: string | null
+          status?: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          first_name?: string | null
+          id?: string
+          invitation_token?: string
+          invited_by?: string
+          last_name?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_referrals: {
         Row: {
           confirmed_at: string | null
