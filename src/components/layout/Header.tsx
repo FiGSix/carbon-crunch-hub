@@ -220,6 +220,11 @@ const navItems = [
     description: "Calculate your potential earnings" 
   },
   { 
+    label: "Marketplace", 
+    href: "/marketplace",
+    description: "Buy, sell & trade carbon credits" 
+  },
+  { 
     label: "For Agents", 
     href: "/agents",
     description: "Information for energy consultants" 

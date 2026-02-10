@@ -4,6 +4,7 @@ import { LinkGroup } from './LinkGroup';
 const productLinks = [
   { label: 'How It Works', href: '/#how-it-works' },
   { label: 'Calculator', href: '/calculator' },
+  { label: 'Marketplace', href: '/marketplace' },
   { label: 'For Agents', href: '/agents' },
 ];
 
