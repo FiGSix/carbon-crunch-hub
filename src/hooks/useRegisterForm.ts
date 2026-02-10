@@ -55,12 +55,16 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
 
     const validateInvitation = async () => {
       try {
-        const { data, error } = await supabase
-          .from('agent_invitations')
+        // Determine which table to query based on initial role
+        // Use 'as any' for client_invitations since types may not be regenerated yet
+        const tableName = initialRole === 'client' ? 'client_invitations' : 'agent_invitations';
+        
+        const { data, error } = await (supabase
+          .from(tableName as any)
           .select('*')
           .eq('invitation_token', invitationToken)
           .eq('status', 'pending')
-          .single();
+          .single() as any);
 
         if (error || !data) {
           toast({
@@ -85,19 +89,20 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
 
         // Pre-fill form with invitation data
         setInvitationData(data);
-        setInvitedEmail(data.email); // Store the original invited email
+        setInvitedEmail(data.email);
         setFormData((prev) => ({
           ...prev,
           email: data.email,
           firstName: data.first_name || "",
           lastName: data.last_name || "",
           companyName: data.company_name || "",
-          role: "agent", // Lock role to agent
+          role: initialRole, // Lock role to what the invitation specifies
         }));
 
         authLogger.info("Invitation validated and form pre-filled", { 
           email: data.email,
-          invitationId: data.id 
+          invitationId: data.id,
+          role: initialRole,
         });
 
       } catch (error) {
@@ -113,7 +118,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     };
 
     validateInvitation();
-  }, [invitationToken, navigate, toast]);
+  }, [invitationToken, initialRole, navigate, toast]);
   
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -127,7 +132,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
     if (invitationToken) {
       toast({
         title: "Role Locked",
-        description: "You must register as an agent to accept this invitation.",
+        description: `You must register as ${initialRole === 'agent' ? 'an agent' : 'a client'} to accept this invitation.`,
         variant: "destructive",
       });
       return;
@@ -157,8 +162,8 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
       return;
     }
 
-    // Validate email match for invited agents
-    if (formData.role === "agent" && invitationToken && invitedEmail) {
+    // Validate email match for invited users
+    if (invitationToken && invitedEmail) {
       const normalizedFormEmail = formData.email.toLowerCase().trim();
       const normalizedInvitedEmail = invitedEmail.toLowerCase().trim();
       
@@ -379,16 +384,18 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
       // Mark invitation as accepted if token exists
       if (invitationToken && invitationData) {
         try {
-          await supabase
-            .from('agent_invitations')
+          const tableName = formData.role === 'client' ? 'client_invitations' : 'agent_invitations';
+          await (supabase
+            .from(tableName as any)
             .update({
               status: 'accepted',
               accepted_at: new Date().toISOString(),
             })
-            .eq('id', invitationData.id);
+            .eq('id', invitationData.id) as any);
 
           authLogger.info("Invitation marked as accepted", { 
-            invitationId: invitationData.id 
+            invitationId: invitationData.id,
+            table: tableName,
           });
         } catch (error) {
           authLogger.error("Failed to mark invitation as accepted", { 

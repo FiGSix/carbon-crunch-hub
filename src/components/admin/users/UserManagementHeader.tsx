@@ -1,5 +1,8 @@
 import { Users, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { InviteClientDialog } from '@/components/client/InviteClientDialog';
+import { Button } from '@/components/ui/button';
+import { UserPlus } from 'lucide-react';
 
 export function UserManagementHeader() {
   return (
@@ -17,6 +20,14 @@ export function UserManagementHeader() {
           Manage user accounts and role assignments
         </p>
       </div>
+      <InviteClientDialog
+        trigger={
+          <Button>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invite Client
+          </Button>
+        }
+      />
     </div>
   );
 }
