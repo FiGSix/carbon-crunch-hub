@@ -1,52 +1,110 @@
 
-
-# Add "Export Users" Button to Admin User Management
+# Client Self-Service: Submit a Project
 
 ## What This Does
 
-Adds an **Export CSV** button to the Admin User Management page that downloads a CSV file containing user names, surnames, and emails -- ready to import into Resend for your Quarterly Newsletter.
+Gives clients the same proposal creation experience as agents, minus the "Client Info" step (since they ARE the client). The flow becomes:
 
-## Export Format
+**Eligibility → Project Info → Summary**
 
-The CSV will include:
+Clients see a "Submit a Project" link in their sidebar. The resulting proposal is created in `draft` status for admin review, with no agent involvement.
 
-| First Name | Last Name | Email |
-|------------|-----------|-------|
-| John       | Doe       | john@example.com |
+## Steps (3-step flow)
 
-You can then upload this CSV directly into Resend's audience/contact list for newsletter campaigns.
+1. **Eligibility** -- Same checklist as agents (is the project in South Africa, commissioned after 2022, etc.)
+2. **Project Info** -- Reuses the existing `ProjectInfoStep` component (name, address, GPS, system size, commissioning date, multi-phase support)
+3. **Summary** -- Shows project details, carbon credit estimates, and revenue projections. Submit button creates the proposal.
 
-## Scope
+## How It Works
 
-This is a small, focused change:
+- The client's own `clients` record is looked up automatically via their `user_id`
+- Their name/email/company is populated from their profile -- no manual entry needed
+- `agent_id` is set to a configurable "Crunch Carbon Direct" admin user ID (stored as `VITE_CRUNCH_DIRECT_AGENT_ID` env var) to maintain compatibility with existing queries that assume `agent_id` is present
+- Agent commission is set to 0% for direct client submissions
+- Proposal is created with `status: 'draft'` for admin review
 
-- **1 new file**: `src/components/admin/users/ExportUsersButton.tsx` -- a reusable export button following the same pattern as the existing `ExportButton.tsx` in the clients module
-- **1 modified file**: `src/components/admin/users/UserManagementHeader.tsx` -- add the export button to the header area
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/pages/SubmitProject.tsx` | Page wrapper -- 3-step form using DashboardLayout |
+| `src/components/client/submit-project/ClientProposalStepper.tsx` | 3-step stepper (Eligibility, Project Info, Summary) |
+| `src/components/client/submit-project/ClientSummaryStep.tsx` | Summary step adapted for client context (no client info section, submit calls client-specific service) |
+| `src/services/proposals/clientProjectSubmission.ts` | Service: looks up client record by user_id, calculates carbon values, inserts proposal with agent_id set to system account, 0% agent commission |
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Add `/submit-project` route (lazy-loaded, wrapped in PrivateRoute) |
+| `src/components/layout/DashboardSidebar.tsx` | Add "Submit a Project" nav item for `client` role |
+| `src/types/proposals.ts` | Add `"client_project"` to `FormStep` type as a union variant for the client-specific steps |
+
+## Database Migration
+
+A new RLS INSERT policy on `proposals` to allow clients to insert:
+
+```sql
+CREATE POLICY "clients_can_submit_projects"
+ON public.proposals
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  -- User must have client role and not be soft-deleted
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = 'client'
+    AND deleted_at IS NULL
+  )
+  -- Client must have a linked clients record
+  AND client_id = auth.uid()
+);
+```
+
+This sits alongside the existing `proposals_insert_unified` policy (which requires `agent_id = auth.uid()`). Both policies are checked -- either one passing allows the insert.
+
+## Reuse Strategy
+
+- **EligibilityStep** -- reused as-is from `src/components/proposals/EligibilityStep.tsx`
+- **ProjectInfoStep** -- reused as-is from `src/components/proposals/ProjectInfoStep.tsx`
+- **SummaryStep sections** -- reuses `ProjectInformationSection`, `CarbonCreditSection`, and `RevenueDistributionSection` from the existing summary. Skips `ClientInformationSection` (or shows it read-only with auto-populated data)
+- **Carbon calculation utilities** -- reuses `UnifiedCarbonService`, `normalizeToKWp`, `calculateAnnualEnergy`, `calculateCarbonCredits`
 
 ## Technical Details
 
-### New Component: `ExportUsersButton.tsx`
+### Client Project Submission Service
 
-- Receives the filtered `users` array from `UserManagementTable`
-- Exports a CSV with columns: `First Name`, `Last Name`, `Email`
-- Skips users with no email
-- Uses the same CSV download pattern already established in `ExportButton.tsx`
+The new `clientProjectSubmission.ts` service will:
 
-### Integration Approach
+1. Look up the client's `clients` record via `user_id = auth.uid()`
+2. Build `ClientInformation` from the client record (name, email, company)
+3. Calculate system values using existing carbon utilities
+4. Get client portfolio size for tier-based pricing
+5. Set `agent_commission_percentage = 0` (no agent)
+6. Set `agent_id` to a system/admin account ID (prevents NULL issues across codebase)
+7. Insert proposal with `status: 'draft'`
+8. Create admin notification about the new client submission
 
-The `UserManagementTable` already has the `users` array (filtered by search/role/company). Rather than re-fetching data, we will:
+### Navigation
 
-1. Lift the export button into `UserManagementTable.tsx` (next to the search/filter controls)
-2. Pass the current filtered `users` list to the export button
-3. This means the export respects whatever filters the admin has applied (e.g., export only clients, only a specific company, etc.)
+Add to sidebar after "Project Onboarding":
 
-### File Changes
+```text
+{
+  name: "Submit a Project",
+  href: "/submit-project",
+  icon: FileText,
+  roles: ["client"]
+}
+```
 
-**`src/components/admin/users/ExportUsersButton.tsx`** (new):
-- Button component with Download icon
-- `exportToCSV` function generating `First Name, Last Name, Email` columns
-- Filename: `users-newsletter-export-YYYY-MM-DD.csv`
+### Form Step Flow
 
-**`src/components/admin/users/UserManagementTable.tsx`** (modified):
-- Import and render `ExportUsersButton` in the filter bar area, passing the current `users` array
+The `SubmitProject.tsx` page manages a simplified 3-step state machine:
 
+```text
+"eligibility" --> "project" --> "summary"
+```
+
+No "client" step. The `prevStep`/`nextStep` functions skip straight between eligibility and project.
