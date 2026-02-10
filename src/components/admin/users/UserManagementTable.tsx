@@ -32,6 +32,7 @@ import { RoleManagementDialog } from './RoleManagementDialog';
 import { CompanyManagementDialog } from '@/components/admin/companies/CompanyManagementDialog';
 import { LinkUserToCompanyDialog } from './LinkUserToCompanyDialog';
 import { DeleteUserDialog } from './DeleteUserDialog';
+import { ExportUsersButton } from './ExportUsersButton';
 import { useDeleteUser } from '@/hooks/admin/useDeleteUser';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -285,6 +286,7 @@ export function UserManagementTable() {
     <div className="space-y-4">
       <div className="flex gap-4">
         <div className="relative flex-1">
+
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or email..."
@@ -318,6 +320,7 @@ export function UserManagementTable() {
             ))}
           </SelectContent>
         </Select>
+        <ExportUsersButton users={users || []} />
       </div>
 
       <div className="border rounded-lg">
