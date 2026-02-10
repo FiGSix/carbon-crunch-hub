@@ -86,6 +86,12 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Submit a Project",
+      href: "/submit-project",
+      icon: FileText,
+      roles: ["client"]
+    },
+    {
       name: "Audit Status",
       href: "/admin/audit-status",
       icon: ClipboardCheck,

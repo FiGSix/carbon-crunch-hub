@@ -77,6 +77,7 @@ const Referral = createOptimizedLazyComponent(() => import("./pages/Referral"), 
 const LegalDocuments = createOptimizedLazyComponent(() => import("./pages/Admin/LegalDocuments"), "LegalDocuments");
 const AuditStatus = createOptimizedLazyComponent(() => import("./pages/admin/AuditStatus"), "AuditStatus");
 const PartnerManagement = createOptimizedLazyComponent(() => import("./pages/admin/PartnerManagement"), "PartnerManagement");
+const SubmitProject = createOptimizedLazyComponent(() => import("./pages/SubmitProject"), "SubmitProject");
 
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -503,6 +504,18 @@ function App() {
                         <PageErrorBoundary pageName="Referral">
                           <Suspense fallback={<PageLoader />}>
                             <Referral />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/submit-project" 
+                    element={
+                      <PrivateRoute allowedRoles={['client']}>
+                        <PageErrorBoundary pageName="Submit Project">
+                          <Suspense fallback={<PageLoader />}>
+                            <SubmitProject />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>
