@@ -5,6 +5,7 @@ interface UserForExport {
   email: string;
   first_name: string | null;
   last_name: string | null;
+  source?: 'profile' | 'client_record';
 }
 
 interface ExportUsersButtonProps {
@@ -16,11 +17,12 @@ export function ExportUsersButton({ users }: ExportUsersButtonProps) {
     const usersWithEmail = users.filter(u => u.email);
     if (usersWithEmail.length === 0) return;
 
-    const headers = ['First Name', 'Last Name', 'Email'];
+    const headers = ['First Name', 'Last Name', 'Email', 'Status'];
     const csvData = usersWithEmail.map(u => [
       u.first_name || '',
       u.last_name || '',
       u.email,
+      u.source === 'client_record' ? 'Potential Client' : 'Signed Up',
     ]);
 
     const csvContent = [headers, ...csvData]
