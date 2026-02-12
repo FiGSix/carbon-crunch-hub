@@ -1,47 +1,68 @@
 
 
-# Fix: Agent Invitation Resend for Expired Invitations
-
-## Problem
-
-The `send-agent-invitation` edge function fails when trying to re-invite an agent whose previous invitation has `status = 'expired'`. The code only handles the case where `status = 'pending'` and the expiry date has passed -- it does not handle records already marked as `expired` in the database.
-
-This causes a `duplicate key value violates unique constraint "agent_invitations_email_key"` error.
+# Fix: Shaida and Kobie Can't See Texiwell Projects
 
 ## Root Cause
 
-In `supabase/functions/send-agent-invitation/index.ts`, line 244:
+The proposals belong to Dr Mohammed Ahmed-Essa (the primary Texiwell client). Shaida and Kobie are **team members** in the same client company (Texiwell Investments Pty Ltd).
 
-```typescript
-if (existingInvitation && existingInvitation.status === 'pending') {
+The **database RLS policies work correctly** -- they include a `get_user_client_company_client_ids()` check that would grant access to company team members.
+
+However, the **frontend query in `ProposalsDataService.ts` (line 69)** adds an explicit filter that only matches proposals where `client_id` or `client_reference_id` equals the logged-in user's ID directly:
+
+```
+client_id.eq.{userId},client_reference_id.eq.{userId}
 ```
 
-This condition skips invitations with `status = 'expired'`, so the old record is never deleted, and the INSERT fails on the unique constraint.
+Since Kobie and Shaida are not the `client_id` or `client_reference_id` on any proposal, **zero rows are returned** -- the filter removes them before RLS can allow them through.
 
 ## Solution
 
-Update the conditional logic to also handle invitations with `status = 'expired'` (or `accepted`) -- delete any non-pending expired or stale invitation before creating a new one.
+For client users, expand the query filter to also include proposals linked to any client record in the user's company. This mirrors how agent team visibility already works.
 
-## File Changes
+### File: `src/services/unified/proposals/ProposalsDataService.ts`
 
-### `supabase/functions/send-agent-invitation/index.ts`
+**Change the client filtering block (around line 68-69):**
 
-Replace the existing invitation handling block (around lines 244-267) with logic that:
-
-1. If status is `pending` and NOT expired: block the request (invitation still active)
-2. If status is `pending` but expired, OR status is `expired` or `accepted`: DELETE the old record and allow creating a new one
+1. Look up the user's `client_company_id` from `client_company_members`
+2. If they belong to a company, fetch all `clients` records in that company
+3. Build the filter to include `client_reference_id` matching any of those client IDs, in addition to the direct `client_id` match
 
 ```text
-Before (simplified):
-  if (status === 'pending') {
-    if (not expired) -> block
-    else -> delete old, continue
-  }
-  // status === 'expired' falls through to INSERT -> FAILS
+Before:
+  query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
 
-After (simplified):
-  if (status === 'pending' && not expired) -> block
-  else if (existingInvitation) -> delete old, continue
+After:
+  // Get user's client company membership
+  const { data: membership } = await supabase
+    .from('client_company_members')
+    .select('client_company_id')
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  const companyIds = membership?.map(m => m.client_company_id) || [];
+
+  if (companyIds.length > 0) {
+    // Get all client record IDs in user's company
+    const { data: companyClients } = await supabase
+      .from('clients')
+      .select('id')
+      .in('client_company_id', companyIds);
+
+    const companyClientIds = companyClients?.map(c => c.id) || [];
+    const allClientIds = [...new Set([...companyClientIds])];
+
+    // Filter: direct match OR company client reference match
+    const filters = [`client_id.eq.${userId}`];
+    if (allClientIds.length > 0) {
+      filters.push(`client_reference_id.in.(${allClientIds.join(',')})`);
+    }
+    query = query.or(filters.join(','));
+  } else {
+    // No company -- fall back to direct match only
+    query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
+  }
 ```
 
-This is a single-file change to the edge function. No database or frontend changes needed.
+This is a single-file change. No database migrations needed -- the RLS policies already support this access pattern.
+
