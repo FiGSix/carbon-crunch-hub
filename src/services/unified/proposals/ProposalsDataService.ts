@@ -66,7 +66,34 @@ export class ProposalsDataService {
 
       // Apply role-based filtering - RLS will handle the actual security
       if (userRole === 'client') {
-        query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
+        // Get user's client company membership
+        const { data: membership } = await supabase
+          .from('client_company_members')
+          .select('client_company_id')
+          .eq('user_id', userId)
+          .eq('status', 'active');
+
+        const companyIds = membership?.map(m => m.client_company_id) || [];
+
+        if (companyIds.length > 0) {
+          // Get all client record IDs in user's company
+          const { data: companyClients } = await supabase
+            .from('clients')
+            .select('id')
+            .in('client_company_id', companyIds);
+
+          const companyClientIds = companyClients?.map(c => c.id) || [];
+
+          // Filter: direct match OR company client reference match
+          const filters = [`client_id.eq.${userId}`];
+          if (companyClientIds.length > 0) {
+            filters.push(`client_reference_id.in.(${companyClientIds.join(',')})`);
+          }
+          query = query.or(filters.join(','));
+        } else {
+          // No company -- fall back to direct match only
+          query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
+        }
       } else if (userRole === 'agent') {
         // Get user's company members to show all team proposals
         const { data: companyMembers } = await supabase
