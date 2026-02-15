@@ -1,68 +1,62 @@
 
 
-# Fix: Shaida and Kobie Can't See Texiwell Projects
+# Fix Partner API Issues for PVBiz Integration
 
-## Root Cause
+## Issues to Address
 
-The proposals belong to Dr Mohammed Ahmed-Essa (the primary Texiwell client). Shaida and Kobie are **team members** in the same client company (Texiwell Investments Pty Ltd).
+### Issue 1: Scope Naming Mismatch (Critical Bug)
+The `ApiScope` type and route config use `projects:data_access:write` (underscore), but PVBiz's key has `projects:data-access:write` (hyphen). This will cause a silent 403 when they try to use it.
 
-The **database RLS policies work correctly** -- they include a `get_user_client_company_client_ids()` check that would grant access to company team members.
+**Fix:** Standardize on the hyphenated format (`projects:data-access:write`) since that's what's stored in the database and shown in the admin UI. Update `partner-types.ts` and the route config in `index.ts`.
 
-However, the **frontend query in `ProposalsDataService.ts` (line 69)** adds an explicit filter that only matches proposals where `client_id` or `client_reference_id` equals the logged-in user's ID directly:
+### Issue 2: Missing Routes for Granted Scopes
+- `proposals:acceptance` -- no route exists for this scope
+- `projects:onboarding:read` -- no GET route for reading onboarding data
 
-```
-client_id.eq.{userId},client_reference_id.eq.{userId}
-```
+**Fix:** Add the `ApiScope` type entries and create read-only onboarding GET handler (`GET /v1/projects/:id/onboarding`). For `proposals:acceptance`, either add a route or remove from PVBiz's key (this scope may have been intended for a future feature).
 
-Since Kobie and Shaida are not the `client_id` or `client_reference_id` on any proposal, **zero rows are returned** -- the filter removes them before RLS can allow them through.
+### Issue 3: Request/Response Body Logging
+Lines 229-230 in `index.ts` hardcode `null` for request and response bodies, making debugging impossible.
 
-## Solution
+**Fix:** Capture the request body (already parsed by handlers) and clone the response body before logging. Pass them to `logApiRequest`.
 
-For client users, expand the query filter to also include proposals linked to any client record in the user's company. This mirrors how agent team visibility already works.
+### Issue 4: PVBiz Scope Configuration
+PVBiz needs `projects:read` added to their API key if they want to list/view projects.
 
-### File: `src/services/unified/proposals/ProposalsDataService.ts`
+**Fix:** This is an admin action -- add the scope via the Partner Management portal or direct DB update.
 
-**Change the client filtering block (around line 68-69):**
+## Technical Changes
 
-1. Look up the user's `client_company_id` from `client_company_members`
-2. If they belong to a company, fetch all `clients` records in that company
-3. Build the filter to include `client_reference_id` matching any of those client IDs, in addition to the direct `client_id` match
+### File 1: `supabase/functions/_shared/partner-types.ts`
+- Change `'projects:data_access:write'` to `'projects:data-access:write'`
+- Add `'proposals:acceptance'` and `'projects:onboarding:read'` to the `ApiScope` type
 
+### File 2: `supabase/functions/partner-api/index.ts`
+
+**Route config (line 276):**
+- Change scope from `'projects:data_access:write'` to `'projects:data-access:write'`
+
+**Add new route (~line 271):**
 ```text
-Before:
-  query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
-
-After:
-  // Get user's client company membership
-  const { data: membership } = await supabase
-    .from('client_company_members')
-    .select('client_company_id')
-    .eq('user_id', userId)
-    .eq('status', 'active');
-
-  const companyIds = membership?.map(m => m.client_company_id) || [];
-
-  if (companyIds.length > 0) {
-    // Get all client record IDs in user's company
-    const { data: companyClients } = await supabase
-      .from('clients')
-      .select('id')
-      .in('client_company_id', companyIds);
-
-    const companyClientIds = companyClients?.map(c => c.id) || [];
-    const allClientIds = [...new Set([...companyClientIds])];
-
-    // Filter: direct match OR company client reference match
-    const filters = [`client_id.eq.${userId}`];
-    if (allClientIds.length > 0) {
-      filters.push(`client_reference_id.in.(${allClientIds.join(',')})`);
-    }
-    query = query.or(filters.join(','));
-  } else {
-    // No company -- fall back to direct match only
-    query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
-  }
+{ method: 'GET', pattern: /^\/projects\/([^/]+)\/onboarding$/, scope: 'projects:onboarding:read', handler: handleGetOnboarding }
 ```
 
-This is a single-file change. No database migrations needed -- the RLS policies already support this access pattern.
+**Add handler `handleGetOnboarding`:**
+- Fetches `onboarding_fields` and `onboarding_documents` for the given project
+- Validates the project belongs to the partner
+- Returns onboarding status, fields, and document list
+
+**Improve logging (lines 218-233):**
+- Pass request body and a cloned/serialized response body to `logApiRequest` instead of `null`
+
+### File 3: Database update (admin action)
+- Add `projects:read` to PVBiz's API key scopes if confirmed
+
+## Sequencing
+
+1. Fix scope naming in types and route config (prevents future 403 bugs)
+2. Add onboarding read route and handler
+3. Fix logging to capture request/response bodies
+4. Deploy edge function
+5. Update PVBiz scopes (admin action via portal or SQL)
 
