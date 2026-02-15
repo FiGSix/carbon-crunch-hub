@@ -23,10 +23,12 @@ export type ApiScope =
   | 'proposals:create'
   | 'proposals:read'
   | 'proposals:send'
+  | 'proposals:acceptance'
   | 'projects:read'
   | 'projects:onboarding:write'
+  | 'projects:onboarding:read'
   | 'projects:documents:write'
-  | 'projects:data_access:write'
+  | 'projects:data-access:write'
   | 'webhooks:manage'
   | 'clients:read';
 

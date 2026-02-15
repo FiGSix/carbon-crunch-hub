@@ -215,9 +215,34 @@ serve(async (req: Request): Promise<Response> => {
     // Route the request
     const response = await routeRequest(req, path, auth, requestId, rateLimitInfo);
     
-    // Log the request (async, don't await)
+    // Log the request with captured bodies
     const duration = Date.now() - startTime;
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || null;
+    
+    // Clone response to read body for logging without consuming it
+    let responseBody: unknown = null;
+    try {
+      const cloned = response.clone();
+      responseBody = await cloned.json();
+    } catch {
+      // Response may not be JSON, skip
+    }
+    
+    // Parse request body for logging (sanitize sensitive fields)
+    let requestBody: unknown = null;
+    if (req.method !== 'GET' && req.method !== 'DELETE') {
+      try {
+        const reqClone = req.clone();
+        const rawBody = await reqClone.json();
+        // Sanitize: remove sensitive fields
+        const sanitized = { ...rawBody };
+        if (sanitized.client?.phone) sanitized.client = { ...sanitized.client, phone: '***' };
+        if (sanitized.api_key) sanitized.api_key = '***';
+        requestBody = sanitized;
+      } catch {
+        // Request may not have JSON body
+      }
+    }
     
     logApiRequest(
       auth.partnerId,
@@ -226,8 +251,8 @@ serve(async (req: Request): Promise<Response> => {
       req.method,
       path,
       response.status,
-      null, // Request body (will be set by handlers)
-      null, // Response body
+      requestBody,
+      responseBody,
       clientIp,
       duration
     ).catch(err => console.error('[PartnerAPI] Log error:', err));
@@ -273,7 +298,8 @@ async function routeRequest(
     { method: 'POST', pattern: /^\/projects\/([^/]+)\/documents\/presign$/, scope: 'projects:documents:write', handler: handleDocumentPresign },
     { method: 'POST', pattern: /^\/projects\/([^/]+)\/documents\/([^/]+)\/confirm$/, scope: 'projects:documents:write', handler: handleDocumentConfirm },
     { method: 'POST', pattern: /^\/projects\/([^/]+)\/documents$/, scope: 'projects:documents:write', handler: handleDocumentUrl },
-    { method: 'POST', pattern: /^\/projects\/([^/]+)\/data-access$/, scope: 'projects:data_access:write', handler: handleConfigureDataAccess },
+    { method: 'GET', pattern: /^\/projects\/([^/]+)\/onboarding$/, scope: 'projects:onboarding:read', handler: handleGetOnboarding },
+    { method: 'POST', pattern: /^\/projects\/([^/]+)\/data-access$/, scope: 'projects:data-access:write', handler: handleConfigureDataAccess },
     
     // Clients
     { method: 'GET', pattern: /^\/clients\/([^/]+)\/projects$/, scope: 'clients:read', handler: handleClientProjects },
@@ -1310,6 +1336,131 @@ async function handleGetProject(
       } 
     }
   );
+}
+
+// =============================================================================
+// Handler - Get Onboarding (Read)
+// =============================================================================
+
+async function handleGetOnboarding(
+  _req: Request,
+  auth: PartnerAuthInfo,
+  params: Record<string, string>,
+  requestId: string
+): Promise<Response> {
+  const uuidValidation = validateUUID(params.id, 'project_id');
+  if (!uuidValidation.success) {
+    return validationErrorResponse(requestId, 'Invalid project ID format', 'project_id', params.id);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const projectId = params.id;
+
+  // Verify project belongs to this partner
+  const { data: project, error: projectError } = await supabase
+    .from('project_onboarding')
+    .select('id, proposal_id, onboarding_complete, submitted_for_review, admin_validated, version')
+    .eq('id', projectId)
+    .single();
+
+  if (projectError || !project) {
+    return notFoundResponse(requestId, 'Project');
+  }
+
+  // Verify the proposal belongs to this partner
+  const { data: proposal } = await supabase
+    .from('proposals')
+    .select('id, partner_id')
+    .eq('id', project.proposal_id)
+    .eq('partner_id', auth.partnerId)
+    .is('deleted_at', null)
+    .single();
+
+  if (!proposal) {
+    return notFoundResponse(requestId, 'Project');
+  }
+
+  // Fetch onboarding fields
+  const { data: fields } = await supabase
+    .from('onboarding_fields')
+    .select('*')
+    .eq('project_id', projectId)
+    .single();
+
+  // Fetch onboarding documents
+  const { data: documents } = await supabase
+    .from('onboarding_documents')
+    .select('id, category, file_name, file_url, mime_type, file_size_bytes, uploaded_at, is_validated, version')
+    .eq('project_id', projectId)
+    .order('uploaded_at', { ascending: false });
+
+  // Build completion info
+  const requiredFields = [
+    'inverter_brand', 'inverter_model', 'inverter_serial', 'inverter_capacity_kw',
+    'panel_brand', 'panel_quantity', 'panel_size_wp', 'panel_total_kwp',
+    'system_address', 'commissioning_date', 'total_capex', 'ownership_type',
+  ];
+  const fieldsComplete = fields ? requiredFields.filter(f => (fields as Record<string, unknown>)[f] != null).length : 0;
+  const missingFields = fields ? requiredFields.filter(f => (fields as Record<string, unknown>)[f] == null) : requiredFields;
+
+  return successResponse({
+    project_id: projectId,
+    version: project.version,
+    status: {
+      onboarding_complete: project.onboarding_complete,
+      submitted_for_review: project.submitted_for_review,
+      admin_validated: project.admin_validated,
+    },
+    completion: {
+      fields_complete: fieldsComplete,
+      fields_required: requiredFields.length,
+      percentage: Math.round((fieldsComplete / requiredFields.length) * 100),
+      missing_fields: missingFields,
+    },
+    fields: fields ? {
+      system: {
+        inverter_brand: fields.inverter_brand,
+        inverter_model: fields.inverter_model,
+        inverter_serial: fields.inverter_serial,
+        inverter_capacity_kw: fields.inverter_capacity_kw,
+        inverter_quantity: fields.inverter_quantity,
+        panel_brand: fields.panel_brand,
+        panel_quantity: fields.panel_quantity,
+        panel_size_wp: fields.panel_size_wp,
+        panel_total_kwp: fields.panel_total_kwp,
+        has_battery: fields.has_battery,
+        battery_brand: fields.battery_brand,
+        battery_capacity_kwh: fields.battery_capacity_kwh,
+      },
+      installation: {
+        total_capex: fields.total_capex,
+        ownership_type: fields.ownership_type,
+        has_maintenance_agreement: fields.has_maintenance_agreement,
+        maintenance_cost_annual: fields.maintenance_cost_annual,
+        commissioning_date: fields.commissioning_date,
+      },
+      location: {
+        address: fields.system_address,
+        gps_lat: fields.system_gps_lat,
+        gps_lng: fields.system_gps_lng,
+      },
+      installer: {
+        company_name: fields.installer_company_name,
+        email: fields.installer_email,
+      },
+    } : null,
+    documents: (documents || []).map(d => ({
+      document_id: d.id,
+      category: d.category,
+      file_name: d.file_name,
+      file_url: d.file_url,
+      mime_type: d.mime_type,
+      file_size_bytes: d.file_size_bytes,
+      uploaded_at: d.uploaded_at,
+      is_validated: d.is_validated,
+      version: d.version,
+    })),
+  }, requestId, { etag: String(project.version) });
 }
 
 async function handleUpdateOnboarding(
