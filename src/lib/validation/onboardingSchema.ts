@@ -56,7 +56,7 @@ export const inverterSectionSchema = z.object({
 export const batteryDetailsSchema = z.object({
   has_battery: z.boolean().nullable(),
   battery_brand: z.string().optional().nullable(),
-  battery_capacity_kwh: z.number().positive("Capacity must be positive").max(1000, "Maximum 1000 kWh").optional().nullable(),
+  battery_capacity_kwh: z.number().positive("Capacity must be positive").max(50000, "Maximum 50,000 kWh").optional().nullable(),
   battery_cost: z.number().positive("Cost must be positive").optional().nullable(),
 }).refine(
   (data) => {
@@ -166,7 +166,7 @@ export const validateField = (fieldName: string, value: any, formData?: any): st
           if (!value) return "Battery capacity is required";
           const capacity = Number(value);
           if (isNaN(capacity) || capacity <= 0) return "Capacity must be positive";
-          if (capacity > 1000) return "Maximum 1000 kWh";
+          if (capacity > 50000) return "Maximum 50,000 kWh";
         }
         break;
       
