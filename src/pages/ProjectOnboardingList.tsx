@@ -107,19 +107,40 @@ export default function ProjectOnboardingList() {
           query = query.eq('proposals.agent_id', user?.id);
         }
       } else if (userRole === 'client') {
-        // For clients, filter by either client_id or client_reference_id
-        // First, get client record if exists
+        // For clients, filter by client_id, client_reference_id, or company membership
         const { data: clientRecord } = await supabase
           .from('clients')
           .select('id')
           .eq('user_id', user?.id)
           .single();
 
-        if (clientRecord) {
-          query = query.or(`client_id.eq.${user?.id},client_reference_id.eq.${clientRecord.id}`, { foreignTable: 'proposals' });
-        } else {
-          query = query.eq('proposals.client_id', user?.id);
+        // Get company client IDs for team visibility
+        const { data: membership } = await supabase
+          .from('client_company_members')
+          .select('client_company_id')
+          .eq('user_id', user?.id)
+          .eq('status', 'active');
+
+        const companyIds = membership?.map(m => m.client_company_id) || [];
+        let companyClientIds: string[] = [];
+
+        if (companyIds.length > 0) {
+          const { data: companyClients } = await supabase
+            .from('clients')
+            .select('id')
+            .in('client_company_id', companyIds);
+          companyClientIds = companyClients?.map(c => c.id) || [];
         }
+
+        // Build OR filter combining direct match + company matches
+        const filters = [`client_id.eq.${user?.id}`];
+        if (clientRecord) {
+          filters.push(`client_reference_id.eq.${clientRecord.id}`);
+        }
+        if (companyClientIds.length > 0) {
+          filters.push(`client_reference_id.in.(${companyClientIds.join(',')})`);
+        }
+        query = query.or(filters.join(','), { foreignTable: 'proposals' });
       }
       // Admin sees all projects (no filter needed)
 
