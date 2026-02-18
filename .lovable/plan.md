@@ -1,79 +1,193 @@
 
-# Reassign 96 Proposals from info@icsolar.co.za to ben@icsolar.co.za
+# Fix: Partner API Proposals Display Identically to Normal Proposals
 
-## What This Does
+## Root Cause Analysis
 
-Runs a single SQL UPDATE in the Supabase SQL Editor (Live environment selected) to move all 96 proposals from Waizeru Ladouce (`info@icsolar.co.za`) to Ben Joubert (`ben@icsolar.co.za`). After this runs, you can safely delete the `info@icsolar.co.za` agent account.
+There are **three separate bugs** all caused by the same underlying issue: the partner API stores data in a different shape than the normal proposal creation flow expects.
+
+### Bug 1 — System Size Shows "0 kWp"
+
+The `ProposalDetails` component reads `projectInfo.size` (a string, e.g. `"3.6"`) to render the system size and to decide whether to show the `CarbonCreditSection` and `RevenueDistributionSection`:
+
+```typescript
+// ProposalDetails.tsx line 114
+{(projectInfo.size || ...) && (
+  <CarbonCreditSection systemSize={projectInfo.size || ...} />
+)}
+```
+
+The partner API stores size in `content.projectInfo.system_size_kwp` (a number) and also uses `commissioning_date` (snake_case) instead of `commissionDate` (camelCase):
+
+```json
+// Partner API stores:
+"projectInfo": {
+  "system_size_kwp": 3.6,       ← number, not "size" string
+  "commissioning_date": "2022-10-18",  ← snake_case
+  "name": "Mario Solar Home",
+  "address": "19 Chris Erwee Close..."
+}
+```
+
+Normal proposals store:
+```json
+"projectInfo": {
+  "size": "3.6",              ← string key "size"
+  "commissionDate": "2022-10-18",  ← camelCase
+  ...
+}
+```
+
+Because `projectInfo.size` is `undefined` for partner proposals, the `CarbonCreditSection` and `RevenueDistributionSection` are **never rendered** — so the proposal shows no carbon credit data and no revenue figures.
+
+### Bug 2 — The RPC Doesn't Return `system_size_kwp` or `project_info`
+
+The `get_proposal_by_token_direct` database function (used for token-based access) only returns:
+
+```
+id, title, status, content, agent_id, client_id, client_reference_id,
+signed_at, created_at, archived_at, review_later_until, is_preview,
+preview_of_id, client_email, invitation_token, invitation_expires_at,
+annual_energy, carbon_credits, client_share_percentage
+```
+
+It is **missing** `system_size_kwp` and `project_info`. Even if the content normalization was fixed, a token-accessed partner proposal would still show `0 kWp` because `system_size_kwp` is never returned from the RPC.
+
+### Bug 3 — Client Name Is Blank / Partial
+
+The partner API sends client data with separate `first_name` / `last_name` fields alongside a `name` field:
+
+```json
+"clientInfo": {
+  "first_name": "Mario",
+  "last_name": "Morelli",
+  "name": "Mario Morelli",
+  "email": "...",
+  "phone": "..."
+}
+```
+
+This part actually works (the `name` field is present), so client name displays correctly. However `companyName` is stored as `company_name` in the partner payload which means company doesn't display. Minor issue.
 
 ---
 
-## The SQL to Run
+## The Fix — Three Parts
 
-Copy this entire block and run it in the **Supabase SQL Editor** (make sure "Live" is selected in the environment dropdown):
+### Fix 1 — Normalize Partner API Content on Creation (Edge Function)
+
+**File:** `supabase/functions/partner-api/index.ts` (~line 583)
+
+When building `content` to insert into the proposals table, normalize the `projectInfo` shape to match what the frontend expects:
+
+```typescript
+// BEFORE (current — partner API format):
+content: {
+  clientInfo: data.client,  // has first_name, last_name, company_name (snake_case)
+  projectInfo: data.project, // has system_size_kwp, commissioning_date (snake_case)
+},
+
+// AFTER (normalized — frontend expects):
+content: {
+  clientInfo: {
+    name: `${data.client.first_name} ${data.client.last_name}`.trim(),
+    email: data.client.email,
+    phone: data.client.phone || '',
+    companyName: data.client.company_name || '',  // camelCase
+  },
+  projectInfo: {
+    name: data.project.name,
+    address: data.project.address,
+    size: String(data.project.system_size_kwp),  // "size" string key
+    commissionDate: data.project.commissioning_date, // camelCase
+    isMultiPhase: false,
+    additionalNotes: '',
+  },
+},
+```
+
+This ensures all **new** partner proposals display correctly going forward.
+
+### Fix 2 — Add `system_size_kwp` and `project_info` to the Token RPC
+
+**File:** Database migration — `supabase/migrations/[timestamp]_fix_proposal_token_rpc.sql`
+
+Update `get_proposal_by_token_direct` to also return `system_size_kwp` and `project_info`:
 
 ```sql
--- STEP 1: Verify counts before updating (run this first to confirm)
-SELECT 
-  COUNT(*) AS proposals_to_reassign,
-  agent_id AS current_agent
-FROM proposals
-WHERE agent_id = '2fdb2569-6817-4d22-9027-079e043e65cf'
-  AND deleted_at IS NULL
-GROUP BY agent_id;
+ALTER FUNCTION get_proposal_by_token_direct ... 
+-- Add to RETURNS TABLE:
+system_size_kwp numeric,
+project_info jsonb,
+-- Add to SELECT:
+p.system_size_kwp,
+p.project_info,
+```
 
--- STEP 2: Reassign all proposals from info@icsolar to ben@icsolar
-UPDATE proposals
-SET 
-  agent_id       = '76b4c999-1474-463b-8193-52f8a9a74bec',  -- ben@icsolar.co.za
-  last_modified_by = '76b4c999-1474-463b-8193-52f8a9a74bec',
-  updated_at     = now()
-WHERE agent_id   = '2fdb2569-6817-4d22-9027-079e043e65cf'  -- info@icsolar.co.za
-  AND deleted_at IS NULL;
+Then update `transformToProposalData` in the frontend to map `system_size_kwp` from the RPC response (it already maps it from direct DB queries, but the RPC shape is missing it).
 
--- STEP 3: Confirm the update worked (run after STEP 2)
-SELECT 
-  COUNT(*) AS proposals_now_under_ben,
-  agent_id AS new_agent
-FROM proposals
-WHERE agent_id = '76b4c999-1474-463b-8193-52f8a9a74bec'
-  AND deleted_at IS NULL
-GROUP BY agent_id;
+### Fix 3 — Normalize `projectInfo` in `transformToProposalData`
 
--- STEP 4: Confirm info@icsolar now has 0 proposals
-SELECT 
-  COUNT(*) AS remaining_info_proposals
-FROM proposals
-WHERE agent_id = '2fdb2569-6817-4d22-9027-079e043e65cf'
-  AND deleted_at IS NULL;
+**File:** `src/utils/proposals/simplifiedTransformers.ts`
+
+After fetching, normalize `content.projectInfo` to handle both partner API format and normal format:
+
+```typescript
+export function transformToProposalData(rawProposal: any): ProposalData {
+  const rawContent = rawProposal.content || {};
+  const rawProjectInfo = rawContent.projectInfo || {};
+
+  // Normalize projectInfo to always use frontend camelCase format
+  const normalizedProjectInfo = {
+    ...rawProjectInfo,
+    // Handle partner API snake_case → camelCase
+    size: rawProjectInfo.size 
+      || (rawProjectInfo.system_size_kwp ? String(rawProjectInfo.system_size_kwp) : '')
+      || (rawProposal.system_size_kwp ? String(rawProposal.system_size_kwp) : ''),
+    commissionDate: rawProjectInfo.commissionDate 
+      || rawProjectInfo.commissioning_date 
+      || '',
+    companyName: rawProjectInfo.companyName || rawProjectInfo.company_name || '',
+    isMultiPhase: rawProjectInfo.isMultiPhase || false,
+    additionalNotes: rawProjectInfo.additionalNotes || '',
+  };
+
+  // Normalize clientInfo camelCase
+  const rawClientInfo = rawContent.clientInfo || {};
+  const normalizedClientInfo = {
+    ...rawClientInfo,
+    name: rawClientInfo.name 
+      || `${rawClientInfo.first_name || ''} ${rawClientInfo.last_name || ''}`.trim(),
+    companyName: rawClientInfo.companyName || rawClientInfo.company_name || '',
+  };
+
+  return {
+    ...existing fields,
+    content: {
+      ...rawContent,
+      clientInfo: normalizedClientInfo,
+      projectInfo: normalizedProjectInfo,
+    },
+    system_size_kwp: rawProposal.system_size_kwp,
+    // ...
+  };
+}
 ```
 
 ---
 
-## Key Details
+## What This Fixes for the Existing "Mario Solar Home" Proposal
 
-| Field | Value |
+The Mario Solar Home proposal (`176b0b3c`) is already `approved` and has the data correctly stored in `system_size_kwp = 3.6` and `carbon_credits = 6.11`. The fix to `transformToProposalData` (Fix 3) means that when this proposal is loaded, it will correctly read `content.projectInfo.system_size_kwp = 3.6` → normalize to `size = "3.6"` → render the `CarbonCreditSection` and `RevenueDistributionSection` properly.
+
+---
+
+## Files to Change
+
+| File | Change |
 |---|---|
-| From (info@icsolar UUID) | `2fdb2569-6817-4d22-9027-079e043e65cf` |
-| To (ben@icsolar UUID) | `76b4c999-1474-463b-8193-52f8a9a74bec` |
-| Proposals affected | 96 (all draft, all active) |
-| Clients affected | 0 (clients were created by Ben, no change needed) |
-| Safe to delete info@icsolar after | Yes — once 0 proposals remain under that agent_id |
+| `supabase/functions/partner-api/index.ts` | Normalize `content.clientInfo` and `content.projectInfo` to camelCase frontend format at creation time (Fix 1) |
+| `supabase/migrations/[ts]_fix_proposal_token_rpc.sql` | Add `system_size_kwp` and `project_info` to `get_proposal_by_token_direct` return columns (Fix 2) |
+| `src/utils/proposals/simplifiedTransformers.ts` | Normalize `projectInfo` and `clientInfo` in `transformToProposalData` to handle both partner API snake_case and normal camelCase formats (Fix 3) |
 
----
+Fix 3 is the most impactful — it makes the existing approved "Mario Solar Home" proposal display correctly immediately. Fixes 1 and 2 ensure all future partner proposals work correctly at creation and token-access time.
 
-## After Running the SQL
-
-Once the UPDATE confirms 96 rows changed:
-
-1. Go to **Supabase Auth → Users** and delete `info@icsolar.co.za`
-2. Go to **Profiles table** and confirm the profile row is also removed (it may cascade automatically depending on your FK setup)
-3. Ben can then log in and send invitations for all 96 proposals immediately — since `agent_id` will now match `auth.uid()` for Ben, the RLS policy on the `proposals` UPDATE will pass correctly and `invitation_token` will be written successfully
-
----
-
-## Technical Notes
-
-- The `WHERE deleted_at IS NULL` clause ensures only active proposals are touched — no risk of accidentally modifying soft-deleted records
-- The `last_modified_by` is set to Ben's UUID so the audit trail reflects who the proposals are now managed by
-- No migration is needed — this is a data operation, not a schema change, so it is run directly in the SQL Editor
-- The `agent_portfolio_kwp` cached field on each proposal may now be slightly inaccurate (it was calculated based on info@icsolar's portfolio at upload time). These figures will self-correct the next time any of these proposals are viewed/recalculated, as the dashboard metrics are calculated live from the database
+No schema changes are required. No new tables are needed.
