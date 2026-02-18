@@ -1,100 +1,79 @@
 
+# Reassign 96 Proposals from info@icsolar.co.za to ben@icsolar.co.za
 
-## Root Cause Found: The Feb 17 Migration Broke the Admin Revenue Formula
+## What This Does
 
-### What Changed 4 Days Ago
-
-Migration `20260217130437_137ddba9` was run on **February 17, 2026**. Its stated purpose was to **add client company membership visibility** to three RPC functions so that clients who are members of a company could see their team's proposals. That is a legitimate and correct change.
-
-However, in rewriting the third function (`get_dashboard_metrics_by_stage`), a single line was changed in the revenue formula for the **admin/default role** (the `ELSE` branch of the `CASE` statement), and it now produces incorrect totals for admin users viewing the dashboard.
+Runs a single SQL UPDATE in the Supabase SQL Editor (Live environment selected) to move all 96 proposals from Waizeru Ladouce (`info@icsolar.co.za`) to Ben Joubert (`ben@icsolar.co.za`). After this runs, you can safely delete the `info@icsolar.co.za` agent account.
 
 ---
 
-### The Exact Line That Changed
+## The SQL to Run
 
-In the previous correct version (`20260128131807`), the admin revenue formula was:
+Copy this entire block and run it in the **Supabase SQL Editor** (make sure "Live" is selected in the environment dropdown):
 
 ```sql
--- CORRECT (before Feb 17):
-ELSE ar.carbon_credits * v_carbon_price_6yr * ((100 - COALESCE(ar.client_share_percentage, 70) - COALESCE(ar.agent_commission_percentage, 4)) / 100.0)
+-- STEP 1: Verify counts before updating (run this first to confirm)
+SELECT 
+  COUNT(*) AS proposals_to_reassign,
+  agent_id AS current_agent
+FROM proposals
+WHERE agent_id = '2fdb2569-6817-4d22-9027-079e043e65cf'
+  AND deleted_at IS NULL
+GROUP BY agent_id;
+
+-- STEP 2: Reassign all proposals from info@icsolar to ben@icsolar
+UPDATE proposals
+SET 
+  agent_id       = '76b4c999-1474-463b-8193-52f8a9a74bec',  -- ben@icsolar.co.za
+  last_modified_by = '76b4c999-1474-463b-8193-52f8a9a74bec',
+  updated_at     = now()
+WHERE agent_id   = '2fdb2569-6817-4d22-9027-079e043e65cf'  -- info@icsolar.co.za
+  AND deleted_at IS NULL;
+
+-- STEP 3: Confirm the update worked (run after STEP 2)
+SELECT 
+  COUNT(*) AS proposals_now_under_ben,
+  agent_id AS new_agent
+FROM proposals
+WHERE agent_id = '76b4c999-1474-463b-8193-52f8a9a74bec'
+  AND deleted_at IS NULL
+GROUP BY agent_id;
+
+-- STEP 4: Confirm info@icsolar now has 0 proposals
+SELECT 
+  COUNT(*) AS remaining_info_proposals
+FROM proposals
+WHERE agent_id = '2fdb2569-6817-4d22-9027-079e043e65cf'
+  AND deleted_at IS NULL;
 ```
-
-In the Feb 17 migration (`20260217130437`), it became:
-
-```sql
--- BROKEN (after Feb 17):
-ELSE ar.carbon_credits * v_carbon_price_6yr
-```
-
-This single change removes both the `client_share_percentage` and `agent_commission_percentage` deductions entirely for the admin view. Instead of showing the **platform's net revenue** (what Crunch Carbon earns after paying the client and agent their shares), it now shows **gross carbon credit value** — the full R891.71 multiplied by all credits, with nothing deducted.
-
-This same mistake is repeated across all three revenue cards:
-- `audit_ready_revenue` — line 249
-- `onboarding_revenue` — line 258  
-- `pending_approval_revenue` — line 266
 
 ---
 
-### Why the Numbers Are Wrong
+## Key Details
 
-Using a real example with a 100 kWp proposal (~169.74 carbon credits, 60.2% client share, 4% agent commission):
-
-| What it shows | Formula | Result |
-|---|---|---|
-| **Current (broken)** | `169.74 * 891.71` | **R151,333** |
-| **Correct (platform net)** | `169.74 * 891.71 * (100 - 60.2 - 4) / 100` | **R53,984** |
-
-The dashboard is inflating revenue by approximately **2.8x** — showing total carbon value instead of Crunch Carbon's platform share.
-
----
-
-### Why It Happened
-
-The Feb 17 migration was a copy-paste of the existing function body with modifications to add `user_company_client_ids` CTE. During the copy, the `ELSE` branch of the revenue `CASE` was simplified from the three-part formula to just `ar.carbon_credits * v_carbon_price_6yr`, dropping the platform margin calculation.
-
-The client view (`WHEN 'client'`) and agent view (`WHEN 'agent'`) were carried over correctly — those formulas still apply the right percentage. Only the admin/default `ELSE` branch was accidentally truncated.
+| Field | Value |
+|---|---|
+| From (info@icsolar UUID) | `2fdb2569-6817-4d22-9027-079e043e65cf` |
+| To (ben@icsolar UUID) | `76b4c999-1474-463b-8193-52f8a9a74bec` |
+| Proposals affected | 96 (all draft, all active) |
+| Clients affected | 0 (clients were created by Ben, no change needed) |
+| Safe to delete info@icsolar after | Yes — once 0 proposals remain under that agent_id |
 
 ---
 
-### What Needs to Be Fixed
+## After Running the SQL
 
-A single targeted migration to restore the three `ELSE` branches in `get_dashboard_metrics_by_stage`:
+Once the UPDATE confirms 96 rows changed:
 
-**For `audit_ready_revenue`:**
-```sql
--- Change from:
-ELSE ar.carbon_credits * v_carbon_price_6yr
--- To:
-ELSE ar.carbon_credits * v_carbon_price_6yr * ((100 - COALESCE(ar.client_share_percentage, 70) - COALESCE(ar.agent_commission_percentage, 4)) / 100.0)
-```
-
-**For `onboarding_revenue`:**
-```sql
--- Change from:
-ELSE op.carbon_credits * v_carbon_price_6yr
--- To:
-ELSE op.carbon_credits * v_carbon_price_6yr * ((100 - COALESCE(op.client_share_percentage, 70) - COALESCE(op.agent_commission_percentage, 4)) / 100.0)
-```
-
-**For `pending_approval_revenue`:**
-```sql
--- Change from:
-ELSE pp.carbon_credits * v_carbon_price_6yr
--- To:
-ELSE pp.carbon_credits * v_carbon_price_6yr * ((100 - COALESCE(pp.client_share_percentage, 70) - COALESCE(pp.agent_commission_percentage, 4)) / 100.0)
-```
-
-Everything else in the Feb 17 migration — the `user_company_client_ids` CTE, the updated client role filtering, the correct MWp calculations — is correct and must be kept.
+1. Go to **Supabase Auth → Users** and delete `info@icsolar.co.za`
+2. Go to **Profiles table** and confirm the profile row is also removed (it may cascade automatically depending on your FK setup)
+3. Ben can then log in and send invitations for all 96 proposals immediately — since `agent_id` will now match `auth.uid()` for Ben, the RLS policy on the `proposals` UPDATE will pass correctly and `invitation_token` will be written successfully
 
 ---
 
-### No Frontend Changes Required
+## Technical Notes
 
-The hook (`useDashboardMetricsByStage`), the dashboard cards, and all display components are correct. This is a **database-only fix** — a single `CREATE OR REPLACE FUNCTION` migration restoring the three `ELSE` branches.
-
----
-
-### Technical Note: Why This Keeps Recurring
-
-Every time this function is rewritten for a different purpose (company visibility, status changes, return type changes), the revenue formula is being carried forward incorrectly. A `COMMENT ON FUNCTION` has already been added documenting the formula. The recommended fix also adds an inline code comment directly above the `ELSE` branch so the formula is self-documenting at the point of risk.
-
+- The `WHERE deleted_at IS NULL` clause ensures only active proposals are touched — no risk of accidentally modifying soft-deleted records
+- The `last_modified_by` is set to Ben's UUID so the audit trail reflects who the proposals are now managed by
+- No migration is needed — this is a data operation, not a schema change, so it is run directly in the SQL Editor
+- The `agent_portfolio_kwp` cached field on each proposal may now be slightly inaccurate (it was calculated based on info@icsolar's portfolio at upload time). These figures will self-correct the next time any of these proposals are viewed/recalculated, as the dashboard metrics are calculated live from the database
