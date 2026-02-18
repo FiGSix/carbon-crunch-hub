@@ -2929,6 +2929,7 @@ export type Database = {
       get_proposal_by_token_direct: {
         Args: { token_param: string }
         Returns: {
+          agent_commission_percentage: number
           agent_id: string
           annual_energy: number
           archived_at: string
@@ -2947,6 +2948,7 @@ export type Database = {
           review_later_until: string
           signed_at: string
           status: string
+          system_size_kwp: number
           title: string
         }[]
       }
