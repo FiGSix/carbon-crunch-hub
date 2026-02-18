@@ -581,8 +581,21 @@ async function handleCreateProposal(
         installerEmail: data.project.installer_email,
       },
       content: {
-        clientInfo: data.client,
-        projectInfo: data.project,
+        // Normalize to camelCase frontend format so partner proposals display identically to normal proposals
+        clientInfo: {
+          name: `${data.client.first_name || ''} ${data.client.last_name || ''}`.trim(),
+          email: data.client.email,
+          phone: data.client.phone || '',
+          companyName: data.client.company_name || '',
+        },
+        projectInfo: {
+          name: data.project.name,
+          address: data.project.address,
+          size: String(data.project.system_size_kwp),  // frontend expects "size" string key
+          commissionDate: data.project.commissioning_date, // frontend expects camelCase
+          isMultiPhase: false,
+          additionalNotes: '',
+        },
       },
     };
     
