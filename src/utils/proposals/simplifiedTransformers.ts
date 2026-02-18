@@ -8,13 +8,46 @@ import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
 /**
  * Transform raw proposal data to ProposalData
+ * Normalizes content.projectInfo and content.clientInfo to handle both:
+ * - Normal proposals: camelCase (size, commissionDate, companyName)
+ * - Partner API proposals: snake_case (system_size_kwp, commissioning_date, company_name)
  */
 export function transformToProposalData(rawProposal: any): ProposalData {
+  const rawContent = rawProposal.content || {};
+  const rawProjectInfo = rawContent.projectInfo || {};
+  const rawClientInfo = rawContent.clientInfo || {};
+
+  // Normalize projectInfo: handle partner API snake_case → frontend camelCase
+  const normalizedProjectInfo = {
+    ...rawProjectInfo,
+    size: rawProjectInfo.size
+      || (rawProjectInfo.system_size_kwp ? String(rawProjectInfo.system_size_kwp) : '')
+      || (rawProposal.system_size_kwp ? String(rawProposal.system_size_kwp) : ''),
+    commissionDate: rawProjectInfo.commissionDate
+      || rawProjectInfo.commissioning_date
+      || '',
+    isMultiPhase: rawProjectInfo.isMultiPhase || false,
+    additionalNotes: rawProjectInfo.additionalNotes || '',
+  };
+
+  // Normalize clientInfo: handle partner API snake_case company_name → camelCase companyName
+  const normalizedClientInfo = {
+    ...rawClientInfo,
+    name: rawClientInfo.name
+      || `${rawClientInfo.first_name || ''} ${rawClientInfo.last_name || ''}`.trim()
+      || '',
+    companyName: rawClientInfo.companyName || rawClientInfo.company_name || '',
+  };
+
   return {
     id: rawProposal.id,
     title: rawProposal.title || `Project ${rawProposal.id}`,
     status: rawProposal.status,
-    content: rawProposal.content || {},
+    content: {
+      ...rawContent,
+      clientInfo: normalizedClientInfo,
+      projectInfo: normalizedProjectInfo,
+    },
     created_at: rawProposal.created_at,
     signed_at: rawProposal.signed_at,
     archived_at: rawProposal.archived_at,
