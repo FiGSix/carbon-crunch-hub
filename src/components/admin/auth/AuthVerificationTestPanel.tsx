@@ -81,8 +81,9 @@ export function AuthVerificationTestPanel() {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    navigator.clipboard.writeText(text)
+      .then(() => toast.success("Copied to clipboard"))
+      .catch(() => toast.error("Could not copy — please copy manually"));
   };
 
   return (

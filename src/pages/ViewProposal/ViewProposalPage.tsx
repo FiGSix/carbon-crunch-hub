@@ -60,7 +60,11 @@ const ViewProposalPage = () => {
       });
       
       // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname);
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        // Silently ignored — history API blocked in sandboxed WebView/in-app browsers
+      }
       
       // Force a proposal refresh to ensure latest data
       if (viewProposalLogic.id) {
