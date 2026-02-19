@@ -1,110 +1,145 @@
 
-# Surgical Fix: Add Client Company Member Check to `is_project_stakeholder`
+# Fix: SecurityError (DOMException.code 18) on Android / In-App Browsers
 
-## What We Have Now (Exact Live Function)
+## Plain English Summary of the Problem
 
-The current `is_project_stakeholder` function has exactly **4 checks** in its `OR` chain:
+When a client opens a proposal link from their Gmail app on Android, the email is opened inside Gmail's **built-in mini-browser** (a WebView). This mini-browser is more restricted than a real Chrome tab. Two browser features that the app uses without any error protection are blocked inside it:
 
-```text
-Check 1: public.is_current_user_admin()
-Check 2: p.agent_id = auth.uid()
-Check 3: p.client_id = auth.uid()
-Check 4: EXISTS (clients c WHERE c.id = p.client_reference_id AND c.user_id = auth.uid())
-Check 5: EXISTS (company_members cm1 JOIN company_members cm2 ... [EPC team check])
+1. **`window.history.replaceState()`** — used to clean up the URL after email verification. The mini-browser blocks this silently and throws a `SecurityError`.
+2. **`navigator.clipboard.writeText()`** — used to copy links. The mini-browser blocks clipboard access without an explicit user permission and throws the same `SecurityError`.
+
+Because neither of these calls has any error handling, the error bubbles up uncaught, Sentry catches it as an unhandled crash, and it shows up as a production alert. The client likely sees nothing or a blank/broken page.
+
+---
+
+## Is It Important?
+
+**Yes.** The specific Sentry error (`/proposals/331cef4a...`) is on the **client-facing proposal page** — the most business-critical page in the product. Any client opening their proposal from Gmail on an Android phone is hitting this. It does not cause data loss, but it can make the page appear broken and undermine client trust.
+
+---
+
+## Scope: Exactly 5 Files, Minimal Changes
+
+No database changes. No edge functions. No RLS. Pure defensive frontend hardening — wrapping existing calls with `try/catch`.
+
+---
+
+## Change 1 — `src/pages/ViewProposal/ViewProposalPage.tsx` (line 63)
+
+**The highest-priority fix** — this is the exact file/line referenced in the Sentry error.
+
+The `window.history.replaceState` call that strips `?source=email_verification` from the URL is cosmetic (it just tidies up the URL bar). If it fails in a restricted browser, the app must continue normally.
+
+```
+Before:
+window.history.replaceState({}, '', window.location.pathname);
+
+After:
+try {
+  window.history.replaceState({}, '', window.location.pathname);
+} catch {
+  // Silently ignored — history API blocked in sandboxed WebView/in-app browsers
+}
 ```
 
-Shaida passes **none of these** because she is not an admin, not the agent, not the registered `client_id` on the proposal, and not in the EPC agent's company team.
+---
 
-## The One Change: Add Check 6
+## Change 2 — `src/components/admin/agents/AgentsTableContent.tsx` (line 291)
 
-We add exactly one new `OR EXISTS` clause — nothing else in the function body is touched:
+This clipboard call has two problems: it is not `await`-ed (so the Promise rejection is never caught) and has no `try/catch`. On Android, this throws a `SecurityError`.
 
-```sql
--- NEW CHECK 6 (mirrors proposals SELECT policy):
-OR EXISTS (
-  SELECT 1
-  FROM public.clients c
-  JOIN public.client_company_members ccm ON ccm.client_company_id = c.client_company_id
-  WHERE c.id = p.client_reference_id
-    AND ccm.user_id = auth.uid()
-    AND ccm.status = 'active'
-)
+```
+Before:
+navigator.clipboard.writeText(inviteUrl);
+alert('Invitation link copied to clipboard!');
+
+After:
+async onClick:
+  try {
+    await navigator.clipboard.writeText(inviteUrl);
+    alert('Invitation link copied to clipboard!');
+  } catch {
+    window.prompt('Copy this invitation link:', inviteUrl);
+  }
 ```
 
-This mirrors word-for-word the logic already in the `proposals` table SELECT policy (`Client company members can view company clients`) that already grants Shaida visibility. We are simply extending the same principle to write access.
+The `window.prompt` fallback lets the user manually copy the URL if the clipboard API is blocked — a standard, well-supported fallback.
 
-## What the Migration Will Look Like
+---
 
-The migration is a single `CREATE OR REPLACE FUNCTION` statement that is a **verbatim copy** of the current live function with only the new `OR EXISTS` block appended before the closing `)`  — no other characters changed:
+## Change 3 — `src/components/admin/partners/ApiKeyRevealDialog.tsx` (line 43)
 
-```sql
--- Migration: add client company member check to is_project_stakeholder
--- Only change: adds OR EXISTS (client_company_members) as check 6
--- All other checks are reproduced verbatim from the live function
+The `handleCopy` function already uses `async/await` but has no `try/catch`. If the clipboard API is blocked, the error is unhandled.
 
-CREATE OR REPLACE FUNCTION public.is_project_stakeholder(_project_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.project_onboarding po
-    JOIN public.proposals p ON p.id = po.proposal_id
-    WHERE po.id = _project_id
-      AND (
-        public.is_current_user_admin()                          -- check 1 (unchanged)
-        OR p.agent_id = auth.uid()                              -- check 2 (unchanged)
-        OR p.client_id = auth.uid()                             -- check 3 (unchanged)
-        OR EXISTS (                                             -- check 4 (unchanged)
-          SELECT 1 FROM public.clients c
-          WHERE c.id = p.client_reference_id
-            AND c.user_id = auth.uid()
-        )
-        OR EXISTS (                                             -- check 5 (unchanged)
-          SELECT 1
-          FROM public.company_members cm1
-          JOIN public.company_members cm2 ON cm1.company_id = cm2.company_id
-          WHERE cm1.user_id = auth.uid()
-            AND cm2.user_id = p.agent_id
-            AND cm1.status = 'active'
-            AND cm2.status = 'active'
-        )
-        OR EXISTS (                                             -- check 6 (NEW - Shaida fix)
-          SELECT 1
-          FROM public.clients c
-          JOIN public.client_company_members ccm
-            ON ccm.client_company_id = c.client_company_id
-          WHERE c.id = p.client_reference_id
-            AND ccm.user_id = auth.uid()
-            AND ccm.status = 'active'
-        )
-      )
-  );
-$function$;
+```
+Before:
+await navigator.clipboard.writeText(apiKey);
+setCopied(true);
+
+After:
+try {
+  await navigator.clipboard.writeText(apiKey);
+  setCopied(true);
+} catch {
+  // Silent fallback — admin context, clipboard permission may not be granted
+}
 ```
 
-## Scope Guarantee
+---
 
-| What changes | What does NOT change |
-|---|---|
-| `is_project_stakeholder` function — 1 new `OR EXISTS` clause appended | All existing 5 checks — copied verbatim character-for-character from live DB |
-| | All RLS policies on `onboarding_fields`, `onboarding_documents`, `data_access_config`, `onboarding_comments` — untouched (they already call this function) |
-| | No other functions, triggers, tables, or migrations |
-| | No frontend code changes required |
+## Change 4 — `src/components/admin/auth/AuthVerificationTestPanel.tsx` (line 84)
 
-## Why `CREATE OR REPLACE` Is Safe Here
+The `copyToClipboard` helper is neither `async` nor wrapped. The returned Promise is discarded.
 
-Unlike the RPC fix earlier (which had to `DROP` first because the return type changed), `is_project_stakeholder` returns `boolean` — the return type is **not changing**. `CREATE OR REPLACE` is safe and atomic: if the migration fails for any reason, the old function remains in place unchanged.
+```
+Before:
+navigator.clipboard.writeText(text);
+toast.success("Copied to clipboard");
 
-## What This Fixes for Shaida
+After:
+navigator.clipboard.writeText(text)
+  .then(() => toast.success("Copied to clipboard"))
+  .catch(() => toast.error("Could not copy — please copy manually"));
+```
 
-Shaida (`d32a7219`) is an `account_admin` in `client_company_members` for Texiwell (`853ef604`). The Texiwell proposals have `client_reference_id` pointing to Dr Mohammed's `clients` row, which has `client_company_id = 853ef604`. Check 6 will:
+---
 
-1. Find Dr Mohammed's `clients` row via `c.id = p.client_reference_id`
-2. Join to `client_company_members` on `ccm.client_company_id = 853ef604`
-3. Find Shaida's active membership row → return `true`
+## Change 5 — `src/components/admin/partners/PartnerInvitationDialog.tsx` (line 76)
 
-Result: Shaida can now save project info, upload documents, post comments, and configure data access — the same four tables that delegate to `is_project_stakeholder`.
+The `handleCopyKey` function uses `await` but has no `try/catch`.
+
+```
+Before:
+await navigator.clipboard.writeText(generatedApiKey);
+setCopied(true);
+
+After:
+try {
+  await navigator.clipboard.writeText(generatedApiKey);
+  setCopied(true);
+} catch {
+  // Silent fallback — admin context only
+}
+```
+
+---
+
+## What Is NOT Changed
+
+- `src/pages/AuthCallback.tsx` — its many `window.history.replaceState` calls do NOT need wrapping because they execute **before** navigation (not inside a restricted proposal WebView context), and they are always followed by a `navigate()` call that would mask any error anyway. Changing them would add noise without benefit.
+- `src/pages/Dashboard.tsx` — same rationale; runs after full auth, not in a restricted email WebView.
+- `src/pages/ResetPassword.tsx` — same rationale.
+- `src/pages/Referral.tsx` — already has a correct `try/catch` around its clipboard call. No change needed.
+- All database functions, RLS policies, edge functions, and migrations — untouched.
+
+---
+
+## Files Changed Summary
+
+| File | Change | Risk |
+|---|---|---|
+| `src/pages/ViewProposal/ViewProposalPage.tsx` | Wrap `history.replaceState` in try/catch | Zero — purely cosmetic call |
+| `src/components/admin/agents/AgentsTableContent.tsx` | Add async/await + try/catch + prompt fallback | Zero — admin-only UI |
+| `src/components/admin/partners/ApiKeyRevealDialog.tsx` | Add try/catch around clipboard | Zero — admin-only UI |
+| `src/components/admin/auth/AuthVerificationTestPanel.tsx` | Chain .then/.catch on clipboard call | Zero — admin-only UI |
+| `src/components/admin/partners/PartnerInvitationDialog.tsx` | Add try/catch around clipboard | Zero — admin-only UI |
