@@ -1,193 +1,110 @@
 
-# Fix: Partner API Proposals Display Identically to Normal Proposals
+# Surgical Fix: Add Client Company Member Check to `is_project_stakeholder`
 
-## Root Cause Analysis
+## What We Have Now (Exact Live Function)
 
-There are **three separate bugs** all caused by the same underlying issue: the partner API stores data in a different shape than the normal proposal creation flow expects.
+The current `is_project_stakeholder` function has exactly **4 checks** in its `OR` chain:
 
-### Bug 1 — System Size Shows "0 kWp"
-
-The `ProposalDetails` component reads `projectInfo.size` (a string, e.g. `"3.6"`) to render the system size and to decide whether to show the `CarbonCreditSection` and `RevenueDistributionSection`:
-
-```typescript
-// ProposalDetails.tsx line 114
-{(projectInfo.size || ...) && (
-  <CarbonCreditSection systemSize={projectInfo.size || ...} />
-)}
+```text
+Check 1: public.is_current_user_admin()
+Check 2: p.agent_id = auth.uid()
+Check 3: p.client_id = auth.uid()
+Check 4: EXISTS (clients c WHERE c.id = p.client_reference_id AND c.user_id = auth.uid())
+Check 5: EXISTS (company_members cm1 JOIN company_members cm2 ... [EPC team check])
 ```
 
-The partner API stores size in `content.projectInfo.system_size_kwp` (a number) and also uses `commissioning_date` (snake_case) instead of `commissionDate` (camelCase):
+Shaida passes **none of these** because she is not an admin, not the agent, not the registered `client_id` on the proposal, and not in the EPC agent's company team.
 
-```json
-// Partner API stores:
-"projectInfo": {
-  "system_size_kwp": 3.6,       ← number, not "size" string
-  "commissioning_date": "2022-10-18",  ← snake_case
-  "name": "Mario Solar Home",
-  "address": "19 Chris Erwee Close..."
-}
-```
+## The One Change: Add Check 6
 
-Normal proposals store:
-```json
-"projectInfo": {
-  "size": "3.6",              ← string key "size"
-  "commissionDate": "2022-10-18",  ← camelCase
-  ...
-}
-```
-
-Because `projectInfo.size` is `undefined` for partner proposals, the `CarbonCreditSection` and `RevenueDistributionSection` are **never rendered** — so the proposal shows no carbon credit data and no revenue figures.
-
-### Bug 2 — The RPC Doesn't Return `system_size_kwp` or `project_info`
-
-The `get_proposal_by_token_direct` database function (used for token-based access) only returns:
-
-```
-id, title, status, content, agent_id, client_id, client_reference_id,
-signed_at, created_at, archived_at, review_later_until, is_preview,
-preview_of_id, client_email, invitation_token, invitation_expires_at,
-annual_energy, carbon_credits, client_share_percentage
-```
-
-It is **missing** `system_size_kwp` and `project_info`. Even if the content normalization was fixed, a token-accessed partner proposal would still show `0 kWp` because `system_size_kwp` is never returned from the RPC.
-
-### Bug 3 — Client Name Is Blank / Partial
-
-The partner API sends client data with separate `first_name` / `last_name` fields alongside a `name` field:
-
-```json
-"clientInfo": {
-  "first_name": "Mario",
-  "last_name": "Morelli",
-  "name": "Mario Morelli",
-  "email": "...",
-  "phone": "..."
-}
-```
-
-This part actually works (the `name` field is present), so client name displays correctly. However `companyName` is stored as `company_name` in the partner payload which means company doesn't display. Minor issue.
-
----
-
-## The Fix — Three Parts
-
-### Fix 1 — Normalize Partner API Content on Creation (Edge Function)
-
-**File:** `supabase/functions/partner-api/index.ts` (~line 583)
-
-When building `content` to insert into the proposals table, normalize the `projectInfo` shape to match what the frontend expects:
-
-```typescript
-// BEFORE (current — partner API format):
-content: {
-  clientInfo: data.client,  // has first_name, last_name, company_name (snake_case)
-  projectInfo: data.project, // has system_size_kwp, commissioning_date (snake_case)
-},
-
-// AFTER (normalized — frontend expects):
-content: {
-  clientInfo: {
-    name: `${data.client.first_name} ${data.client.last_name}`.trim(),
-    email: data.client.email,
-    phone: data.client.phone || '',
-    companyName: data.client.company_name || '',  // camelCase
-  },
-  projectInfo: {
-    name: data.project.name,
-    address: data.project.address,
-    size: String(data.project.system_size_kwp),  // "size" string key
-    commissionDate: data.project.commissioning_date, // camelCase
-    isMultiPhase: false,
-    additionalNotes: '',
-  },
-},
-```
-
-This ensures all **new** partner proposals display correctly going forward.
-
-### Fix 2 — Add `system_size_kwp` and `project_info` to the Token RPC
-
-**File:** Database migration — `supabase/migrations/[timestamp]_fix_proposal_token_rpc.sql`
-
-Update `get_proposal_by_token_direct` to also return `system_size_kwp` and `project_info`:
+We add exactly one new `OR EXISTS` clause — nothing else in the function body is touched:
 
 ```sql
-ALTER FUNCTION get_proposal_by_token_direct ... 
--- Add to RETURNS TABLE:
-system_size_kwp numeric,
-project_info jsonb,
--- Add to SELECT:
-p.system_size_kwp,
-p.project_info,
+-- NEW CHECK 6 (mirrors proposals SELECT policy):
+OR EXISTS (
+  SELECT 1
+  FROM public.clients c
+  JOIN public.client_company_members ccm ON ccm.client_company_id = c.client_company_id
+  WHERE c.id = p.client_reference_id
+    AND ccm.user_id = auth.uid()
+    AND ccm.status = 'active'
+)
 ```
 
-Then update `transformToProposalData` in the frontend to map `system_size_kwp` from the RPC response (it already maps it from direct DB queries, but the RPC shape is missing it).
+This mirrors word-for-word the logic already in the `proposals` table SELECT policy (`Client company members can view company clients`) that already grants Shaida visibility. We are simply extending the same principle to write access.
 
-### Fix 3 — Normalize `projectInfo` in `transformToProposalData`
+## What the Migration Will Look Like
 
-**File:** `src/utils/proposals/simplifiedTransformers.ts`
+The migration is a single `CREATE OR REPLACE FUNCTION` statement that is a **verbatim copy** of the current live function with only the new `OR EXISTS` block appended before the closing `)`  — no other characters changed:
 
-After fetching, normalize `content.projectInfo` to handle both partner API format and normal format:
+```sql
+-- Migration: add client company member check to is_project_stakeholder
+-- Only change: adds OR EXISTS (client_company_members) as check 6
+-- All other checks are reproduced verbatim from the live function
 
-```typescript
-export function transformToProposalData(rawProposal: any): ProposalData {
-  const rawContent = rawProposal.content || {};
-  const rawProjectInfo = rawContent.projectInfo || {};
-
-  // Normalize projectInfo to always use frontend camelCase format
-  const normalizedProjectInfo = {
-    ...rawProjectInfo,
-    // Handle partner API snake_case → camelCase
-    size: rawProjectInfo.size 
-      || (rawProjectInfo.system_size_kwp ? String(rawProjectInfo.system_size_kwp) : '')
-      || (rawProposal.system_size_kwp ? String(rawProposal.system_size_kwp) : ''),
-    commissionDate: rawProjectInfo.commissionDate 
-      || rawProjectInfo.commissioning_date 
-      || '',
-    companyName: rawProjectInfo.companyName || rawProjectInfo.company_name || '',
-    isMultiPhase: rawProjectInfo.isMultiPhase || false,
-    additionalNotes: rawProjectInfo.additionalNotes || '',
-  };
-
-  // Normalize clientInfo camelCase
-  const rawClientInfo = rawContent.clientInfo || {};
-  const normalizedClientInfo = {
-    ...rawClientInfo,
-    name: rawClientInfo.name 
-      || `${rawClientInfo.first_name || ''} ${rawClientInfo.last_name || ''}`.trim(),
-    companyName: rawClientInfo.companyName || rawClientInfo.company_name || '',
-  };
-
-  return {
-    ...existing fields,
-    content: {
-      ...rawContent,
-      clientInfo: normalizedClientInfo,
-      projectInfo: normalizedProjectInfo,
-    },
-    system_size_kwp: rawProposal.system_size_kwp,
-    // ...
-  };
-}
+CREATE OR REPLACE FUNCTION public.is_project_stakeholder(_project_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.project_onboarding po
+    JOIN public.proposals p ON p.id = po.proposal_id
+    WHERE po.id = _project_id
+      AND (
+        public.is_current_user_admin()                          -- check 1 (unchanged)
+        OR p.agent_id = auth.uid()                              -- check 2 (unchanged)
+        OR p.client_id = auth.uid()                             -- check 3 (unchanged)
+        OR EXISTS (                                             -- check 4 (unchanged)
+          SELECT 1 FROM public.clients c
+          WHERE c.id = p.client_reference_id
+            AND c.user_id = auth.uid()
+        )
+        OR EXISTS (                                             -- check 5 (unchanged)
+          SELECT 1
+          FROM public.company_members cm1
+          JOIN public.company_members cm2 ON cm1.company_id = cm2.company_id
+          WHERE cm1.user_id = auth.uid()
+            AND cm2.user_id = p.agent_id
+            AND cm1.status = 'active'
+            AND cm2.status = 'active'
+        )
+        OR EXISTS (                                             -- check 6 (NEW - Shaida fix)
+          SELECT 1
+          FROM public.clients c
+          JOIN public.client_company_members ccm
+            ON ccm.client_company_id = c.client_company_id
+          WHERE c.id = p.client_reference_id
+            AND ccm.user_id = auth.uid()
+            AND ccm.status = 'active'
+        )
+      )
+  );
+$function$;
 ```
 
----
+## Scope Guarantee
 
-## What This Fixes for the Existing "Mario Solar Home" Proposal
-
-The Mario Solar Home proposal (`176b0b3c`) is already `approved` and has the data correctly stored in `system_size_kwp = 3.6` and `carbon_credits = 6.11`. The fix to `transformToProposalData` (Fix 3) means that when this proposal is loaded, it will correctly read `content.projectInfo.system_size_kwp = 3.6` → normalize to `size = "3.6"` → render the `CarbonCreditSection` and `RevenueDistributionSection` properly.
-
----
-
-## Files to Change
-
-| File | Change |
+| What changes | What does NOT change |
 |---|---|
-| `supabase/functions/partner-api/index.ts` | Normalize `content.clientInfo` and `content.projectInfo` to camelCase frontend format at creation time (Fix 1) |
-| `supabase/migrations/[ts]_fix_proposal_token_rpc.sql` | Add `system_size_kwp` and `project_info` to `get_proposal_by_token_direct` return columns (Fix 2) |
-| `src/utils/proposals/simplifiedTransformers.ts` | Normalize `projectInfo` and `clientInfo` in `transformToProposalData` to handle both partner API snake_case and normal camelCase formats (Fix 3) |
+| `is_project_stakeholder` function — 1 new `OR EXISTS` clause appended | All existing 5 checks — copied verbatim character-for-character from live DB |
+| | All RLS policies on `onboarding_fields`, `onboarding_documents`, `data_access_config`, `onboarding_comments` — untouched (they already call this function) |
+| | No other functions, triggers, tables, or migrations |
+| | No frontend code changes required |
 
-Fix 3 is the most impactful — it makes the existing approved "Mario Solar Home" proposal display correctly immediately. Fixes 1 and 2 ensure all future partner proposals work correctly at creation and token-access time.
+## Why `CREATE OR REPLACE` Is Safe Here
 
-No schema changes are required. No new tables are needed.
+Unlike the RPC fix earlier (which had to `DROP` first because the return type changed), `is_project_stakeholder` returns `boolean` — the return type is **not changing**. `CREATE OR REPLACE` is safe and atomic: if the migration fails for any reason, the old function remains in place unchanged.
+
+## What This Fixes for Shaida
+
+Shaida (`d32a7219`) is an `account_admin` in `client_company_members` for Texiwell (`853ef604`). The Texiwell proposals have `client_reference_id` pointing to Dr Mohammed's `clients` row, which has `client_company_id = 853ef604`. Check 6 will:
+
+1. Find Dr Mohammed's `clients` row via `c.id = p.client_reference_id`
+2. Join to `client_company_members` on `ccm.client_company_id = 853ef604`
+3. Find Shaida's active membership row → return `true`
+
+Result: Shaida can now save project info, upload documents, post comments, and configure data access — the same four tables that delegate to `is_project_stakeholder`.
