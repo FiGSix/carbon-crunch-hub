@@ -20,6 +20,7 @@ import { useOnboardingValidation } from "@/hooks/useOnboardingValidation";
 import { FormError } from "@/components/ui/form-error";
 import { ValidationSummary } from "@/components/onboarding/ValidationSummary";
 import { cn } from "@/lib/utils";
+import { calculateAnnualEnergy, calculateCarbonCredits } from "@/services/calculations/carbon/calculations";
 
 interface SolarInstaller {
   id: string;
@@ -367,8 +368,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       if (error) throw error;
 
-      // Cascade sync system_name to proposals table
-      if (formData.system_name) {
+      // Cascade sync system_name AND panel_total_kwp to proposals table
+      const shouldSync = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0);
+      if (shouldSync) {
         const { data: projectData } = await supabase
           .from('project_onboarding')
           .select('proposal_id')
@@ -376,25 +378,33 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .single();
 
         if (projectData?.proposal_id) {
-          const { data: proposalData } = await supabase
-            .from('proposals')
-            .select('project_info')
-            .eq('id', projectData.proposal_id)
-            .single();
+          const updatePayload: Record<string, any> = {};
 
-          const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
-          const updatedProjectInfo = {
-            ...currentProjectInfo,
-            name: formData.system_name
-          };
+          if (formData.system_name) {
+            const { data: proposalData } = await supabase
+              .from('proposals')
+              .select('project_info')
+              .eq('id', projectData.proposal_id)
+              .single();
 
-          await supabase
-            .from('proposals')
-            .update({
-              title: formData.system_name,
-              project_info: updatedProjectInfo
-            })
-            .eq('id', projectData.proposal_id);
+            const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
+            updatePayload.title = formData.system_name;
+            updatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
+          }
+
+          if (formData.panel_total_kwp && formData.panel_total_kwp > 0) {
+            const newSizeKwp = formData.panel_total_kwp;
+            updatePayload.system_size_kwp = newSizeKwp;
+            updatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
+            updatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
+          }
+
+          if (Object.keys(updatePayload).length > 0) {
+            await supabase
+              .from('proposals')
+              .update(updatePayload)
+              .eq('id', projectData.proposal_id);
+          }
         }
       }
 
@@ -463,7 +473,47 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       logger.info("Fields saved successfully, validating", { projectId });
 
-      // Validate completion using RPC function
+      // Cascade sync system_name AND panel_total_kwp to proposals table
+      const shouldSyncProposal = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0);
+      if (shouldSyncProposal) {
+        const { data: projectOnboardingData } = await supabase
+          .from('project_onboarding')
+          .select('proposal_id')
+          .eq('id', projectId)
+          .single();
+
+        if (projectOnboardingData?.proposal_id) {
+          const proposalUpdatePayload: Record<string, any> = {};
+
+          if (formData.system_name) {
+            const { data: proposalData } = await supabase
+              .from('proposals')
+              .select('project_info')
+              .eq('id', projectOnboardingData.proposal_id)
+              .single();
+
+            const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
+            proposalUpdatePayload.title = formData.system_name;
+            proposalUpdatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
+          }
+
+          if (formData.panel_total_kwp && formData.panel_total_kwp > 0) {
+            const newSizeKwp = formData.panel_total_kwp;
+            proposalUpdatePayload.system_size_kwp = newSizeKwp;
+            proposalUpdatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
+            proposalUpdatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
+          }
+
+          if (Object.keys(proposalUpdatePayload).length > 0) {
+            await supabase
+              .from('proposals')
+              .update(proposalUpdatePayload)
+              .eq('id', projectOnboardingData.proposal_id);
+          }
+        }
+      }
+
+
       const { data: isValid, error: validationError } = await supabase
         .rpc('validate_onboarding_completion', { 
           project_id_param: projectId 
