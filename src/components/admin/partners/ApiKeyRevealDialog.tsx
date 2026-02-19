@@ -40,9 +40,13 @@ export function ApiKeyRevealDialog({ apiKey, onClose }: ApiKeyRevealDialogProps)
 
   const handleCopy = async () => {
     if (apiKey) {
-      await navigator.clipboard.writeText(apiKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await navigator.clipboard.writeText(apiKey);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Silent fallback — admin context, clipboard permission may not be granted
+      }
     }
   };
 

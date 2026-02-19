@@ -73,9 +73,13 @@ export function PartnerInvitationDialog({ open, onOpenChange, onSuccess }: Partn
 
   const handleCopyKey = async () => {
     if (generatedApiKey) {
-      await navigator.clipboard.writeText(generatedApiKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await navigator.clipboard.writeText(generatedApiKey);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Silent fallback — admin context only
+      }
     }
   };
 

@@ -286,10 +286,14 @@ export function AgentsTableContent({
                             Resend Invitation
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => {
+                            onClick={async () => {
                               const inviteUrl = `${window.location.origin}/register?role=agent&token=${agent.invitation_token}`;
-                              navigator.clipboard.writeText(inviteUrl);
-                              alert('Invitation link copied to clipboard!');
+                              try {
+                                await navigator.clipboard.writeText(inviteUrl);
+                                alert('Invitation link copied to clipboard!');
+                              } catch {
+                                window.prompt('Copy this invitation link:', inviteUrl);
+                              }
                             }}
                           >
                             <Copy className="h-4 w-4 mr-2" />
