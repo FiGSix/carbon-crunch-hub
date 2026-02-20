@@ -1,118 +1,80 @@
 
-# Fix: Sync Onboarding System Size Back to the Proposal
+# Fix: Shaida Cannot Save Onboarding Fields — Stale RLS Policy
 
-## The Problem in Plain English
+## Root Cause — Plain English
 
-When an agent creates a proposal, they estimate the solar system size (e.g., 20 kWp). That estimate gets stored in `proposals.system_size_kwp` and immediately drives revenue projections, carbon credit calculations, and PDF output.
+There are two different "door locks" in the database for who can write to onboarding fields:
 
-Later, during onboarding, the actual installed system size is confirmed. It is stored in `onboarding_fields.panel_total_kwp`. But that confirmed number is **never written back** to `proposals.system_size_kwp`. The proposal — and everything that reads from it — stays frozen at the original estimate forever, even if the real size is different.
+1. **The shared function** (`is_project_stakeholder`) — this was updated to recognise Shaida as a company co-admin for Texiwell Investments. It correctly returns `true` for her.
+2. **The `onboarding_fields` table's own write policy** — this uses an old, hard-coded copy of the access check that was never updated. It is missing the company membership check entirely. This is what Shaida hits when she tries to save.
 
----
-
-## What Currently Syncs vs. What Does Not
-
-| Onboarding Field | Proposal Field | Currently Syncs? |
-|---|---|---|
-| `system_name` | `proposals.title` + `project_info.name` | YES |
-| `panel_total_kwp` | `proposals.system_size_kwp` | **NO** |
-| `panel_total_kwp` | `proposals.annual_energy` | **NO** |
-| `panel_total_kwp` | `proposals.carbon_credits` | **NO** |
+Because the table policy is stale, the database rejects her write with `"new row violates row-level security policy for table onboarding_fields"`. The error has been firing at `08:13` and `08:17` UTC this morning.
 
 ---
 
-## What Reads From `proposals.system_size_kwp`
+## Evidence
 
-Fixing this is important because the following all read from the proposal, not from onboarding fields:
-
-- **Revenue Tab** (`RevenueTab.tsx`) — uses `proposal.system_size_kwp` to calculate 20-year revenue projections shown to the client
-- **Overview Tab** (`OverviewTab.tsx`) — displays system size as `{proposal.system_size_kwp} kWp`
-- **PDF / Proposal document** — generated from proposal data
-- **Dashboard portfolio totals** — sum `system_size_kwp` across all proposals for portfolio tier calculations
-
----
-
-## The Fix
-
-### Location: `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`
-
-The existing `handleSaveDraft` function (lines 352–417) already has a cascade sync block for `system_name`. The fix extends that same block to also sync `panel_total_kwp` → `proposals.system_size_kwp`, and recalculate `annual_energy` and `carbon_credits` from the new size.
-
-The `handleValidateAndComplete` function (lines 419–571) also saves fields before completing — it must perform the same sync, since admins often complete onboarding without calling Save Draft first.
-
-### Exact Change to `handleSaveDraft`
-
-```
-Before (lines 370–399):
-// Cascade sync system_name to proposals table
-if (formData.system_name) {
-  ...
-  await supabase
-    .from('proposals')
-    .update({
-      title: formData.system_name,
-      project_info: updatedProjectInfo
-    })
-    .eq('id', projectData.proposal_id);
-}
-
-After:
-// Cascade sync system_name AND panel_total_kwp to proposals table
-const shouldSync = formData.system_name || formData.panel_total_kwp;
-if (shouldSync) {
-  const { data: projectData } = await supabase
-    .from('project_onboarding')
-    .select('proposal_id')
-    .eq('id', projectId)
-    .single();
-
-  if (projectData?.proposal_id) {
-    const updatePayload: Record<string, any> = {};
-
-    if (formData.system_name) {
-      const { data: proposalData } = await supabase
-        .from('proposals')
-        .select('project_info')
-        .eq('id', projectData.proposal_id)
-        .single();
-
-      const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
-      updatePayload.title = formData.system_name;
-      updatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
-    }
-
-    if (formData.panel_total_kwp) {
-      const newSizeKwp = formData.panel_total_kwp;
-      updatePayload.system_size_kwp = newSizeKwp;
-      updatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
-      updatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
-    }
-
-    if (Object.keys(updatePayload).length > 0) {
-      await supabase
-        .from('proposals')
-        .update(updatePayload)
-        .eq('id', projectData.proposal_id);
-    }
-  }
-}
-```
-
-### Same Logic Added to `handleValidateAndComplete`
-
-After the fields upsert succeeds (line ~462), the same proposal sync block will be added — so that when an admin clicks "Validate & Complete" without having pressed Save Draft first, the proposal still gets the updated size.
-
----
-
-## Important Guardrails
-
-The fix will only sync when `panel_total_kwp` is a positive number, to prevent accidentally zeroing out a proposal that hasn't had panel data entered yet. There is no automatic recalculation of `client_share_percentage` or `agent_commission_percentage` — those tier-based values involve portfolio-wide lookups and are intentionally left unchanged (they were set at proposal creation and should only change via admin override).
-
----
-
-## Files Changed
-
-| File | Change |
+| Detail | Value |
 |---|---|
-| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Extend `handleSaveDraft` and `handleValidateAndComplete` to sync `panel_total_kwp` → `proposals.system_size_kwp`, `annual_energy`, `carbon_credits` |
+| Shaida's user ID | `d32a7219-...` |
+| Shaida's role | `client` |
+| Her company | Texiwell Investments (company ID `853ef604`) |
+| Her membership | `account_admin`, `active` in Texiwell |
+| Project client | Dr Mohammed Essa (company ID `853ef604`) — same company |
+| `is_project_stakeholder()` check 6 result | **PASSES** ✓ |
+| `onboarding_fields` RLS policy check | **FAILS** — missing check 6 |
+| DB error logged | `new row violates row-level security policy for table "onboarding_fields"` at 08:13 and 08:17 UTC |
 
-No database migrations. No RLS changes. No edge functions. One file, two functions.
+The `onboarding_fields` RLS policy uses an inline 5-check query. The `is_project_stakeholder()` function has 6 checks. The 6th check (client company membership) is what Shaida qualifies under. The policy never got the 6th check added.
+
+---
+
+## The Fix — One Database Migration
+
+Replace the two stale inline RLS policies on `onboarding_fields` with the canonical `is_project_stakeholder()` function call — the same pattern used correctly on `data_access_config`, `onboarding_documents`, `onboarding_comments`, and `onboarding_activity_log`.
+
+### SQL to Execute
+
+```sql
+-- Drop the stale policies on onboarding_fields
+DROP POLICY IF EXISTS "Stakeholders can update fields" ON public.onboarding_fields;
+DROP POLICY IF EXISTS "Users can view project fields" ON public.onboarding_fields;
+
+-- Recreate with canonical is_project_stakeholder() function
+CREATE POLICY "Stakeholders can manage onboarding fields"
+  ON public.onboarding_fields
+  FOR ALL
+  USING (public.is_project_stakeholder(project_id))
+  WITH CHECK (public.is_project_stakeholder(project_id));
+
+CREATE POLICY "Stakeholders can view onboarding fields"
+  ON public.onboarding_fields
+  FOR SELECT
+  USING (public.is_project_stakeholder(project_id));
+```
+
+### Why `WITH CHECK` is Added
+
+The existing ALL policy had no explicit `WITH CHECK`. When omitted on an ALL policy, PostgreSQL uses the USING expression — but this only applies to the WHERE filter on existing rows. Adding an explicit `WITH CHECK` with the same function makes INSERT behaviour unambiguous and correct.
+
+---
+
+## Why This Is Safe
+
+- `is_project_stakeholder()` is a `SECURITY DEFINER` function — it runs with elevated privileges, so it can correctly evaluate all 6 checks even for restricted users like Shaida.
+- This is exactly the same pattern already working on `onboarding_documents`, `data_access_config`, `onboarding_comments`, and `onboarding_activity_log`.
+- Replacing the inline check with the function call does not change who has access — it only adds the missing check 6 (company co-admin) that the function already has but the inline query was missing.
+- No frontend code changes. No edge functions. No other tables.
+
+---
+
+## Scope
+
+| Layer | Change |
+|---|---|
+| Database RLS | Drop 2 stale policies, create 2 updated policies on `onboarding_fields` |
+| Frontend code | None |
+| Edge functions | None |
+| Other tables | None |
+
+One migration. Shaida can save immediately after deployment.
