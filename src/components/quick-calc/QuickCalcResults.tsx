@@ -10,7 +10,7 @@ interface QuickCalcResultsProps {
 }
 
 export const QuickCalcResults = ({ result, onReset }: QuickCalcResultsProps) => {
-  const { annualEnergyKwh, carbonCreditsPerYear, revenueByYear, systemSizeKwp, commissionDate, province } = result;
+  const { annualEnergyKwh, carbonCreditsPerYear, revenueByYear, systemSizeKwp, commissionDate, province, yieldFactor } = result;
 
   // Calculate totals
   const totalRevenue = Object.values(revenueByYear).reduce((sum, val) => sum + val, 0);
@@ -94,6 +94,9 @@ export const QuickCalcResults = ({ result, onReset }: QuickCalcResultsProps) => 
           <h2 className="text-xl font-semibold text-foreground">Revenue Forecast</h2>
           <p className="text-sm text-muted-foreground mt-1">
             {systemSizeKwp.toLocaleString()} kWp • {province} • Commission: {format(commissionDate, "MMM d, yyyy")}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Based on {province} solar yield: {yieldFactor.toLocaleString()} kWh/kWp/year
           </p>
         </div>
 

@@ -18,6 +18,7 @@ export interface QuickCalcResult {
   systemSizeKwp: number;
   commissionDate: Date;
   province: string;
+  yieldFactor: number;
 }
 
 const QuickCalc = () => {
@@ -34,11 +35,14 @@ const QuickCalc = () => {
     const { province, systemSizeKwp, commissionDate } = inputs;
 
     // Import calculation services dynamically
-    const { UnifiedCarbonService, calculateRevenueByYear } = await import('@/services/calculations/carbon');
+    const { UnifiedCarbonService, calculateRevenueByYear, getYieldForProvince } = await import('@/services/calculations/carbon');
     
-    // Calculate using first-time client tier (60.20% share)
-    const annualEnergyKwh = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKwp);
-    const carbonCreditsPerYear = UnifiedCarbonService.calculateCarbonCredits(systemSizeKwp);
+    // Get regional yield factor for the selected province
+    const yieldFactor = await getYieldForProvince(province);
+    
+    // Calculate using regional yield and first-time client tier (60.20% share)
+    const annualEnergyKwh = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKwp, yieldFactor);
+    const carbonCreditsPerYear = UnifiedCarbonService.calculateCarbonCredits(systemSizeKwp, yieldFactor);
     const clientSharePercentage = UnifiedCarbonService.getClientSharePercentage(0); // First-time client
     
     // Calculate revenue by year
@@ -55,6 +59,7 @@ const QuickCalc = () => {
       systemSizeKwp,
       commissionDate,
       province,
+      yieldFactor,
     });
     
     setIsCalculating(false);

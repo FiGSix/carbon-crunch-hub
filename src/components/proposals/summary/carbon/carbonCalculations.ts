@@ -1,8 +1,8 @@
 
 import { UnifiedCarbonService } from '@/services/calculations/carbon';
 
-export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string): number {
-  const annualEnergy = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKWp);
+export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commissionDate?: string, yieldFactor?: number): number {
+  const annualEnergy = UnifiedCarbonService.calculateAnnualEnergy(systemSizeKWp, yieldFactor);
   
   // Return 0 for years before commissioning
   if (commissionDate && year < new Date(commissionDate).getFullYear()) {
@@ -22,8 +22,8 @@ export function calculateYearlyEnergy(systemSizeKWp: number, year: number, commi
   return annualEnergy;
 }
 
-export function calculateYearlyCarbonCredits(systemSizeKWp: number, year: number, commissionDate?: string): number {
-  const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, year, commissionDate);
+export function calculateYearlyCarbonCredits(systemSizeKWp: number, year: number, commissionDate?: string, yieldFactor?: number): number {
+  const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, year, commissionDate, yieldFactor);
   return (yearlyEnergy / 1000) * 1.0334; // Convert to MWh and apply Crunch Carbon's emission factor
 }
 

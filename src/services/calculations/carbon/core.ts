@@ -11,6 +11,7 @@ import {
   calculateRevenueByYearSync
 } from './pricing';
 import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
+import { getYieldForProvince } from './regionalYields';
 
 /**
  * Main calculation method - comprehensive carbon credits and revenue calculation
@@ -33,8 +34,11 @@ export async function calculateComplete(
     throw new Error(validation.error);
   }
 
-  const annualEnergyKwh = calculateAnnualEnergy(systemSizeKwp);
-  const carbonCreditsPerYear = calculateCarbonCredits(systemSizeKwp);
+  // Get regional yield factor
+  const yieldFactor = await getYieldForProvince(specs.province);
+
+  const annualEnergyKwh = calculateAnnualEnergy(systemSizeKwp, yieldFactor);
+  const carbonCreditsPerYear = calculateCarbonCredits(systemSizeKwp, yieldFactor);
 
   const effectivePortfolioKWp = portfolioKWp || systemSizeKwp;
   const clientSharePercentage = getClientSharePercentage(effectivePortfolioKWp);
@@ -97,6 +101,9 @@ async function calculateMultiPhaseComplete(
 
   // OPTIMIZATION: Pre-fetch carbon prices once (Phase 1)
   const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
+  
+  // Get regional yield factor
+  const yieldFactor = await getYieldForProvince(specs.province);
 
   // OPTIMIZATION: Batch phase calculations using synchronous method (Phase 2)
   const phaseRevenues: PhaseRevenue[] = [];
@@ -104,8 +111,8 @@ async function calculateMultiPhaseComplete(
 
   // Calculate each phase with pre-fetched prices
   phases.forEach((phase) => {
-    const phaseAnnualEnergy = calculateAnnualEnergy(phase.sizeKWp);
-    const phaseCarbonCredits = calculateCarbonCredits(phase.sizeKWp);
+    const phaseAnnualEnergy = calculateAnnualEnergy(phase.sizeKWp, yieldFactor);
+    const phaseCarbonCredits = calculateCarbonCredits(phase.sizeKWp, yieldFactor);
     
     // Use synchronous calculation with pre-fetched prices
     const phaseRevenueByYear = calculateRevenueByYearSync(

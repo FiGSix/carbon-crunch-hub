@@ -93,8 +93,8 @@ serve(async (req: Request) => {
     }
 
     // Calculate carbon credits and annual energy
-    const annualEnergy = Math.round(systemSizeKwp * 1300);
-    const carbonCredits = parseFloat(((annualEnergy / 1000) * 0.93).toFixed(2));
+    const annualEnergy = Math.round(systemSizeKwp * 1642.50);
+    const carbonCredits = parseFloat(((annualEnergy / 1000) * 1.0334).toFixed(2));
 
     // Generate secure token (48 char random string)
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
