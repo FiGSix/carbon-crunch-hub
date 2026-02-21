@@ -53,10 +53,15 @@ describe("onboardingSchema - validateField", () => {
       expect(validateField("installer_email", null)).toBeNull();
     });
 
-    it("should return error for invalid email format", () => {
-      expect(validateField("installer_email", "invalid")).toBe("Invalid email format");
+    it("should return error for invalid email format containing @", () => {
       expect(validateField("installer_email", "test@")).toBe("Invalid email format");
       expect(validateField("installer_email", "@test.com")).toBe("Invalid email format");
+    });
+
+    it("should return null for placeholder text without @", () => {
+      expect(validateField("installer_email", "To be confirmed")).toBeNull();
+      expect(validateField("installer_email", "TBC")).toBeNull();
+      expect(validateField("installer_email", "N/A")).toBeNull();
     });
 
     it("should return null for valid email", () => {
