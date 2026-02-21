@@ -53,6 +53,7 @@ export function ProposalContent({
         isDeleted={!!proposal.deleted_at}
         proposalId={proposal.id}
         proposal={proposal as any}
+        proposalData={proposal}
         onProposalUpdate={onProposalUpdate}
       />
       

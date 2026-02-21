@@ -1,13 +1,16 @@
 
 
-import { CheckCircle2, ChevronLeft } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, ChevronLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProposalPdfButton } from "./ProposalPdfButton";
 import { SignedAgreementDownloadButton } from "./SignedAgreementDownloadButton";
 import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
+import { ProposalEditDialog } from "./ProposalEditDialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Proposal } from "@/components/proposals/types";
+import { ProposalData } from "@/types/proposals";
 
 interface ProposalHeaderProps {
   title: string;
@@ -18,6 +21,7 @@ interface ProposalHeaderProps {
   showBackButton?: boolean;
   proposalId?: string;
   proposal?: Proposal;
+  proposalData?: ProposalData;
   onProposalUpdate?: () => void;
 }
 
@@ -30,10 +34,19 @@ export function ProposalHeader({
   showBackButton = true,
   proposalId,
   proposal,
+  proposalData,
   onProposalUpdate
 }: ProposalHeaderProps) {
   const navigate = useNavigate();
-  const { userRole, profile } = useAuth();
+  const { user, userRole, profile } = useAuth();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // Determine if editing is allowed
+  const editableStatuses = ['draft', 'sent', 'pending'];
+  const canEdit = !isDeleted 
+    && proposal 
+    && editableStatuses.includes(proposal.status || '')
+    && (userRole === 'admin' || (userRole === 'agent' && proposal.agent_id === user?.id));
 
   const handleBack = () => {
     navigate('/proposals');
@@ -104,6 +117,18 @@ export function ProposalHeader({
           />
         )}
         
+        {/* Edit button - agents/admins on editable proposals */}
+        {canEdit && proposalData && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditDialogOpen(true)}
+            className="flex items-center gap-1"
+          >
+            <Pencil className="h-4 w-4" /> Edit
+          </Button>
+        )}
+
         {/* Invitation Button - Shown for agents and admins viewing proposals */}
         {proposal && (userRole === "agent" || userRole === "admin") && !isDeleted && (
           <ProposalInviteButton 
@@ -112,6 +137,16 @@ export function ProposalHeader({
           />
         )}
       </div>
+
+      {/* Edit Dialog */}
+      {canEdit && proposalData && (
+        <ProposalEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          proposal={proposalData}
+          onSaved={() => onProposalUpdate?.()}
+        />
+      )}
     </div>
   );
 }
