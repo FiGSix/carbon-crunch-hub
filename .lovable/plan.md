@@ -1,80 +1,55 @@
 
-# Fix: Shaida Cannot Save Onboarding Fields — Stale RLS Policy
+# Fix: FLM Brickworks and Cornubia Failing Validation
 
-## Root Cause — Plain English
+## The Problem
 
-There are two different "door locks" in the database for who can write to onboarding fields:
+Both projects have `installer_email` set to **"To be confirmed"** -- a placeholder that was entered when the actual installer email was not yet known.
 
-1. **The shared function** (`is_project_stakeholder`) — this was updated to recognise Shaida as a company co-admin for Texiwell Investments. It correctly returns `true` for her.
-2. **The `onboarding_fields` table's own write policy** — this uses an old, hard-coded copy of the access check that was never updated. It is missing the company membership check entirely. This is what Shaida hits when she tries to save.
+The client-side validation (which runs before submission) treats any non-empty value in `installer_email` as something that must pass an email format check. "To be confirmed" is not a valid email, so validation fails silently with an error that says "Invalid email format" on the installer email field.
 
-Because the table policy is stale, the database rejects her write with `"new row violates row-level security policy for table onboarding_fields"`. The error has been firing at `08:13` and `08:17` UTC this morning.
+The tricky part: the validation summary shows errors, but the installer email field is in the "optional fields" section and is likely scrolled out of view or easy to overlook. You see "validation error, check the marked items" but the marked field is not obvious.
 
----
+## Why This Only Affects These Projects
 
-## Evidence
+Most other projects either have a real email in `installer_email` or have it set to `null`/empty. These two legacy projects had placeholder text entered instead.
 
-| Detail | Value |
-|---|---|
-| Shaida's user ID | `d32a7219-...` |
-| Shaida's role | `client` |
-| Her company | Texiwell Investments (company ID `853ef604`) |
-| Her membership | `account_admin`, `active` in Texiwell |
-| Project client | Dr Mohammed Essa (company ID `853ef604`) — same company |
-| `is_project_stakeholder()` check 6 result | **PASSES** ✓ |
-| `onboarding_fields` RLS policy check | **FAILS** — missing check 6 |
-| DB error logged | `new row violates row-level security policy for table "onboarding_fields"` at 08:13 and 08:17 UTC |
+## The Fix
 
-The `onboarding_fields` RLS policy uses an inline 5-check query. The `is_project_stakeholder()` function has 6 checks. The 6th check (client company membership) is what Shaida qualifies under. The policy never got the 6th check added.
+**File:** `src/lib/validation/onboardingSchema.ts`
 
----
+Change the `installer_email` validation (lines 124-127) so that it only enforces email format when the value actually looks like an attempted email address. If the value doesn't contain an `@` symbol, skip validation entirely since this is an optional field and placeholder text like "To be confirmed" or "TBC" should not block submission.
 
-## The Fix — One Database Migration
-
-Replace the two stale inline RLS policies on `onboarding_fields` with the canonical `is_project_stakeholder()` function call — the same pattern used correctly on `data_access_config`, `onboarding_documents`, `onboarding_comments`, and `onboarding_activity_log`.
-
-### SQL to Execute
-
-```sql
--- Drop the stale policies on onboarding_fields
-DROP POLICY IF EXISTS "Stakeholders can update fields" ON public.onboarding_fields;
-DROP POLICY IF EXISTS "Users can view project fields" ON public.onboarding_fields;
-
--- Recreate with canonical is_project_stakeholder() function
-CREATE POLICY "Stakeholders can manage onboarding fields"
-  ON public.onboarding_fields
-  FOR ALL
-  USING (public.is_project_stakeholder(project_id))
-  WITH CHECK (public.is_project_stakeholder(project_id));
-
-CREATE POLICY "Stakeholders can view onboarding fields"
-  ON public.onboarding_fields
-  FOR SELECT
-  USING (public.is_project_stakeholder(project_id));
+**Before:**
+```typescript
+case "installer_email":
+  if (value && typeof value === "string" && value.trim() !== "") {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(value)) return "Invalid email format";
+  }
+  break;
 ```
 
-### Why `WITH CHECK` is Added
+**After:**
+```typescript
+case "installer_email":
+  if (value && typeof value === "string" && value.trim() !== "" && value.includes("@")) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(value)) return "Invalid email format";
+  }
+  break;
+```
 
-The existing ALL policy had no explicit `WITH CHECK`. When omitted on an ALL policy, PostgreSQL uses the USING expression — but this only applies to the WHERE filter on existing rows. Adding an explicit `WITH CHECK` with the same function makes INSERT behaviour unambiguous and correct.
-
----
-
-## Why This Is Safe
-
-- `is_project_stakeholder()` is a `SECURITY DEFINER` function — it runs with elevated privileges, so it can correctly evaluate all 6 checks even for restricted users like Shaida.
-- This is exactly the same pattern already working on `onboarding_documents`, `data_access_config`, `onboarding_comments`, and `onboarding_activity_log`.
-- Replacing the inline check with the function call does not change who has access — it only adds the missing check 6 (company co-admin) that the function already has but the inline query was missing.
-- No frontend code changes. No edge functions. No other tables.
-
----
+This single-character-level change (`&& value.includes("@")`) means:
+- Real email addresses still get validated for correct format
+- Placeholder text like "To be confirmed", "TBC", "N/A" passes through without blocking
+- Empty/null values continue to pass (field is optional)
 
 ## Scope
 
 | Layer | Change |
 |---|---|
-| Database RLS | Drop 2 stale policies, create 2 updated policies on `onboarding_fields` |
-| Frontend code | None |
-| Edge functions | None |
-| Other tables | None |
+| `src/lib/validation/onboardingSchema.ts` | Relax installer_email validation to skip format check on non-email placeholder text |
+| Database | None |
+| Other files | None |
 
-One migration. Shaida can save immediately after deployment.
+One line change, one file. Both projects will pass validation immediately after deployment.
