@@ -1,55 +1,107 @@
 
-# Fix: FLM Brickworks and Cornubia Failing Validation
 
-## The Problem
+# Add "Edit Proposal" to the View Page
 
-Both projects have `installer_email` set to **"To be confirmed"** -- a placeholder that was entered when the actual installer email was not yet known.
+## What This Adds
 
-The client-side validation (which runs before submission) treats any non-empty value in `installer_email` as something that must pass an email format check. "To be confirmed" is not a valid email, so validation fails silently with an error that says "Invalid email format" on the installer email field.
+An **Edit button** on the proposal view page that allows agents (for their own proposals) and admins (for any proposal) to update proposal details after creation. This avoids the current workaround of deleting and recreating proposals when something needs correcting.
 
-The tricky part: the validation summary shows errors, but the installer email field is in the "optional fields" section and is likely scrolled out of view or easy to overlook. You see "validation error, check the marked items" but the marked field is not obvious.
+---
 
-## Why This Only Affects These Projects
+## What Can Be Edited
 
-Most other projects either have a real email in `installer_email` or have it set to `null`/empty. These two legacy projects had placeholder text entered instead.
+The editable fields mirror what was entered during creation:
 
-## The Fix
+**Client Information**
+- Client name, email, phone, company name
 
-**File:** `src/lib/validation/onboardingSchema.ts`
+**Project Information**
+- Project name, address, system size (kWp), commission date, additional notes
+- Multi-phase details (if applicable)
 
-Change the `installer_email` validation (lines 124-127) so that it only enforces email format when the value actually looks like an attempted email address. If the value doesn't contain an `@` symbol, skip validation entirely since this is an optional field and placeholder text like "To be confirmed" or "TBC" should not block submission.
+**What Cannot Be Edited** (intentionally locked)
+- Eligibility criteria (these are pass/fail at creation)
+- Status (managed by approve/reject workflow)
+- Client share percentage and agent commission (set by business rules / admin override)
+- Signed agreement data
 
-**Before:**
-```typescript
-case "installer_email":
-  if (value && typeof value === "string" && value.trim() !== "") {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(value)) return "Invalid email format";
-  }
-  break;
-```
+---
 
-**After:**
-```typescript
-case "installer_email":
-  if (value && typeof value === "string" && value.trim() !== "" && value.includes("@")) {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(value)) return "Invalid email format";
-  }
-  break;
-```
+## Who Can Edit
 
-This single-character-level change (`&& value.includes("@")`) means:
-- Real email addresses still get validated for correct format
-- Placeholder text like "To be confirmed", "TBC", "N/A" passes through without blocking
-- Empty/null values continue to pass (field is optional)
+- **Agents**: Can edit their own proposals
+- **Admins**: Can edit any proposal
+- **Clients**: Cannot edit (they can only approve/reject)
 
-## Scope
+## When Editing Is Allowed
 
-| Layer | Change |
+- Proposals with status `draft`, `sent`, or `pending` can be edited freely
+- `approved` (signed) proposals cannot be edited -- a banner will explain why
+- Archived or deleted proposals cannot be edited
+
+---
+
+## How It Works (User Experience)
+
+1. Agent or admin opens a proposal from the view page
+2. An **"Edit"** button (pencil icon) appears in the header next to the existing PDF/Invite buttons
+3. Clicking it opens an **edit dialog/modal** with the current client and project info pre-filled in editable form fields
+4. The user modifies what they need and clicks **"Save Changes"**
+5. The proposal record is updated in the database, including recalculating `annual_energy`, `carbon_credits`, and `system_size_kwp` if the system size changed
+6. The view page refreshes to show the updated data
+
+---
+
+## Technical Approach
+
+### New Files
+
+| File | Purpose |
 |---|---|
-| `src/lib/validation/onboardingSchema.ts` | Relax installer_email validation to skip format check on non-email placeholder text |
-| Database | None |
-| Other files | None |
+| `src/components/proposals/view/ProposalEditDialog.tsx` | Modal dialog with editable form fields for client info and project info |
+| `src/hooks/proposals/view/useProposalEdit.ts` | Hook managing form state, validation, and the Supabase update call |
 
-One line change, one file. Both projects will pass validation immediately after deployment.
+### Modified Files
+
+| File | Change |
+|---|---|
+| `src/components/proposals/view/ProposalHeader.tsx` | Add an "Edit" button next to existing action buttons, visible to agents/admins on editable-status proposals |
+| `src/components/proposals/view/ProposalContent.tsx` | Pass `fetchProposal` callback down so the edit dialog can refresh data after save |
+
+### Database
+
+No schema changes needed. The existing `proposals_update_policy` RLS policy already permits agents to update their own proposals and admins to update any proposal:
+
+```text
+proposals_update_policy: auth.uid() = agent_id OR is_admin()
+```
+
+### Update Logic (in `useProposalEdit`)
+
+When saving, the hook will:
+
+1. Update `proposals.content` JSON (clientInfo and projectInfo sections)
+2. Update `proposals.title` to match the project name
+3. Update `proposals.project_info` JSON column
+4. If system size changed: recalculate and update `system_size_kwp`, `annual_energy`, and `carbon_credits` using the existing `calculateAnnualEnergy` and `calculateCarbonCredits` functions from `@/services/calculations/carbon/calculations`
+5. Set `updated_at` to now
+
+### Edit Dialog Structure
+
+The dialog will have two sections matching the creation wizard:
+
+- **Client Info Section**: Name, email, phone, company (text inputs)
+- **Project Info Section**: Name, address, system size, commission date, notes (text/date inputs)
+
+Basic validation (required fields, email format, positive system size) will run before save.
+
+---
+
+## Guardrails
+
+- The edit button is hidden for clients (role check)
+- The edit button is hidden on signed/approved proposals (status check)
+- The edit button is hidden on archived or deleted proposals
+- System size changes trigger automatic recalculation of derived fields
+- An agent can only edit proposals where they are the `agent_id` (enforced by RLS)
+
