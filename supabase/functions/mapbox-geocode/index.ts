@@ -5,8 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ReverseGeocodeRequest {
-  operation: 'reverse' | 'forward' | 'get_token';
+interface GeocodeRequest {
+  operation: 'reverse' | 'forward' | 'get_token' | 'autocomplete';
   lat?: number;
   lng?: number;
   query?: string;
@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { operation, lat, lng, query }: ReverseGeocodeRequest = await req.json();
+    const { operation, lat, lng, query }: GeocodeRequest = await req.json();
     const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN');
 
     if (!mapboxToken) {
@@ -103,6 +103,30 @@ serve(async (req) => {
           lng: firstResult.center[0],
           address: firstResult.place_name
         }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Autocomplete: return multiple results for address search dropdown
+    if (operation === 'autocomplete' && query) {
+      const encodedQuery = encodeURIComponent(query);
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${mapboxToken}&country=za&autocomplete=true&types=address,place,locality,neighborhood&limit=5`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`Mapbox API error: ${data.message || 'Unknown error'}`);
+      }
+
+      const suggestions = (data.features || []).map((f: any) => ({
+        place_name: f.place_name,
+        lat: f.center[1],
+        lng: f.center[0],
+      }));
+
+      return new Response(
+        JSON.stringify({ suggestions }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
