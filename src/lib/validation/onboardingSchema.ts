@@ -121,7 +121,7 @@ export const validateField = (fieldName: string, value: any, formData?: any): st
         break;
       
       case "installer_email":
-        if (value && typeof value === "string" && value.trim() !== "") {
+        if (value && typeof value === "string" && value.trim() !== "" && value.includes("@")) {
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailPattern.test(value)) return "Invalid email format";
         }
