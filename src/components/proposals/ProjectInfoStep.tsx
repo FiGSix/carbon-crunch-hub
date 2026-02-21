@@ -95,13 +95,6 @@ export function ProjectInfoStep({
   // Handle address input errors
   const handleAddressError = (hasError: boolean) => {
     setAddressInputError(hasError);
-    if (hasError) {
-      toast({
-        title: "Address Input Issue",
-        description: "There's a problem with the Google Maps integration. Check your API key configuration.",
-        variant: "destructive"
-      });
-    }
   };
 
   // Validate form before proceeding to next step

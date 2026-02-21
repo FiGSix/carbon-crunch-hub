@@ -1,11 +1,11 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "lucide-react";
-import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
+import { MapboxAddressAutocomplete } from "@/components/common/MapboxAddressAutocomplete";
 import { AddressInputMode } from "@/components/common/AddressInputMode";
 import { MapAddressPicker } from "@/components/common/MapAddressPicker";
 import { ProjectInformation } from "@/types/proposals";
@@ -32,12 +32,7 @@ export function ProjectInfoForm({
   setProjectInfo
 }: ProjectInfoFormProps) {
   const { toast } = useToast();
-  const [mapsError, setMapsError] = useState(false);
   const [addressMode, setAddressMode] = useState<'search' | 'map'>('search');
-
-  const handleMapsError = (hasError: boolean) => {
-    setMapsError(hasError);
-  };
 
   const handleMapLocationSelect = (lat: number, lng: number, address: string) => {
     // Use setProjectInfo for consolidated state update if available
@@ -108,13 +103,23 @@ export function ProjectInfoForm({
                 />
               ) : (
                 <>
-                  <SecureGoogleAddressAutocomplete
+                  <MapboxAddressAutocomplete
                     value={projectInfo.address}
-                    onChange={handleAddressChange}
+                    onChange={(address, coords) => {
+                      handleAddressChange(address);
+                      if (coords && setProjectInfo) {
+                        setProjectInfo({
+                          ...projectInfo,
+                          address,
+                          gpsLat: coords.lat,
+                          gpsLng: coords.lng,
+                          addressSource: 'autocomplete'
+                        });
+                      }
+                    }}
                     className="retro-input"
                     required
                     placeholder="Enter the project's physical address"
-                    onError={handleMapsError}
                   />
                   <p className="text-xs text-muted-foreground">
                     Can't find your address? Try "Pin Drop on Map" for rural locations
