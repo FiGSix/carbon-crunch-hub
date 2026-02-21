@@ -1,6 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CarbonPriceManager } from "@/components/admin/CarbonPriceManager";
+import { RegionalSolarYieldManager } from "@/components/admin/RegionalSolarYieldManager";
 import { DataCorrectionManager } from "@/components/admin/DataCorrectionManager";
 import { ClientPopulationManager } from "@/components/admin/ClientPopulationManager";
 import { VintageDeadlineManager } from "@/components/admin/VintageDeadlineManager";
@@ -31,6 +32,7 @@ const SystemSettings = () => {
         <VintageDeadlineManager />
         <DataCorrectionManager />
         <ClientPopulationManager />
+        <RegionalSolarYieldManager />
         <CarbonPriceManager />
       </div>
     </DashboardLayout>
