@@ -39,6 +39,9 @@ export { calculatePortfolioTotals } from './portfolio';
 // Export core calculation function
 export { calculateComplete } from './core';
 
+// Export regional yields functions
+export { getYieldForProvince, getYieldForProvinceSync, primeRegionalYieldsCache } from './regionalYields';
+
 /**
  * Unified Carbon Calculation Service
  * Single source of truth for all carbon-related calculations

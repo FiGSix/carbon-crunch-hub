@@ -7,6 +7,7 @@ export interface SystemSpecs {
   unitStandard?: 'kWp' | 'MWp';
   commissionDate?: string | Date;
   phases?: ProjectPhase[];
+  province?: string;
 }
 
 export interface PhaseRevenue {

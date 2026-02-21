@@ -2352,6 +2352,33 @@ export type Database = {
           },
         ]
       }
+      regional_solar_yields: {
+        Row: {
+          id: string
+          province: string
+          source: string | null
+          updated_at: string
+          updated_by: string | null
+          yield_kwh_per_kwp: number
+        }
+        Insert: {
+          id?: string
+          province: string
+          source?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          yield_kwh_per_kwp: number
+        }
+        Update: {
+          id?: string
+          province?: string
+          source?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          yield_kwh_per_kwp?: number
+        }
+        Relationships: []
+      }
       solar_installers: {
         Row: {
           address: string | null
