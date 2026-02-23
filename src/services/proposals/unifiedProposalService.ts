@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { EligibilityCriteria, ClientInformation, ProjectInformation, ProjectPhase } from "@/types/proposals";
+import { EligibilityCriteria, ClientInformation, ProjectInformation, ProjectPhase, AdditionalClient } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/normalization";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/lib/calculations/carbon";
@@ -109,7 +109,8 @@ export async function createProposal(
   eligibilityCriteria: EligibilityCriteria,
   projectInfo: ProjectInformation,
   clientInfo: ClientInformation,
-  selectedClientId?: string
+  selectedClientId?: string,
+  additionalClients?: AdditionalClient[]
 ): Promise<{ success: boolean; proposalId?: string; error?: string }> {
   const proposalLogger = logger.withContext({
     component: 'UnifiedProposalService',
@@ -238,6 +239,7 @@ export async function createProposal(
         eligibilityCriteria,
         projectInfo,
         clientInfo,
+        additionalClients: additionalClients && additionalClients.length > 0 ? additionalClients : undefined,
         financials: {
           totalClientRevenue: Math.round(totalClientRevenue)
         }
@@ -270,6 +272,36 @@ export async function createProposal(
       clientSharePercentage,
       agentCommissionPercentage
     });
+
+    // Step 7: Insert additional clients into proposal_clients junction table
+    if (additionalClients && additionalClients.length > 0) {
+      const additionalClientRows = [];
+      
+      for (const ac of additionalClients) {
+        const acClientId = ac.clientId || await findOrCreateClient(
+          { name: ac.name, email: ac.email, phone: ac.phone || "", companyName: ac.companyName || "", existingClient: !!ac.clientId },
+          agentId
+        );
+        additionalClientRows.push({
+          proposal_id: insertedProposal.id,
+          client_id: acClientId,
+          added_by: agentId,
+        });
+      }
+
+      if (additionalClientRows.length > 0) {
+        const { error: junctionError } = await supabase
+          .from('proposal_clients')
+          .insert(additionalClientRows);
+        
+        if (junctionError) {
+          proposalLogger.warn("Failed to insert additional clients into proposal_clients", { error: junctionError });
+          // Non-fatal: proposal was created, additional client linking failed
+        } else {
+          proposalLogger.info("Additional clients linked", { count: additionalClientRows.length });
+        }
+      }
+    }
 
     return {
       success: true,

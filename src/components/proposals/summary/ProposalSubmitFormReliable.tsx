@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -22,6 +22,7 @@ interface ProposalSubmitFormReliableProps {
   nextStep: () => void;
   prevStep: () => void;
   selectedClientId?: string | null;
+  additionalClients?: AdditionalClient[];
 }
 
 export function ProposalSubmitFormReliable({ 
@@ -30,7 +31,8 @@ export function ProposalSubmitFormReliable({
   projectInfo, 
   nextStep, 
   prevStep,
-  selectedClientId
+  selectedClientId,
+  additionalClients
 }: ProposalSubmitFormReliableProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -67,7 +69,8 @@ export function ProposalSubmitFormReliable({
         projectInfo,
         clientInfo,
         selectedClientId || undefined,
-        setProgress
+        setProgress,
+        additionalClients
       );
       
       if (result.success && result.proposalId) {

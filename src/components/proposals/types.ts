@@ -3,6 +3,7 @@
 export type {
   EligibilityCriteria,
   ClientInformation,
+  AdditionalClient,
   ProjectInformation,
   ProposalContent,
   FormStep,

@@ -47,6 +47,14 @@ export interface ClientInformation {
   registrationNumber?: string;
 }
 
+export interface AdditionalClient {
+  name: string;
+  email: string;
+  phone?: string;
+  companyName?: string;
+  clientId?: string; // If selected from existing clients
+}
+
 export interface ProjectPhase {
   phaseNumber: number;
   phaseName?: string;
@@ -92,6 +100,7 @@ export interface CalculationMetadata {
 export interface ProposalContent {
   clientInfo: ClientInformation;
   projectInfo: ProjectInformation;
+  additionalClients?: AdditionalClient[];
   portfolioSize?: number; // Store portfolio size for transparency
   revenue?: Record<string, number>; // Legacy field - kept for backward compatibility
   marketRevenue?: Record<string, number>; // Market-rate revenue breakdown

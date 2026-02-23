@@ -2152,6 +2152,60 @@ export type Database = {
           },
         ]
       }
+      proposal_clients: {
+        Row: {
+          added_at: string
+          added_by: string
+          client_id: string
+          id: string
+          invitation_expires_at: string | null
+          invitation_sent_at: string | null
+          invitation_token: string | null
+          invitation_viewed_at: string | null
+          proposal_id: string
+          signed_at: string | null
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          client_id: string
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          invitation_viewed_at?: string | null
+          proposal_id: string
+          signed_at?: string | null
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          client_id?: string
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          invitation_viewed_at?: string | null
+          proposal_id?: string
+          signed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_clients_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           agent_commission_percentage: number | null
