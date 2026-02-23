@@ -1,84 +1,124 @@
 
 
-# Fix: Allow Client Company Members to Upload & Collaborate on Onboarding
+# Expand Proposal Edit Permissions
 
-## Findings
+## Summary
 
-After a thorough audit, the file upload failure is just the tip of the iceberg. There are **8 policies** across 4 tables (plus 2 storage policies) that are missing the `client_company_members` check. This means Shaida and other client company team members are blocked from:
+Allow agents, team leads, company members, and admins to edit proposals at any stage before they are signed/approved and moved to onboarding. Add a database-level status guard to prevent editing of finalized proposals.
 
-- Uploading documents (the reported issue)
-- Viewing uploaded documents
-- Viewing or posting comments
-- Viewing activity log entries
-- Viewing assigned tasks
+---
 
-All of these are required for collaborative work toward "Audit Ready" status.
+## Current Behavior (broken)
 
-## Root Cause
-
-When the `is_project_stakeholder()` function was updated (migration `20260219`) to include client company members, only the tables that **use that function** benefited (`onboarding_fields`, `data_access_config`). The remaining tables still use **inline SQL** that only checks for agents, agent team members (`company_members`), direct clients, and admins.
-
-## What the Migration Must Fix
-
-### Group A: Directly blocking file upload (the reported bug)
-
-| # | Table | Policy | Command |
-|---|---|---|---|
-| 1 | `storage.objects` | "Onboarding document uploads for stakeholders" | INSERT |
-| 2 | `storage.objects` | "Users can delete own project documents" | DELETE |
-| 3 | `onboarding_documents` | "Stakeholders can insert documents" | INSERT |
-
-### Group B: Blocking visibility and collaboration (needed for audit-ready)
-
-| # | Table | Policy | Command |
-|---|---|---|---|
-| 4 | `onboarding_documents` | "Stakeholders can manage documents" | ALL |
-| 5 | `onboarding_documents` | "Users can view documents" | SELECT |
-| 6 | `onboarding_comments` | "Users can view comments" | SELECT |
-| 7 | `onboarding_activity_log` | "Users can view activity log" | SELECT |
-| 8 | `onboarding_tasks` | "Users can view tasks" | SELECT |
-
-### Already correct (no changes needed)
-
-- `onboarding_fields` -- uses `is_project_stakeholder()` (already includes client company members)
-- `data_access_config` -- INSERT/UPDATE/DELETE/SELECT use `is_project_stakeholder()` (already correct)
-
-## The Fix: Add Client Company Member Check
-
-Each of the 8 policies above needs one additional `OR EXISTS` clause appended:
-
-```sql
-OR EXISTS (
-  SELECT 1
-  FROM clients c
-  JOIN client_company_members ccm
-    ON ccm.client_company_id = c.client_company_id
-  WHERE c.id = p.client_reference_id
-    AND ccm.user_id = auth.uid()
-    AND ccm.status = 'active'
-)
+**Frontend (`ProposalHeader.tsx` lines 45-49):**
+```
+editableStatuses = ['draft', 'sent', 'pending']
+canEdit = editableStatuses.includes(status)
+  && (admin OR (agent && own proposal))
 ```
 
-This mirrors check #6 in `is_project_stakeholder()`.
+**Database (`proposals_update_unified`):**
+```
+deleted_at IS NULL
+AND (agent_id = auth.uid() OR is_admin())
+```
 
-## Scope Guard: What This Migration Does NOT Touch
+### Problems
+1. Missing statuses: `delivered`, `opened`, `viewed`, `stale` -- agents cannot edit proposals in these stages
+2. No team lead or company member access: they can VIEW proposals but cannot EDIT them
+3. No database-level status guard: technically possible to bypass the UI and edit a signed proposal
 
-- No frontend code changes
-- No edge function changes
-- No changes to `is_project_stakeholder()` (already correct)
-- No changes to `onboarding_fields` or `data_access_config` policies (already correct)
+---
+
+## New Behavior
+
+**Rule:** A proposal is editable by agents, their team leads, their company members, and admins at any status BEFORE it reaches `approved`, `rejected`, or `signed`, and before it has `signed_at`, `archived_at`, or `deleted_at` set.
+
+---
+
+## Changes
+
+### 1. Frontend: `src/components/proposals/view/ProposalHeader.tsx`
+
+Replace the `canEdit` logic (lines 45-49):
+
+**From:**
+```typescript
+const editableStatuses = ['draft', 'sent', 'pending'];
+const canEdit = !isDeleted 
+  && proposal 
+  && editableStatuses.includes(proposal.status || '')
+  && (userRole === 'admin' || (userRole === 'agent' && proposal.agent_id === user?.id));
+```
+
+**To:**
+```typescript
+const NON_EDITABLE_STATUSES = ['approved', 'rejected', 'signed'];
+const canEdit = !isDeleted
+  && proposal
+  && !NON_EDITABLE_STATUSES.includes(proposal.status || '')
+  && !proposal.signed_at
+  && !proposal.archived_at
+  && (
+    userRole === 'admin'
+    || (userRole === 'agent' && proposal.agent_id === user?.id)
+  );
+```
+
+This uses a blocklist instead of an allowlist, so new pre-signature statuses are automatically editable without code changes. The RLS policy remains the true gatekeeper for team leads and company members.
+
+### 2. Database Migration: Update `proposals_update_unified` RLS policy
+
+Drop and recreate the policy to add:
+- **Status guard**: Block updates when status is `approved`, `rejected`, or `signed`
+- **signed_at guard**: Double-check against signed agreements
+- **Company member access**: Team leads and fellow agents in the same company can update
+
+```sql
+DROP POLICY IF EXISTS "proposals_update_unified" ON public.proposals;
+
+CREATE POLICY "proposals_update_unified"
+ON public.proposals
+FOR UPDATE
+TO authenticated
+USING (
+  deleted_at IS NULL
+  AND signed_at IS NULL
+  AND status NOT IN ('approved', 'rejected', 'signed')
+  AND (
+    -- Own proposal (agent)
+    auth.uid() = agent_id
+    -- Company member of the agent (includes team leads)
+    OR EXISTS (
+      SELECT 1
+      FROM company_members cm1
+      JOIN company_members cm2 ON cm1.company_id = cm2.company_id
+      WHERE cm1.user_id = auth.uid()
+        AND cm2.user_id = agent_id
+        AND cm1.status = 'active'
+        AND cm2.status = 'active'
+    )
+    -- Admin
+    OR is_current_user_admin()
+  )
+);
+```
+
+---
+
+## Files Summary
+
+| Action | File | Reason |
+|---|---|---|
+| Edit | `src/components/proposals/view/ProposalHeader.tsx` | Replace allowlist with blocklist for editable statuses |
+| New | `supabase/migrations/...` | Update `proposals_update_unified` RLS policy with status guard and company member access |
+
+## What Does NOT Change
+
+- No removal of 'pending' references (separate task)
+- No changes to `useProposalStatus.ts`, `statusUpdateService.ts`, or `StatusColors.ts`
+- No changes to `SubmitForReviewDialog.tsx` or submission hooks
+- No changes to `is_project_stakeholder()` or `can_view_proposal()`
 - No table schema changes
-- No trigger or function changes
-- No changes to any table outside the 4 listed above + storage
-
-## Implementation
-
-**Single migration file** that:
-1. Drops and recreates all 8 policies with the added client company member check
-2. Reproduces existing logic verbatim (surgical approach per project guidelines)
-3. Only appends the missing `OR EXISTS` clause to each policy
-
-## Ideal Long-Term Refactor (Not in This Migration)
-
-The `onboarding_documents`, `onboarding_comments`, `onboarding_activity_log`, and `onboarding_tasks` tables should eventually be migrated to use `is_project_stakeholder()` like `onboarding_fields` does, so future permission changes propagate automatically. However, this is a larger refactor and should be done separately to avoid risk. The storage policies cannot use `is_project_stakeholder()` directly due to how storage RLS works (the `project_id` must be extracted from the file path).
+- No edge function changes
 
