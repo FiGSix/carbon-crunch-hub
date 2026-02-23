@@ -41,12 +41,17 @@ export function ProposalHeader({
   const { user, userRole, profile } = useAuth();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  // Determine if editing is allowed
-  const editableStatuses = ['draft', 'sent', 'pending'];
-  const canEdit = !isDeleted 
-    && proposal 
-    && editableStatuses.includes(proposal.status || '')
-    && (userRole === 'admin' || (userRole === 'agent' && proposal.agent_id === user?.id));
+  // Statuses where editing is blocked (proposal is finalized)
+  const NON_EDITABLE_STATUSES = ['approved', 'rejected', 'signed'];
+  const canEdit = !isDeleted
+    && proposal
+    && !NON_EDITABLE_STATUSES.includes(proposal.status || '')
+    && !proposal.signed_at
+    && !proposal.archived_at
+    && (
+      userRole === 'admin'
+      || (userRole === 'agent' && proposal.agent_id === user?.id)
+    );
 
   const handleBack = () => {
     navigate('/proposals');
