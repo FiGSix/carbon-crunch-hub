@@ -1,95 +1,84 @@
 
 
-# Consolidate Address Input: Remove Google Maps, Use Mapbox Only
+# Fix: Allow Client Company Members to Upload & Collaborate on Onboarding
 
-## Why
+## Findings
 
-The proposal form currently uses two mapping services for the same job:
-- **Google Maps**: address autocomplete text search (3 edge functions, 7+ frontend files)
-- **Mapbox**: pin-drop map, forward/reverse geocoding (1 edge function, 2 frontend files)
+After a thorough audit, the file upload failure is just the tip of the iceberg. There are **8 policies** across 4 tables (plus 2 storage policies) that are missing the `client_company_members` check. This means Shaida and other client company team members are blocked from:
 
-Both provide address search and GPS coordinates. Consolidating to Mapbox removes a redundant paid dependency and simplifies the codebase significantly.
+- Uploading documents (the reported issue)
+- Viewing uploaded documents
+- Viewing or posting comments
+- Viewing activity log entries
+- Viewing assigned tasks
 
----
+All of these are required for collaborative work toward "Audit Ready" status.
 
-## What Changes
+## Root Cause
 
-### 1. New Component: `MapboxAddressAutocomplete`
+When the `is_project_stakeholder()` function was updated (migration `20260219`) to include client company members, only the tables that **use that function** benefited (`onboarding_fields`, `data_access_config`). The remaining tables still use **inline SQL** that only checks for agents, agent team members (`company_members`), direct clients, and admins.
 
-Replace `SecureGoogleAddressAutocomplete` with a new Mapbox-powered autocomplete input that:
-- Calls the existing `mapbox-geocode` edge function with `operation: 'forward'` as the user types
-- Shows a dropdown of address suggestions (debounced, like the current Google version)
-- On selection, returns the address string + GPS coordinates
-- Falls back gracefully if the Mapbox API is unavailable
+## What the Migration Must Fix
 
-### 2. Update `ProjectInfoForm.tsx`
+### Group A: Directly blocking file upload (the reported bug)
 
-- Replace `SecureGoogleAddressAutocomplete` import with the new `MapboxAddressAutocomplete`
-- Simplify the address flow: both "search" and "map" modes now use the same Mapbox backend
-- When a user selects an address from autocomplete, GPS coordinates are captured automatically (no separate pin-drop needed, though the map picker remains as an option for rural locations)
+| # | Table | Policy | Command |
+|---|---|---|---|
+| 1 | `storage.objects` | "Onboarding document uploads for stakeholders" | INSERT |
+| 2 | `storage.objects` | "Users can delete own project documents" | DELETE |
+| 3 | `onboarding_documents` | "Stakeholders can insert documents" | INSERT |
 
-### 3. Update `mapbox-geocode` Edge Function
+### Group B: Blocking visibility and collaboration (needed for audit-ready)
 
-- Add a `search` operation that returns multiple results (for autocomplete suggestions), distinct from the current `forward` operation that returns a single best match
-- Return an array of `{ address, lat, lng }` objects for the autocomplete dropdown
+| # | Table | Policy | Command |
+|---|---|---|---|
+| 4 | `onboarding_documents` | "Stakeholders can manage documents" | ALL |
+| 5 | `onboarding_documents` | "Users can view documents" | SELECT |
+| 6 | `onboarding_comments` | "Users can view comments" | SELECT |
+| 7 | `onboarding_activity_log` | "Users can view activity log" | SELECT |
+| 8 | `onboarding_tasks` | "Users can view tasks" | SELECT |
 
-### 4. Delete Google Maps Files
+### Already correct (no changes needed)
 
-**Edge functions to delete (3):**
-- `supabase/functions/google-maps-health-check/`
-- `supabase/functions/google-place-details/`
-- `supabase/functions/google-places-autocomplete/`
+- `onboarding_fields` -- uses `is_project_stakeholder()` (already includes client company members)
+- `data_access_config` -- INSERT/UPDATE/DELETE/SELECT use `is_project_stakeholder()` (already correct)
 
-**Frontend files to delete (7+):**
-- `src/components/common/SecureGoogleAddressAutocomplete.tsx`
-- `src/components/common/GoogleMapsHealthMonitor.tsx`
-- `src/components/common/GoogleMapsMessages.tsx`
-- `src/components/common/GoogleMapsStatusIndicator.tsx`
-- `src/components/common/address-autocomplete/AddressAutocompleteInput.tsx`
-- `src/components/common/address-autocomplete/PredictionsList.tsx`
-- `src/components/common/address-autocomplete/useAddressAutocomplete.ts`
-- `src/hooks/useSecureGoogleMaps.ts`
-- `src/components/testing/GoogleMapsIntegrationTest.tsx`
+## The Fix: Add Client Company Member Check
 
-### 5. Update References
+Each of the 8 policies above needs one additional `OR EXISTS` clause appended:
 
-- `ProjectInfoStep.tsx`: Remove Google Maps error handling references
-- Any System Settings or testing pages referencing Google Maps health checks
-- Remove `GOOGLE_MAPS_API_KEY` secret (can be done later via Supabase dashboard)
+```sql
+OR EXISTS (
+  SELECT 1
+  FROM clients c
+  JOIN client_company_members ccm
+    ON ccm.client_company_id = c.client_company_id
+  WHERE c.id = p.client_reference_id
+    AND ccm.user_id = auth.uid()
+    AND ccm.status = 'active'
+)
+```
 
----
+This mirrors check #6 in `is_project_stakeholder()`.
 
-## Files Summary
+## Scope Guard: What This Migration Does NOT Touch
 
-| Action | File |
-|---|---|
-| **New** | `src/components/common/MapboxAddressAutocomplete.tsx` |
-| **Edit** | `supabase/functions/mapbox-geocode/index.ts` (add autocomplete operation) |
-| **Edit** | `src/components/proposals/project-info/ProjectInfoForm.tsx` (swap component) |
-| **Edit** | `src/components/proposals/ProjectInfoStep.tsx` (remove Google error handling) |
-| **Edit** | `src/pages/SystemSettings.tsx` (remove Google health monitor if present) |
-| **Delete** | 3 Google edge functions |
-| **Delete** | ~8 Google-related frontend files |
+- No frontend code changes
+- No edge function changes
+- No changes to `is_project_stakeholder()` (already correct)
+- No changes to `onboarding_fields` or `data_access_config` policies (already correct)
+- No table schema changes
+- No trigger or function changes
+- No changes to any table outside the 4 listed above + storage
 
----
+## Implementation
 
-## What Does NOT Change
+**Single migration file** that:
+1. Drops and recreates all 8 policies with the added client company member check
+2. Reproduces existing logic verbatim (surgical approach per project guidelines)
+3. Only appends the missing `OR EXISTS` clause to each policy
 
-- `MapAddressPicker` (the interactive pin-drop map) stays as-is -- it already uses Mapbox
-- `useMapboxGeocoding` hook stays as-is
-- The `mapbox-geocode` edge function stays, just gets an additional operation
-- All GPS coordinate capture logic remains the same
-- Address conflict detection (50m threshold) is unaffected
-- No database changes needed
+## Ideal Long-Term Refactor (Not in This Migration)
 
----
-
-## Technical Details
-
-The new `MapboxAddressAutocomplete` component will:
-- Use a debounced input (300ms) to call `mapbox-geocode` with `operation: 'autocomplete'`
-- The edge function will call Mapbox Geocoding API with `autocomplete=true` and `country=za` (South Africa)
-- Display results in a dropdown list styled to match the existing UI
-- On selection, call `onChange` with the full address and emit GPS coordinates via the existing `gpsData` pattern
-- Show loading state and error handling matching current UX patterns
+The `onboarding_documents`, `onboarding_comments`, `onboarding_activity_log`, and `onboarding_tasks` tables should eventually be migrated to use `is_project_stakeholder()` like `onboarding_fields` does, so future permission changes propagate automatically. However, this is a larger refactor and should be done separately to avoid risk. The storage policies cannot use `is_project_stakeholder()` directly due to how storage RLS works (the `project_id` must be extracted from the file path).
 
