@@ -8,7 +8,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from "./types";
+import { EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from "./types";
 import { ClientInformationSection } from "./summary/ClientInformationSection";
 import { ProjectInformationSection } from "./summary/ProjectInformationSection";
 import { CarbonCreditSection } from "./summary/CarbonCreditSection";
@@ -22,7 +22,8 @@ interface SummaryStepProps {
   nextStep: () => void;
   prevStep: () => void;
   selectedClientId?: string | null;
-  proposalId?: string | null; // Add proposal ID parameter (null for new proposals)
+  proposalId?: string | null;
+  additionalClients?: AdditionalClient[];
 }
 
 export function SummaryStep({ 
@@ -32,7 +33,8 @@ export function SummaryStep({
   nextStep, 
   prevStep,
   selectedClientId,
-  proposalId
+  proposalId,
+  additionalClients
 }: SummaryStepProps) {
   return (
     <Card className="retro-card">
@@ -44,7 +46,7 @@ export function SummaryStep({
       </CardHeader>
       <CardContent>
         <div className="space-y-8">
-          <ClientInformationSection clientInfo={clientInfo} />
+          <ClientInformationSection clientInfo={clientInfo} additionalClients={additionalClients} />
           <ProjectInformationSection projectInfo={projectInfo} />
           <CarbonCreditSection 
             systemSize={projectInfo.size} 
@@ -70,6 +72,7 @@ export function SummaryStep({
             nextStep={nextStep}
             prevStep={prevStep}
             selectedClientId={selectedClientId}
+            additionalClients={additionalClients}
           />
       </CardFooter>
     </Card>

@@ -6,7 +6,7 @@
 import { RetryService } from '@/lib/reliability/RetryService';
 import { ConnectionManager } from '@/lib/reliability/ConnectionManager';
 import { createProposal, searchClients } from './unifiedProposalService';
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from '@/types/proposals';
+import { EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from '@/types/proposals';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -49,7 +49,8 @@ export class ReliableProposalService {
     projectInfo: ProjectInformation,
     clientInfo: ClientInformation,
     selectedClientId?: string,
-    onProgress?: (progress: ProposalProgress) => void
+    onProgress?: (progress: ProposalProgress) => void,
+    additionalClients?: AdditionalClient[]
   ): Promise<ReliableProposalResult> {
     const operationId = `proposal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -84,7 +85,8 @@ export class ReliableProposalService {
         projectInfo,
         clientInfo,
         selectedClientId,
-        operationId
+        operationId,
+        additionalClients
       );
 
       if (immediateResult.success) {
@@ -133,7 +135,8 @@ export class ReliableProposalService {
     projectInfo: ProjectInformation,
     clientInfo: ClientInformation,
     selectedClientId: string | undefined,
-    operationId: string
+    operationId: string,
+    additionalClients?: AdditionalClient[]
   ): Promise<ReliableProposalResult> {
     
     return await RetryService.executeWithRetry(
@@ -158,7 +161,8 @@ export class ReliableProposalService {
           eligibilityCriteria,
           projectInfo,
           clientInfo,
-          selectedClientId
+          selectedClientId,
+          additionalClients
         );
 
         if (!result.success) {

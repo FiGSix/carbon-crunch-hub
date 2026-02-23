@@ -7,7 +7,7 @@ import { EligibilityStep } from "@/components/proposals/EligibilityStep";
 import { ClientInfoStep } from "@/components/proposals/ClientInfoStep";
 import { ProjectInfoStep } from "@/components/proposals/ProjectInfoStep";
 import { SummaryStep } from "@/components/proposals/SummaryStep";
-import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
 import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
 
@@ -35,6 +35,7 @@ const CreateProposal = () => {
   });
   
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [additionalClients, setAdditionalClients] = useState<AdditionalClient[]>([]);
   
   const [projectInfo, setProjectInfo] = useState<ProjectInformation>({
     name: "",
@@ -149,6 +150,8 @@ const CreateProposal = () => {
           setClientInfo={setClientInfoDirectly}
           selectedClientId={selectedClientId}
           setSelectedClientId={setSelectedClientId}
+          additionalClients={additionalClients}
+          setAdditionalClients={setAdditionalClients}
         />
       )}
       
@@ -171,6 +174,7 @@ const CreateProposal = () => {
           prevStep={prevStep}
           selectedClientId={selectedClientId}
           proposalId={null}
+          additionalClients={additionalClients}
         />
       )}
     </DashboardLayout>
