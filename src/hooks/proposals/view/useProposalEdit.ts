@@ -143,6 +143,33 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         return false;
       }
 
+      // Also update the linked clients table record so resolveClientInfo() picks up the change
+      if (proposal.client_reference_id) {
+        try {
+          const nameParts = formData.clientName.trim().split(/\s+/);
+          const lastName = nameParts.length > 1 ? nameParts.pop()! : '';
+          const firstName = nameParts.join(' ');
+
+          const { error: clientError } = await supabase
+            .from('clients')
+            .update({
+              first_name: firstName,
+              last_name: lastName,
+              email: formData.clientEmail.trim(),
+              phone: formData.clientPhone.trim(),
+              company_name: formData.clientCompanyName.trim(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', proposal.client_reference_id);
+
+          if (clientError) {
+            console.warn('Failed to update linked client record:', clientError.message);
+          }
+        } catch (clientErr) {
+          console.warn('Exception updating linked client record:', clientErr);
+        }
+      }
+
       toast.success('Proposal updated successfully');
       onSuccess?.();
       return true;
