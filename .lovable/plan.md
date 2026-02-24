@@ -1,58 +1,67 @@
 
 
-# Fix: Knowledge Hub Download Failure
+# Fix: Edit Dialog Save Fails for Proposals with firstName/lastName Format
 
 ## Root Cause
 
-The download fails immediately with "Invalid file URL" due to a path extraction bug.
+The `clientInfo` JSON in proposals has **two different name formats** depending on how the proposal was created:
 
-### The Bug
+- **Format A**: `{ "name": "Estelle" }` -- used by some creation flows
+- **Format B**: `{ "firstName": "Estelle", "lastName": "..." }` -- used by other creation flows
 
-The `file_url` stored in the database is:
-```
-knowledge-hub/marketing/1771922177908_CRUNCH-CARBON-LOGO-ALL-1.png
-```
+Estelle's 4 proposals (Toothrock Huis, Fijnbosch Self-Catering, Dagdromer, DAAI PLEKKIE) all use Format B with NO `name` field.
 
-The download function splits on `/knowledge-hub/` (with a leading slash):
-```typescript
-const path = fileUrl.split('/knowledge-hub/')[1];
-```
+The edit form's `extractFormData` reads `clientInfo.name`, gets `undefined`/empty, so the Client Name field appears **blank**. When you click Save, validation rejects it with "Client name is required" -- even though the data exists in `firstName`/`lastName`.
 
-Since the stored URL has NO leading slash, the split pattern doesn't match. `path` becomes `undefined`, and the function throws "Invalid file URL" -- every single download will fail.
+**Scale**: 862 of 1079 proposals use `firstName`/`lastName`. Any that lack a `name` field will have this same bug.
 
 ## Fix
 
-### File: `src/hooks/useKnowledgeHub.ts`
+### File: `src/hooks/proposals/view/useProposalEdit.ts`
 
-Update the `downloadResource` function to handle the stored URL format correctly. Instead of splitting on a pattern that assumes a full URL, check if the URL starts with the bucket name and extract the path accordingly:
+Update `extractFormData` to handle both name formats when populating `clientName`:
 
 ```text
 Before:
-  const path = fileUrl.split('/knowledge-hub/')[1];
+  clientName: clientInfo.name || '',
 
 After:
-  // Handle both formats:
-  //   "knowledge-hub/marketing/file.png" (stored as relative path)
-  //   "https://.../knowledge-hub/marketing/file.png" (full URL)
-  let path = fileUrl.split('/knowledge-hub/')[1];
-  if (!path && fileUrl.startsWith('knowledge-hub/')) {
-    path = fileUrl.substring('knowledge-hub/'.length);
-  }
+  clientName: clientInfo.name
+    || [clientInfo.firstName, clientInfo.lastName]
+        .filter(n => n && n !== 'null')
+        .join(' ')
+    || '',
 ```
 
-This handles both the current stored format and any future full-URL format.
+The `lastName: "null"` (string "null") in Estelle's data needs to be filtered out, hence the `n !== 'null'` check.
 
-The same bug exists in the `useDeleteResource` mutation (line 113) which also splits on `/knowledge-hub/` -- that will be fixed with the same pattern.
+Also update the `save` function to write back **both** `name` AND `firstName`/`lastName` to the clientInfo, so future edits work regardless of which format was originally used:
+
+```text
+// In the save function's updatedContent.clientInfo:
+clientInfo: {
+  ...oldContent.clientInfo,
+  name: formData.clientName.trim(),
+  firstName: formData.clientName.trim().split(/\s+/).slice(0, -1).join(' ') || formData.clientName.trim(),
+  lastName: formData.clientName.trim().split(/\s+/).pop() || '',
+  email: formData.clientEmail.trim(),
+  phone: formData.clientPhone.trim(),
+  companyName: formData.clientCompanyName.trim(),
+},
+```
+
+This ensures both formats are always present after an edit, preventing future mismatches.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useKnowledgeHub.ts` | Fix path extraction in `downloadResource` and `useDeleteResource` to handle relative URL format |
+| `src/hooks/proposals/view/useProposalEdit.ts` | Handle `firstName`/`lastName` fallback in `extractFormData`; write both name formats on save |
 
 ## Impact
 
-- All Knowledge Hub downloads will work immediately
-- Resource deletion (which also extracts the storage path) will also be fixed
-- No database or storage changes needed
+- Immediately fixes editing for all 4 of Estelle's proposals
+- Fixes any other proposals that only have `firstName`/`lastName` (no `name` field)
+- After saving, proposals will have both name formats, preventing future issues
+- No database migration needed
 
