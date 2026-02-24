@@ -1,87 +1,58 @@
 
 
-# Fix: Multi-Phase Proposal Editing and Resend Button Visibility
+# Fix: Knowledge Hub Download Failure
 
-## Problems Found
+## Root Cause
 
-### 1. Edit form breaks on multi-phase proposals
-The Keystone Hatchery proposal has 2 phases but `content.projectInfo.size` is empty (the total is in `totalSystemSize` and `system_size_kwp`). The edit form reads `projectInfo.size`, gets `""`, and validation blocks saving with "System size is required."
+The download fails immediately with "Invalid file URL" due to a path extraction bug.
 
-### 2. No per-phase editing capability
-The edit dialog only shows a single "System Size" and "Commission Date" field. For multi-phase proposals, there is no way to edit individual phase sizes or commission dates. Agents need to update each phase independently.
+### The Bug
 
-### 3. Resend button hidden for "delivered + viewed" proposals
-The `ProposalInviteButton` has a gap in its status conditions:
-- Line 132 checks `"delivered"` but requires `!invitation_viewed_at` -- this proposal has been viewed, so it fails
-- Line 155 checks `"sent" || "viewed"` -- status is `"delivered"`, so it fails too
-
-Result: No resend/send-again button appears for proposals in "delivered" status that have been viewed.
-
-## Current Proposal State (Keystone Hatchery)
-
-| Field | Value |
-|-------|-------|
-| Status | delivered |
-| Agent | Connor Gibbs (matches agent_id) |
-| signed_at | null |
-| archived_at | null |
-| projectInfo.size | "" (empty) |
-| totalSystemSize | 725.62 |
-| system_size_kwp | 725.62 |
-| Phases | Phase 1: 325.61 kWp (2023-04-09), Phase 2: 400.01 kWp (2024-04-23) |
-| invitation_viewed_at | Set (2026-02-24) |
-
-The Edit button DOES show for Connor (he is the agent, status is not finalized). But when he opens the dialog, the system size field is blank and he cannot save.
-
-## Fix Plan
-
-### Fix 1: Multi-phase aware edit form (`useProposalEdit.ts`)
-
-**extractFormData**: Add fallbacks for system size:
+The `file_url` stored in the database is:
 ```
-systemSize: projectInfo.size
-  || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')
-  || (proposal.system_size_kwp ? String(proposal.system_size_kwp) : ''),
+knowledge-hub/marketing/1771922177908_CRUNCH-CARBON-LOGO-ALL-1.png
 ```
 
-Add `phases` to the form data so they can be edited independently. Each phase has `sizeKWp`, `commissionDate`, and `phaseName`.
-
-**validate**: For multi-phase proposals, validate each phase's size individually instead of the single systemSize field. The total system size becomes read-only (auto-calculated from phases).
-
-**save**: When saving multi-phase proposals, update each phase in `content.projectInfo.phases`, recalculate `totalSystemSize`, and sync to `system_size_kwp`.
-
-### Fix 2: Phase editing UI (`ProposalEditDialog.tsx`)
-
-Detect if the proposal is multi-phase (has `content.projectInfo.phases` with length > 1). If so:
-- Hide the single "System Size" and "Commission Date" fields
-- Show a "Project Phases" section with per-phase editing (size + commission date for each phase)
-- Display an auto-calculated total system size (read-only)
-
-Reuse the existing `ProjectPhasesInput` component pattern for the edit dialog, or render a simpler inline version.
-
-### Fix 3: Resend button for "delivered + viewed" (`ProposalInviteButton.tsx`)
-
-Add `"delivered"` to the status check on line 155 so that proposals in "delivered" status with `invitation_viewed_at` set show the "Send Again" button:
-
+The download function splits on `/knowledge-hub/` (with a leading slash):
+```typescript
+const path = fileUrl.split('/knowledge-hub/')[1];
 ```
+
+Since the stored URL has NO leading slash, the split pattern doesn't match. `path` becomes `undefined`, and the function throws "Invalid file URL" -- every single download will fail.
+
+## Fix
+
+### File: `src/hooks/useKnowledgeHub.ts`
+
+Update the `downloadResource` function to handle the stored URL format correctly. Instead of splitting on a pattern that assumes a full URL, check if the URL starts with the bucket name and extract the path accordingly:
+
+```text
 Before:
-  (proposal.status === "sent" || proposal.status === "viewed") && proposal.invitation_viewed_at
+  const path = fileUrl.split('/knowledge-hub/')[1];
 
 After:
-  (proposal.status === "sent" || proposal.status === "delivered" || proposal.status === "viewed") && proposal.invitation_viewed_at
+  // Handle both formats:
+  //   "knowledge-hub/marketing/file.png" (stored as relative path)
+  //   "https://.../knowledge-hub/marketing/file.png" (full URL)
+  let path = fileUrl.split('/knowledge-hub/')[1];
+  if (!path && fileUrl.startsWith('knowledge-hub/')) {
+    path = fileUrl.substring('knowledge-hub/'.length);
+  }
 ```
+
+This handles both the current stored format and any future full-URL format.
+
+The same bug exists in the `useDeleteResource` mutation (line 113) which also splits on `/knowledge-hub/` -- that will be fixed with the same pattern.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/proposals/view/useProposalEdit.ts` | Add phases to form data, fallback system size extraction, per-phase validation, per-phase save logic |
-| `src/components/proposals/view/ProposalEditDialog.tsx` | Add conditional phase editing UI for multi-phase proposals |
-| `src/components/proposals/components/ProposalInviteButton.tsx` | Add "delivered" to the viewed-proposal resend condition (line 155) |
+| `src/hooks/useKnowledgeHub.ts` | Fix path extraction in `downloadResource` and `useDeleteResource` to handle relative URL format |
 
 ## Impact
 
-- Connor can immediately edit Keystone Hatchery (system size pre-fills with 725.62, phases are individually editable)
-- All multi-phase proposals will correctly show per-phase editing in the edit dialog
-- The "Send Again" button will appear for delivered+viewed proposals
-- No database changes needed
+- All Knowledge Hub downloads will work immediately
+- Resource deletion (which also extracts the storage path) will also be fixed
+- No database or storage changes needed
+
