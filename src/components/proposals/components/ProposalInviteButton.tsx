@@ -152,7 +152,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
   }
   
   // For proposals that have been viewed, allow resending
-  if ((proposal.status === "sent" || proposal.status === "viewed") && proposal.invitation_viewed_at) {
+  if ((proposal.status === "sent" || proposal.status === "delivered" || proposal.status === "viewed") && proposal.invitation_viewed_at) {
     return (
       <Button
         variant="outline"

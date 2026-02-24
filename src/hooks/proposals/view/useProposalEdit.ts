@@ -5,6 +5,12 @@ import { ProposalData, ClientInformation, ProjectInformation } from '@/types/pro
 import { calculateAnnualEnergy, calculateCarbonCredits } from '@/services/calculations/carbon/calculations';
 import { toast } from 'sonner';
 
+export interface PhaseFormData {
+  phaseName: string;
+  sizeKWp: string;
+  commissionDate: string;
+}
+
 export interface ProposalEditFormData {
   // Client info
   clientName: string;
@@ -17,11 +23,26 @@ export interface ProposalEditFormData {
   systemSize: string;
   commissionDate: string;
   additionalNotes: string;
+  // Multi-phase
+  phases: PhaseFormData[];
+  isMultiPhase: boolean;
+}
+
+function extractPhases(projectInfo: any): PhaseFormData[] {
+  const phases = projectInfo?.phases;
+  if (!Array.isArray(phases) || phases.length <= 1) return [];
+  return phases.map((p: any, i: number) => ({
+    phaseName: p.phaseName || p.name || `Phase ${i + 1}`,
+    sizeKWp: p.sizeKWp != null ? String(p.sizeKWp) : '',
+    commissionDate: p.commissionDate || '',
+  }));
 }
 
 function extractFormData(proposal: ProposalData): ProposalEditFormData {
   const clientInfo = proposal.content?.clientInfo || {} as ClientInformation;
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
+  const phases = extractPhases(projectInfo);
+  const isMultiPhase = phases.length > 1;
 
   return {
     clientName: clientInfo.name || '',
@@ -30,9 +51,13 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
     clientCompanyName: clientInfo.companyName || '',
     projectName: projectInfo.name || '',
     projectAddress: projectInfo.address || '',
-    systemSize: projectInfo.size || '',
+    systemSize: projectInfo.size
+      || ((projectInfo as any).totalSystemSize ? String((projectInfo as any).totalSystemSize) : '')
+      || (proposal.system_size_kwp ? String(proposal.system_size_kwp) : ''),
     commissionDate: projectInfo.commissionDate || '',
     additionalNotes: projectInfo.additionalNotes || '',
+    phases,
+    isMultiPhase,
   };
 }
 
@@ -49,10 +74,21 @@ function validate(data: ProposalEditFormData): ValidationErrors {
     errors.clientEmail = 'Invalid email format';
   }
   if (!data.projectName.trim()) errors.projectName = 'Project name is required';
-  if (!data.systemSize.trim()) {
-    errors.systemSize = 'System size is required';
-  } else if (parseFloat(data.systemSize) <= 0 || isNaN(parseFloat(data.systemSize))) {
-    errors.systemSize = 'System size must be a positive number';
+
+  if (data.isMultiPhase) {
+    data.phases.forEach((phase, i) => {
+      if (!phase.sizeKWp.trim()) {
+        errors[`phase_${i}_size`] = `${phase.phaseName} size is required`;
+      } else if (parseFloat(phase.sizeKWp) <= 0 || isNaN(parseFloat(phase.sizeKWp))) {
+        errors[`phase_${i}_size`] = `${phase.phaseName} size must be a positive number`;
+      }
+    });
+  } else {
+    if (!data.systemSize.trim()) {
+      errors.systemSize = 'System size is required';
+    } else if (parseFloat(data.systemSize) <= 0 || isNaN(parseFloat(data.systemSize))) {
+      errors.systemSize = 'System size must be a positive number';
+    }
   }
   return errors;
 }
@@ -78,6 +114,27 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     }
   };
 
+  const updatePhase = (index: number, field: keyof PhaseFormData, value: string) => {
+    setFormData(prev => {
+      const newPhases = [...prev.phases];
+      newPhases[index] = { ...newPhases[index], [field]: value };
+      return { ...prev, phases: newPhases };
+    });
+    const errorKey = `phase_${index}_size`;
+    if (errors[errorKey]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[errorKey];
+        return next;
+      });
+    }
+  };
+
+  const computedTotalSize = (): number => {
+    if (!formData.isMultiPhase) return parseFloat(formData.systemSize) || 0;
+    return formData.phases.reduce((sum, p) => sum + (parseFloat(p.sizeKWp) || 0), 0);
+  };
+
   const save = async (): Promise<boolean> => {
     const validationErrors = validate(formData);
     if (Object.keys(validationErrors).length > 0) {
@@ -87,10 +144,25 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
 
     setSaving(true);
     try {
-      const newSystemSize = parseFloat(formData.systemSize);
+      const newSystemSize = computedTotalSize();
       const oldContent = proposal.content || {} as any;
+      const oldProjectInfo = oldContent.projectInfo || {};
 
-      // Build updated content JSON
+      // Build updated phases if multi-phase
+      let updatedPhases = oldProjectInfo.phases;
+      if (formData.isMultiPhase && Array.isArray(oldProjectInfo.phases)) {
+        updatedPhases = oldProjectInfo.phases.map((p: any, i: number) => {
+          const edited = formData.phases[i];
+          if (!edited) return p;
+          return {
+            ...p,
+            sizeKWp: parseFloat(edited.sizeKWp),
+            commissionDate: edited.commissionDate,
+            phaseName: edited.phaseName,
+          };
+        });
+      }
+
       const updatedContent = {
         ...oldContent,
         clientInfo: {
@@ -101,26 +173,26 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
           companyName: formData.clientCompanyName.trim(),
         },
         projectInfo: {
-          ...oldContent.projectInfo,
+          ...oldProjectInfo,
           name: formData.projectName.trim(),
           address: formData.projectAddress.trim(),
-          size: formData.systemSize.trim(),
-          commissionDate: formData.commissionDate,
+          size: formData.isMultiPhase ? '' : formData.systemSize.trim(),
+          totalSystemSize: formData.isMultiPhase ? newSystemSize : undefined,
+          commissionDate: formData.isMultiPhase ? oldProjectInfo.commissionDate : formData.commissionDate,
           additionalNotes: formData.additionalNotes.trim(),
+          ...(updatedPhases ? { phases: updatedPhases } : {}),
         },
       };
 
-      // Build project_info JSON column
       const existingProjectInfo = (proposal as any).project_info;
       const updatedProjectInfo = {
         ...(typeof existingProjectInfo === 'object' && existingProjectInfo !== null ? existingProjectInfo : {}),
         name: formData.projectName.trim(),
         address: formData.projectAddress.trim(),
-        size: formData.systemSize.trim(),
-        commissionDate: formData.commissionDate,
+        size: formData.isMultiPhase ? String(newSystemSize) : formData.systemSize.trim(),
+        commissionDate: formData.isMultiPhase ? '' : formData.commissionDate,
       };
 
-      // Recalculate derived fields
       const annualEnergy = calculateAnnualEnergy(newSystemSize);
       const carbonCredits = calculateCarbonCredits(newSystemSize);
 
@@ -143,7 +215,6 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         return false;
       }
 
-      // Also update the linked clients table record so resolveClientInfo() picks up the change
       if (proposal.client_reference_id) {
         try {
           const nameParts = formData.clientName.trim().split(/\s+/);
@@ -187,6 +258,8 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     errors,
     saving,
     updateField,
+    updatePhase,
+    computedTotalSize,
     save,
     resetForm,
   };
