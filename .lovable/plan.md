@@ -1,98 +1,56 @@
 
 
-# Knowledge Hub for Agents and Partners
+# Fix: Detect Duplicate Signup and Show "Account Already Exists"
 
-## Overview
+## Root Cause
 
-A new "Knowledge Hub" section accessible from the sidebar for agents (and admins who manage it). Agents and partners can browse, search, and download marketing materials, templates, explainers, FAQ documents, email templates, and other resources uploaded by admins.
+When a user signs up with an email that already exists, Supabase Auth does NOT return an error. Instead, it returns a 200 response with `data.user` present but `data.user.identities` as an empty array (`[]`). This is Supabase's way of signaling a duplicate without leaking account existence to attackers.
 
-## Architecture
+The current code in `useRegisterForm.ts` (line 201-203) only checks for an explicit `error` object. Since none is returned, it falls through to line 444 and navigates to `/verify-email` -- where the user waits forever for an email that was never sent.
 
-### Database
+## The Fix
 
-**New table: `knowledge_hub_resources`**
+Two small, surgical changes:
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK |
-| title | text | Resource name |
-| description | text | Short description |
-| category | text | e.g. "marketing", "templates", "explainers", "faq", "email_templates", "other" |
-| file_name | text | Original file name |
-| file_url | text | Supabase storage URL |
-| file_size_bytes | bigint | File size |
-| mime_type | text | File type |
-| tags | text[] | Searchable tags |
-| is_published | boolean | Only published items visible to agents |
-| uploaded_by | uuid | Admin who uploaded |
-| created_at | timestamptz | Upload date |
-| updated_at | timestamptz | Last modified |
-| download_count | integer | Track popularity |
+### 1. Add duplicate detection in `signUp.ts`
 
-**RLS Policies:**
-- Admins: full CRUD access
-- Agents: SELECT only where `is_published = true`
-- No anonymous access
+After the Supabase call returns, check if `data.user.identities` is empty. If so, return a clear error instead of silently succeeding.
 
-**Storage bucket: `knowledge-hub`**
-- Private bucket (downloads via signed URLs)
-- RLS: admins can upload/delete, agents can read published resources
+**File:** `src/lib/supabase/auth/signUp.ts`
 
-### New Pages and Components
+```typescript
+const { data, error } = await supabase.auth.signUp({ ... });
 
-**1. Agent-facing page: `/knowledge-hub`**
-- Route: Protected, accessible to `agent` and `admin` roles
-- Sidebar entry with `BookOpen` icon, positioned after "Quick Calc" for agents
-- Features:
-  - Category filter tabs (All, Marketing, Templates, Explainers, FAQ, Email Templates)
-  - Search bar to filter by title, description, or tags
-  - Card grid showing each resource with title, description, category badge, file type icon, and download button
-  - Download triggers a signed URL from Supabase storage
+// Detect duplicate signup: Supabase returns a user with empty identities
+if (!error && data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+  return {
+    data: null,
+    error: new Error("An account with this email already exists. Please log in or reset your password.")
+  };
+}
 
-**2. Admin management page: `/admin/knowledge-hub`**
-- Route: Protected, admin only
-- Sidebar entry with `BookOpen` icon in the admin section
-- Features:
-  - Upload new resources (drag-and-drop or file picker)
-  - Set title, description, category, and tags
-  - Toggle published/draft status
-  - Delete resources
-  - View download counts
+return { data, error };
+```
 
-### Files to Create/Modify
+### 2. Improve error handling in `useRegisterForm.ts`
 
-| Action | File | Purpose |
-|--------|------|---------|
-| New | `src/pages/KnowledgeHub.tsx` | Agent-facing browse and download page |
-| New | `src/pages/admin/KnowledgeHubAdmin.tsx` | Admin upload and management page |
-| New | `src/components/knowledge-hub/ResourceCard.tsx` | Resource display card with download |
-| New | `src/components/knowledge-hub/ResourceUploadForm.tsx` | Admin upload form |
-| New | `src/components/knowledge-hub/CategoryFilter.tsx` | Tab-based category filter |
-| New | `src/hooks/useKnowledgeHub.ts` | Data fetching and mutations |
-| Modify | `src/App.tsx` | Add routes for both pages |
-| Modify | `src/components/layout/DashboardSidebar.tsx` | Add sidebar entries |
-| Migration | SQL | Create table, bucket, and RLS policies |
+The existing catch block (line 446-457) already shows a toast with `error.message` and does NOT navigate to `/verify-email`. So the fix in `signUp.ts` is sufficient -- the error will propagate, the toast will display "An account with this email already exists. Please log in or reset your password.", and the user stays on the registration page.
 
-### Technical Details
+No changes needed in `useRegisterForm.ts` for basic functionality. However, we can optionally enhance the error toast to include direct links to login/reset:
 
-**Download flow:** When an agent clicks "Download", we call `supabase.storage.from('knowledge-hub').createSignedUrl(path, 60)` to generate a 60-second signed URL, then trigger the browser download.
+**File:** `src/hooks/useRegisterForm.ts` -- in the catch block, detect the specific message and show a more helpful toast with action links.
 
-**Upload flow (admin):** Uses the existing `useFileUpload` hook pattern (same as onboarding documents). Files are stored in the `knowledge-hub` bucket with a folder structure like `{category}/{filename}`.
+## Files Changed
 
-**Category options:**
-- Marketing Materials
-- Templates
-- Explainers
-- FAQ / Guides
-- Email Templates
-- Other
+| File | Change |
+|------|--------|
+| `src/lib/supabase/auth/signUp.ts` | Add empty-identities check after `supabase.auth.signUp()` |
+| `src/hooks/useRegisterForm.ts` | Enhance catch block to show "Log in" / "Reset password" links for duplicate accounts |
 
-### UI Design
+## What the user will see
 
-The agent-facing page follows the existing dashboard card pattern with:
-- `DashboardLayout` wrapper
-- `DashboardHeader` with title "Knowledge Hub"
-- Tabs for category filtering
-- Responsive card grid (1 col mobile, 2 cols tablet, 3 cols desktop)
-- Each card shows file type icon, title, description, category badge, file size, and a prominent download button
+Instead of being sent to the verification splash page, users who try to register with an existing email will:
+1. Stay on the registration form
+2. See a toast: "Account already exists -- Please log in or reset your password"
+3. The toast description will guide them to the login page
 
