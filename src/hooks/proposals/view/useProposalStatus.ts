@@ -37,7 +37,8 @@ export function useProposalStatus(
     // Direct client match (existing logic)
     const isDirectClient = userRole === 'client' && (
       proposal.client_id === user?.id || 
-      proposal.client_reference_id === user?.id
+      proposal.client_reference_id === user?.id ||
+      proposal.client_reference_user_id === user?.id
     );
 
     // Team member with signing rights - can act on behalf of company

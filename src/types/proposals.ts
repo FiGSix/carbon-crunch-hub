@@ -148,6 +148,9 @@ export interface ProposalData {
   automation_paused?: boolean | null;
   automation_pause_reason?: string | null;
   
+  // Resolved user_id from clients table for identity matching
+  client_reference_user_id?: string | null;
+  
   // Live client data from clients table (joined at fetch time)
   client?: {
     first_name?: string | null;

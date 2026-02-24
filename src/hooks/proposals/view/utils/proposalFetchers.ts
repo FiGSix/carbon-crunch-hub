@@ -89,13 +89,14 @@ export async function fetchProposalById(proposalId: string): Promise<ProposalDat
       .from('proposals')
       .select(`
         *,
-        client:client_reference_id (
+      client:client_reference_id (
           first_name,
           last_name,
           email,
           phone,
           company_name,
-          registration_number
+          registration_number,
+          user_id
         )
       `)
       .eq('id', proposalId)
