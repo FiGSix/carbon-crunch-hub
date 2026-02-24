@@ -105,8 +105,11 @@ export function useDeleteResource() {
 
   return useMutation({
     mutationFn: async ({ id, file_url }: { id: string; file_url: string }) => {
-      // Extract storage path from file_url
-      const path = file_url.split('/knowledge-hub/')[1];
+      // Extract storage path from file_url (handles both relative and full URL formats)
+      let path = file_url.split('/knowledge-hub/')[1];
+      if (!path && file_url.startsWith('knowledge-hub/')) {
+        path = file_url.substring('knowledge-hub/'.length);
+      }
       if (path) {
         await supabase.storage.from('knowledge-hub').remove([path]);
       }
@@ -127,8 +130,11 @@ export function useDeleteResource() {
 }
 
 export async function downloadResource(fileUrl: string, fileName: string, resourceId: string) {
-  // Extract storage path
-  const path = fileUrl.split('/knowledge-hub/')[1];
+  // Extract storage path (handles both relative and full URL formats)
+  let path = fileUrl.split('/knowledge-hub/')[1];
+  if (!path && fileUrl.startsWith('knowledge-hub/')) {
+    path = fileUrl.substring('knowledge-hub/'.length);
+  }
   if (!path) {
     throw new Error('Invalid file URL');
   }
