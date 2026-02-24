@@ -27,6 +27,14 @@ export async function signUp(email: string, password: string, role: UserRole, me
       },
     });
     
+    // Detect duplicate signup: Supabase returns a user with empty identities
+    if (!error && data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+      return {
+        data: null,
+        error: new Error("An account with this email already exists. Please log in or reset your password.")
+      };
+    }
+    
     return { data, error };
   } catch (e) {
     console.error("Exception during signup:", e);
