@@ -870,6 +870,57 @@ export type Database = {
           },
         ]
       }
+      knowledge_hub_resources: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          download_count: number
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          is_published: boolean
+          mime_type: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          download_count?: number
+          file_name: string
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          is_published?: boolean
+          mime_type?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          download_count?: number
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          is_published?: boolean
+          mime_type?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       lead_outreach_history: {
         Row: {
           body_preview: string | null
