@@ -449,9 +449,12 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         role: formData.role,
         error: error.message 
       });
+      const isDuplicate = error.message?.includes("already exists");
       toast({
-        title: "Registration failed",
-        description: error.message || "Please check your information and try again",
+        title: isDuplicate ? "Account already exists" : "Registration failed",
+        description: isDuplicate 
+          ? "An account with this email already exists. Please log in or reset your password."
+          : (error.message || "Please check your information and try again"),
         variant: "destructive",
       });
     } finally {

@@ -105,6 +105,11 @@ export function useRegistrationFormLogic(
         throw signUpError;
       }
 
+      // Detect duplicate signup: Supabase returns user with empty identities
+      if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+        throw new Error("An account with this email already exists. Please sign in instead.");
+      }
+
       // Once registered, update the proposal's client_id
       if (data?.user) {
         registrationLogger.info("User registered successfully, updating proposal", {
