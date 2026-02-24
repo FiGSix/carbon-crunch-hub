@@ -1,67 +1,115 @@
 
 
-# Fix: Edit Dialog Save Fails for Proposals with firstName/lastName Format
+# Fix: Enable Dawn Harris-Slabber to Sign + Sync Profile on Edit
 
-## Root Cause
+## What's Happening
 
-The `clientInfo` JSON in proposals has **two different name formats** depending on how the proposal was created:
+Dawn (`sl@bber.africa`) logs in but can't see the Accept/Reject buttons on "The Gallops Drive" proposal. Two issues need fixing:
 
-- **Format A**: `{ "name": "Estelle" }` -- used by some creation flows
-- **Format B**: `{ "firstName": "Estelle", "lastName": "..." }` -- used by other creation flows
+1. **Identity mismatch blocks signing**: The proposal only has `client_reference_id` (a `clients` table ID), not `client_id` (the auth user ID). The code compares these directly — they never match.
+2. **Profile name not synced on edit**: When you edit a proposal's client name, it updates the `clients` table but NOT the `profiles` table, so the auth account still shows "Shaun Slabber" instead of "Dawn Harris-Slabber."
 
-Estelle's 4 proposals (Toothrock Huis, Fijnbosch Self-Catering, Dagdromer, DAAI PLEKKIE) all use Format B with NO `name` field.
+## Changes
 
-The edit form's `extractFormData` reads `clientInfo.name`, gets `undefined`/empty, so the Client Name field appears **blank**. When you click Save, validation rejects it with "Client name is required" -- even though the data exists in `firstName`/`lastName`.
+### 1. Fetch the client's `user_id` when loading proposals
 
-**Scale**: 862 of 1079 proposals use `firstName`/`lastName`. Any that lack a `name` field will have this same bug.
+**File: `src/hooks/proposals/view/utils/proposalFetchers.ts`**
 
-## Fix
+In `fetchProposalById`, add `user_id` to the `client:client_reference_id` join select:
 
-### File: `src/hooks/proposals/view/useProposalEdit.ts`
-
-Update `extractFormData` to handle both name formats when populating `clientName`:
-
-```text
-Before:
-  clientName: clientInfo.name || '',
-
-After:
-  clientName: clientInfo.name
-    || [clientInfo.firstName, clientInfo.lastName]
-        .filter(n => n && n !== 'null')
-        .join(' ')
-    || '',
+```
+client:client_reference_id (
+  first_name,
+  last_name,
+  email,
+  phone,
+  company_name,
+  registration_number,
+  user_id          // <-- ADD THIS
+)
 ```
 
-The `lastName: "null"` (string "null") in Estelle's data needs to be filtered out, hence the `n !== 'null'` check.
+### 2. Pass `user_id` through the transformer
 
-Also update the `save` function to write back **both** `name` AND `firstName`/`lastName` to the clientInfo, so future edits work regardless of which format was originally used:
+**File: `src/utils/proposals/simplifiedTransformers.ts`**
 
-```text
-// In the save function's updatedContent.clientInfo:
-clientInfo: {
-  ...oldContent.clientInfo,
-  name: formData.clientName.trim(),
-  firstName: formData.clientName.trim().split(/\s+/).slice(0, -1).join(' ') || formData.clientName.trim(),
-  lastName: formData.clientName.trim().split(/\s+/).pop() || '',
-  email: formData.clientEmail.trim(),
-  phone: formData.clientPhone.trim(),
-  companyName: formData.clientCompanyName.trim(),
-},
+In `transformToProposalData`, add:
+
+```
+client_reference_user_id: rawProposal.client?.user_id || null,
 ```
 
-This ensures both formats are always present after an edit, preventing future mismatches.
+This resolves the `clients.user_id` and exposes it directly on the proposal object.
+
+### 3. Add the field to the type
+
+**File: `src/types/proposals.ts`**
+
+Add to `ProposalData`:
+
+```
+client_reference_user_id?: string | null;
+```
+
+### 4. Use the resolved user ID in status checks
+
+**File: `src/hooks/proposals/view/useProposalStatus.ts`**
+
+Update the `isDirectClient` check to also compare against the resolved user ID:
+
+```typescript
+const isDirectClient = userRole === 'client' && (
+  proposal.client_id === user?.id || 
+  proposal.client_reference_id === user?.id ||
+  proposal.client_reference_user_id === user?.id  // NEW
+);
+```
+
+### 5. Sync profile table when editing proposals
+
+**File: `src/hooks/proposals/view/useProposalEdit.ts`**
+
+After the existing `clients` table update (around line 248), add a block that also updates the `profiles` table:
+
+```typescript
+// Also sync to profiles table if the client has a linked user account
+if (proposal.client_reference_id) {
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('user_id')
+    .eq('id', proposal.client_reference_id)
+    .single();
+
+  if (clientData?.user_id) {
+    await supabase
+      .from('profiles')
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        phone: formData.clientPhone.trim(),
+        company_name: formData.clientCompanyName.trim(),
+      })
+      .eq('id', clientData.user_id);
+  }
+}
+```
+
+Email is intentionally NOT synced to profiles because it's tied to auth and requires a separate flow.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/proposals/view/useProposalEdit.ts` | Handle `firstName`/`lastName` fallback in `extractFormData`; write both name formats on save |
+| `src/hooks/proposals/view/utils/proposalFetchers.ts` | Add `user_id` to the client join select |
+| `src/utils/proposals/simplifiedTransformers.ts` | Map `client.user_id` to `client_reference_user_id` |
+| `src/types/proposals.ts` | Add `client_reference_user_id` to `ProposalData` |
+| `src/hooks/proposals/view/useProposalStatus.ts` | Check `client_reference_user_id` in identity match |
+| `src/hooks/proposals/view/useProposalEdit.ts` | Sync name changes to `profiles` table via `clients.user_id` |
 
-## Impact
+## Result
 
-- Immediately fixes editing for all 4 of Estelle's proposals
-- Fixes any other proposals that only have `firstName`/`lastName` (no `name` field)
-- After saving, proposals will have both name formats, preventing future issues
+- Dawn will immediately be able to sign "The Gallops Drive" (identity resolution fix)
+- Future edits to client names will also update the auth profile, keeping names consistent
+- Fixes the same issue for ~867 other proposals that only have `client_reference_id`
 - No database migration needed
 
