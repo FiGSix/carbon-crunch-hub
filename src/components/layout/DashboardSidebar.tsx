@@ -17,7 +17,8 @@ import {
   Mail,
   Scale,
   Calculator,
-  Code2
+  Code2,
+  BookOpen
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -65,6 +66,12 @@ export function DashboardSidebar() {
       name: "Quick Calc",
       href: "/quick-calc",
       icon: Calculator,
+      roles: ["admin", "agent"]
+    },
+    {
+      name: "Knowledge Hub",
+      href: "/knowledge-hub",
+      icon: BookOpen,
       roles: ["admin", "agent"]
     },
     {
@@ -155,6 +162,12 @@ export function DashboardSidebar() {
       name: "Partner API",
       href: "/admin/partners",
       icon: Code2,
+      roles: ["admin"]
+    },
+    {
+      name: "Knowledge Hub Mgmt",
+      href: "/admin/knowledge-hub",
+      icon: BookOpen,
       roles: ["admin"]
     },
     {

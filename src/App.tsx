@@ -78,7 +78,8 @@ const LegalDocuments = createOptimizedLazyComponent(() => import("./pages/Admin/
 const AuditStatus = createOptimizedLazyComponent(() => import("./pages/admin/AuditStatus"), "AuditStatus");
 const PartnerManagement = createOptimizedLazyComponent(() => import("./pages/admin/PartnerManagement"), "PartnerManagement");
 const SubmitProject = createOptimizedLazyComponent(() => import("./pages/SubmitProject"), "SubmitProject");
-
+const KnowledgeHub = createOptimizedLazyComponent(() => import("./pages/KnowledgeHub"), "KnowledgeHub");
+const KnowledgeHubAdmin = createOptimizedLazyComponent(() => import("./pages/admin/KnowledgeHubAdmin"), "KnowledgeHubAdmin");
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
 
@@ -204,6 +205,20 @@ function App() {
                         </AgentApprovalGuard>
                       </PrivateRoute>
                     } 
+                  />
+                  <Route 
+                    path="/knowledge-hub" 
+                    element={
+                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                        <AgentApprovalGuard>
+                          <PageErrorBoundary pageName="Knowledge Hub">
+                            <Suspense fallback={<PageLoader />}>
+                              <KnowledgeHub />
+                            </Suspense>
+                          </PageErrorBoundary>
+                        </AgentApprovalGuard>
+                      </PrivateRoute>
+                    }
                   />
   <Route path="/home-owners" element={
     <PageErrorBoundary pageName="SolarRewards">
@@ -412,6 +427,18 @@ function App() {
                         </PageErrorBoundary>
                       </PrivateRoute>
                     } 
+                  />
+                  <Route 
+                    path="/admin/knowledge-hub" 
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Knowledge Hub Admin">
+                          <Suspense fallback={<PageLoader />}>
+                            <KnowledgeHubAdmin />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
                   />
                   <Route 
                     path="/admin/partners" 
