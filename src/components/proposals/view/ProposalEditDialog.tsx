@@ -16,7 +16,7 @@ interface ProposalEditDialogProps {
 }
 
 export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: ProposalEditDialogProps) {
-  const { formData, errors, saving, updateField, save, resetForm } = useProposalEdit(proposal, () => {
+  const { formData, errors, saving, updateField, updatePhase, computedTotalSize, save, resetForm } = useProposalEdit(proposal, () => {
     onSaved();
     onOpenChange(false);
   });
@@ -106,28 +106,76 @@ export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: Pr
                   onChange={(e) => updateField('projectAddress', e.target.value)}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="systemSize">System Size (kWp) *</Label>
-                <Input
-                  id="systemSize"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.systemSize}
-                  onChange={(e) => updateField('systemSize', e.target.value)}
-                  className={errors.systemSize ? 'border-destructive' : ''}
-                />
-                {errors.systemSize && <p className="text-xs text-destructive">{errors.systemSize}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="commissionDate">Commission Date</Label>
-                <Input
-                  id="commissionDate"
-                  type="date"
-                  value={formData.commissionDate}
-                  onChange={(e) => updateField('commissionDate', e.target.value)}
-                />
-              </div>
+
+              {formData.isMultiPhase ? (
+                <>
+                  {/* Per-phase editing */}
+                  <div className="sm:col-span-2 space-y-4">
+                    <h4 className="text-sm font-medium text-foreground">Project Phases</h4>
+                    {formData.phases.map((phase, i) => (
+                      <div key={i} className="rounded-md border border-border p-3 space-y-3">
+                        <p className="text-sm font-medium">{phase.phaseName}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`phase-size-${i}`}>Size (kWp) *</Label>
+                            <Input
+                              id={`phase-size-${i}`}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={phase.sizeKWp}
+                              onChange={(e) => updatePhase(i, 'sizeKWp', e.target.value)}
+                              className={errors[`phase_${i}_size`] ? 'border-destructive' : ''}
+                            />
+                            {errors[`phase_${i}_size`] && (
+                              <p className="text-xs text-destructive">{errors[`phase_${i}_size`]}</p>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`phase-date-${i}`}>Commission Date</Label>
+                            <Input
+                              id={`phase-date-${i}`}
+                              type="date"
+                              value={phase.commissionDate}
+                              onChange={(e) => updatePhase(i, 'commissionDate', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+                      <span className="text-sm text-muted-foreground">Total System Size</span>
+                      <span className="text-sm font-semibold">{computedTotalSize().toFixed(2)} kWp</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="systemSize">System Size (kWp) *</Label>
+                    <Input
+                      id="systemSize"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.systemSize}
+                      onChange={(e) => updateField('systemSize', e.target.value)}
+                      className={errors.systemSize ? 'border-destructive' : ''}
+                    />
+                    {errors.systemSize && <p className="text-xs text-destructive">{errors.systemSize}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="commissionDate">Commission Date</Label>
+                    <Input
+                      id="commissionDate"
+                      type="date"
+                      value={formData.commissionDate}
+                      onChange={(e) => updateField('commissionDate', e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="additionalNotes">Additional Notes</Label>
                 <Input
