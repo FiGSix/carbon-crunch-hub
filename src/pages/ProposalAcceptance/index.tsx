@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ProposalData, ProposalContent } from "@/types/proposals";
+import { resolveClientInfo, LiveClientRecord } from "@/utils/proposals/resolveClientInfo";
 import { PageLoading } from "@/components/ui/loading-states";
 import { ProposalSummarySection } from "./components/ProposalSummarySection";
 import { TermsAndConditionsSection } from "./components/TermsAndConditionsSection";
@@ -29,6 +30,7 @@ export default function ProposalAcceptance() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [tokenExpired, setTokenExpired] = useState(false);
+  const [clientRecord, setClientRecord] = useState<LiveClientRecord | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -79,9 +81,12 @@ export default function ProposalAcceptance() {
       
       setProposal(transformedProposal);
 
-      // Check if client already has a signed agreement
+      // Fetch live client data and check existing agreement
       if (rawProposal.client_reference_id) {
-        await checkExistingAgreement(rawProposal.client_reference_id);
+        await Promise.all([
+          fetchClientRecord(rawProposal.client_reference_id),
+          checkExistingAgreement(rawProposal.client_reference_id),
+        ]);
       }
     } catch (err) {
       console.error("Error fetching proposal by token:", err);
@@ -163,15 +168,34 @@ export default function ProposalAcceptance() {
       
       setProposal(transformedProposal);
 
-      // Check if client already has a signed agreement
+      // Fetch live client data and check existing agreement
       if (data.client_reference_id) {
-        await checkExistingAgreement(data.client_reference_id);
+        await Promise.all([
+          fetchClientRecord(data.client_reference_id),
+          checkExistingAgreement(data.client_reference_id),
+        ]);
       }
     } catch (err) {
       console.error("Error fetching proposal:", err);
       setError(err instanceof Error ? err.message : "Failed to load proposal");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClientRecord = async (clientReferenceId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('first_name, last_name, email, phone, company_name, registration_number')
+        .eq('id', clientReferenceId)
+        .single();
+
+      if (!error && data) {
+        setClientRecord(data);
+      }
+    } catch (err) {
+      console.error('Error fetching client record:', err);
     }
   };
 
@@ -193,7 +217,8 @@ export default function ProposalAcceptance() {
 
   const getClientName = (): string => {
     if (!proposal) return "";
-    return proposal.content?.clientInfo?.name || "";
+    const resolved = resolveClientInfo(proposal.content?.clientInfo || {}, clientRecord);
+    return resolved.name || "";
   };
 
   const validateTypedName = (): boolean => {
