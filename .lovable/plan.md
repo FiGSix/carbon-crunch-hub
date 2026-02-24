@@ -1,56 +1,65 @@
 
 
-# Fix: Detect Duplicate Signup and Show "Account Already Exists"
+# Fix: Proposal Acceptance Page Uses Stale Client Name
 
-## Root Cause
+## Problem
 
-When a user signs up with an email that already exists, Supabase Auth does NOT return an error. Instead, it returns a 200 response with `data.user` present but `data.user.identities` as an empty array (`[]`). This is Supabase's way of signaling a duplicate without leaking account existence to attackers.
+The proposal acceptance page (`src/pages/ProposalAcceptance/index.tsx`) reads the client name from a frozen JSON snapshot (`proposal.content.clientInfo.name`). This snapshot is set when the proposal is first created and may not reflect edits made later via the Edit Proposal dialog.
 
-The current code in `useRegisterForm.ts` (line 201-203) only checks for an explicit `error` object. Since none is returned, it falls through to line 444 and navigates to `/verify-email` -- where the user waits forever for an email that was never sent.
+The rest of the app uses `resolveClientInfo()` which merges live data from the `clients` table with the snapshot, giving precedence to live data. The acceptance page skips this entirely.
 
-## The Fix
+This means:
+- If an admin updates the client name via the edit button, the acceptance page still shows the old name
+- The typed-name validation compares against the stale snapshot name, so the client cannot sign
+- This will affect every proposal where client info was edited after creation
 
-Two small, surgical changes:
+## Current Data State
 
-### 1. Add duplicate detection in `signUp.ts`
+| Source | Name |
+|--------|------|
+| `proposal.content.clientInfo.name` (snapshot) | Dawn Harris-Slabber |
+| `clients` table (live record) | Dawn Harris-Slabber |
 
-After the Supabase call returns, check if `data.user.identities` is empty. If so, return a clear error instead of silently succeeding.
+Both still say "Dawn Harris-Slabber". If the intended signer is Shaun Slabber, the client record name needs to be updated too. But the code fix is needed regardless to prevent this pattern from recurring.
 
-**File:** `src/lib/supabase/auth/signUp.ts`
+## Fix
 
-```typescript
-const { data, error } = await supabase.auth.signUp({ ... });
+### 1. Fetch live client data in the acceptance page
 
-// Detect duplicate signup: Supabase returns a user with empty identities
-if (!error && data?.user && (!data.user.identities || data.user.identities.length === 0)) {
-  return {
-    data: null,
-    error: new Error("An account with this email already exists. Please log in or reset your password.")
-  };
-}
+After fetching the proposal, also fetch the linked client record from the `clients` table using `client_reference_id`, then use `resolveClientInfo()` to get the merged (live-priority) client name.
 
-return { data, error };
+**File:** `src/pages/ProposalAcceptance/index.tsx`
+
+- Add a `clientRecord` state variable
+- After setting the proposal, fetch the client record: `SELECT first_name, last_name, email, phone, company_name FROM clients WHERE id = client_reference_id`
+- Update `getClientName()` to use `resolveClientInfo(proposal.content.clientInfo, clientRecord)` instead of reading the snapshot directly
+
+### 2. Update `getClientName()` to use resolved info
+
+```text
+Before:
+  const getClientName = () => proposal.content?.clientInfo?.name || "";
+
+After:
+  const resolvedClient = resolveClientInfo(
+    proposal.content?.clientInfo || {},
+    clientRecord
+  );
+  const getClientName = () => resolvedClient.name || "";
 ```
 
-### 2. Improve error handling in `useRegisterForm.ts`
-
-The existing catch block (line 446-457) already shows a toast with `error.message` and does NOT navigate to `/verify-email`. So the fix in `signUp.ts` is sufficient -- the error will propagate, the toast will display "An account with this email already exists. Please log in or reset your password.", and the user stays on the registration page.
-
-No changes needed in `useRegisterForm.ts` for basic functionality. However, we can optionally enhance the error toast to include direct links to login/reset:
-
-**File:** `src/hooks/useRegisterForm.ts` -- in the catch block, detect the specific message and show a more helpful toast with action links.
+This ensures the typed-name validation and the displayed "client name" label always reflect the latest data from the `clients` table.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/lib/supabase/auth/signUp.ts` | Add empty-identities check after `supabase.auth.signUp()` |
-| `src/hooks/useRegisterForm.ts` | Enhance catch block to show "Log in" / "Reset password" links for duplicate accounts |
+| `src/pages/ProposalAcceptance/index.tsx` | Fetch live client record, use `resolveClientInfo()` for name resolution |
 
-## What the user will see
+## Impact
 
-Instead of being sent to the verification splash page, users who try to register with an existing email will:
-1. Stay on the registration form
-2. See a toast: "Account already exists -- Please log in or reset your password"
-3. The toast description will guide them to the login page
+- Fixes the signing issue for any proposal where client info was edited after creation
+- Consistent with how the rest of the app resolves client info
+- No database migration needed
+- The `resolveClientInfo` utility already exists and is well-tested
 
