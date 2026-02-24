@@ -1,65 +1,87 @@
 
 
-# Fix: Proposal Acceptance Page Uses Stale Client Name
+# Fix: Multi-Phase Proposal Editing and Resend Button Visibility
 
-## Problem
+## Problems Found
 
-The proposal acceptance page (`src/pages/ProposalAcceptance/index.tsx`) reads the client name from a frozen JSON snapshot (`proposal.content.clientInfo.name`). This snapshot is set when the proposal is first created and may not reflect edits made later via the Edit Proposal dialog.
+### 1. Edit form breaks on multi-phase proposals
+The Keystone Hatchery proposal has 2 phases but `content.projectInfo.size` is empty (the total is in `totalSystemSize` and `system_size_kwp`). The edit form reads `projectInfo.size`, gets `""`, and validation blocks saving with "System size is required."
 
-The rest of the app uses `resolveClientInfo()` which merges live data from the `clients` table with the snapshot, giving precedence to live data. The acceptance page skips this entirely.
+### 2. No per-phase editing capability
+The edit dialog only shows a single "System Size" and "Commission Date" field. For multi-phase proposals, there is no way to edit individual phase sizes or commission dates. Agents need to update each phase independently.
 
-This means:
-- If an admin updates the client name via the edit button, the acceptance page still shows the old name
-- The typed-name validation compares against the stale snapshot name, so the client cannot sign
-- This will affect every proposal where client info was edited after creation
+### 3. Resend button hidden for "delivered + viewed" proposals
+The `ProposalInviteButton` has a gap in its status conditions:
+- Line 132 checks `"delivered"` but requires `!invitation_viewed_at` -- this proposal has been viewed, so it fails
+- Line 155 checks `"sent" || "viewed"` -- status is `"delivered"`, so it fails too
 
-## Current Data State
+Result: No resend/send-again button appears for proposals in "delivered" status that have been viewed.
 
-| Source | Name |
-|--------|------|
-| `proposal.content.clientInfo.name` (snapshot) | Dawn Harris-Slabber |
-| `clients` table (live record) | Dawn Harris-Slabber |
+## Current Proposal State (Keystone Hatchery)
 
-Both still say "Dawn Harris-Slabber". If the intended signer is Shaun Slabber, the client record name needs to be updated too. But the code fix is needed regardless to prevent this pattern from recurring.
+| Field | Value |
+|-------|-------|
+| Status | delivered |
+| Agent | Connor Gibbs (matches agent_id) |
+| signed_at | null |
+| archived_at | null |
+| projectInfo.size | "" (empty) |
+| totalSystemSize | 725.62 |
+| system_size_kwp | 725.62 |
+| Phases | Phase 1: 325.61 kWp (2023-04-09), Phase 2: 400.01 kWp (2024-04-23) |
+| invitation_viewed_at | Set (2026-02-24) |
 
-## Fix
+The Edit button DOES show for Connor (he is the agent, status is not finalized). But when he opens the dialog, the system size field is blank and he cannot save.
 
-### 1. Fetch live client data in the acceptance page
+## Fix Plan
 
-After fetching the proposal, also fetch the linked client record from the `clients` table using `client_reference_id`, then use `resolveClientInfo()` to get the merged (live-priority) client name.
+### Fix 1: Multi-phase aware edit form (`useProposalEdit.ts`)
 
-**File:** `src/pages/ProposalAcceptance/index.tsx`
-
-- Add a `clientRecord` state variable
-- After setting the proposal, fetch the client record: `SELECT first_name, last_name, email, phone, company_name FROM clients WHERE id = client_reference_id`
-- Update `getClientName()` to use `resolveClientInfo(proposal.content.clientInfo, clientRecord)` instead of reading the snapshot directly
-
-### 2. Update `getClientName()` to use resolved info
-
-```text
-Before:
-  const getClientName = () => proposal.content?.clientInfo?.name || "";
-
-After:
-  const resolvedClient = resolveClientInfo(
-    proposal.content?.clientInfo || {},
-    clientRecord
-  );
-  const getClientName = () => resolvedClient.name || "";
+**extractFormData**: Add fallbacks for system size:
+```
+systemSize: projectInfo.size
+  || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')
+  || (proposal.system_size_kwp ? String(proposal.system_size_kwp) : ''),
 ```
 
-This ensures the typed-name validation and the displayed "client name" label always reflect the latest data from the `clients` table.
+Add `phases` to the form data so they can be edited independently. Each phase has `sizeKWp`, `commissionDate`, and `phaseName`.
+
+**validate**: For multi-phase proposals, validate each phase's size individually instead of the single systemSize field. The total system size becomes read-only (auto-calculated from phases).
+
+**save**: When saving multi-phase proposals, update each phase in `content.projectInfo.phases`, recalculate `totalSystemSize`, and sync to `system_size_kwp`.
+
+### Fix 2: Phase editing UI (`ProposalEditDialog.tsx`)
+
+Detect if the proposal is multi-phase (has `content.projectInfo.phases` with length > 1). If so:
+- Hide the single "System Size" and "Commission Date" fields
+- Show a "Project Phases" section with per-phase editing (size + commission date for each phase)
+- Display an auto-calculated total system size (read-only)
+
+Reuse the existing `ProjectPhasesInput` component pattern for the edit dialog, or render a simpler inline version.
+
+### Fix 3: Resend button for "delivered + viewed" (`ProposalInviteButton.tsx`)
+
+Add `"delivered"` to the status check on line 155 so that proposals in "delivered" status with `invitation_viewed_at` set show the "Send Again" button:
+
+```
+Before:
+  (proposal.status === "sent" || proposal.status === "viewed") && proposal.invitation_viewed_at
+
+After:
+  (proposal.status === "sent" || proposal.status === "delivered" || proposal.status === "viewed") && proposal.invitation_viewed_at
+```
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/ProposalAcceptance/index.tsx` | Fetch live client record, use `resolveClientInfo()` for name resolution |
+| `src/hooks/proposals/view/useProposalEdit.ts` | Add phases to form data, fallback system size extraction, per-phase validation, per-phase save logic |
+| `src/components/proposals/view/ProposalEditDialog.tsx` | Add conditional phase editing UI for multi-phase proposals |
+| `src/components/proposals/components/ProposalInviteButton.tsx` | Add "delivered" to the viewed-proposal resend condition (line 155) |
 
 ## Impact
 
-- Fixes the signing issue for any proposal where client info was edited after creation
-- Consistent with how the rest of the app resolves client info
-- No database migration needed
-- The `resolveClientInfo` utility already exists and is well-tested
-
+- Connor can immediately edit Keystone Hatchery (system size pre-fills with 725.62, phases are individually editable)
+- All multi-phase proposals will correctly show per-phase editing in the edit dialog
+- The "Send Again" button will appear for delivered+viewed proposals
+- No database changes needed
