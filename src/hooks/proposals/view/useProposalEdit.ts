@@ -45,7 +45,11 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
   const isMultiPhase = phases.length > 1;
 
   return {
-    clientName: clientInfo.name || '',
+    clientName: clientInfo.name
+      || [(clientInfo as any).firstName, (clientInfo as any).lastName]
+          .filter((n: any) => n && n !== 'null')
+          .join(' ')
+      || '',
     clientEmail: clientInfo.email || '',
     clientPhone: clientInfo.phone || '',
     clientCompanyName: clientInfo.companyName || '',
@@ -168,6 +172,8 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         clientInfo: {
           ...oldContent.clientInfo,
           name: formData.clientName.trim(),
+          firstName: formData.clientName.trim().split(/\s+/).slice(0, -1).join(' ') || formData.clientName.trim(),
+          lastName: formData.clientName.trim().split(/\s+/).pop() || '',
           email: formData.clientEmail.trim(),
           phone: formData.clientPhone.trim(),
           companyName: formData.clientCompanyName.trim(),
