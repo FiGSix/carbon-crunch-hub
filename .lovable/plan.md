@@ -1,73 +1,62 @@
 
 
-# Fix: Proposal Edit Not Updating Client Information
+# Fix: Re-enable Weekly Roundup Cron Job
 
-## Root Cause
+## What Happened
 
-The proposal detail page uses `resolveClientInfo()` to display client data. This function merges two data sources:
+The `pg_cron` extension was originally enabled in migration `20251107115355` and the weekly roundup was scheduled in `20251218124815`. The cron job was working (you received emails previously). However, `pg_cron` is currently **not active** in the database -- the extension was likely lost during a Supabase project restore, pause/unpause cycle, or platform maintenance event.
 
-1. **Snapshot** -- `proposal.content.clientInfo` (stored in the proposal's JSON)
-2. **Live record** -- the linked row in the `clients` table (via `client_reference_id`)
+Migration `20260109122837` (January 2026) intentionally kept the weekly-roundup job while removing other cron jobs, confirming it was meant to stay active.
 
-Live data takes precedence over the snapshot. When you edit a proposal:
-- The edit hook (`useProposalEdit.ts`) updates the **snapshot only** (the `content` JSON column)
-- It does **not** update the linked `clients` table record
-- On the next page load, `resolveClientInfo()` overwrites your edit with the old live data from the `clients` table
+## Fix
 
-**This affects all client fields**: name, email, phone, and company name. Project fields (system size, address, etc.) are unaffected because they don't go through this merge logic.
+Create a new migration that:
+1. Re-enables the `pg_cron` extension
+2. Re-registers the weekly roundup cron job (Friday 7:00 AM UTC / 9:00 AM SAST)
 
-## Solution
+**Note:** Per Supabase guidelines, the cron schedule SQL contains project-specific secrets (anon key, project URL), so this should be run via SQL insert rather than a standard migration. However, since the migration file `20251218124815` already contains these values in the codebase, we can use the migration tool consistently.
 
-Update `useProposalEdit.ts` to also update the linked `clients` table record when client information changes.
+## Migration SQL
 
-## Changes
+```sql
+-- Re-enable pg_cron (may have been lost during project restore)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
-### File: `src/hooks/proposals/view/useProposalEdit.ts`
+-- Re-schedule weekly roundup emails: Friday 7:00 AM UTC (9:00 AM SAST)
+-- Use try/catch pattern: unschedule first if it somehow exists, then reschedule
+DO $$
+BEGIN
+  PERFORM cron.unschedule('weekly-roundup-emails');
+EXCEPTION WHEN OTHERS THEN
+  -- Job doesn't exist, that's fine
+END;
+$$;
 
-In the `save()` function, after the successful `proposals` table update, add a second update to the `clients` table:
-
-- Split `formData.clientName` into `first_name` and `last_name` (last word = last name, everything before = first name)
-- Update the `clients` record matching `proposal.client_reference_id` with: `first_name`, `last_name`, `email`, `phone`, `company_name`
-- Only perform this update if `proposal.client_reference_id` exists (some proposals may not have a linked client record)
-- If the client update fails, log a warning but don't block the overall save (the snapshot is already saved as a fallback)
-
-### Technical Detail
-
-```
-save() {
-  // ... existing proposal update (lines 127-138) ...
-
-  // NEW: Also update the clients table so resolveClientInfo() picks up the change
-  if (proposal.client_reference_id) {
-    const nameParts = formData.clientName.trim().split(/\s+/);
-    const lastName = nameParts.length > 1 ? nameParts.pop() : '';
-    const firstName = nameParts.join(' ');
-
-    await supabase
-      .from('clients')
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        email: formData.clientEmail.trim(),
-        phone: formData.clientPhone.trim(),
-        company_name: formData.clientCompanyName.trim(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', proposal.client_reference_id);
-  }
-}
+SELECT cron.schedule(
+  'weekly-roundup-emails',
+  '0 7 * * 5',
+  $$
+  SELECT net.http_post(
+    url:='https://uyjryuopuqgmsvayiccl.supabase.co/functions/v1/send-weekly-roundup',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5anJ5dW9wdXFnbXN2YXlpY2NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyNzU2MzgsImV4cCI6MjA1OTg1MTYzOH0.M828t6sJxh4lZAVACqpRosoRvW_VibHDAMSXV-3WrLo"}'::jsonb,
+    body:='{}'::jsonb
+  ) as request_id;
+  $$
+);
 ```
 
-## Files Summary
+## Optional: Send Missed Roundup Now
+
+After the migration, we can manually trigger the edge function to send the missed Friday roundup immediately.
+
+## Files
 
 | Action | File | Reason |
 |--------|------|--------|
-| Edit | `src/hooks/proposals/view/useProposalEdit.ts` | Add clients table update alongside the content snapshot update |
+| New | `supabase/migrations/...` | Re-enable pg_cron and reschedule weekly roundup |
 
-## What Does NOT Change
+## Risk
 
-- No changes to `resolveClientInfo()` -- the merge logic is correct by design
-- No changes to `ProposalEditDialog.tsx` -- the form fields stay the same
-- No database migrations needed -- existing RLS on `clients` already allows agents to update clients linked to their proposals
-- No changes to project field editing -- those already work correctly
-
+- Zero risk to existing data -- purely additive
+- If pg_cron was intentionally removed by Supabase support, it will re-enable cleanly
+- The unschedule-then-reschedule pattern prevents duplicate job errors
