@@ -66,6 +66,8 @@ export function transformToProposalData(rawProposal: any): ProposalData {
     invitation_expires_at: rawProposal.invitation_expires_at,
     invitation_sent_at: rawProposal.invitation_sent_at,
     invitation_viewed_at: rawProposal.invitation_viewed_at,
+    // Resolve client_reference_id → user_id for identity matching
+    client_reference_user_id: rawProposal.client?.user_id || null,
     // Preserve joined client record for live data resolution
     client: rawProposal.client || null
   };

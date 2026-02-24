@@ -227,7 +227,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
           const lastName = nameParts.length > 1 ? nameParts.pop()! : '';
           const firstName = nameParts.join(' ');
 
-          const { error: clientError } = await supabase
+          const { data: clientData, error: clientError } = await supabase
             .from('clients')
             .update({
               first_name: firstName,
@@ -237,10 +237,29 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
               company_name: formData.clientCompanyName.trim(),
               updated_at: new Date().toISOString(),
             })
-            .eq('id', proposal.client_reference_id);
+            .eq('id', proposal.client_reference_id)
+            .select('user_id')
+            .single();
 
           if (clientError) {
             console.warn('Failed to update linked client record:', clientError.message);
+          }
+
+          // Also sync to profiles table if the client has a linked user account
+          if (clientData?.user_id) {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({
+                first_name: firstName,
+                last_name: lastName,
+                phone: formData.clientPhone.trim(),
+                company_name: formData.clientCompanyName.trim(),
+              })
+              .eq('id', clientData.user_id);
+
+            if (profileError) {
+              console.warn('Failed to sync profile:', profileError.message);
+            }
           }
         } catch (clientErr) {
           console.warn('Exception updating linked client record:', clientErr);
