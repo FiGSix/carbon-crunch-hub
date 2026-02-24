@@ -1,62 +1,34 @@
 
 
-# Fix: Re-enable Weekly Roundup Cron Job
+# Send Missed Weekly Roundup with Apology Note
 
-## What Happened
+## What We'll Do
 
-The `pg_cron` extension was originally enabled in migration `20251107115355` and the weekly roundup was scheduled in `20251218124815`. The cron job was working (you received emails previously). However, `pg_cron` is currently **not active** in the database -- the extension was likely lost during a Supabase project restore, pause/unpause cycle, or platform maintenance event.
+1. Temporarily add a short apology banner to the weekly roundup email template
+2. Deploy the updated edge function
+3. Manually trigger it to send to all agents and admins
+4. Remove the apology banner afterward (so future Friday emails are clean)
 
-Migration `20260109122837` (January 2026) intentionally kept the weekly-roundup job while removing other cron jobs, confirming it was meant to stay active.
+## Changes
 
-## Fix
+### File: `supabase/functions/send-weekly-roundup/index.ts`
 
-Create a new migration that:
-1. Re-enables the `pg_cron` extension
-2. Re-registers the weekly roundup cron job (Friday 7:00 AM UTC / 9:00 AM SAST)
+**Agent email** (`buildAgentEmailHtml`, around line 800): Insert an apology note right after the "Hi {name}" greeting, before the segment opening:
 
-**Note:** Per Supabase guidelines, the cron schedule SQL contains project-specific secrets (anon key, project URL), so this should be run via SQL insert rather than a standard migration. However, since the migration file `20251218124815` already contains these values in the codebase, we can use the migration tool consistently.
-
-## Migration SQL
-
-```sql
--- Re-enable pg_cron (may have been lost during project restore)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- Re-schedule weekly roundup emails: Friday 7:00 AM UTC (9:00 AM SAST)
--- Use try/catch pattern: unschedule first if it somehow exists, then reschedule
-DO $$
-BEGIN
-  PERFORM cron.unschedule('weekly-roundup-emails');
-EXCEPTION WHEN OTHERS THEN
-  -- Job doesn't exist, that's fine
-END;
-$$;
-
-SELECT cron.schedule(
-  'weekly-roundup-emails',
-  '0 7 * * 5',
-  $$
-  SELECT net.http_post(
-    url:='https://uyjryuopuqgmsvayiccl.supabase.co/functions/v1/send-weekly-roundup',
-    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5anJ5dW9wdXFnbXN2YXlpY2NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyNzU2MzgsImV4cCI6MjA1OTg1MTYzOH0.M828t6sJxh4lZAVACqpRosoRvW_VibHDAMSXV-3WrLo"}'::jsonb,
-    body:='{}'::jsonb
-  ) as request_id;
-  $$
-);
+```
+Apologies — our weekly roundup didn't go out on Friday as usual due to a technical hiccup on our side. Everything is back on track, and here's your update.
 ```
 
-## Optional: Send Missed Roundup Now
+**Admin email** (`buildAdminEmailHtml`): Add the same apology note after the admin greeting.
 
-After the migration, we can manually trigger the edge function to send the missed Friday roundup immediately.
+### Deployment and Trigger
 
-## Files
-
-| Action | File | Reason |
-|--------|------|--------|
-| New | `supabase/migrations/...` | Re-enable pg_cron and reschedule weekly roundup |
+- Deploy the updated `send-weekly-roundup` edge function
+- Invoke it with no test parameters (production mode) to send to all agents and admins
+- After confirming it sent successfully, remove the apology text and redeploy so future Friday emails are clean
 
 ## Risk
 
-- Zero risk to existing data -- purely additive
-- If pg_cron was intentionally removed by Supabase support, it will re-enable cleanly
-- The unschedule-then-reschedule pattern prevents duplicate job errors
+- Minimal — the apology is a one-line text addition to the existing HTML template
+- We remove it immediately after sending, so it won't appear in future automated emails
+
