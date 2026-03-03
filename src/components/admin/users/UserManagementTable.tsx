@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MoreVertical, Shield, UserCog, Building2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/services/unified/utils/withTimeout';
 import {
   Table,
   TableBody,
@@ -76,7 +77,9 @@ export function UserManagementTable() {
 
   const { data: allUsers, isLoading, refetch } = useQuery({
     queryKey: ['admin-users', roleFilter, companyFilter, userTypeFilter],
-    queryFn: async () => {
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: () => withTimeout((async () => {
       // 1. Fetch profiles (existing logic)
       let profileQuery = supabase
         .from('profiles')
@@ -225,7 +228,7 @@ export function UserManagementTable() {
       }
 
       return merged;
-    },
+    })(), 15000),
   });
 
   // Get unique companies for filter

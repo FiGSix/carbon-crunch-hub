@@ -9,6 +9,12 @@ export function useAgentsRealtime() {
   const { toast } = useToast();
   const { invalidateAgentManagement } = useCacheInvalidation();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  
+  // Use refs to avoid re-subscribing when these change
+  const toastRef = useRef(toast);
+  const invalidateRef = useRef(invalidateAgentManagement);
+  toastRef.current = toast;
+  invalidateRef.current = invalidateAgentManagement;
 
   useEffect(() => {
     // Clean up previous subscription if it exists
@@ -16,6 +22,8 @@ export function useAgentsRealtime() {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+
+    let activityDebounce: NodeJS.Timeout | null = null;
 
     const channel = supabase
       .channel('agent-management-changes')
@@ -30,13 +38,11 @@ export function useAgentsRealtime() {
         async (payload) => {
           devLogger.realtime.info('Agent profile change detected:', payload);
           
-          // Invalidate and refetch agent management queries
-          await invalidateAgentManagement();
+          await invalidateRef.current();
           
-          // Show notification based on event type
           if (payload.eventType === 'INSERT') {
             const newAgent = payload.new as any;
-            toast({
+            toastRef.current({
               title: "New Agent Added",
               description: `${newAgent.first_name} ${newAgent.last_name} has been added to the system.`,
             });
@@ -44,14 +50,13 @@ export function useAgentsRealtime() {
             const updatedAgent = payload.new as any;
             const oldAgent = payload.old as any;
             
-            // Check what was updated
             if (oldAgent.agent_status !== updatedAgent.agent_status) {
-              toast({
+              toastRef.current({
                 title: "Agent Status Updated",
                 description: `${updatedAgent.first_name} ${updatedAgent.last_name}'s status changed to ${updatedAgent.agent_status}.`,
               });
             } else if (oldAgent.commission_override !== updatedAgent.commission_override) {
-              toast({
+              toastRef.current({
                 title: "Commission Updated",
                 description: `${updatedAgent.first_name} ${updatedAgent.last_name}'s commission has been updated.`,
               });
@@ -66,51 +71,27 @@ export function useAgentsRealtime() {
           schema: 'public',
           table: 'agent_activities'
         },
-        async (payload) => {
+        (payload) => {
           devLogger.realtime.info('Agent activity change detected:', payload);
           
-          // Invalidate agent management queries to reflect activity changes
-          await invalidateAgentManagement();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'proposals',
-        },
-        async (payload) => {
-          devLogger.realtime.info('Proposal change detected:', payload);
-          
-          // Invalidate queries as proposal changes affect agent stats
-          await invalidateAgentManagement();
+          // Debounce activity updates to prevent rapid-fire invalidations
+          if (activityDebounce) clearTimeout(activityDebounce);
+          activityDebounce = setTimeout(() => {
+            invalidateRef.current();
+          }, 2000);
         }
       )
       .subscribe();
 
-    // Store channel reference
     channelRef.current = channel;
-
-    // Enable realtime for the tables
-    const enableRealtime = async () => {
-      try {
-        // Enable replica identity for real-time updates
-        await supabase.rpc('test_rls_policies'); // This will ensure functions exist
-        
-        devLogger.realtime.info('Realtime subscriptions established for agent management');
-      } catch (error) {
-        devLogger.realtime.error('Error setting up realtime:', error);
-      }
-    };
-
-    enableRealtime();
+    devLogger.realtime.info('Realtime subscriptions established for agent management');
 
     return () => {
+      if (activityDebounce) clearTimeout(activityDebounce);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [toast, invalidateAgentManagement]);
+  }, []); // Empty deps - refs handle current values
 }
