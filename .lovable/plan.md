@@ -1,115 +1,56 @@
 
 
-# Fix: Enable Dawn Harris-Slabber to Sign + Sync Profile on Edit
+# Fix: Page Freezing on Users and Agents Pages
 
-## What's Happening
+## Root Causes Identified
 
-Dawn (`sl@bber.africa`) logs in but can't see the Accept/Reject buttons on "The Gallops Drive" proposal. Two issues need fixing:
+### 1. Realtime subscription infinite loop (Agents page)
 
-1. **Identity mismatch blocks signing**: The proposal only has `client_reference_id` (a `clients` table ID), not `client_id` (the auth user ID). The code compares these directly — they never match.
-2. **Profile name not synced on edit**: When you edit a proposal's client name, it updates the `clients` table but NOT the `profiles` table, so the auth account still shows "Shaun Slabber" instead of "Dawn Harris-Slabber."
+In `src/components/admin/agents/realtime/useAgentsRealtime.ts`, the `useEffect` at line 13 has `[toast, invalidateAgentManagement]` as dependencies. While `invalidateAgentManagement` is wrapped in `useCallback`, `toast` from `useToast()` may not be referentially stable across renders. Each time the dependency changes, the effect tears down and recreates the Supabase realtime channel, causing a subscribe/unsubscribe loop.
+
+Additionally, this realtime hook subscribes to ALL proposal changes (line 77-88), meaning every single proposal update across the entire system triggers `invalidateAgentManagement()`, which refetches agent data, which re-renders, which can cascade.
+
+**Fix:**
+- Remove `toast` and `invalidateAgentManagement` from the dependency array -- use refs instead to access current values without triggering re-subscriptions.
+- Narrow the proposals subscription or remove it entirely (proposal stats don't need live updates).
+
+### 2. Waterfall queries without error boundaries (Users page)
+
+In `src/components/admin/users/UserManagementTable.tsx`, the main query (line 77-228) makes 5+ sequential Supabase calls in a single `queryFn`:
+1. Fetch all profiles
+2. Fetch company_members filtered by all profile IDs
+3. Fetch client_company_members filtered by all profile IDs
+4. Fetch companies by IDs
+5. Fetch client_companies by IDs
+6. Fetch unlinked clients
+
+If any of these hang or the `.in()` call has a very large array, the entire query blocks. There's no timeout protection.
+
+**Fix:**
+- Wrap the queryFn with the existing `withTimeout` utility (from `src/services/unified/utils/withTimeout.ts`) to prevent indefinite hanging.
+- Add `staleTime` to prevent unnecessary refetches.
+
+### 3. RPC call on every realtime event
+
+In `useAgentsRealtime.ts` line 99, `supabase.rpc('test_rls_policies')` is called every time the effect runs. This is unnecessary overhead that runs on mount and on every resubscription.
+
+**Fix:** Remove the `enableRealtime` function entirely -- it serves no purpose.
 
 ## Changes
 
-### 1. Fetch the client's `user_id` when loading proposals
+### File 1: `src/components/admin/agents/realtime/useAgentsRealtime.ts`
+- Use `useRef` for `toast` and `invalidateAgentManagement` to keep the effect dependency array empty (`[]`)
+- Remove the `proposals` table subscription (it's too broad and causes cascading refetches)
+- Remove the unnecessary `enableRealtime()` / `test_rls_policies` RPC call
+- Add debouncing for the agent_activities subscription
 
-**File: `src/hooks/proposals/view/utils/proposalFetchers.ts`**
+### File 2: `src/components/admin/users/UserManagementTable.tsx`
+- Wrap the `queryFn` with `withTimeout` (15 second limit)
+- Add `staleTime: 30_000` to prevent refetching on every focus/remount
+- Add `refetchOnWindowFocus: false` to prevent refetch storms when switching tabs
 
-In `fetchProposalById`, add `user_id` to the `client:client_reference_id` join select:
-
-```
-client:client_reference_id (
-  first_name,
-  last_name,
-  email,
-  phone,
-  company_name,
-  registration_number,
-  user_id          // <-- ADD THIS
-)
-```
-
-### 2. Pass `user_id` through the transformer
-
-**File: `src/utils/proposals/simplifiedTransformers.ts`**
-
-In `transformToProposalData`, add:
-
-```
-client_reference_user_id: rawProposal.client?.user_id || null,
-```
-
-This resolves the `clients.user_id` and exposes it directly on the proposal object.
-
-### 3. Add the field to the type
-
-**File: `src/types/proposals.ts`**
-
-Add to `ProposalData`:
-
-```
-client_reference_user_id?: string | null;
-```
-
-### 4. Use the resolved user ID in status checks
-
-**File: `src/hooks/proposals/view/useProposalStatus.ts`**
-
-Update the `isDirectClient` check to also compare against the resolved user ID:
-
-```typescript
-const isDirectClient = userRole === 'client' && (
-  proposal.client_id === user?.id || 
-  proposal.client_reference_id === user?.id ||
-  proposal.client_reference_user_id === user?.id  // NEW
-);
-```
-
-### 5. Sync profile table when editing proposals
-
-**File: `src/hooks/proposals/view/useProposalEdit.ts`**
-
-After the existing `clients` table update (around line 248), add a block that also updates the `profiles` table:
-
-```typescript
-// Also sync to profiles table if the client has a linked user account
-if (proposal.client_reference_id) {
-  const { data: clientData } = await supabase
-    .from('clients')
-    .select('user_id')
-    .eq('id', proposal.client_reference_id)
-    .single();
-
-  if (clientData?.user_id) {
-    await supabase
-      .from('profiles')
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        phone: formData.clientPhone.trim(),
-        company_name: formData.clientCompanyName.trim(),
-      })
-      .eq('id', clientData.user_id);
-  }
-}
-```
-
-Email is intentionally NOT synced to profiles because it's tied to auth and requires a separate flow.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/hooks/proposals/view/utils/proposalFetchers.ts` | Add `user_id` to the client join select |
-| `src/utils/proposals/simplifiedTransformers.ts` | Map `client.user_id` to `client_reference_user_id` |
-| `src/types/proposals.ts` | Add `client_reference_user_id` to `ProposalData` |
-| `src/hooks/proposals/view/useProposalStatus.ts` | Check `client_reference_user_id` in identity match |
-| `src/hooks/proposals/view/useProposalEdit.ts` | Sync name changes to `profiles` table via `clients.user_id` |
-
-## Result
-
-- Dawn will immediately be able to sign "The Gallops Drive" (identity resolution fix)
-- Future edits to client names will also update the auth profile, keeping names consistent
-- Fixes the same issue for ~867 other proposals that only have `client_reference_id`
-- No database migration needed
-
+## Expected Result
+- Agents page will no longer create a subscribe/unsubscribe loop
+- Proposal changes system-wide will no longer trigger agent page refetches
+- Users page will timeout gracefully instead of hanging indefinitely
+- Both pages will feel responsive and not freeze the browser
