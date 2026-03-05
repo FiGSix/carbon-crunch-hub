@@ -78,7 +78,7 @@ const ClientRow2 = memo(function ClientRow2({
       </td>
       <td className="p-4">
         <div className="flex justify-center">
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <MoreHorizontal className="h-4 w-4" />
