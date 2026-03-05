@@ -1,6 +1,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -17,7 +18,7 @@ interface ProposalEditDialogProps {
 }
 
 export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: ProposalEditDialogProps) {
-  const { formData, errors, saving, updateField, updatePhase, addAdditionalClient, updateAdditionalClient, removeAdditionalClient, computedTotalSize, save, resetForm } = useProposalEdit(proposal, () => {
+  const { formData, errors, saving, updateField, updatePhase, addAdditionalClient, updateAdditionalClient, removeAdditionalClient, makePrimary, computedTotalSize, save, resetForm } = useProposalEdit(proposal, () => {
     onSaved();
     onOpenChange(false);
   });
@@ -41,7 +42,10 @@ export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: Pr
         <div className="space-y-6 py-4">
           {/* Client Information */}
           <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Client Information</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Client Information</h3>
+              <Badge variant="secondary" className="text-xs">Primary — receives invitation email</Badge>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="clientName">Client Name *</Label>
@@ -103,6 +107,7 @@ export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: Pr
                     client={client}
                     onChange={updateAdditionalClient}
                     onRemove={removeAdditionalClient}
+                    onMakePrimary={makePrimary}
                   />
                 ))}
               </div>
