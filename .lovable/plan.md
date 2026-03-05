@@ -1,79 +1,56 @@
 
 
-# Root Cause Analysis: Page Freezing on Action Button Click
+# Fix: Proposal Not Re-rendering with Correct Client After "Make Primary"
 
-## The Real Problem (Not Realtime Loops)
+## Root Cause
 
-The previous fix addressed realtime echo loops, but the freeze happens **immediately when clicking an action button** — before any mutation or realtime event. The root cause is a **rendering performance catastrophe** triggered by Radix DropdownMenu opening.
+There are two bugs working together:
 
-### Critical Bug #1: `memo()` Defined Inside Component (Clients Page)
+### Bug 1: `client_reference_id` update may fail silently
 
-In `ClientsTableContent.tsx` (line 170), `ClientsTableRows` is defined with `memo()` **inside** the parent component function:
+In `useProposalEdit.ts`, the save function performs **two separate database updates**:
+1. Line 353: Updates `content` JSON (with correct new clientInfo) — succeeds
+2. Line 409: Updates `client_reference_id` in a **separate** call — may fail, but only logs a `console.warn`
 
+The user sees "Proposal updated successfully" even if the second update fails. The `client_reference_id` stays pointing to the old client (ops@keystone).
+
+### Bug 2: View prioritizes stale `client_reference_id` join over correct snapshot
+
+`ProposalDetails.tsx` calls `resolveClientInfo(proposal.content?.clientInfo, proposal.client)` where `proposal.client` comes from a Supabase JOIN on `client_reference_id`. Since the live join data takes **precedence** over the snapshot, even though `content.clientInfo` has the correct gm@keystone data, the view shows ops@keystone from the stale join.
+
+### Bug 3: Invitation email uses `client_reference_id` for email resolution
+
+`useProposalInvitations.ts` line 177 fetches the client email from the `clients` table via `client_reference_id`. If that FK wasn't updated, the email goes to the old client.
+
+### Why `client_reference_id` fails to update
+
+The most likely cause: the first `UPDATE` at line 353 and the second `UPDATE` at line 409 are **not combined into a single operation**. They should be. Additionally, if `resolvedPrimaryClientId` is `null` because the find-or-create block failed (e.g., RLS blocked the insert into `clients`), line 408's condition `primaryChanged && resolvedPrimaryClientId` evaluates to **false** and the update is silently skipped.
+
+## Fix
+
+### `src/hooks/proposals/view/useProposalEdit.ts`
+
+**Combine both updates into a single database call.** Move the `client_reference_id` resolution BEFORE the main proposal update, then include it in the same `.update()` call.
+
+Current flow:
 ```text
-export function ClientsTableContent(...) {
-  // ... state ...
-  
-  const ClientsTableRows = memo(function ClientsTableRows(...) {  // LINE 170
-    // renders all rows
-  });
-  
-  return <ClientsTableRows ... />;
-}
+1. Update proposals SET content=..., system_size_kwp=... WHERE id=...
+2. (separately) Resolve/create primary client
+3. (separately) Update proposals SET client_reference_id=... WHERE id=...
 ```
 
-This is a well-known React anti-pattern. Every time `ClientsTableContent` re-renders, **a brand new component type** is created. React sees a different component type each render, so it **unmounts and remounts every single table row** instead of diffing them. With 50+ clients, this means:
+Fixed flow:
+```text
+1. Resolve/create primary client (if changed)
+2. Update proposals SET content=..., system_size_kwp=..., client_reference_id=... WHERE id=...
+   (single atomic update with all fields including client_reference_id)
+```
 
-1. User clicks the "⋮" action button
-2. Radix DropdownMenu opens → internal state change → parent re-renders
-3. `ClientsTableRows` is recreated as a new component type
-4. React unmounts ALL rows, remounts ALL rows from scratch
-5. Each row contains a DropdownMenu, Badge, multiple cells — expensive DOM work
-6. Main thread blocks for 500ms-2000ms → **page appears frozen**
+Also: if `client_reference_id` resolution fails, **abort the save** with an error toast instead of silently continuing.
 
-### Critical Bug #2: No Row Memoization (Users & Agents Pages)
-
-`UserManagementTable.tsx` renders 400+ rows inline (lines 401-523) with **no memoization at all**. Every state change (search input keystroke, dropdown open, filter change) re-renders the entire table body. The same applies to `AgentsTableContent.tsx`.
-
-### Critical Bug #3: Dialogs Trigger Full Re-renders
-
-All three pages open dialogs (Edit, Delete, Reassign) that set state on the parent component (`setEditDialogOpen`, `setSelectedUser`, etc.). This state lives in the same component as the table, so **opening any dialog re-renders every row**.
-
-## The Fix
-
-### 1. `src/components/clients/table/ClientsTableContent.tsx` — Move memo outside
-
-Extract `ClientsTableRows` to a **top-level memoized component** defined outside `ClientsTableContent`. This ensures React reuses the same component type across renders and only re-renders rows when their props actually change.
-
-Additionally, extract each table row into a memoized `ClientRow` component so individual rows don't re-render when sibling rows change.
-
-### 2. `src/components/admin/users/UserManagementTable.tsx` — Add row memoization
-
-Extract a `UserRow` memoized component for the table body. Move dialog state management into a separate hook or use a reducer so opening a dialog doesn't cause every row to re-render.
-
-### 3. `src/components/admin/agents/AgentsTableContent.tsx` — Add row memoization
-
-Same pattern: extract a memoized `AgentRow` component.
-
-### 4. `src/components/clients/SimpleClientsTable2.tsx` — Same fix needed
-
-This component also renders all rows inline with no memoization. Extract a memoized `ClientRow2` component.
-
-### 5. Stabilize callback props
-
-All `onClick` handlers inside `.map()` create new function references each render (e.g., `onClick={() => onEdit(client)}`). These defeat memo. Use `useCallback` with client ID, or pass the client ID to the memoized row and let it handle the callback internally.
-
-## Summary of Changes
+### Changes
 
 | File | Change |
 |------|--------|
-| `src/components/clients/table/ClientsTableContent.tsx` | Move `ClientsTableRows` and individual `ClientRow` outside component as top-level `memo` components |
-| `src/components/clients/SimpleClientsTable2.tsx` | Extract memoized `ClientRow2` component |
-| `src/components/admin/users/UserManagementTable.tsx` | Extract memoized `UserRow` component |
-| `src/components/admin/agents/AgentsTableContent.tsx` | Extract memoized `AgentRow` component |
-
-This eliminates the freeze because:
-- React no longer unmounts/remounts all rows on every interaction
-- Opening a dropdown only re-renders the affected row
-- Dialog state changes don't cascade to row re-renders
+| `src/hooks/proposals/view/useProposalEdit.ts` | Move client resolution before the proposal update; combine `client_reference_id` into the single `.update()` call; fail loudly if resolution fails |
 
