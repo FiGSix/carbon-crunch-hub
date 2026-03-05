@@ -350,26 +350,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
       const annualEnergy = calculateAnnualEnergy(newSystemSize);
       const carbonCredits = calculateCarbonCredits(newSystemSize);
 
-      const { error } = await supabase
-        .from('proposals')
-        .update({
-          title: formData.projectName.trim(),
-          content: updatedContent as any,
-          project_info: updatedProjectInfo as any,
-          system_size_kwp: newSystemSize,
-          annual_energy: annualEnergy,
-          carbon_credits: carbonCredits,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', proposal.id);
-
-      if (error) {
-        console.error('Error updating proposal:', error);
-        toast.error('Failed to update proposal: ' + error.message);
-        return false;
-      }
-
-      // Resolve the primary client record
+      // Resolve primary client BEFORE the proposal update so we can include client_reference_id atomically
       const primaryChanged = formData.primaryClientId !== proposal.client_reference_id;
       let resolvedPrimaryClientId = formData.primaryClientId;
 
@@ -402,15 +383,38 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
             .single();
           if (newClient) resolvedPrimaryClientId = newClient.id;
         }
+
+        if (!resolvedPrimaryClientId) {
+          toast.error('Failed to resolve the new primary client. Please try again.');
+          return false;
+        }
       }
 
-      // Update client_reference_id on proposals if primary changed
+      // Build the single atomic update payload
+      const updatePayload: Record<string, any> = {
+        title: formData.projectName.trim(),
+        content: updatedContent as any,
+        project_info: updatedProjectInfo as any,
+        system_size_kwp: newSystemSize,
+        annual_energy: annualEnergy,
+        carbon_credits: carbonCredits,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Include client_reference_id in the same update if primary changed
       if (primaryChanged && resolvedPrimaryClientId) {
-        const { error: refError } = await supabase
-          .from('proposals')
-          .update({ client_reference_id: resolvedPrimaryClientId })
-          .eq('id', proposal.id);
-        if (refError) console.warn('Failed to update client_reference_id:', refError.message);
+        updatePayload.client_reference_id = resolvedPrimaryClientId;
+      }
+
+      const { error } = await supabase
+        .from('proposals')
+        .update(updatePayload)
+        .eq('id', proposal.id);
+
+      if (error) {
+        console.error('Error updating proposal:', error);
+        toast.error('Failed to update proposal: ' + error.message);
+        return false;
       }
 
       // Sync primary client's record in the clients table
