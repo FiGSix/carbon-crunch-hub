@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { OptimizedRealtimeService } from '@/services/optimizedRealtimeService';
+import { isInCooldown } from '@/hooks/query/useCacheInvalidation';
 
 interface UseRealtimeSubscriptionProps {
   user: any;
@@ -17,6 +18,7 @@ export function useRealtimeSubscription({ user, onDataChange }: UseRealtimeSubsc
       user.id,
       user.role || 'client',
       () => {
+        if (isInCooldown('clients')) return;
         onDataChange();
       }
     );

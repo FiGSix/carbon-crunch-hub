@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
+import { useCacheInvalidation, isInCooldown } from '@/hooks/query/useCacheInvalidation';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -37,6 +37,12 @@ export function useAgentsRealtime() {
         },
         async (payload) => {
           devLogger.realtime.info('Agent profile change detected:', payload);
+          
+          // Skip if this is an echo from a local mutation
+          if (isInCooldown('agent-management')) {
+            devLogger.realtime.info('Skipping agent realtime echo (within cooldown)');
+            return;
+          }
           
           await invalidateRef.current();
           

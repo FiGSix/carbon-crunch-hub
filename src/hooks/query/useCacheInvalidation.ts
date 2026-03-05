@@ -5,6 +5,20 @@ import { cacheUtils } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/auth';
 import { logger } from '@/lib/logger';
 
+// Module-level cooldown tracking to prevent realtime echo loops
+export const mutationCooldowns = new Map<string, number>();
+const COOLDOWN_MS = 3000;
+
+export function isInCooldown(key: string): boolean {
+  const lastMutation = mutationCooldowns.get(key);
+  if (!lastMutation) return false;
+  return Date.now() - lastMutation < COOLDOWN_MS;
+}
+
+export function markMutation(key: string): void {
+  mutationCooldowns.set(key, Date.now());
+}
+
 /**
  * Centralized cache invalidation hook
  * 
@@ -58,7 +72,7 @@ export function useCacheInvalidation() {
    */
   const invalidateClients = useCallback(async () => {
     if (!user?.id || !userRole) return;
-    
+    markMutation('clients');
     const keys = queryKeyUtils.getClientKeys(user.id, userRole);
     await cacheUtils.invalidateQueries(queryClient, keys as any);
     
@@ -73,25 +87,15 @@ export function useCacheInvalidation() {
    * Invalidate agent management data - DEBOUNCED
    */
   const invalidateAgentManagement = useCallback(async () => {
-    const debounceKey = 'agent-management';
+    // Record mutation timestamp so realtime handlers can skip echo events
+    markMutation('agent-management');
     
-    // Clear existing timer
-    if (debounceTimers.current.has(debounceKey)) {
-      clearTimeout(debounceTimers.current.get(debounceKey)!);
-    }
+    const keys = queryKeyUtils.getAgentManagementKeys();
+    await cacheUtils.invalidateQueries(queryClient, keys as any);
     
-    // Set new timer
-    const timer = setTimeout(async () => {
-      const keys = queryKeyUtils.getAgentManagementKeys();
-      await cacheUtils.invalidateQueries(queryClient, keys as any);
-      
-      invalidationLogger.info('Agent management cache invalidated', { 
-        keyCount: keys.length 
-      });
-      debounceTimers.current.delete(debounceKey);
-    }, 1000);
-    
-    debounceTimers.current.set(debounceKey, timer);
+    invalidationLogger.info('Agent management cache invalidated', { 
+      keyCount: keys.length 
+    });
   }, [queryClient, invalidationLogger]);
 
   /**
