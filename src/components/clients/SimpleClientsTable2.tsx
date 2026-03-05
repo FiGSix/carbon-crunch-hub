@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { ClientData } from '@/hooks/clients/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,100 @@ import { ClientDeleter } from '@/services/unified/clients/operations/ClientDelet
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 
+// ── Memoized row component defined OUTSIDE parent ──
+const ClientRow2 = memo(function ClientRow2({
+  client,
+  isAdmin,
+  onEdit,
+  onPortfolio,
+  onReassign,
+  onDelete,
+}: {
+  client: ClientData;
+  isAdmin: boolean;
+  onEdit: (client: ClientData) => void;
+  onPortfolio: (client: ClientData) => void;
+  onReassign: (client: ClientData) => void;
+  onDelete: (client: ClientData) => void;
+}) {
+  return (
+    <tr className="border-b hover:bg-muted/30 transition-colors">
+      <td className="p-4">
+        <div className="flex flex-col">
+          <span className="font-medium">{client.client_name}</span>
+          <span className="text-sm text-muted-foreground">{client.client_email}</span>
+        </div>
+      </td>
+      <td className="p-4">
+        <span className="text-sm">
+          {client.company_name || <span className="text-muted-foreground italic">Private</span>}
+        </span>
+      </td>
+      {isAdmin && (
+        <td className="p-4">
+          <span className="text-sm">
+            {client.agent_company_name || <span className="text-muted-foreground italic">No Agent</span>}
+          </span>
+        </td>
+      )}
+      <td className="p-4 text-center">
+        <span className="text-sm font-medium">{client.project_count}</span>
+      </td>
+      <td className="p-4 text-right">
+        <span className="text-sm font-medium">{client.total_mwp.toFixed(2)} MWp</span>
+      </td>
+      <td className="p-4">
+        <div className="flex justify-center">
+          <Badge variant={client.is_active ? 'default' : 'secondary'}>
+            {client.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+      </td>
+      <td className="p-4">
+        <div className="flex justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(client)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Client Info
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => onPortfolio(client)}>
+                  <Percent className="mr-2 h-4 w-4" />
+                  Company Fee % for Portfolio
+                </DropdownMenuItem>
+              )}
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => onReassign(client)}>
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Edit Assigned Agent
+                </DropdownMenuItem>
+              )}
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => onDelete(client)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Client
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 interface SimpleClientsTable2Props {
   clients: ClientData[];
   onRefresh: () => void;
@@ -52,6 +146,12 @@ export function SimpleClientsTable2({
   const [reassignClient, setReassignClient] = useState<ClientData | null>(null);
   const [deleteClient, setDeleteClient] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Stable callbacks
+  const handleEdit = useCallback((client: ClientData) => setEditingClient(client), []);
+  const handlePortfolio = useCallback((client: ClientData) => setPortfolioClient(client), []);
+  const handleReassign = useCallback((client: ClientData) => setReassignClient(client), []);
+  const handleDelete = useCallback((client: ClientData) => setDeleteClient(client), []);
 
   const handleDeleteConfirm = async () => {
     if (!deleteClient) return;
@@ -110,103 +210,21 @@ export function SimpleClientsTable2({
                 </tr>
               ) : (
                 clients.map((client) => (
-                  <tr
+                  <ClientRow2
                     key={client.client_id}
-                    className="border-b hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Client Name */}
-                    <td className="p-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{client.client_name}</span>
-                        <span className="text-sm text-muted-foreground">{client.client_email}</span>
-                      </div>
-                    </td>
-
-                    {/* Company */}
-                    <td className="p-4">
-                      <span className="text-sm">
-                        {client.company_name || <span className="text-muted-foreground italic">Private</span>}
-                      </span>
-                    </td>
-
-                    {/* Agent (Admin only) */}
-                    {isAdmin && (
-                      <td className="p-4">
-                        <span className="text-sm">
-                          {client.agent_company_name || <span className="text-muted-foreground italic">No Agent</span>}
-                        </span>
-                      </td>
-                    )}
-
-                    {/* Projects */}
-                    <td className="p-4 text-center">
-                      <span className="text-sm font-medium">{client.project_count}</span>
-                    </td>
-
-                    {/* Total MWp */}
-                    <td className="p-4 text-right">
-                      <span className="text-sm font-medium">{client.total_mwp.toFixed(2)} MWp</span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="p-4">
-                      <div className="flex justify-center">
-                        <Badge variant={client.is_active ? 'default' : 'secondary'}>
-                          {client.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="p-4">
-                      <div className="flex justify-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditingClient(client)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit Client Info
-                            </DropdownMenuItem>
-                            {isAdmin && (
-                              <DropdownMenuItem onClick={() => setPortfolioClient(client)}>
-                                <Percent className="mr-2 h-4 w-4" />
-                                Company Fee % for Portfolio
-                              </DropdownMenuItem>
-                            )}
-                            {isAdmin && (
-                              <DropdownMenuItem onClick={() => setReassignClient(client)}>
-                                <UserCheck className="mr-2 h-4 w-4" />
-                                Edit Assigned Agent
-                              </DropdownMenuItem>
-                            )}
-                            {isAdmin && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => setDeleteClient(client)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete Client
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
+                    client={client}
+                    isAdmin={isAdmin}
+                    onEdit={handleEdit}
+                    onPortfolio={handlePortfolio}
+                    onReassign={handleReassign}
+                    onDelete={handleDelete}
+                  />
                 ))
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination Info & Load More */}
         {clients.length > 0 && (
           <div className="border-t p-4 flex items-center justify-between bg-muted/20">
             <div className="text-sm text-muted-foreground">
@@ -226,7 +244,6 @@ export function SimpleClientsTable2({
         )}
       </div>
 
-      {/* Edit Client Dialog */}
       <EditClientDialog
         open={!!editingClient}
         onOpenChange={(open) => !open && setEditingClient(null)}
@@ -234,7 +251,6 @@ export function SimpleClientsTable2({
         onSuccess={onRefresh}
       />
 
-      {/* Portfolio Client Share Dialog */}
       <PortfolioClientShareDialog
         open={!!portfolioClient}
         onOpenChange={(open) => !open && setPortfolioClient(null)}
@@ -242,7 +258,6 @@ export function SimpleClientsTable2({
         onSuccess={onRefresh}
       />
 
-      {/* Edit Assigned Agent Dialog */}
       <EditAssignedAgentDialog
         open={!!reassignClient}
         onOpenChange={(open) => !open && setReassignClient(null)}
@@ -250,7 +265,6 @@ export function SimpleClientsTable2({
         onSuccess={onRefresh}
       />
 
-      {/* Delete Client Confirmation Dialog */}
       <AlertDialog open={!!deleteClient} onOpenChange={(open) => !open && setDeleteClient(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

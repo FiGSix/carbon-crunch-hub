@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MoreVertical, Shield, UserCog, Building2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +54,172 @@ interface UserWithRoles {
   source?: 'profile' | 'client_record';
 }
 
+// ── Helper functions (stable, no hooks) ──
+function getRoleBadgeVariant(role: string) {
+  switch (role) {
+    case 'admin': return 'destructive';
+    case 'agent': return 'default';
+    case 'client': return 'secondary';
+    case 'potential_client': return 'outline';
+    default: return 'outline';
+  }
+}
+
+function getRoleLabel(role: string) {
+  if (role === 'potential_client') return 'Potential Client';
+  return role;
+}
+
+function getStatusBadge(user: UserWithRoles) {
+  if (user.source === 'client_record') {
+    return <Badge variant="outline" className="text-xs">Not Signed Up</Badge>;
+  }
+  if (!user.agent_status) return null;
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    active: 'default',
+    pending_approval: 'secondary',
+    inactive: 'outline',
+    suspended: 'destructive',
+  };
+  return (
+    <Badge variant={variants[user.agent_status] || 'outline'}>
+      {user.agent_status.replace('_', ' ')}
+    </Badge>
+  );
+}
+
+// ── Memoized row component defined OUTSIDE parent ──
+const UserRow = memo(function UserRow({
+  user,
+  currentUserId,
+  onManageRoles,
+  onDeleteUser,
+  onLinkToCompany,
+  onViewCompany,
+}: {
+  user: UserWithRoles;
+  currentUserId: string | undefined;
+  onManageRoles: (user: UserWithRoles) => void;
+  onDeleteUser: (user: UserWithRoles) => void;
+  onLinkToCompany: (user: UserWithRoles) => void;
+  onViewCompany: (companyId: string) => void;
+}) {
+  return (
+    <TableRow>
+      <TableCell className="font-medium">
+        {user.first_name || user.last_name
+          ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+          : 'N/A'}
+      </TableCell>
+      <TableCell>{user.email}</TableCell>
+      <TableCell>
+        <Badge variant={getRoleBadgeVariant(user.role)}>
+          {getRoleLabel(user.role)}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-left">
+        {user.company_name ? (
+          user.company_id ? (
+            <button
+              onClick={() => onViewCompany(user.company_id!)}
+              className="text-primary hover:underline text-sm"
+            >
+              {user.company_name}
+            </button>
+          ) : (
+            <span className="text-muted-foreground text-sm">
+              {user.company_name}
+            </span>
+          )
+        ) : (
+          <Badge variant="outline" className="text-xs">No Company</Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        {user.company_role === 'team_lead' && user.company_id ? (
+          <Badge variant="default" className="text-xs">Team Lead</Badge>
+        ) : user.company_role === 'member' && user.company_id ? (
+          <Badge variant="secondary" className="text-xs">Member</Badge>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        )}
+      </TableCell>
+      <TableCell>{getStatusBadge(user)}</TableCell>
+      <TableCell>
+        {format(new Date(user.created_at), 'MMM d, yyyy')}
+      </TableCell>
+      <TableCell className="text-right">
+        {user.source === 'client_record' ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDeleteUser(user)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Record
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onManageRoles(user)}>
+                <UserCog className="h-4 w-4 mr-2" />
+                Manage Roles
+              </DropdownMenuItem>
+              {!user.company_id && user.role !== 'client' && (
+                <DropdownMenuItem onClick={() => onLinkToCompany(user)}>
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Link to Company
+                </DropdownMenuItem>
+              )}
+              {user.company_id && (
+                <DropdownMenuItem onClick={() => onViewCompany(user.company_id!)}>
+                  <Building2 className="h-4 w-4 mr-2" />
+                  View Team
+                </DropdownMenuItem>
+              )}
+              {user.role !== 'admin' && (
+                <DropdownMenuItem onClick={() => onManageRoles(user)}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  Promote to Admin
+                </DropdownMenuItem>
+              )}
+              {currentUserId !== user.id && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => onDeleteUser(user)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete User
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+});
+
 interface CompanyOption {
   id: string;
   company_name: string;
@@ -95,7 +261,6 @@ export function UserManagementTable() {
 
       const profileIds = profiles?.map(p => p.id) || [];
 
-      // Get company memberships (existing logic)
       const { data: agentMemberships } = await supabase
         .from('company_members')
         .select('user_id, company_id, role, status')
@@ -120,7 +285,6 @@ export function UserManagementTable() {
         .select('id, company_name')
         .in('id', clientCompanyIds);
 
-      // Map profiles to UserWithRoles
       const usersFromProfiles: UserWithRoles[] = (profiles || []).map(profile => {
         const isClient = profile.role === 'client';
         let companyId: string | null = null;
@@ -172,7 +336,6 @@ export function UserManagementTable() {
         };
       });
 
-      // 2. Fetch potential clients (clients with no user_id)
       let potentialClients: UserWithRoles[] = [];
       if (roleFilter === 'all' || roleFilter === 'potential_client') {
         const { data: unlinkedClients, error: clientError } = await supabase
@@ -183,7 +346,6 @@ export function UserManagementTable() {
 
         if (clientError) throw clientError;
 
-        // Deduplicate: exclude client records whose email already exists in profiles
         const profileEmails = new Set((profiles || []).map(p => p.email.toLowerCase()));
 
         potentialClients = (unlinkedClients || [])
@@ -205,7 +367,6 @@ export function UserManagementTable() {
           }));
       }
 
-      // 3. Merge
       let merged: UserWithRoles[];
       if (userTypeFilter === 'signed_up') {
         merged = usersFromProfiles;
@@ -215,12 +376,10 @@ export function UserManagementTable() {
         merged = [...usersFromProfiles, ...potentialClients];
       }
 
-      // If role filter is potential_client, only show potential clients
       if (roleFilter === 'potential_client') {
         merged = merged.filter(u => u.source === 'client_record');
       }
 
-      // Apply company filter
       if (companyFilter === 'none') {
         merged = merged.filter(u => !u.company_id && !u.is_legacy_company && !u.company_name);
       } else if (companyFilter !== 'all') {
@@ -231,7 +390,6 @@ export function UserManagementTable() {
     })(), 15000),
   });
 
-  // Get unique companies for filter
   const { data: allCompanies } = useQuery({
     queryKey: ['all-companies-filter'],
     queryFn: async () => {
@@ -258,59 +416,31 @@ export function UserManagementTable() {
     refetchOnWindowFocus: false,
   });
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'destructive';
-      case 'agent':
-        return 'default';
-      case 'client':
-        return 'secondary';
-      case 'potential_client':
-        return 'outline';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    if (role === 'potential_client') return 'Potential Client';
-    return role;
-  };
-
-  const getStatusBadge = (user: UserWithRoles) => {
-    if (user.source === 'client_record') {
-      return <Badge variant="outline" className="text-xs">Not Signed Up</Badge>;
-    }
-    if (!user.agent_status) return null;
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      active: 'default',
-      pending_approval: 'secondary',
-      inactive: 'outline',
-      suspended: 'destructive',
-    };
-    return (
-      <Badge variant={variants[user.agent_status] || 'outline'}>
-        {user.agent_status.replace('_', ' ')}
-      </Badge>
-    );
-  };
-
-  const handleManageRoles = (user: UserWithRoles) => {
+  // Stable callbacks for row actions
+  const handleManageRoles = useCallback((user: UserWithRoles) => {
     setSelectedUser(user);
     setRoleDialogOpen(true);
-  };
+  }, []);
 
-  const handleDeleteUser = (user: UserWithRoles) => {
+  const handleDeleteUser = useCallback((user: UserWithRoles) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
-  };
+  }, []);
+
+  const handleLinkToCompany = useCallback((user: UserWithRoles) => {
+    setSelectedUser(user);
+    setLinkDialogOpen(true);
+  }, []);
+
+  const handleViewCompany = useCallback((companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setCompanyDialogOpen(true);
+  }, []);
 
   const handleDeleteConfirm = async (userId: string) => {
     await deleteUserMutation.mutateAsync(userId);
   };
 
-  // Client-side search filtering
   const users = useMemo(() => {
     if (!allUsers) return [];
     if (!searchTerm.trim()) return allUsers;
@@ -399,127 +529,15 @@ export function UserManagementTable() {
           <TableBody>
             {users && users.length > 0 ? (
               users.map((user) => (
-                <TableRow key={`${user.source}-${user.id}`}>
-                  <TableCell className="font-medium">
-                    {user.first_name || user.last_name
-                      ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-                      : 'N/A'}
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {getRoleLabel(user.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-left">
-                    {user.company_name ? (
-                      user.company_id ? (
-                        <button
-                          onClick={() => {
-                            setSelectedCompanyId(user.company_id!);
-                            setCompanyDialogOpen(true);
-                          }}
-                          className="text-primary hover:underline text-sm"
-                        >
-                          {user.company_name}
-                        </button>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          {user.company_name}
-                        </span>
-                      )
-                    ) : (
-                      <Badge variant="outline" className="text-xs">No Company</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {user.company_role === 'team_lead' && user.company_id ? (
-                      <Badge variant="default" className="text-xs">Team Lead</Badge>
-                    ) : user.company_role === 'member' && user.company_id ? (
-                      <Badge variant="secondary" className="text-xs">Member</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(user)}</TableCell>
-                  <TableCell>
-                    {format(new Date(user.created_at), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {user.source === 'client_record' ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteUser(user)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Record
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleManageRoles(user)}>
-                            <UserCog className="h-4 w-4 mr-2" />
-                            Manage Roles
-                          </DropdownMenuItem>
-                          {!user.company_id && user.role !== 'client' && (
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedUser(user);
-                              setLinkDialogOpen(true);
-                            }}>
-                              <Building2 className="h-4 w-4 mr-2" />
-                              Link to Company
-                            </DropdownMenuItem>
-                          )}
-                          {user.company_id && (
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedCompanyId(user.company_id!);
-                              setCompanyDialogOpen(true);
-                            }}>
-                              <Building2 className="h-4 w-4 mr-2" />
-                              View Team
-                            </DropdownMenuItem>
-                          )}
-                          {user.role !== 'admin' && (
-                            <DropdownMenuItem onClick={() => handleManageRoles(user)}>
-                              <Shield className="h-4 w-4 mr-2" />
-                              Promote to Admin
-                            </DropdownMenuItem>
-                          )}
-                          {currentUser?.id !== user.id && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteUser(user)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
+                <UserRow
+                  key={`${user.source}-${user.id}`}
+                  user={user}
+                  currentUserId={currentUser?.id}
+                  onManageRoles={handleManageRoles}
+                  onDeleteUser={handleDeleteUser}
+                  onLinkToCompany={handleLinkToCompany}
+                  onViewCompany={handleViewCompany}
+                />
               ))
             ) : (
               <TableRow>
