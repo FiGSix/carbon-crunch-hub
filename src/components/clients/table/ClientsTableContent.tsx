@@ -34,6 +34,88 @@ import { EditClientDialog } from '@/components/clients/EditClientDialog';
 import { EditAssignedAgentDialog } from '@/components/clients/EditAssignedAgentDialog';
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
+// ── Memoized row component defined OUTSIDE parent to maintain stable identity ──
+const ClientRow = memo(function ClientRow({
+  client,
+  isAdmin,
+  isRefreshing,
+  onEdit,
+  onReassign,
+  onDelete,
+}: {
+  client: ClientData;
+  isAdmin: boolean;
+  isRefreshing: boolean;
+  onEdit: (client: ClientData) => void;
+  onReassign: (client: ClientData) => void;
+  onDelete: (client: ClientData) => void;
+}) {
+  return (
+    <TableRow className={isRefreshing ? 'opacity-70' : ''}>
+      <TableCell className="font-medium">
+        <div>
+          <p className="font-semibold">{client.client_name}</p>
+          {client.client_email && (
+            <p className="text-sm text-muted-foreground">{client.client_email}</p>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        {client.company_name || 'No Company'}
+      </TableCell>
+      {isAdmin && (
+        <TableCell>
+          {client.agent_company_name || 'N/A'}
+        </TableCell>
+      )}
+      <TableCell className="text-center">
+        {client.project_count}
+      </TableCell>
+      <TableCell className="text-center font-mono">
+        {client.total_mwp.toFixed(3)} MWp
+      </TableCell>
+      {isAdmin && (
+        <TableCell className="text-center">
+          <Badge variant={client.is_active ? 'default' : 'secondary'}>
+            {client.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        </TableCell>
+      )}
+      <TableCell className="text-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(client)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Client Info
+            </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuItem onClick={() => onReassign(client)}>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Edit Assigned Agent
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(client)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Client
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 interface ClientsTableContentProps {
   clients: ClientData[];
   isAdmin: boolean;
@@ -71,10 +153,8 @@ export function ClientsTableContent({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
 
-  // Use deferred value for smoother rendering during search
   const deferredQuery = useDeferredValue(searchQuery);
 
-  // Create search index for faster filtering
   const searchIndex = useMemo(() => {
     const index = new Map<string, string>();
     for (const client of clients) {
@@ -86,9 +166,7 @@ export function ClientsTableContent({
     return index;
   }, [clients]);
 
-  // Filter and sort clients
   const filteredClients = useMemo(() => {
-    // First, filter based on search term using the search index
     let filtered = clients;
     if (deferredQuery.trim()) {
       const lowerSearch = deferredQuery.toLowerCase();
@@ -97,32 +175,24 @@ export function ClientsTableContent({
       );
     }
 
-    // Then, sort if a column is selected
     if (sortColumn) {
       filtered = [...filtered].sort((a, b) => {
         const aValue = a[sortColumn];
         const bValue = b[sortColumn];
-
-        // Handle null/undefined values
         if (aValue == null && bValue == null) return 0;
         if (aValue == null) return 1;
         if (bValue == null) return -1;
-
-        // Sort based on type
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
           return sortDirection === 'asc' ? comparison : -comparison;
         }
-
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
         }
-
         if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
           const comparison = aValue === bValue ? 0 : aValue ? 1 : -1;
           return sortDirection === 'asc' ? comparison : -comparison;
         }
-
         return 0;
       });
     }
@@ -130,7 +200,7 @@ export function ClientsTableContent({
     return filtered;
   }, [clients, deferredQuery, sortColumn, sortDirection, searchIndex]);
 
-  // Stable callbacks to prevent unnecessary re-renders
+  // Stable callbacks
   const handleDeleteClick = useCallback((client: ClientData) => {
     setClientToDelete(client);
     setDeleteConfirmOpen(true);
@@ -148,10 +218,8 @@ export function ClientsTableContent({
 
   const handleSort = (column: keyof ClientData) => {
     if (sortColumn === column) {
-      // Toggle direction if same column
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // New column, default to ascending
       setSortColumn(column);
       setSortDirection('asc');
     }
@@ -165,104 +233,6 @@ export function ClientsTableContent({
       ? <ArrowUp className="h-3 w-3 ml-1 inline" />
       : <ArrowDown className="h-3 w-3 ml-1 inline" />;
   };
-
-  // Memoized table rows component to prevent unnecessary re-renders
-  const ClientsTableRows = memo(function ClientsTableRows({
-    rows,
-    isAdmin,
-    isRefreshing,
-    searchQuery,
-    onEdit,
-    onReassign,
-    onDelete
-  }: {
-    rows: ClientData[];
-    isAdmin: boolean;
-    isRefreshing: boolean;
-    searchQuery: string;
-    onEdit: (client: ClientData) => void;
-    onReassign: (client: ClientData) => void;
-    onDelete: (client: ClientData) => void;
-  }) {
-    if (rows.length === 0) {
-      return (
-        <TableRow>
-          <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
-            {searchQuery ? `No clients found matching "${searchQuery}"` : 'No clients found'}
-          </TableCell>
-        </TableRow>
-      );
-    }
-
-    return (
-      <>
-        {rows.map((client) => (
-          <TableRow key={client.client_id} className={isRefreshing ? 'opacity-70' : ''}>
-            <TableCell className="font-medium">
-              <div>
-                <p className="font-semibold">{client.client_name}</p>
-                {client.client_email && (
-                  <p className="text-sm text-gray-500">{client.client_email}</p>
-                )}
-              </div>
-            </TableCell>
-            <TableCell>
-              {client.company_name || 'No Company'}
-            </TableCell>
-            {isAdmin && (
-              <TableCell>
-                {client.agent_company_name || 'N/A'}
-              </TableCell>
-            )}
-            <TableCell className="text-center">
-              {client.project_count}
-            </TableCell>
-            <TableCell className="text-center font-mono">
-              {client.total_mwp.toFixed(3)} MWp
-            </TableCell>
-            {isAdmin && (
-              <TableCell className="text-center">
-                <Badge variant={client.is_active ? 'default' : 'secondary'}>
-                  {client.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-              </TableCell>
-            )}
-            <TableCell className="text-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(client)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Client Info
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <>
-                      <DropdownMenuItem onClick={() => onReassign(client)}>
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        Edit Assigned Agent
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => onDelete(client)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Client
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          </TableRow>
-        ))}
-      </>
-    );
-  });
 
   const confirmDelete = async () => {
     if (!clientToDelete) return;
@@ -293,7 +263,6 @@ export function ClientsTableContent({
     <div className="space-y-4">
       {/* Header with title and filters */}
       <div className="flex flex-col gap-4">
-        {/* Title and description */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -325,7 +294,6 @@ export function ClientsTableContent({
           )}
         </div>
 
-        {/* Search and filters row */}
         <div className="flex gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -338,7 +306,6 @@ export function ClientsTableContent({
           </div>
         </div>
 
-        {/* Search results indicator */}
         {deferredQuery && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
@@ -354,10 +321,9 @@ export function ClientsTableContent({
         )}
       </div>
 
-      {/* Error notification */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex items-center text-red-700">
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+          <div className="flex items-center text-destructive">
             <AlertTriangle className="h-4 w-4 mr-2" />
             <span className="text-sm">Failed to refresh: {error}</span>
             {onRefresh && (
@@ -376,17 +342,15 @@ export function ClientsTableContent({
         </div>
       )}
 
-      {/* Refreshing notification */}
       {isRefreshing && !error && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <div className="flex items-center text-blue-700">
+        <div className="p-3 bg-primary/10 border border-primary/20 rounded-md">
+          <div className="flex items-center text-primary">
             <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
             <span className="text-sm">Refreshing client data...</span>
           </div>
         </div>
       )}
       
-      {/* Table */}
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -435,20 +399,29 @@ export function ClientsTableContent({
             </TableRow>
           </TableHeader>
           <TableBody>
-            <ClientsTableRows
-              rows={filteredClients}
-              isAdmin={isAdmin}
-              isRefreshing={isRefreshing}
-              searchQuery={deferredQuery}
-              onEdit={handleEditClick}
-              onReassign={handleReassignClick}
-              onDelete={handleDeleteClick}
-            />
+            {filteredClients.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
+                  {deferredQuery ? `No clients found matching "${deferredQuery}"` : 'No clients found'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredClients.map((client) => (
+                <ClientRow
+                  key={client.client_id}
+                  client={client}
+                  isAdmin={isAdmin}
+                  isRefreshing={isRefreshing}
+                  onEdit={handleEditClick}
+                  onReassign={handleReassignClick}
+                  onDelete={handleDeleteClick}
+                />
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Load More Button */}
       {hasMore && onLoadMore && (
         <div className="flex flex-col items-center gap-2 py-4">
           <p className="text-sm text-muted-foreground">
@@ -486,7 +459,7 @@ export function ClientsTableContent({
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete Permanently'}
             </AlertDialogAction>
@@ -499,6 +472,7 @@ export function ClientsTableContent({
         onOpenChange={setEditDialogOpen}
         client={clientToEdit}
         onSuccess={() => {
+          setEditDialogOpen(false);
           if (onRefresh) onRefresh();
         }}
       />
@@ -508,6 +482,7 @@ export function ClientsTableContent({
         onOpenChange={setReassignDialogOpen}
         client={clientToReassign}
         onSuccess={() => {
+          setReassignDialogOpen(false);
           if (onRefresh) onRefresh();
         }}
       />
