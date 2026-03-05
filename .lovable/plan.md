@@ -1,47 +1,79 @@
 
 
-# Update Primary Client on a Proposal
+# Root Cause Analysis: Page Freezing on Action Button Click
 
-## Problem
+## The Real Problem (Not Realtime Loops)
 
-The current edit dialog allows changing the primary client's name/email/phone but always keeps `proposals.client_reference_id` pointing to the same `clients` record. If you want a different person to be the primary recipient (the one who gets the invitation email), there is no mechanism to swap them.
+The previous fix addressed realtime echo loops, but the freeze happens **immediately when clicking an action button** — before any mutation or realtime event. The root cause is a **rendering performance catastrophe** triggered by Radix DropdownMenu opening.
 
-The invitation system (`useProposalInvitations.ts` line 177) resolves email from `client_reference_id` — so changing the primary client means updating that foreign key on the `proposals` table.
+### Critical Bug #1: `memo()` Defined Inside Component (Clients Page)
 
-## Solution
+In `ClientsTableContent.tsx` (line 170), `ClientsTableRows` is defined with `memo()` **inside** the parent component function:
 
-Add a "Make Primary" action to each additional client in the edit dialog. When clicked, it swaps that additional client into the primary slot and moves the current primary into the additional clients list. On save, the `client_reference_id` on the `proposals` table is updated to point to the new primary client's record.
+```text
+export function ClientsTableContent(...) {
+  // ... state ...
+  
+  const ClientsTableRows = memo(function ClientsTableRows(...) {  // LINE 170
+    // renders all rows
+  });
+  
+  return <ClientsTableRows ... />;
+}
+```
 
-## Changes
+This is a well-known React anti-pattern. Every time `ClientsTableContent` re-renders, **a brand new component type** is created. React sees a different component type each render, so it **unmounts and remounts every single table row** instead of diffing them. With 50+ clients, this means:
 
-### 1. `src/hooks/proposals/view/useProposalEdit.ts`
+1. User clicks the "⋮" action button
+2. Radix DropdownMenu opens → internal state change → parent re-renders
+3. `ClientsTableRows` is recreated as a new component type
+4. React unmounts ALL rows, remounts ALL rows from scratch
+5. Each row contains a DropdownMenu, Badge, multiple cells — expensive DOM work
+6. Main thread blocks for 500ms-2000ms → **page appears frozen**
 
-- Add `primaryClientId: string | null` to `ProposalEditFormData`, populated from `proposal.client_reference_id`
-- Add a `makePrimary(index: number)` function that:
-  - Moves the current primary client fields (name, email, phone, company) into `additionalClients` (with current `primaryClientId` as `clientId`)
-  - Copies the selected additional client's fields into the primary slot
-  - Sets `primaryClientId` to that additional client's `clientId` (or null if new)
-- In `save()`:
-  - If `primaryClientId` changed, resolve or create the new client record in the `clients` table
-  - Update `proposals.client_reference_id` to the new primary client's ID
-  - The existing client update logic (line 341) already uses `proposal.client_reference_id` — change it to use `formData.primaryClientId` so it updates the correct record
+### Critical Bug #2: No Row Memoization (Users & Agents Pages)
 
-### 2. `src/components/proposals/view/ProposalEditDialog.tsx`
+`UserManagementTable.tsx` renders 400+ rows inline (lines 401-523) with **no memoization at all**. Every state change (search input keystroke, dropdown open, filter change) re-renders the entire table body. The same applies to `AgentsTableContent.tsx`.
 
-- Add a "Make Primary" button (small, outline) next to each additional client's remove button
-- Wire it to the `makePrimary` handler from the hook
-- Show a visual indicator on the primary client section (e.g., a badge or label saying "Primary - receives invitation email")
+### Critical Bug #3: Dialogs Trigger Full Re-renders
 
-### 3. `src/components/proposals/client-info/AdditionalClientForm.tsx`
+All three pages open dialogs (Edit, Delete, Reassign) that set state on the parent component (`setEditDialogOpen`, `setSelectedUser`, etc.). This state lives in the same component as the table, so **opening any dialog re-renders every row**.
 
-- Add an optional `onMakePrimary` prop
-- When provided, render a "Make Primary" button in the client card header
+## The Fix
 
-## File Summary
+### 1. `src/components/clients/table/ClientsTableContent.tsx` — Move memo outside
+
+Extract `ClientsTableRows` to a **top-level memoized component** defined outside `ClientsTableContent`. This ensures React reuses the same component type across renders and only re-renders rows when their props actually change.
+
+Additionally, extract each table row into a memoized `ClientRow` component so individual rows don't re-render when sibling rows change.
+
+### 2. `src/components/admin/users/UserManagementTable.tsx` — Add row memoization
+
+Extract a `UserRow` memoized component for the table body. Move dialog state management into a separate hook or use a reducer so opening a dialog doesn't cause every row to re-render.
+
+### 3. `src/components/admin/agents/AgentsTableContent.tsx` — Add row memoization
+
+Same pattern: extract a memoized `AgentRow` component.
+
+### 4. `src/components/clients/SimpleClientsTable2.tsx` — Same fix needed
+
+This component also renders all rows inline with no memoization. Extract a memoized `ClientRow2` component.
+
+### 5. Stabilize callback props
+
+All `onClick` handlers inside `.map()` create new function references each render (e.g., `onClick={() => onEdit(client)}`). These defeat memo. Use `useCallback` with client ID, or pass the client ID to the memoized row and let it handle the callback internally.
+
+## Summary of Changes
 
 | File | Change |
 |------|--------|
-| `src/hooks/proposals/view/useProposalEdit.ts` | Add `primaryClientId` state, `makePrimary()` swap logic, update `save()` to sync `client_reference_id` |
-| `src/components/proposals/view/ProposalEditDialog.tsx` | Wire up "Make Primary" button, add primary label |
-| `src/components/proposals/client-info/AdditionalClientForm.tsx` | Add optional `onMakePrimary` prop and button |
+| `src/components/clients/table/ClientsTableContent.tsx` | Move `ClientsTableRows` and individual `ClientRow` outside component as top-level `memo` components |
+| `src/components/clients/SimpleClientsTable2.tsx` | Extract memoized `ClientRow2` component |
+| `src/components/admin/users/UserManagementTable.tsx` | Extract memoized `UserRow` component |
+| `src/components/admin/agents/AgentsTableContent.tsx` | Extract memoized `AgentRow` component |
+
+This eliminates the freeze because:
+- React no longer unmounts/remounts all rows on every interaction
+- Opening a dropdown only re-renders the affected row
+- Dialog state changes don't cascade to row re-renders
 
