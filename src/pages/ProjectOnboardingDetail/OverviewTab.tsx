@@ -71,11 +71,13 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
     try {
       setIsUpdating(true);
 
+      const turningOn = !project.audit_ready;
+
       const { error } = await supabase
         .from('project_onboarding')
         .update({
-          audit_ready: !project.audit_ready,
-          audit_ready_marked_at: !project.audit_ready ? new Date().toISOString() : null,
+          audit_ready: turningOn,
+          audit_ready_marked_at: turningOn ? new Date().toISOString() : null,
         })
         .eq('id', project.id);
 
@@ -83,12 +85,32 @@ export function OverviewTab({ project, proposal, onRefresh }: OverviewTabProps) 
 
       toast({
         title: "Success",
-        description: project.audit_ready
-          ? "Audit ready status removed"
-          : "Project marked as audit ready",
+        description: turningOn
+          ? "Project marked as audit ready"
+          : "Audit ready status removed",
       });
 
       onRefresh();
+
+      // Send confirmation email only when marking audit ready ON
+      if (turningOn) {
+        try {
+          await supabase.functions.invoke('send-audit-ready-email', {
+            body: { projectOnboardingId: project.id },
+          });
+          toast({
+            title: "Email Sent",
+            description: "Audit readiness confirmation email sent to the client",
+          });
+        } catch (emailErr) {
+          console.error('Failed to send audit ready email:', emailErr);
+          toast({
+            title: "Email Warning",
+            description: "Audit status updated but the confirmation email could not be sent",
+            variant: "destructive",
+          });
+        }
+      }
     } catch (error) {
       console.error('Error updating audit status:', error);
       toast({
