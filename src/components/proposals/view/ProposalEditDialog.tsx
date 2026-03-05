@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { ProposalData } from '@/types/proposals';
 import { useProposalEdit } from '@/hooks/proposals/view/useProposalEdit';
+import { AdditionalClientForm } from '@/components/proposals/client-info/AdditionalClientForm';
 
 interface ProposalEditDialogProps {
   open: boolean;
@@ -16,7 +17,7 @@ interface ProposalEditDialogProps {
 }
 
 export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: ProposalEditDialogProps) {
-  const { formData, errors, saving, updateField, updatePhase, computedTotalSize, save, resetForm } = useProposalEdit(proposal, () => {
+  const { formData, errors, saving, updateField, updatePhase, addAdditionalClient, updateAdditionalClient, removeAdditionalClient, computedTotalSize, save, resetForm } = useProposalEdit(proposal, () => {
     onSaved();
     onOpenChange(false);
   });
@@ -80,6 +81,32 @@ export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: Pr
                 />
               </div>
             </div>
+          </div>
+
+          {/* Additional Clients */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Additional Clients</h3>
+              <Button type="button" variant="outline" size="sm" onClick={addAdditionalClient}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                Add Client
+              </Button>
+            </div>
+            {formData.additionalClients.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No additional clients. Click "Add Client" to include more recipients.</p>
+            ) : (
+              <div className="space-y-3">
+                {formData.additionalClients.map((client, index) => (
+                  <AdditionalClientForm
+                    key={index}
+                    index={index}
+                    client={client}
+                    onChange={updateAdditionalClient}
+                    onRemove={removeAdditionalClient}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <Separator />

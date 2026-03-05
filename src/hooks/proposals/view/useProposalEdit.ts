@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ProposalData, ClientInformation, ProjectInformation } from '@/types/proposals';
+import { ProposalData, ClientInformation, ProjectInformation, AdditionalClient } from '@/types/proposals';
 import { calculateAnnualEnergy, calculateCarbonCredits } from '@/services/calculations/carbon/calculations';
 import { toast } from 'sonner';
 
@@ -17,6 +17,8 @@ export interface ProposalEditFormData {
   clientEmail: string;
   clientPhone: string;
   clientCompanyName: string;
+  // Additional clients
+  additionalClients: AdditionalClient[];
   // Project info
   projectName: string;
   projectAddress: string;
@@ -53,6 +55,7 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
     clientEmail: clientInfo.email || '',
     clientPhone: clientInfo.phone || '',
     clientCompanyName: clientInfo.companyName || '',
+    additionalClients: (proposal.content?.additionalClients || []).map(c => ({ ...c })),
     projectName: projectInfo.name || '',
     projectAddress: projectInfo.address || '',
     systemSize: projectInfo.size
@@ -79,6 +82,16 @@ function validate(data: ProposalEditFormData): ValidationErrors {
   }
   if (!data.projectName.trim()) errors.projectName = 'Project name is required';
 
+  // Validate additional clients
+  data.additionalClients.forEach((client, i) => {
+    if (!client.name.trim()) errors[`addClient_${i}_name`] = 'Name is required';
+    if (!client.email.trim()) {
+      errors[`addClient_${i}_email`] = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.email)) {
+      errors[`addClient_${i}_email`] = 'Invalid email format';
+    }
+  });
+
   if (data.isMultiPhase) {
     data.phases.forEach((phase, i) => {
       if (!phase.sizeKWp.trim()) {
@@ -95,6 +108,75 @@ function validate(data: ProposalEditFormData): ValidationErrors {
     }
   }
   return errors;
+}
+async function syncAdditionalClientsJunction(proposalId: string, additionalClients: AdditionalClient[]) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Delete existing non-primary proposal_clients rows
+    // We keep the primary client (from proposals.client_reference_id) and replace additional ones
+    await supabase
+      .from('proposal_clients')
+      .delete()
+      .eq('proposal_id', proposalId);
+
+    if (additionalClients.length === 0) return;
+
+    // Resolve or create client records for each additional client
+    const rows = [];
+    for (const client of additionalClients) {
+      let clientId = client.clientId;
+
+      if (!clientId) {
+        // Search by email first
+        const { data: existing } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('email', client.email.trim())
+          .maybeSingle();
+
+        if (existing) {
+          clientId = existing.id;
+        } else {
+          // Create new client record
+          const nameParts = client.name.trim().split(/\s+/);
+          const lastName = nameParts.length > 1 ? nameParts.pop()! : '';
+          const firstName = nameParts.join(' ');
+
+          const { data: newClient } = await supabase
+            .from('clients')
+            .insert({
+              first_name: firstName,
+              last_name: lastName,
+              email: client.email.trim(),
+              phone: client.phone?.trim() || null,
+              company_name: client.companyName?.trim() || null,
+              created_by: user.id,
+            })
+            .select('id')
+            .single();
+
+          if (newClient) clientId = newClient.id;
+        }
+      }
+
+      if (clientId) {
+        rows.push({
+          proposal_id: proposalId,
+          client_id: clientId,
+          added_by: user.id,
+        });
+      }
+    }
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from('proposal_clients').insert(rows);
+      if (error) console.warn('Failed to sync proposal_clients:', error.message);
+    }
+  } catch (err) {
+    console.warn('Exception syncing additional clients junction:', err);
+  }
 }
 
 export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) {
@@ -132,6 +214,34 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         return next;
       });
     }
+  };
+
+  const addAdditionalClient = () => {
+    setFormData(prev => ({
+      ...prev,
+      additionalClients: [...prev.additionalClients, { name: '', email: '', phone: '', companyName: '' }],
+    }));
+  };
+
+  const updateAdditionalClient = (index: number, client: AdditionalClient) => {
+    setFormData(prev => {
+      const updated = [...prev.additionalClients];
+      updated[index] = client;
+      return { ...prev, additionalClients: updated };
+    });
+    setErrors(prev => {
+      const next = { ...prev };
+      delete next[`addClient_${index}_name`];
+      delete next[`addClient_${index}_email`];
+      return next;
+    });
+  };
+
+  const removeAdditionalClient = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalClients: prev.additionalClients.filter((_, i) => i !== index),
+    }));
   };
 
   const computedTotalSize = (): number => {
@@ -178,6 +288,13 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
           phone: formData.clientPhone.trim(),
           companyName: formData.clientCompanyName.trim(),
         },
+        additionalClients: formData.additionalClients.map(c => ({
+          name: c.name.trim(),
+          email: c.email.trim(),
+          phone: c.phone?.trim() || '',
+          companyName: c.companyName?.trim() || '',
+          clientId: c.clientId,
+        })),
         projectInfo: {
           ...oldProjectInfo,
           name: formData.projectName.trim(),
@@ -266,6 +383,9 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         }
       }
 
+      // Sync additional clients to proposal_clients junction table
+      await syncAdditionalClientsJunction(proposal.id, formData.additionalClients);
+
       toast.success('Proposal updated successfully');
       onSuccess?.();
       return true;
@@ -284,6 +404,9 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     saving,
     updateField,
     updatePhase,
+    addAdditionalClient,
+    updateAdditionalClient,
+    removeAdditionalClient,
     computedTotalSize,
     save,
     resetForm,
