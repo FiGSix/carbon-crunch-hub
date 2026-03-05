@@ -254,6 +254,8 @@ export function UserManagementTable() {
 
       return combined.sort((a, b) => a.company_name.localeCompare(b.company_name));
     },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   const getRoleBadgeVariant = (role: string) => {
