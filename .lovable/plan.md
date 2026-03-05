@@ -1,47 +1,84 @@
 
 
-# Send Audit Ready Confirmation Email to Client
+# Improve Onboarding Section Completion Visibility
 
-## Overview
+## Problem
 
-When an admin marks a project as "Audit Ready," an email will be sent to the primary client confirming that their project has reached audit readiness and that they will be kept informed of progress through the various milestones until carbon credit issuance.
+The current UX relies on a small 20px icon (CheckCircle2/AlertCircle) in the top-right corner of each card. When data is pre-filled from the proposal, clients scan the page, see populated fields, and skip sections that still have empty required fields. The validation summary only appears after clicking "Submit" — too late.
 
-## Changes
+## Solution: Subtle but firm visual cues at three levels
 
-### 1. New Edge Function: `supabase/functions/send-audit-ready-email/index.ts`
+### 1. Section-level: Colored left border on each Card
 
-- Accepts `{ projectOnboardingId: string }`
-- Looks up the `project_onboarding` record, joins to `proposals` and `clients` (via `client_reference_id`) to get:
-  - Client name and email
-  - Project/proposal title
-  - System size
-  - Agent details (for CC)
-- Sends a branded email via Resend with:
-  - Subject: "Your Solar Project is Audit Ready"
-  - Body confirming audit readiness, briefly explaining the milestones ahead (Energy Data Analysis, Independent Audit, Verra Audit, Credit Issuance, Sale, Payment)
-  - A note that they will receive updates as the project progresses through each stage
-- Logs the send to `proposal_automation_log` with the Resend message ID for tracking
+Add a 4px left border to every section card:
+- **Green** (`border-l-green-500`) when the section is complete
+- **Amber** (`border-l-amber-500`) when the section has missing required fields
 
-### 2. Update `supabase/config.toml`
+This is immediately scannable when scrolling — the client sees a vertical "traffic light" down the page without needing to read anything. Subtle (just a border), but firm (impossible to miss).
 
-- Add `[functions.send-audit-ready-email]` with `verify_jwt = false`
+### 2. Section-level: Inline incomplete field count
 
-### 3. Update `src/pages/ProjectOnboardingDetail/OverviewTab.tsx`
+Inside each incomplete card header, add a small text badge next to the existing AlertCircle:
+```
+⚠ 2 fields remaining
+```
+This tells the client exactly how much work is left in that section, preventing the "it looks done" problem.
 
-- After successfully setting `audit_ready = true`, invoke the edge function:
-  ```typescript
-  await supabase.functions.invoke('send-audit-ready-email', {
-    body: { projectOnboardingId: project.id }
-  });
-  ```
-- Only trigger the email when toggling audit_ready **on** (not when removing it)
-- Show a toast confirming the email was sent (non-blocking; email failure doesn't revert audit status)
+### 3. Page-level: Progress bar at the top
 
-## File Summary
+Add an overall completion progress bar above all cards showing "4 of 7 sections complete". This gives clients a clear goal and makes them scroll to find the incomplete ones.
+
+## Implementation
+
+### File: `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`
+
+**A) Add a `getSectionCompletionInfo` helper** that returns `{ complete: boolean, remaining: number, total: number }` for each section, replacing the boolean-only `getSectionStatus`.
+
+**B) Add progress bar** after the page heading, before the first Card:
+```tsx
+const sections = [systemInfo, inverterInfo, batteryInfo, panelInfo, financialInfo, docsInfo, omInfo];
+const completedCount = sections.filter(s => s.complete).length;
+
+<div className="space-y-2">
+  <div className="flex justify-between text-sm">
+    <span>{completedCount} of {sections.length} sections complete</span>
+    <span>{Math.round((completedCount / sections.length) * 100)}%</span>
+  </div>
+  <Progress value={(completedCount / sections.length) * 100} />
+</div>
+```
+
+**C) Update each Card** to use the colored left border and remaining count:
+```tsx
+<Card className={cn(
+  "border-l-4",
+  sectionInfo.complete ? "border-l-green-500" : "border-l-amber-500"
+)}>
+  <CardHeader>
+    <div className="flex items-center justify-between">
+      <div>
+        <CardTitle>System Details</CardTitle>
+        <CardDescription>...</CardDescription>
+      </div>
+      <div className="flex items-center gap-2">
+        {!sectionInfo.complete && (
+          <span className="text-xs text-amber-600 font-medium">
+            {sectionInfo.remaining} field{sectionInfo.remaining !== 1 ? 's' : ''} remaining
+          </span>
+        )}
+        {sectionInfo.complete ? (
+          <CheckCircle2 className="h-5 w-5 text-green-600" />
+        ) : (
+          <AlertCircle className="h-5 w-5 text-amber-500" />
+        )}
+      </div>
+    </div>
+  </CardHeader>
+```
+
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/send-audit-ready-email/index.ts` | New edge function: fetch project/client data, send branded Resend email, log to automation log |
-| `supabase/config.toml` | Add function entry with `verify_jwt = false` |
-| `src/pages/ProjectOnboardingDetail/OverviewTab.tsx` | Call edge function after marking audit ready |
+| `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx` | Add progress bar, colored card borders, remaining field counts per section |
 
