@@ -37,13 +37,18 @@ export function resolveClientInfo(
     .join(' ')
     .trim();
 
-  // Merge: live client data takes precedence over snapshot
+  // Snapshot takes precedence; live data is fallback for missing fields
   return {
-    ...snapshotClientInfo, // Keep any extra fields from snapshot (e.g., existingClient, address)
-    name: liveName || snapshotClientInfo.name || '',
-    email: clientRecord.email || snapshotClientInfo.email || '',
-    phone: clientRecord.phone || snapshotClientInfo.phone || '',
-    companyName: clientRecord.company_name || snapshotClientInfo.companyName || '',
-    registrationNumber: clientRecord.registration_number || snapshotClientInfo.registrationNumber,
+    name: snapshotClientInfo.name || liveName || '',
+    email: snapshotClientInfo.email || clientRecord.email || '',
+    phone: snapshotClientInfo.phone || clientRecord.phone || '',
+    companyName: snapshotClientInfo.companyName || clientRecord.company_name || '',
+    registrationNumber: snapshotClientInfo.registrationNumber || clientRecord.registration_number,
+    // Preserve extra snapshot fields (existingClient, address, etc.)
+    ...Object.fromEntries(
+      Object.entries(snapshotClientInfo).filter(
+        ([k]) => !['name','email','phone','companyName','registrationNumber'].includes(k)
+      )
+    ),
   };
 }
