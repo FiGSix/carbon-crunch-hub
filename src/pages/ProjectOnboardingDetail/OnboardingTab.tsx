@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -620,37 +621,115 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     }
   };
 
-  const getSectionStatus = (fields: string[]) => {
-    // Special handling for inverter_serial validation (now stored as JSON array of objects)
-    if (fields.includes('inverter_serial')) {
-      // For inverters, we check the inverterDetails state directly
-      // Each inverter should have brand, model, capacity_kw and serial filled
-      const hasValidInverters = inverterDetails.length > 0 && inverterDetails.every(inv => 
-        inv.brand && inv.model && inv.capacity_kw !== null && inv.serial?.trim()
-      );
-      
-      return hasValidInverters;
+  const getSectionCompletionInfo = (sectionKey: string): { complete: boolean; remaining: number; total: number } => {
+    switch (sectionKey) {
+      case 'system': {
+        const requiredFields = ['system_address', 'commissioning_date'];
+        const filled = requiredFields.filter(f => formData[f as keyof OnboardingFields]);
+        return { complete: filled.length === requiredFields.length, remaining: requiredFields.length - filled.length, total: requiredFields.length };
+      }
+      case 'inverter': {
+        const fields = ['brand', 'model', 'capacity_kw', 'serial'] as const;
+        const total = inverterDetails.length * fields.length;
+        let filledCount = 0;
+        inverterDetails.forEach(inv => {
+          if (inv.brand) filledCount++;
+          if (inv.model) filledCount++;
+          if (inv.capacity_kw !== null) filledCount++;
+          if (inv.serial?.trim()) filledCount++;
+        });
+        if (inverterDetails.length === 0) return { complete: false, remaining: 4, total: 4 };
+        return { complete: filledCount === total, remaining: total - filledCount, total };
+      }
+      case 'battery': {
+        if (formData.has_battery === null || formData.has_battery === undefined) {
+          return { complete: false, remaining: 1, total: 1 };
+        }
+        if (formData.has_battery === false) return { complete: true, remaining: 0, total: 1 };
+        const requiredFields = ['battery_brand', 'battery_capacity_kwh', 'battery_cost'];
+        const filled = requiredFields.filter(f => formData[f as keyof OnboardingFields]);
+        return { complete: filled.length === requiredFields.length, remaining: requiredFields.length - filled.length, total: requiredFields.length };
+      }
+      case 'panel': {
+        const fields = ['brand', 'size_wp', 'quantity', 'total_kwp'] as const;
+        const total = panelArrayDetails.length * fields.length;
+        let filledCount = 0;
+        panelArrayDetails.forEach(arr => {
+          if (arr.brand) filledCount++;
+          if (arr.size_wp !== null) filledCount++;
+          if (arr.quantity !== null) filledCount++;
+          if (arr.total_kwp !== null) filledCount++;
+        });
+        if (panelArrayDetails.length === 0) return { complete: false, remaining: 4, total: 4 };
+        return { complete: filledCount === total, remaining: total - filledCount, total };
+      }
+      case 'financial': {
+        const has = !!formData.total_capex;
+        return { complete: has, remaining: has ? 0 : 1, total: 1 };
+      }
+      case 'documents': {
+        const hasCoc = documents.some(d => d.category === 'coc');
+        const hasInvoice = documents.some(d => d.category === 'invoice');
+        const total = 2;
+        const filled = (hasCoc ? 1 : 0) + (hasInvoice ? 1 : 0);
+        return { complete: filled === total, remaining: total - filled, total };
+      }
+      case 'om': {
+        if (formData.has_maintenance_agreement === null || formData.has_maintenance_agreement === undefined) {
+          return { complete: false, remaining: 1, total: 1 };
+        }
+        if (formData.has_maintenance_agreement === false) return { complete: true, remaining: 0, total: 1 };
+        const requiredFields = ['maintenance_agreement_term_years', 'maintenance_cost_annual'];
+        const hasDoc = documents.some(d => d.category === 'om_agreement');
+        const filledFields = requiredFields.filter(f => formData[f as keyof OnboardingFields]).length;
+        const filled = filledFields + (hasDoc ? 1 : 0);
+        const total = requiredFields.length + 1;
+        return { complete: filled === total, remaining: total - filled, total };
+      }
+      default:
+        return { complete: false, remaining: 0, total: 0 };
     }
-    
-    const allFilled = fields.every(field => formData[field as keyof OnboardingFields]);
-    return allFilled;
   };
+
+  const sectionKeys = ['system', 'inverter', 'battery', 'panel', 'financial', 'documents', 'om'] as const;
+  const sectionInfos = Object.fromEntries(sectionKeys.map(k => [k, getSectionCompletionInfo(k)]));
+  const completedSections = sectionKeys.filter(k => sectionInfos[k].complete).length;
+
+  const SectionBadge = ({ info }: { info: { complete: boolean; remaining: number } }) => (
+    <div className="flex items-center gap-2">
+      {!info.complete && (
+        <span className="text-xs text-amber-600 font-medium">
+          {info.remaining} field{info.remaining !== 1 ? 's' : ''} remaining
+        </span>
+      )}
+      {info.complete ? (
+        <CheckCircle2 className="h-5 w-5 text-green-600" />
+      ) : (
+        <AlertCircle className="h-5 w-5 text-amber-500" />
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
+      {/* Overall Progress */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm text-muted-foreground">
+          <span className="font-medium">{completedSections} of {sectionKeys.length} sections complete</span>
+          <span>{Math.round((completedSections / sectionKeys.length) * 100)}%</span>
+        </div>
+        <Progress value={(completedSections / sectionKeys.length) * 100} className="h-2" />
+      </div>
+
       {/* System Details */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.system.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>System Details</CardTitle>
               <CardDescription>Basic information about the solar installation</CardDescription>
             </div>
-            {getSectionStatus(['system_address', 'commissioning_date']) ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-            )}
+            <SectionBadge info={sectionInfos.system} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -938,18 +1017,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       </Card>
 
       {/* Inverter Details */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.inverter.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Inverter Details</CardTitle>
               <CardDescription>Information about the inverter installation</CardDescription>
             </div>
-            {getSectionStatus(['inverter_serial']) ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-            )}
+            <SectionBadge info={sectionInfos.inverter} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1055,31 +1130,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       </Card>
 
       {/* Battery Details */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.battery.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Battery Details</CardTitle>
               <CardDescription>Information about battery storage if installed</CardDescription>
             </div>
-            {(() => {
-              if (formData.has_battery === null || formData.has_battery === undefined) {
-                return <AlertCircle className="h-5 w-5 text-orange-600" />;
-              } else if (formData.has_battery === false) {
-                return <CheckCircle2 className="h-5 w-5 text-green-600" />;
-              } else {
-                const hasRequiredFields = !!(
-                  formData.battery_brand &&
-                  formData.battery_capacity_kwh &&
-                  formData.battery_cost
-                );
-                return hasRequiredFields ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
-                );
-              }
-            })()}
+            <SectionBadge info={sectionInfos.battery} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1166,24 +1224,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       </Card>
 
       {/* Panel Details */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.panel.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Panel Details</CardTitle>
               <CardDescription>Information about the solar panels</CardDescription>
             </div>
-            {(() => {
-              // Check if at least one array has all required fields filled
-              const hasValidArrays = panelArrayDetails.length > 0 && panelArrayDetails.some(arr => 
-                arr.brand && arr.size_wp !== null && arr.quantity !== null && arr.total_kwp !== null
-              );
-              return hasValidArrays ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-              );
-            })()}
+            <SectionBadge info={sectionInfos.panel} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1253,18 +1301,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       </Card>
 
       {/* Financial */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.financial.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Financial Details</CardTitle>
               <CardDescription>Cost breakdown and CAPEX information</CardDescription>
             </div>
-            {getSectionStatus(['total_capex']) ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-            )}
+            <SectionBadge info={sectionInfos.financial} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1289,7 +1333,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       </Card>
 
       {/* Project Documentation */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.documents.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -1308,6 +1352,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               </div>
               <CardDescription>Upload required project documents</CardDescription>
             </div>
+            <SectionBadge info={sectionInfos.documents} />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -1354,31 +1399,14 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       </Card>
 
       {/* O&M Agreement */}
-      <Card>
+      <Card className={cn("border-l-4", sectionInfos.om.complete ? "border-l-green-500" : "border-l-amber-500")}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Operations & Maintenance</CardTitle>
               <CardDescription>Maintenance agreement details</CardDescription>
             </div>
-            {(() => {
-              if (formData.has_maintenance_agreement === null || formData.has_maintenance_agreement === undefined) {
-                return <AlertCircle className="h-5 w-5 text-orange-600" />;
-              } else if (formData.has_maintenance_agreement === false) {
-                return <CheckCircle2 className="h-5 w-5 text-green-600" />;
-              } else {
-                const hasRequiredFields = !!(
-                  formData.maintenance_agreement_term_years &&
-                  formData.maintenance_cost_annual &&
-                  documents.some(doc => doc.category === 'om_agreement')
-                );
-                return hasRequiredFields ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
-                );
-              }
-            })()}
+            <SectionBadge info={sectionInfos.om} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
