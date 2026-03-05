@@ -1,72 +1,47 @@
 
 
-# Root Cause: `resolveClientInfo` Overrides Correct Data with Stale Data
+# Root Cause: Radix `pointer-events: none` Stuck on Body
 
-## The Problem — One Core Bug
+## The Actual Problem
 
-The system has an inverted priority. Here's what happens:
+This is a **well-documented Radix UI bug** ([#3317](https://github.com/radix-ui/primitives/issues/3317), [#1241](https://github.com/radix-ui/primitives/issues/1241)) — not a React re-render or memoization issue. Every previous "fix" addressed the wrong thing.
 
-1. User edits client details on the proposal → snapshot (`content.clientInfo`) gets updated to `gm@keystonehatchery.co.za` — **correct**
-2. But `client_reference_id` still points to a different `clients` record (`ops@keystonehatchery.co.za`) — **stale**
-3. `resolveClientInfo()` is designed so **live join data overrides the snapshot**
-4. Result: the correct snapshot data is thrown away and replaced with stale data from the wrong `clients` record
+**What happens:**
 
-The "atomic update" fix from earlier doesn't help because the edit flow updates the `clients` record fields (name, phone, etc.) on the existing record pointed to by `client_reference_id`, but it doesn't change which record `client_reference_id` points to. When the email changes, there's now a *different* client record with that email, and the FK was never re-pointed.
+1. User clicks the DropdownMenu trigger (⋮ button) on a table row
+2. Radix sets `pointer-events: none` on `<body>` as part of its modal overlay behavior
+3. User clicks a menu item that opens a Dialog (Edit Client, View Details, Manage Roles, etc.)
+4. The DropdownMenu closes and the Dialog opens simultaneously
+5. Two competing `DismissableLayer` instances clash — the Dialog saves the current body style (`pointer-events: none`) as the "original" to restore later
+6. When the Dialog closes, it restores `pointer-events: none` instead of removing it
+7. **The entire page becomes unresponsive** — nothing is clickable
 
-## The Fix — Invert the Priority
+This affects all three admin pages because they all follow the same pattern: **DropdownMenu → click item → open Dialog**.
 
-The snapshot is what the user explicitly set. It should be the authority, not the join. The `resolveClientInfo` function currently does:
+## The Fix — One Change, At the Root
 
-```text
-CURRENT (broken):  live join data → overrides → snapshot
-CORRECT:           snapshot → overrides → live join data (fallback only)
+Add `modal={false}` to every `DropdownMenu` that programmatically opens a Dialog. This prevents Radix from setting `pointer-events: none` on body in the first place, eliminating the conflict entirely.
+
+**Affected files:**
+
+| File | What changes |
+|------|-------------|
+| `src/components/clients/table/ClientsTableContent.tsx` | Add `modal={false}` to `<DropdownMenu>` (line ~85) |
+| `src/components/admin/agents/AgentsTableContent.tsx` | Add `modal={false}` to `<DropdownMenu>` inside `AgentRow` (line ~192) |
+| `src/components/admin/users/UserManagementTable.tsx` | Add `modal={false}` to both `<DropdownMenu>` instances inside `UserRow` (lines ~153, ~172) |
+
+**The change per file is a single prop addition:**
+```tsx
+// Before
+<DropdownMenu>
+
+// After  
+<DropdownMenu modal={false}>
 ```
 
-### File: `src/utils/proposals/resolveClientInfo.ts`
+No new abstractions. No memoization changes. No realtime subscription changes. Just fixing the actual Radix interaction bug at the component level where it occurs.
 
-Invert the merge so the **snapshot takes precedence** over live data. Live data only fills in fields that are missing/empty in the snapshot:
+## Why Previous Fixes Didn't Work
 
-```typescript
-export function resolveClientInfo(
-  snapshotClientInfo: Partial<ClientInformation>,
-  clientRecord?: LiveClientRecord | null
-): Partial<ClientInformation> {
-  if (!clientRecord) {
-    return snapshotClientInfo;
-  }
-
-  const liveName = [clientRecord.first_name, clientRecord.last_name]
-    .filter(Boolean).join(' ').trim();
-
-  // Snapshot takes precedence; live data is fallback for missing fields
-  return {
-    name: snapshotClientInfo.name || liveName || '',
-    email: snapshotClientInfo.email || clientRecord.email || '',
-    phone: snapshotClientInfo.phone || clientRecord.phone || '',
-    companyName: snapshotClientInfo.companyName || clientRecord.company_name || '',
-    registrationNumber: snapshotClientInfo.registrationNumber || clientRecord.registration_number,
-    // Preserve extra snapshot fields (existingClient, address, etc.)
-    ...Object.fromEntries(
-      Object.entries(snapshotClientInfo).filter(
-        ([k]) => !['name','email','phone','companyName','registrationNumber'].includes(k)
-      )
-    ),
-  };
-}
-```
-
-This is a single-file, single-function change. No new layers, no new abstractions.
-
-### Why This Is Correct
-
-- When a user edits client info on a proposal and saves, the snapshot is updated immediately — it always reflects intent
-- The `clients` table record and `client_reference_id` FK are for CRM/linking purposes, not for display override
-- If the snapshot is empty (e.g., old proposals before snapshots existed), the live data fills in as fallback
-- The audit trail is preserved — the snapshot IS the record of what was set
-
-### File Summary
-
-| File | Change |
-|------|--------|
-| `src/utils/proposals/resolveClientInfo.ts` | Invert priority: snapshot takes precedence, live join is fallback only |
+The previous fixes (memoization, `useRef` for handlers, mutation cooldowns, `useDeferredValue`) addressed **React rendering performance** — which was never the problem. The page wasn't slow due to re-renders; it was literally unclickable because `pointer-events: none` was stuck on the body element. These are completely different failure modes that look identical to the user ("the page froze").
 
