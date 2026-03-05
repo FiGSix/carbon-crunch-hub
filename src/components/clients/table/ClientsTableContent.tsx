@@ -82,7 +82,7 @@ const ClientRow = memo(function ClientRow({
         </TableCell>
       )}
       <TableCell className="text-center">
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
               <MoreVertical className="h-4 w-4" />
