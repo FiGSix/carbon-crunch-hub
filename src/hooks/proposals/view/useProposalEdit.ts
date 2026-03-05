@@ -17,6 +17,7 @@ export interface ProposalEditFormData {
   clientEmail: string;
   clientPhone: string;
   clientCompanyName: string;
+  primaryClientId: string | null;
   // Additional clients
   additionalClients: AdditionalClient[];
   // Project info
@@ -55,6 +56,7 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
     clientEmail: clientInfo.email || '',
     clientPhone: clientInfo.phone || '',
     clientCompanyName: clientInfo.companyName || '',
+    primaryClientId: proposal.client_reference_id || null,
     additionalClients: (proposal.content?.additionalClients || []).map(c => ({ ...c })),
     projectName: projectInfo.name || '',
     projectAddress: projectInfo.address || '',
@@ -244,6 +246,35 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     }));
   };
 
+  const makePrimary = (index: number) => {
+    setFormData(prev => {
+      const target = prev.additionalClients[index];
+      if (!target) return prev;
+
+      // Move current primary into additional clients list
+      const demotedPrimary: AdditionalClient = {
+        name: prev.clientName,
+        email: prev.clientEmail,
+        phone: prev.clientPhone,
+        companyName: prev.clientCompanyName,
+        clientId: prev.primaryClientId || undefined,
+      };
+
+      const newAdditional = prev.additionalClients.filter((_, i) => i !== index);
+      newAdditional.push(demotedPrimary);
+
+      return {
+        ...prev,
+        clientName: target.name,
+        clientEmail: target.email,
+        clientPhone: target.phone || '',
+        clientCompanyName: target.companyName || '',
+        primaryClientId: target.clientId || null,
+        additionalClients: newAdditional,
+      };
+    });
+  };
+
   const computedTotalSize = (): number => {
     if (!formData.isMultiPhase) return parseFloat(formData.systemSize) || 0;
     return formData.phases.reduce((sum, p) => sum + (parseFloat(p.sizeKWp) || 0), 0);
@@ -338,7 +369,53 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         return false;
       }
 
-      if (proposal.client_reference_id) {
+      // Resolve the primary client record
+      const primaryChanged = formData.primaryClientId !== proposal.client_reference_id;
+      let resolvedPrimaryClientId = formData.primaryClientId;
+
+      if (primaryChanged && !resolvedPrimaryClientId) {
+        // New primary client has no clientId — find or create
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: existing } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('email', formData.clientEmail.trim())
+          .maybeSingle();
+
+        if (existing) {
+          resolvedPrimaryClientId = existing.id;
+        } else if (user) {
+          const nameParts = formData.clientName.trim().split(/\s+/);
+          const ln = nameParts.length > 1 ? nameParts.pop()! : '';
+          const fn = nameParts.join(' ');
+          const { data: newClient } = await supabase
+            .from('clients')
+            .insert({
+              first_name: fn,
+              last_name: ln,
+              email: formData.clientEmail.trim(),
+              phone: formData.clientPhone.trim() || null,
+              company_name: formData.clientCompanyName.trim() || null,
+              created_by: user.id,
+            })
+            .select('id')
+            .single();
+          if (newClient) resolvedPrimaryClientId = newClient.id;
+        }
+      }
+
+      // Update client_reference_id on proposals if primary changed
+      if (primaryChanged && resolvedPrimaryClientId) {
+        const { error: refError } = await supabase
+          .from('proposals')
+          .update({ client_reference_id: resolvedPrimaryClientId })
+          .eq('id', proposal.id);
+        if (refError) console.warn('Failed to update client_reference_id:', refError.message);
+      }
+
+      // Sync primary client's record in the clients table
+      const clientIdToUpdate = resolvedPrimaryClientId || proposal.client_reference_id;
+      if (clientIdToUpdate) {
         try {
           const nameParts = formData.clientName.trim().split(/\s+/);
           const lastName = nameParts.length > 1 ? nameParts.pop()! : '';
@@ -354,7 +431,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
               company_name: formData.clientCompanyName.trim(),
               updated_at: new Date().toISOString(),
             })
-            .eq('id', proposal.client_reference_id)
+            .eq('id', clientIdToUpdate)
             .select('user_id')
             .single();
 
@@ -362,7 +439,6 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
             console.warn('Failed to update linked client record:', clientError.message);
           }
 
-          // Also sync to profiles table if the client has a linked user account
           if (clientData?.user_id) {
             const { error: profileError } = await supabase
               .from('profiles')
@@ -407,6 +483,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     addAdditionalClient,
     updateAdditionalClient,
     removeAdditionalClient,
+    makePrimary,
     computedTotalSize,
     save,
     resetForm,

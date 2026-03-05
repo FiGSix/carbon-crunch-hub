@@ -2,7 +2,7 @@ import { useState, ChangeEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Crown } from "lucide-react";
 import { AdditionalClient } from "@/types/proposals";
 import { searchClients } from "@/services/proposals/unifiedProposalService";
 
@@ -11,9 +11,10 @@ interface AdditionalClientFormProps {
   client: AdditionalClient;
   onChange: (index: number, client: AdditionalClient) => void;
   onRemove: (index: number) => void;
+  onMakePrimary?: (index: number) => void;
 }
 
-export function AdditionalClientForm({ index, client, onChange, onRemove }: AdditionalClientFormProps) {
+export function AdditionalClientForm({ index, client, onChange, onRemove, onMakePrimary }: AdditionalClientFormProps) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -55,9 +56,17 @@ export function AdditionalClientForm({ index, client, onChange, onRemove }: Addi
     <div className="relative border border-border rounded-lg p-4 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">Additional Client {index + 1}</span>
-        <Button type="button" variant="ghost" size="icon" onClick={() => onRemove(index)} className="h-7 w-7">
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {onMakePrimary && (
+            <Button type="button" variant="outline" size="sm" onClick={() => onMakePrimary(index)} className="h-7 text-xs">
+              <Crown className="h-3 w-3 mr-1" />
+              Make Primary
+            </Button>
+          )}
+          <Button type="button" variant="ghost" size="icon" onClick={() => onRemove(index)} className="h-7 w-7">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
