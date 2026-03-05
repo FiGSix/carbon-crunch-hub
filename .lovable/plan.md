@@ -1,73 +1,47 @@
 
 
-# Fix: Page Freezing After Edits on Clients, Users, and Agents Pages
+# Update Primary Client on a Proposal
 
-## Root Cause Analysis
+## Problem
 
-The freeze pattern is a **mutation → realtime echo → cascading invalidation loop**. Here is how it works on each page:
+The current edit dialog allows changing the primary client's name/email/phone but always keeps `proposals.client_reference_id` pointing to the same `clients` record. If you want a different person to be the primary recipient (the one who gets the invitation email), there is no mechanism to swap them.
 
-### Agents Page
-1. Admin updates an agent (status, commission, etc.) via mutation
-2. Mutation `onSuccess` calls `invalidateAgentManagement()` — this is debounced (1s timer that fires async and returns immediately)
-3. The `await invalidateAgentManagement()` in `onSuccess` resolves instantly (the debounce means the actual invalidation hasn't happened yet)
-4. The database UPDATE triggers a `postgres_changes` event on the `profiles` table
-5. `useAgentsRealtime` receives the event and calls `invalidateAgentManagement()` again
-6. This triggers a refetch, which may itself fire another activity log write → another realtime event → another invalidation
-7. The 1-second debounce in `invalidateAgentManagement` only slows the loop, it doesn't break it
+The invitation system (`useProposalInvitations.ts` line 177) resolves email from `client_reference_id` — so changing the primary client means updating that foreign key on the `proposals` table.
 
-### Users Page
-1. Admin changes a role or deletes a user → `onSuccess` calls `refetch()` or `queryClient.invalidateQueries(['admin-users'])`
-2. The refetch runs 5+ sequential Supabase queries (profiles, company_members, client_company_members, companies, client_companies, unlinked clients)
-3. The `all-companies-filter` query (line 235) has **no `staleTime` or `refetchOnWindowFocus`**, so it also re-runs freely
-4. If the user switches tabs during loading, `refetchOnWindowFocus` (default: true on the companies query) triggers yet another refetch
-5. No realtime subscription here, but the sheer query volume blocks the main thread
+## Solution
 
-### Clients Page
-1. The `useClients` hook has a manual `fetchClients` function with `isFetchingRef` guard — this is actually well-protected
-2. However, the `useRealtimeSubscription` hook subscribes to ALL `proposals` table changes (for admins, no filter)
-3. Any proposal change anywhere in the system triggers `onDataChange()` → `refresh()` → clears cache → full refetch
-4. If an admin edits a client that also affects a proposal, this creates a cascade
+Add a "Make Primary" action to each additional client in the edit dialog. When clicked, it swaps that additional client into the primary slot and moves the current primary into the additional clients list. On save, the `client_reference_id` on the `proposals` table is updated to point to the new primary client's record.
 
-## Fixes
+## Changes
 
-### 1. `src/hooks/query/useCacheInvalidation.ts` — Add mutation cooldown tracking
+### 1. `src/hooks/proposals/view/useProposalEdit.ts`
 
-Add a module-level `lastMutationTimestamp` map so realtime handlers can detect "echoes" from local mutations and skip redundant invalidations.
+- Add `primaryClientId: string | null` to `ProposalEditFormData`, populated from `proposal.client_reference_id`
+- Add a `makePrimary(index: number)` function that:
+  - Moves the current primary client fields (name, email, phone, company) into `additionalClients` (with current `primaryClientId` as `clientId`)
+  - Copies the selected additional client's fields into the primary slot
+  - Sets `primaryClientId` to that additional client's `clientId` (or null if new)
+- In `save()`:
+  - If `primaryClientId` changed, resolve or create the new client record in the `clients` table
+  - Update `proposals.client_reference_id` to the new primary client's ID
+  - The existing client update logic (line 341) already uses `proposal.client_reference_id` — change it to use `formData.primaryClientId` so it updates the correct record
 
-```typescript
-// Module-level: tracks when explicit mutations triggered invalidation
-export const mutationCooldowns = new Map<string, number>();
-const COOLDOWN_MS = 3000;
+### 2. `src/components/proposals/view/ProposalEditDialog.tsx`
 
-export function isInCooldown(key: string): boolean {
-  const lastMutation = mutationCooldowns.get(key);
-  if (!lastMutation) return false;
-  return Date.now() - lastMutation < COOLDOWN_MS;
-}
-```
+- Add a "Make Primary" button (small, outline) next to each additional client's remove button
+- Wire it to the `makePrimary` handler from the hook
+- Show a visual indicator on the primary client section (e.g., a badge or label saying "Primary - receives invitation email")
 
-Update `invalidateAgentManagement` to:
-- Record `Date.now()` in `mutationCooldowns` when called
-- Execute invalidation immediately (remove the debounce for explicit calls) so the `await` in `onSuccess` actually waits
+### 3. `src/components/proposals/client-info/AdditionalClientForm.tsx`
 
-### 2. `src/components/admin/agents/realtime/useAgentsRealtime.ts` — Skip echo events
+- Add an optional `onMakePrimary` prop
+- When provided, render a "Make Primary" button in the client card header
 
-In the profiles change handler, check `isInCooldown('agent-management')` before calling `invalidateRef.current()`. If within cooldown, log and skip.
-
-### 3. `src/components/admin/users/UserManagementTable.tsx` — Fix companies query
-
-Add `staleTime: 30_000` and `refetchOnWindowFocus: false` to the `all-companies-filter` query at line 235 (currently missing these).
-
-### 4. `src/hooks/clients/useRealtimeSubscription.ts` — Add cooldown for clients
-
-Import and check `isInCooldown('clients')` before calling `onDataChange()`, so that admin-triggered client edits don't immediately cascade into a full refetch via the proposal subscription.
-
-## Summary of Changes
+## File Summary
 
 | File | Change |
 |------|--------|
-| `src/hooks/query/useCacheInvalidation.ts` | Add `mutationCooldowns` map + `isInCooldown()` export; make `invalidateAgentManagement` record timestamp and execute synchronously |
-| `src/components/admin/agents/realtime/useAgentsRealtime.ts` | Check cooldown before invalidating on realtime event |
-| `src/components/admin/users/UserManagementTable.tsx` | Add `staleTime` and `refetchOnWindowFocus: false` to `all-companies-filter` query |
-| `src/hooks/clients/useRealtimeSubscription.ts` | Check cooldown before triggering `onDataChange` |
+| `src/hooks/proposals/view/useProposalEdit.ts` | Add `primaryClientId` state, `makePrimary()` swap logic, update `save()` to sync `client_reference_id` |
+| `src/components/proposals/view/ProposalEditDialog.tsx` | Wire up "Make Primary" button, add primary label |
+| `src/components/proposals/client-info/AdditionalClientForm.tsx` | Add optional `onMakePrimary` prop and button |
 
