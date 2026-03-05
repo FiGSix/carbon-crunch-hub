@@ -150,7 +150,7 @@ const UserRow = memo(function UserRow({
       </TableCell>
       <TableCell className="text-right">
         {user.source === 'client_record' ? (
-          <DropdownMenu>
+           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <MoreVertical className="h-4 w-4" />
@@ -169,7 +169,7 @@ const UserRow = memo(function UserRow({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <MoreVertical className="h-4 w-4" />
