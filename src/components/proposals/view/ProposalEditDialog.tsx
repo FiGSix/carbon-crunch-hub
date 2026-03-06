@@ -105,6 +105,7 @@ export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: Pr
                     key={index}
                     index={index}
                     client={client}
+                    errors={errors}
                     onChange={updateAdditionalClient}
                     onRemove={removeAdditionalClient}
                     onMakePrimary={makePrimary}
