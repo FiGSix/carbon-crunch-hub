@@ -1,38 +1,46 @@
 
+# Dead Code Cleanup — COMPLETED
 
-# Fix: `data.systemSize.trim is not a function` TypeError
+## Summary
 
-## Root Cause
+Deleted ~25 orphaned files and cleaned up App.tsx routes, dashboard hook index, and performance exports.
 
-The `systemSize` field in `ProposalEditFormData` is typed as `string`, but at runtime it can be a number. This happens in `extractFormData()` (lines 78-80) where `projectInfo.size` may already be a number from the database JSON. When `validate()` calls `data.systemSize.trim()` at line 121, it crashes.
+### Files Deleted
 
-The same issue could theoretically affect `commissionDate` or other fields extracted from untyped JSON.
+**Tier 1 — Completely Orphaned:**
+- `src/pages/MyClientsOptimized.tsx`
+- `src/hooks/useAuthSimplified.ts`
+- `src/components/debug/RenderTracker.tsx`
+- `src/lib/dev/devUtils.tsx`
+- `src/hooks/dashboard/useOptimizedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsHook.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsVersion.ts`
+- `src/hooks/dashboard/useUnifiedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedAgentPortfolio.ts`
+- `src/services/optimizedDataService.ts`
+- `src/lib/performance/BundleOptimization.ts`
+- `src/docs/` (5 markdown files)
 
-## Fix
+**Tier 2 — Dead Dependency Chains:**
+- `src/hooks/dashboard/useDashboardComputedData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardComputedData.ts`
+- `src/hooks/dashboard/useDashboardStats.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStats.ts`
+- `src/hooks/dashboard/useDashboardPerformanceTracking.ts`
+- `src/lib/performance/DashboardPerformanceMonitor.ts`
+- `src/hooks/dashboard/useAgentCommissionStats.ts`
+- `src/hooks/dashboard/useOptimizedAgentCommissionStats.ts`
 
-**File: `src/hooks/proposals/view/useProposalEdit.ts`**
+**Tier 3 — Dev/Debug Pages:**
+- `src/pages/SimplifiedIndex.tsx`
+- `src/pages/EmbeddedGame.tsx`
+- `src/pages/TestPage.tsx`
+- `src/pages/TestingSuite.tsx`
+- `src/components/testing/` (2 files)
+- `src/components/diagnostics/CSSFallbackDiagnostics.tsx`
 
-Two changes:
-
-1. **`extractFormData`** (line 78-80): Coerce `systemSize` to string safely:
-   ```typescript
-   systemSize: String(
-     projectInfo.size
-     || (projectInfo as any).totalSystemSize
-     || proposal.system_size_kwp
-     || ''
-   ),
-   ```
-
-2. **`validate`** (line 121): Defensive coercion before `.trim()`:
-   ```typescript
-   const sizeStr = String(data.systemSize || '');
-   if (!sizeStr.trim()) {
-     errors.systemSize = 'System size is required';
-   } else if (parseFloat(sizeStr) <= 0 || isNaN(parseFloat(sizeStr))) {
-     errors.systemSize = 'System size must be a positive number';
-   }
-   ```
-
-This ensures the save flow no longer crashes regardless of what type the database JSON contains.
-
+### Code Updates
+- **App.tsx**: Removed 4 dead imports and 4 dead routes (`/debug-home`, `/game`, `/test`, `/testing`)
+- **dashboard/index.ts**: Removed re-exports of deleted hooks
+- **dashboard/types.ts**: Inlined `AgentCommissionStats` interface (was imported from deleted file)
+- **performance/index.ts**: Removed `DashboardPerformanceMonitor` re-export
