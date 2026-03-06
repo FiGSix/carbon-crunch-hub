@@ -410,7 +410,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
           const nameParts = formData.clientName.trim().split(/\s+/);
           const ln = nameParts.length > 1 ? nameParts.pop()! : '';
           const fn = nameParts.join(' ');
-          const { data: newClient } = await supabase
+          const { data: newClient, error: insertError } = await supabase
             .from('clients')
             .insert({
               first_name: fn,
@@ -422,6 +422,17 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
             })
             .select('id')
             .single();
+
+          if (insertError) {
+            console.error('Failed to create client record:', insertError);
+            if (insertError.message.includes('unique') || insertError.message.includes('duplicate')) {
+              toast.error('A client with this email already exists but could not be linked. Please search for them instead of typing manually.');
+            } else {
+              toast.error(`Could not create client: ${insertError.message}`);
+            }
+            setSaving(false);
+            return false;
+          }
           if (newClient) resolvedPrimaryClientId = newClient.id;
         }
 
