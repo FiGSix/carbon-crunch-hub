@@ -1,36 +1,31 @@
 
 
-# Dead Code Cleanup - Round 2
+# Export Unsigned Cession Agreement PDF (Admin Only)
 
-## Summary
+## Changes
 
-Most items from the previous cleanup were already deleted. The following files still exist and are confirmed dead or low-value:
+### 1. New Edge Function: `supabase/functions/generate-cession-agreement-pdf/index.ts`
+- Accepts `{ proposalId }` via POST
+- Uses service role client to fetch proposal + client + agent data (same query pattern as `generate-signed-agreement-pdf`)
+- Calls `addCessionAgreementPages()` from `_shared/cession-agreement-pdf.ts` to render the full agreement with blank signature fields
+- Uploads to `proposal-pdfs` bucket as `cession-agreement-{proposalId}.pdf`
+- Returns `{ success, pdf_url }`
 
-## Files to Delete
+### 2. Config: `supabase/config.toml`
+Add function entry with `verify_jwt = false` (validate auth in code per best practices).
 
-| File | Reason |
-|------|--------|
-| `src/hooks/useProfileForm.ts` | Zero imports anywhere. Replaced by `useOptimizedProfileForm.ts`. |
-| `src/lib/performance/ConsoleMigrationStatus.md` | Markdown file in src/lib. Zero imports. Does not belong in build. |
+### 3. New Hook: `src/hooks/proposals/view/useCessionAgreementPdf.ts`
+Same pattern as `useProposalPdf.ts` — invokes edge function, handles loading/error/toast, triggers blob download.
 
-## Files to Keep (Not Dead)
+### 4. New Button: `src/components/proposals/view/CessionAgreementPdfButton.tsx`
+Button with `FileSignature` icon, label "Download Agreement". Same style as `ProposalPdfButton`.
 
-| File | Reason |
-|------|--------|
-| `src/services/optimizedRealtimeService.ts` | Re-export shim actively imported by 3+ files (NotificationBell, useRealtimeSubscription, useOptimizedProposals). Keep as-is or migrate imports later. |
-| `src/lib/performance/ConsoleReplacementUtility.ts` | Actively imported by 40+ files via `devLogger`. Not dead. |
-| `src/components/diagnostics/DisplayDiagnostics.tsx` | Dev-gated in App.tsx (`import.meta.env.DEV`). Tree-shaken in production. Low risk, keep. |
-| `src/hooks/useOptimizedProfileForm.ts` | Actively used by `ProfileForm.tsx`. |
-| `src/pages/SystemDiagnostics.tsx` | Routed and lazy-loaded in App.tsx. Appears intentional. |
+### 5. ProposalHeader: Admin-only visibility
+Add the button with **admin-only** guard:
 
-## Already Deleted (from previous cleanup)
-
-All dashboard orphan hooks, debug pages (EmbeddedGame, SimplifiedIndex, TestPage, TestingSuite), testing components, debug components, devUtils, docs/, useAuthSimplified, optimizedDataService, MyClientsOptimized, BundleOptimization, DashboardPerformanceMonitor, RenderTracker -- all already removed.
-
-## Code Changes
-
-1. **Delete** `src/hooks/useProfileForm.ts`
-2. **Delete** `src/lib/performance/ConsoleMigrationStatus.md`
-
-No import cleanup needed -- neither file is imported anywhere.
+```tsx
+{!isDeleted && userRole === "admin" && proposalId && (
+  <CessionAgreementPdfButton proposalId={proposalId} proposalTitle={title} />
+)}
+```
 
