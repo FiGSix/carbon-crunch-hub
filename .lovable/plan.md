@@ -1,33 +1,46 @@
 
+# Dead Code Cleanup — COMPLETED
 
-# Comprehensive `modal={false}` Fix for All DropdownMenu Components
+## Summary
 
-## Problem
+Deleted ~25 orphaned files and cleaned up App.tsx routes, dashboard hook index, and performance exports.
 
-The previous fixes only covered some files. There are **6 more files** with `<DropdownMenu>` (no `modal={false}`) that can trigger the same Radix `pointer-events: none` bug. Some open dialogs directly (high risk), others call mutations that could trigger toast/dialog interactions (lower risk but still worth fixing defensively).
+### Files Deleted
 
-## Files to Fix
+**Tier 1 — Completely Orphaned:**
+- `src/pages/MyClientsOptimized.tsx`
+- `src/hooks/useAuthSimplified.ts`
+- `src/components/debug/RenderTracker.tsx`
+- `src/lib/dev/devUtils.tsx`
+- `src/hooks/dashboard/useOptimizedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsHook.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsVersion.ts`
+- `src/hooks/dashboard/useUnifiedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedAgentPortfolio.ts`
+- `src/services/optimizedDataService.ts`
+- `src/lib/performance/BundleOptimization.ts`
+- `src/docs/` (5 markdown files)
 
-| File | Opens Dialog? | Risk |
-|------|--------------|------|
-| `src/components/admin/agents/LeadsAgentsTable.tsx` | Yes — View Details, Send Outreach, Outreach History, Convert dialogs | High |
-| `src/components/admin/agents/InvitedAgentsTable.tsx` | No — direct mutations only | Low (defensive) |
-| `src/components/admin/agents/PendingAgentsTable.tsx` | No — direct mutations only | Low (defensive) |
-| `src/components/admin/agents/SuspendedAgentsTable.tsx` | No — direct mutations only | Low (defensive) |
-| `src/components/admin/partners/ActivePartnersTable.tsx` | Yes — View Details, ApiKeyRevealDialog | High |
-| `src/components/notifications/NotificationList.tsx` | No — likely safe | Low (defensive) |
+**Tier 2 — Dead Dependency Chains:**
+- `src/hooks/dashboard/useDashboardComputedData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardComputedData.ts`
+- `src/hooks/dashboard/useDashboardStats.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStats.ts`
+- `src/hooks/dashboard/useDashboardPerformanceTracking.ts`
+- `src/lib/performance/DashboardPerformanceMonitor.ts`
+- `src/hooks/dashboard/useAgentCommissionStats.ts`
+- `src/hooks/dashboard/useOptimizedAgentCommissionStats.ts`
 
-## Change
+**Tier 3 — Dev/Debug Pages:**
+- `src/pages/SimplifiedIndex.tsx`
+- `src/pages/EmbeddedGame.tsx`
+- `src/pages/TestPage.tsx`
+- `src/pages/TestingSuite.tsx`
+- `src/components/testing/` (2 files)
+- `src/components/diagnostics/CSSFallbackDiagnostics.tsx`
 
-Same one-prop fix in each file:
-
-```tsx
-// Before
-<DropdownMenu>
-
-// After
-<DropdownMenu modal={false}>
-```
-
-Six files, one line each. This covers every remaining `DropdownMenu` in the codebase that doesn't already have `modal={false}`.
-
+### Code Updates
+- **App.tsx**: Removed 4 dead imports and 4 dead routes (`/debug-home`, `/game`, `/test`, `/testing`)
+- **dashboard/index.ts**: Removed re-exports of deleted hooks
+- **dashboard/types.ts**: Inlined `AgentCommissionStats` interface (was imported from deleted file)
+- **performance/index.ts**: Removed `DashboardPerformanceMonitor` re-export
