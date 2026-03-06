@@ -321,7 +321,7 @@ export function LeadsAgentsTable() {
                     {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />

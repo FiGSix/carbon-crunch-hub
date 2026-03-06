@@ -123,7 +123,7 @@ export function NotificationList({
                 <div className="flex-1 space-y-1">
                   <div className="flex items-start justify-between">
                     <p className="text-sm font-medium">{notification.title}</p>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button 
                           variant="ghost" 
