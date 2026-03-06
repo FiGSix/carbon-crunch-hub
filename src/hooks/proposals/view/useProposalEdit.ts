@@ -375,7 +375,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
           ...oldProjectInfo,
           name: formData.projectName.trim(),
           address: formData.projectAddress.trim(),
-          size: formData.isMultiPhase ? '' : formData.systemSize.trim(),
+          size: formData.isMultiPhase ? '' : String(formData.systemSize || '').trim(),
           totalSystemSize: formData.isMultiPhase ? newSystemSize : undefined,
           commissionDate: formData.isMultiPhase ? oldProjectInfo.commissionDate : formData.commissionDate,
           additionalNotes: formData.additionalNotes.trim(),
@@ -388,7 +388,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         ...(typeof existingProjectInfo === 'object' && existingProjectInfo !== null ? existingProjectInfo : {}),
         name: formData.projectName.trim(),
         address: formData.projectAddress.trim(),
-        size: formData.isMultiPhase ? String(newSystemSize) : formData.systemSize.trim(),
+        size: formData.isMultiPhase ? String(newSystemSize) : String(formData.systemSize || '').trim(),
         commissionDate: formData.isMultiPhase ? '' : formData.commissionDate,
       };
 
