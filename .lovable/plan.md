@@ -1,44 +1,46 @@
 
+# Dead Code Cleanup — COMPLETED
 
-# Fix: Cession Agreement PDF 401 Unauthorized Error
+## Summary
 
-## Root Cause
+Deleted ~25 orphaned files and cleaned up App.tsx routes, dashboard hook index, and performance exports.
 
-The edge function has `verify_jwt = false` and attempts manual auth using `userClient.auth.getUser()`. With Supabase's signing-keys system, `getUser()` makes a server-side HTTP call that fails because the token forwarding doesn't work correctly in this context.
+### Files Deleted
 
-## Fix
+**Tier 1 — Completely Orphaned:**
+- `src/pages/MyClientsOptimized.tsx`
+- `src/hooks/useAuthSimplified.ts`
+- `src/components/debug/RenderTracker.tsx`
+- `src/lib/dev/devUtils.tsx`
+- `src/hooks/dashboard/useOptimizedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsHook.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsVersion.ts`
+- `src/hooks/dashboard/useUnifiedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedAgentPortfolio.ts`
+- `src/services/optimizedDataService.ts`
+- `src/lib/performance/BundleOptimization.ts`
+- `src/docs/` (5 markdown files)
 
-Update the edge function to extract the JWT token from the Authorization header and use `supabase.auth.getUser(token)` on the **admin client** instead of creating a separate user client. This is the pattern that works reliably with signing-keys.
+**Tier 2 — Dead Dependency Chains:**
+- `src/hooks/dashboard/useDashboardComputedData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardComputedData.ts`
+- `src/hooks/dashboard/useDashboardStats.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStats.ts`
+- `src/hooks/dashboard/useDashboardPerformanceTracking.ts`
+- `src/lib/performance/DashboardPerformanceMonitor.ts`
+- `src/hooks/dashboard/useAgentCommissionStats.ts`
+- `src/hooks/dashboard/useOptimizedAgentCommissionStats.ts`
 
-### File: `supabase/functions/generate-cession-agreement-pdf/index.ts`
+**Tier 3 — Dev/Debug Pages:**
+- `src/pages/SimplifiedIndex.tsx`
+- `src/pages/EmbeddedGame.tsx`
+- `src/pages/TestPage.tsx`
+- `src/pages/TestingSuite.tsx`
+- `src/components/testing/` (2 files)
+- `src/components/diagnostics/CSSFallbackDiagnostics.tsx`
 
-Replace the auth block (lines 21-41) with:
-
-```typescript
-const authHeader = req.headers.get('Authorization');
-if (!authHeader?.startsWith('Bearer ')) {
-  return new Response(
-    JSON.stringify({ error: 'Missing authorization header' }),
-    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
-
-const token = authHeader.replace('Bearer ', '');
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-if (authError || !user) {
-  return new Response(
-    JSON.stringify({ error: 'Unauthorized' }),
-    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
-```
-
-Key change: Use the **service role admin client** with `getUser(token)` to validate the JWT, instead of creating a separate anon-key client. This bypasses the signing-keys issue while still verifying the user's identity. The admin role check remains unchanged.
-
-No other files need changes.
-
+### Code Updates
+- **App.tsx**: Removed 4 dead imports and 4 dead routes (`/debug-home`, `/game`, `/test`, `/testing`)
+- **dashboard/index.ts**: Removed re-exports of deleted hooks
+- **dashboard/types.ts**: Inlined `AgentCommissionStats` interface (was imported from deleted file)
+- **performance/index.ts**: Removed `DashboardPerformanceMonitor` re-export
