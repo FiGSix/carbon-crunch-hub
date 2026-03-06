@@ -37,18 +37,19 @@ export function resolveClientInfo(
     .join(' ')
     .trim();
 
-  // Snapshot takes precedence; live data is fallback for missing fields
+  // Live client data takes precedence over snapshot to ensure current information is displayed
   return {
-    name: snapshotClientInfo.name || liveName || '',
-    email: snapshotClientInfo.email || clientRecord.email || '',
-    phone: snapshotClientInfo.phone || clientRecord.phone || '',
-    companyName: snapshotClientInfo.companyName || clientRecord.company_name || '',
-    registrationNumber: snapshotClientInfo.registrationNumber || clientRecord.registration_number,
-    // Preserve extra snapshot fields (existingClient, address, etc.)
+    // Preserve extra snapshot fields (existingClient, address, etc.) first
     ...Object.fromEntries(
       Object.entries(snapshotClientInfo).filter(
         ([k]) => !['name','email','phone','companyName','registrationNumber'].includes(k)
       )
     ),
+    // Live data wins over snapshot for core fields
+    name: liveName || snapshotClientInfo.name || '',
+    email: clientRecord.email || snapshotClientInfo.email || '',
+    phone: clientRecord.phone || snapshotClientInfo.phone || '',
+    companyName: clientRecord.company_name || snapshotClientInfo.companyName || '',
+    registrationNumber: clientRecord.registration_number || snapshotClientInfo.registrationNumber,
   };
 }
