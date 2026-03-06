@@ -1,46 +1,51 @@
 
-# Dead Code Cleanup — COMPLETED
 
-## Summary
+# Fix: Replace RLS-Blocked Client Lookup with RPC
 
-Deleted ~25 orphaned files and cleaned up App.tsx routes, dashboard hook index, and performance exports.
+## Problem
 
-### Files Deleted
+The validation feedback fixes (toast + error display) are correctly implemented. However, the **core save failure** persists because of lines 401-405 in `useProposalEdit.ts`:
 
-**Tier 1 — Completely Orphaned:**
-- `src/pages/MyClientsOptimized.tsx`
-- `src/hooks/useAuthSimplified.ts`
-- `src/components/debug/RenderTracker.tsx`
-- `src/lib/dev/devUtils.tsx`
-- `src/hooks/dashboard/useOptimizedDashboardData.ts`
-- `src/hooks/dashboard/useOptimizedDashboardStatsHook.ts`
-- `src/hooks/dashboard/useOptimizedDashboardStatsVersion.ts`
-- `src/hooks/dashboard/useUnifiedDashboardData.ts`
-- `src/hooks/dashboard/useOptimizedAgentPortfolio.ts`
-- `src/services/optimizedDataService.ts`
-- `src/lib/performance/BundleOptimization.ts`
-- `src/docs/` (5 markdown files)
+```typescript
+const { data: existing } = await supabase
+  .from('clients')
+  .select('id')
+  .eq('email', formData.clientEmail.trim())
+  .maybeSingle();
+```
 
-**Tier 2 — Dead Dependency Chains:**
-- `src/hooks/dashboard/useDashboardComputedData.ts`
-- `src/hooks/dashboard/useOptimizedDashboardComputedData.ts`
-- `src/hooks/dashboard/useDashboardStats.ts`
-- `src/hooks/dashboard/useOptimizedDashboardStats.ts`
-- `src/hooks/dashboard/useDashboardPerformanceTracking.ts`
-- `src/lib/performance/DashboardPerformanceMonitor.ts`
-- `src/hooks/dashboard/useAgentCommissionStats.ts`
-- `src/hooks/dashboard/useOptimizedAgentCommissionStats.ts`
+This direct table query is blocked by RLS for agents who didn't create the client record. When the lookup returns `null`, the code tries to INSERT a new client, which fails with a unique constraint violation if that email already exists elsewhere in the system.
 
-**Tier 3 — Dev/Debug Pages:**
-- `src/pages/SimplifiedIndex.tsx`
-- `src/pages/EmbeddedGame.tsx`
-- `src/pages/TestPage.tsx`
-- `src/pages/TestingSuite.tsx`
-- `src/components/testing/` (2 files)
-- `src/components/diagnostics/CSSFallbackDiagnostics.tsx`
+For **genuinely new clients**, the INSERT itself may also fail if RLS blocks it — though the `clients` INSERT policy allows agents (`is_current_user_agent()`), so new clients should work once the lookup is fixed.
 
-### Code Updates
-- **App.tsx**: Removed 4 dead imports and 4 dead routes (`/debug-home`, `/game`, `/test`, `/testing`)
-- **dashboard/index.ts**: Removed re-exports of deleted hooks
-- **dashboard/types.ts**: Inlined `AgentCommissionStats` interface (was imported from deleted file)
-- **performance/index.ts**: Removed `DashboardPerformanceMonitor` re-export
+## Fix
+
+**File: `src/hooks/proposals/view/useProposalEdit.ts`** (lines 401-405)
+
+Replace the direct table query with the existing `search_clients` RPC, which has company-scoped visibility:
+
+```typescript
+// Before (RLS-blocked):
+const { data: existing } = await supabase
+  .from('clients')
+  .select('id')
+  .eq('email', formData.clientEmail.trim())
+  .maybeSingle();
+
+// After (RPC with proper visibility):
+const { data: searchResults } = await supabase.rpc('search_clients', {
+  search_term: formData.clientEmail.trim()
+});
+const existing = searchResults?.find(
+  (r: any) => r.email?.toLowerCase() === formData.clientEmail.trim().toLowerCase()
+) || null;
+```
+
+If `existing` is found, use `existing.id` as the `resolvedPrimaryClientId`. Otherwise, proceed with the INSERT (which already has error handling from the previous fix).
+
+## Files to Change
+
+| File | Change |
+|------|--------|
+| `src/hooks/proposals/view/useProposalEdit.ts` | Replace direct `clients` SELECT (lines 401-405) with `search_clients` RPC call |
+
