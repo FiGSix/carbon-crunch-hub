@@ -58,6 +58,37 @@ export class ClientUpdater {
         return { success: false, error: 'Update failed - insufficient permissions or client not found' };
       }
 
+      // Sync to profiles table if this client has a linked user account
+      try {
+        const { data: clientRecord } = await supabase
+          .from('clients')
+          .select('user_id')
+          .eq('id', clientId)
+          .single();
+
+        if (clientRecord?.user_id) {
+          const profileUpdate: any = {};
+          if (updates.firstName !== undefined) profileUpdate.first_name = updates.firstName;
+          if (updates.lastName !== undefined) profileUpdate.last_name = updates.lastName;
+          if (updates.phone !== undefined) profileUpdate.phone = updates.phone;
+          if (updates.companyName !== undefined) profileUpdate.company_name = updates.companyName;
+          // Email intentionally excluded — tied to auth identity
+
+          if (Object.keys(profileUpdate).length > 0) {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update(profileUpdate)
+              .eq('id', clientRecord.user_id);
+
+            if (profileError) {
+              devLogger.clients.warn('Failed to sync profile for client:', clientId, profileError.message);
+            }
+          }
+        }
+      } catch (syncErr) {
+        devLogger.clients.warn('Exception syncing client to profile:', syncErr);
+      }
+
       devLogger.clients.info('Client updated successfully:', clientId);
       return { success: true };
     } catch (error) {

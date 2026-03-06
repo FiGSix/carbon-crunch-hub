@@ -42,20 +42,35 @@ function extractPhases(projectInfo: any): PhaseFormData[] {
 }
 
 function extractFormData(proposal: ProposalData): ProposalEditFormData {
-  const clientInfo = proposal.content?.clientInfo || {} as ClientInformation;
+  const snapshotClientInfo = proposal.content?.clientInfo || {} as ClientInformation;
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
   const phases = extractPhases(projectInfo);
   const isMultiPhase = phases.length > 1;
+  const liveClient = proposal.client;
+
+  // Prioritize live client data (from client_reference_id join) over snapshot
+  let clientName = snapshotClientInfo.name
+    || [(snapshotClientInfo as any).firstName, (snapshotClientInfo as any).lastName]
+        .filter((n: any) => n && n !== 'null')
+        .join(' ')
+    || '';
+  let clientEmail = snapshotClientInfo.email || '';
+  let clientPhone = snapshotClientInfo.phone || '';
+  let clientCompanyName = snapshotClientInfo.companyName || '';
+
+  if (liveClient && proposal.client_reference_id) {
+    const liveName = [liveClient.first_name, liveClient.last_name].filter(Boolean).join(' ').trim();
+    if (liveName) clientName = liveName;
+    if (liveClient.email) clientEmail = liveClient.email;
+    if (liveClient.phone) clientPhone = liveClient.phone;
+    if (liveClient.company_name) clientCompanyName = liveClient.company_name;
+  }
 
   return {
-    clientName: clientInfo.name
-      || [(clientInfo as any).firstName, (clientInfo as any).lastName]
-          .filter((n: any) => n && n !== 'null')
-          .join(' ')
-      || '',
-    clientEmail: clientInfo.email || '',
-    clientPhone: clientInfo.phone || '',
-    clientCompanyName: clientInfo.companyName || '',
+    clientName,
+    clientEmail,
+    clientPhone,
+    clientCompanyName,
     primaryClientId: proposal.client_reference_id || null,
     additionalClients: (proposal.content?.additionalClients || []).map(c => ({ ...c })),
     projectName: projectInfo.name || '',
@@ -465,6 +480,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
             .single();
 
           if (clientError) {
+            toast.warning('Client record update may not have saved — check My Clients for accuracy.');
             console.warn('Failed to update linked client record:', clientError.message);
           }
 
@@ -480,10 +496,12 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
               .eq('id', clientData.user_id);
 
             if (profileError) {
+              toast.warning('User profile sync failed — User Management may show outdated info.');
               console.warn('Failed to sync profile:', profileError.message);
             }
           }
         } catch (clientErr) {
+          toast.warning('Client record sync encountered an error.');
           console.warn('Exception updating linked client record:', clientErr);
         }
       }
