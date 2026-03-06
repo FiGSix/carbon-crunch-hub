@@ -9,12 +9,13 @@ import { searchClients } from "@/services/proposals/unifiedProposalService";
 interface AdditionalClientFormProps {
   index: number;
   client: AdditionalClient;
+  errors?: Record<string, string>;
   onChange: (index: number, client: AdditionalClient) => void;
   onRemove: (index: number) => void;
   onMakePrimary?: (index: number) => void;
 }
 
-export function AdditionalClientForm({ index, client, onChange, onRemove, onMakePrimary }: AdditionalClientFormProps) {
+export function AdditionalClientForm({ index, client, errors, onChange, onRemove, onMakePrimary }: AdditionalClientFormProps) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -76,7 +77,11 @@ export function AdditionalClientForm({ index, client, onChange, onRemove, onMake
           onChange={handleNameChange}
           placeholder="Search or enter client name"
           required
+          className={errors?.[`addClient_${index}_name`] ? 'border-destructive' : ''}
         />
+        {errors?.[`addClient_${index}_name`] && (
+          <p className="text-xs text-destructive mt-1">{errors[`addClient_${index}_name`]}</p>
+        )}
         {showSuggestions && (
           <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-48 overflow-auto">
             {searchResults.map((r) => (
@@ -97,7 +102,11 @@ export function AdditionalClientForm({ index, client, onChange, onRemove, onMake
           onChange={(e) => handleFieldChange('email', e.target.value)}
           placeholder="client@example.com"
           required
+          className={errors?.[`addClient_${index}_email`] ? 'border-destructive' : ''}
         />
+        {errors?.[`addClient_${index}_email`] && (
+          <p className="text-xs text-destructive mt-1">{errors[`addClient_${index}_email`]}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

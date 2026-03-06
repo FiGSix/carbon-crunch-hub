@@ -324,6 +324,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     const validationErrors = validate(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      toast.error('Please fix the highlighted fields before saving.');
       return false;
     }
 
