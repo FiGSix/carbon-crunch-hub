@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CheckCircle2, ChevronLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProposalPdfButton } from "./ProposalPdfButton";
+import { CessionAgreementPdfButton } from "./CessionAgreementPdfButton";
 import { SignedAgreementDownloadButton } from "./SignedAgreementDownloadButton";
 import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
 import { ProposalEditDialog } from "./ProposalEditDialog";
@@ -117,6 +118,14 @@ export function ProposalHeader({
         {/* PDF Download button for agents and admins */}
         {!isDeleted && (userRole === "agent" || userRole === "admin") && proposalId && (
           <ProposalPdfButton 
+            proposalId={proposalId} 
+            proposalTitle={title}
+          />
+        )}
+
+        {/* Cession Agreement PDF - Admin only */}
+        {!isDeleted && userRole === "admin" && proposalId && (
+          <CessionAgreementPdfButton 
             proposalId={proposalId} 
             proposalTitle={title}
           />

@@ -1,31 +1,46 @@
 
+# Dead Code Cleanup — COMPLETED
 
-# Export Unsigned Cession Agreement PDF (Admin Only)
+## Summary
 
-## Changes
+Deleted ~25 orphaned files and cleaned up App.tsx routes, dashboard hook index, and performance exports.
 
-### 1. New Edge Function: `supabase/functions/generate-cession-agreement-pdf/index.ts`
-- Accepts `{ proposalId }` via POST
-- Uses service role client to fetch proposal + client + agent data (same query pattern as `generate-signed-agreement-pdf`)
-- Calls `addCessionAgreementPages()` from `_shared/cession-agreement-pdf.ts` to render the full agreement with blank signature fields
-- Uploads to `proposal-pdfs` bucket as `cession-agreement-{proposalId}.pdf`
-- Returns `{ success, pdf_url }`
+### Files Deleted
 
-### 2. Config: `supabase/config.toml`
-Add function entry with `verify_jwt = false` (validate auth in code per best practices).
+**Tier 1 — Completely Orphaned:**
+- `src/pages/MyClientsOptimized.tsx`
+- `src/hooks/useAuthSimplified.ts`
+- `src/components/debug/RenderTracker.tsx`
+- `src/lib/dev/devUtils.tsx`
+- `src/hooks/dashboard/useOptimizedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsHook.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStatsVersion.ts`
+- `src/hooks/dashboard/useUnifiedDashboardData.ts`
+- `src/hooks/dashboard/useOptimizedAgentPortfolio.ts`
+- `src/services/optimizedDataService.ts`
+- `src/lib/performance/BundleOptimization.ts`
+- `src/docs/` (5 markdown files)
 
-### 3. New Hook: `src/hooks/proposals/view/useCessionAgreementPdf.ts`
-Same pattern as `useProposalPdf.ts` — invokes edge function, handles loading/error/toast, triggers blob download.
+**Tier 2 — Dead Dependency Chains:**
+- `src/hooks/dashboard/useDashboardComputedData.ts`
+- `src/hooks/dashboard/useOptimizedDashboardComputedData.ts`
+- `src/hooks/dashboard/useDashboardStats.ts`
+- `src/hooks/dashboard/useOptimizedDashboardStats.ts`
+- `src/hooks/dashboard/useDashboardPerformanceTracking.ts`
+- `src/lib/performance/DashboardPerformanceMonitor.ts`
+- `src/hooks/dashboard/useAgentCommissionStats.ts`
+- `src/hooks/dashboard/useOptimizedAgentCommissionStats.ts`
 
-### 4. New Button: `src/components/proposals/view/CessionAgreementPdfButton.tsx`
-Button with `FileSignature` icon, label "Download Agreement". Same style as `ProposalPdfButton`.
+**Tier 3 — Dev/Debug Pages:**
+- `src/pages/SimplifiedIndex.tsx`
+- `src/pages/EmbeddedGame.tsx`
+- `src/pages/TestPage.tsx`
+- `src/pages/TestingSuite.tsx`
+- `src/components/testing/` (2 files)
+- `src/components/diagnostics/CSSFallbackDiagnostics.tsx`
 
-### 5. ProposalHeader: Admin-only visibility
-Add the button with **admin-only** guard:
-
-```tsx
-{!isDeleted && userRole === "admin" && proposalId && (
-  <CessionAgreementPdfButton proposalId={proposalId} proposalTitle={title} />
-)}
-```
-
+### Code Updates
+- **App.tsx**: Removed 4 dead imports and 4 dead routes (`/debug-home`, `/game`, `/test`, `/testing`)
+- **dashboard/index.ts**: Removed re-exports of deleted hooks
+- **dashboard/types.ts**: Inlined `AgentCommissionStats` interface (was imported from deleted file)
+- **performance/index.ts**: Removed `DashboardPerformanceMonitor` re-export
