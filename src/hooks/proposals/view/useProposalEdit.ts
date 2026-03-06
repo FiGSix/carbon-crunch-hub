@@ -396,50 +396,35 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
       let resolvedPrimaryClientId = formData.primaryClientId;
 
       if (primaryChanged && !resolvedPrimaryClientId) {
-        // New primary client has no clientId — find or create
+        // Use RPC that bypasses RLS to find or create client atomically
         const { data: { user } } = await supabase.auth.getUser();
-        const { data: existing } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('email', formData.clientEmail.trim())
-          .maybeSingle();
-
-        if (existing) {
-          resolvedPrimaryClientId = existing.id;
-        } else if (user) {
-          const nameParts = formData.clientName.trim().split(/\s+/);
-          const ln = nameParts.length > 1 ? nameParts.pop()! : '';
-          const fn = nameParts.join(' ');
-          const { data: newClient, error: insertError } = await supabase
-            .from('clients')
-            .insert({
-              first_name: fn,
-              last_name: ln,
-              email: formData.clientEmail.trim(),
-              phone: formData.clientPhone.trim() || null,
-              company_name: formData.clientCompanyName.trim() || null,
-              created_by: user.id,
-            })
-            .select('id')
-            .single();
-
-          if (insertError) {
-            console.error('Failed to create client record:', insertError);
-            if (insertError.message.includes('unique') || insertError.message.includes('duplicate')) {
-              toast.error('A client with this email already exists but could not be linked. Please search for them instead of typing manually.');
-            } else {
-              toast.error(`Could not create client: ${insertError.message}`);
-            }
-            setSaving(false);
-            return false;
-          }
-          if (newClient) resolvedPrimaryClientId = newClient.id;
-        }
-
-        if (!resolvedPrimaryClientId) {
-          toast.error('Failed to resolve the new primary client. Please try again.');
+        if (!user) {
+          toast.error('You must be logged in to save changes.');
+          setSaving(false);
           return false;
         }
+
+        const nameParts = formData.clientName.trim().split(/\s+/);
+        const ln = nameParts.length > 1 ? nameParts.pop()! : '';
+        const fn = nameParts.join(' ');
+
+        const { data: clientId, error: rpcError } = await supabase.rpc('find_or_create_client_by_email', {
+          p_email: formData.clientEmail.trim(),
+          p_first_name: fn,
+          p_last_name: ln,
+          p_phone: formData.clientPhone.trim() || null,
+          p_company_name: formData.clientCompanyName.trim() || null,
+          p_created_by: user.id,
+        });
+
+        if (rpcError) {
+          console.error('Failed to resolve client:', rpcError);
+          toast.error(`Could not resolve client: ${rpcError.message}`);
+          setSaving(false);
+          return false;
+        }
+
+        resolvedPrimaryClientId = clientId;
       }
 
       // Build the single atomic update payload
