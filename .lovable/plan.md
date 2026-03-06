@@ -1,26 +1,33 @@
 
 
-# The Fix Was Applied to the Wrong File
+# Comprehensive `modal={false}` Fix for All DropdownMenu Components
 
-## What Happened
+## Problem
 
-The `modal={false}` fix was applied to `ClientsTableContent.tsx`, but the My Clients page (`MyClients2.tsx`) renders `SimpleClientsTable2.tsx` — a separate component with its own `DropdownMenu` that was missed.
+The previous fixes only covered some files. There are **6 more files** with `<DropdownMenu>` (no `modal={false}`) that can trigger the same Radix `pointer-events: none` bug. Some open dialogs directly (high risk), others call mutations that could trigger toast/dialog interactions (lower risk but still worth fixing defensively).
 
-Same root cause (Radix `pointer-events: none` stuck on body), just an additional instance that wasn't covered.
+## Files to Fix
 
-## Fix
+| File | Opens Dialog? | Risk |
+|------|--------------|------|
+| `src/components/admin/agents/LeadsAgentsTable.tsx` | Yes — View Details, Send Outreach, Outreach History, Convert dialogs | High |
+| `src/components/admin/agents/InvitedAgentsTable.tsx` | No — direct mutations only | Low (defensive) |
+| `src/components/admin/agents/PendingAgentsTable.tsx` | No — direct mutations only | Low (defensive) |
+| `src/components/admin/agents/SuspendedAgentsTable.tsx` | No — direct mutations only | Low (defensive) |
+| `src/components/admin/partners/ActivePartnersTable.tsx` | Yes — View Details, ApiKeyRevealDialog | High |
+| `src/components/notifications/NotificationList.tsx` | No — likely safe | Low (defensive) |
 
-| File | Change |
-|------|--------|
-| `src/components/clients/SimpleClientsTable2.tsx` | Add `modal={false}` to `<DropdownMenu>` on line ~80 |
+## Change
+
+Same one-prop fix in each file:
 
 ```tsx
-// Line ~80: Before
+// Before
 <DropdownMenu>
 
 // After
 <DropdownMenu modal={false}>
 ```
 
-One line change.
+Six files, one line each. This covers every remaining `DropdownMenu` in the codebase that doesn't already have `modal={false}`.
 
