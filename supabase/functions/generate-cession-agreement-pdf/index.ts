@@ -1,0 +1,135 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { PDFDocument, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { addCessionAgreementPages } from "../_shared/cession-agreement-pdf.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Validate caller is admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check admin role
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || profile.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { proposalId } = await req.json();
+    if (!proposalId) {
+      return new Response(
+        JSON.stringify({ error: 'proposalId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[Cession PDF] Generating unsigned cession agreement for proposal: ${proposalId}`);
+
+    // Fetch proposal with client and agent data
+    const { data: proposal, error: proposalError } = await supabaseAdmin
+      .from('proposals')
+      .select(`
+        *,
+        agent:profiles!proposals_agent_id_fkey(first_name, last_name, company_name, email),
+        client:clients!proposals_client_reference_id_fkey(first_name, last_name, email, company_name, registration_number)
+      `)
+      .eq('id', proposalId)
+      .single();
+
+    if (proposalError || !proposal) {
+      console.error('[Cession PDF] Error fetching proposal:', proposalError);
+      return new Response(
+        JSON.stringify({ error: 'Proposal not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fonts = { regular: font, bold };
+
+    await addCessionAgreementPages(pdfDoc, fonts, proposal);
+
+    const pdfBytes = await pdfDoc.save();
+
+    // Upload to storage
+    const fileName = `cession-agreement-${proposalId}.pdf`;
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('proposal-pdfs')
+      .upload(fileName, pdfBytes, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('[Cession PDF] Upload error:', uploadError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to upload PDF' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('proposal-pdfs')
+      .getPublicUrl(fileName);
+
+    console.log(`[Cession PDF] Generated successfully: ${publicUrl}`);
+
+    return new Response(
+      JSON.stringify({ success: true, pdf_url: publicUrl }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('[Cession PDF] Error:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to generate cession agreement PDF' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
