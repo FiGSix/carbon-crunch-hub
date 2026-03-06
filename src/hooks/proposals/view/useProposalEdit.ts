@@ -246,11 +246,36 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     }));
   };
 
-  const makePrimary = (index: number) => {
-    setFormData(prev => {
-      const target = prev.additionalClients[index];
-      if (!target) return prev;
+  const makePrimary = async (index: number) => {
+    const target = formData.additionalClients[index];
+    if (!target) return;
 
+    // If the target has a linked clientId, fetch live data to avoid stale snapshot corruption
+    let liveTarget = target;
+    if (target.clientId) {
+      try {
+        const { data: liveClient } = await supabase
+          .from('clients')
+          .select('first_name, last_name, email, phone, company_name')
+          .eq('id', target.clientId)
+          .single();
+
+        if (liveClient) {
+          const liveName = [liveClient.first_name, liveClient.last_name].filter(Boolean).join(' ').trim();
+          liveTarget = {
+            ...target,
+            name: liveName || target.name,
+            email: liveClient.email || target.email,
+            phone: liveClient.phone || target.phone || '',
+            companyName: liveClient.company_name || target.companyName || '',
+          };
+        }
+      } catch (err) {
+        console.warn('Failed to fetch live client data for makePrimary, using form data', err);
+      }
+    }
+
+    setFormData(prev => {
       // Move current primary into additional clients list
       const demotedPrimary: AdditionalClient = {
         name: prev.clientName,
@@ -265,11 +290,11 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
 
       return {
         ...prev,
-        clientName: target.name,
-        clientEmail: target.email,
-        clientPhone: target.phone || '',
-        clientCompanyName: target.companyName || '',
-        primaryClientId: target.clientId || null,
+        clientName: liveTarget.name,
+        clientEmail: liveTarget.email,
+        clientPhone: liveTarget.phone || '',
+        clientCompanyName: liveTarget.companyName || '',
+        primaryClientId: liveTarget.clientId || null,
         additionalClients: newAdditional,
       };
     });
