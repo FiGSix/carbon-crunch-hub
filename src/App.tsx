@@ -22,9 +22,7 @@ const DisplayDiagnostics = import.meta.env.DEV
 import { logger } from '@/lib/logger';
 
 // Immediate load for critical public pages only
-import SimplifiedIndex from "./pages/SimplifiedIndex";
 import NotFound from "./pages/NotFound";
-import EmbeddedGame from "./pages/EmbeddedGame";
 
 // Lazy load auth pages to reduce initial bundle (not needed on homepage)
 const Index = createOptimizedLazyComponent(() => import("./pages/Index"), "Index");
@@ -33,10 +31,6 @@ const Register = createOptimizedLazyComponent(() => import("./pages/Register"), 
 const ForgotPassword = createOptimizedLazyComponent(() => import("./pages/ForgotPassword"), "ForgotPassword");
 const AuthCallback = createOptimizedLazyComponent(() => import("./pages/AuthCallback"), "AuthCallback");
 
-// Dev-only pages lazy loaded
-const TestPage = import.meta.env.DEV 
-  ? createOptimizedLazyComponent(() => import("./pages/TestPage"), "TestPage")
-  : null;
 
 // Optimized lazy loading with error handling and performance tracking
 const ResetPassword = createOptimizedLazyComponent(() => import("./pages/ResetPassword"), "ResetPassword");
@@ -50,7 +44,7 @@ const Business = createOptimizedLazyComponent(() => import("./pages/Business"), 
 const Marketplace = createOptimizedLazyComponent(() => import("./pages/Marketplace"), "Marketplace");
 const VerifyEmail = createOptimizedLazyComponent(() => import("./pages/VerifyEmail"), "VerifyEmail");
 const ForceLogout = createOptimizedLazyComponent(() => import("./pages/ForceLogout"), "ForceLogout");
-const TestingSuite = createOptimizedLazyComponent(() => import("./pages/TestingSuite"), "TestingSuite");
+
 const SystemDiagnostics = createOptimizedLazyComponent(() => import("./pages/SystemDiagnostics"), "SystemDiagnostics");
 
 // Optimized lazy load protected pages
@@ -144,39 +138,7 @@ function App() {
                       <Suspense fallback={<PageLoader />}><Index /></Suspense>
                     </PageErrorBoundary>
                   } />
-                  {/* Development-only test route */}
-                  {import.meta.env.DEV && TestPage && (
-                  <Route 
-                    path="/test" 
-                      element={
-                        <PrivateRoute allowedRoles={['admin']}>
-                          <PageErrorBoundary pageName="Test">
-                            <Suspense fallback={<PageLoader />}><TestPage /></Suspense>
-                          </PageErrorBoundary>
-                        </PrivateRoute>
-                      } 
-                  />
-                )}
-                {/* Development-only testing suite */}
-                {import.meta.env.DEV && (
-                  <Route 
-                    path="/testing" 
-                      element={
-                        <PrivateRoute allowedRoles={['admin']}>
-                          <PageErrorBoundary pageName="Testing Suite">
-                            <Suspense fallback={<PageLoader />}>
-                              <TestingSuite />
-                            </Suspense>
-                          </PageErrorBoundary>
-                        </PrivateRoute>
-                      } 
-                  />
-                )}
-                  <Route path="/debug-home" element={
-                    <PageErrorBoundary pageName="Debug Home">
-                      <SimplifiedIndex />
-                    </PageErrorBoundary>
-                  } />
+                  
                   <Route path="/about" element={
                     <PageErrorBoundary pageName="About">
                       <Suspense fallback={<PageLoader />}><About /></Suspense>
@@ -281,8 +243,6 @@ function App() {
                     </PageErrorBoundary>
                   } />
                   
-                  {/* Embedded Game - No navigation or branding */}
-                  <Route path="/game" element={<EmbeddedGame />} />
                   
                   {/* Proposal viewing - accessible with token */}
                   <Route path="/proposals/:id" element={

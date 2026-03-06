@@ -1,6 +1,10 @@
 
 import { ProposalListItem } from '@/types/proposals';
-import { AgentCommissionStats } from './useAgentCommissionStats';
+
+export interface AgentCommissionStats {
+  projectedCommission: number;
+  filteredProposalsCount: number;
+}
 
 export interface DashboardStats {
   totalProposals: number;
