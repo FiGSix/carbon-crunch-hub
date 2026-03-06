@@ -75,9 +75,12 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
     additionalClients: (proposal.content?.additionalClients || []).map(c => ({ ...c })),
     projectName: projectInfo.name || '',
     projectAddress: projectInfo.address || '',
-    systemSize: projectInfo.size
-      || ((projectInfo as any).totalSystemSize ? String((projectInfo as any).totalSystemSize) : '')
-      || (proposal.system_size_kwp ? String(proposal.system_size_kwp) : ''),
+    systemSize: String(
+      projectInfo.size
+      || (projectInfo as any).totalSystemSize
+      || proposal.system_size_kwp
+      || ''
+    ),
     commissionDate: projectInfo.commissionDate || '',
     additionalNotes: projectInfo.additionalNotes || '',
     phases,
@@ -118,9 +121,10 @@ function validate(data: ProposalEditFormData): ValidationErrors {
       }
     });
   } else {
-    if (!data.systemSize.trim()) {
+    const sizeStr = String(data.systemSize || '');
+    if (!sizeStr.trim()) {
       errors.systemSize = 'System size is required';
-    } else if (parseFloat(data.systemSize) <= 0 || isNaN(parseFloat(data.systemSize))) {
+    } else if (parseFloat(sizeStr) <= 0 || isNaN(parseFloat(sizeStr))) {
       errors.systemSize = 'System size must be a positive number';
     }
   }
