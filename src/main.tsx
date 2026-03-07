@@ -8,7 +8,6 @@ import './styles/base.css'
 import './styles/components.css'
 import './styles/animations.css'
 import { validateSecurityConfig } from './lib/security/headers'
-import { consoleOptimizer } from './lib/performance/ConsoleOptimizer'
 
 // Global startup error handlers - catch issues before React mounts
 window.onerror = (message, source, lineno, colno, error) => {
@@ -26,11 +25,6 @@ window.onunhandledrejection = (event) => {
   }
 };
 
-// Console Logging Cleanup: Immediate performance optimization
-// Eliminates 445+ console statements for 15-25% performance gain
-consoleOptimizer.optimizeForProduction();
-consoleOptimizer.replaceGlobalConsole();
-
 // Only enable Sentry in production to avoid interference during development
 if (import.meta.env.PROD) {
   Sentry.init({
@@ -42,15 +36,6 @@ if (import.meta.env.PROD) {
 
 // Validate security configuration in development
 validateSecurityConfig();
-
-// Register Service Worker in production only
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Silently fail - not critical
-    });
-  });
-}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
