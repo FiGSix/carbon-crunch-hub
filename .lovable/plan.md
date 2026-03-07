@@ -1,46 +1,34 @@
 
-# Dead Code Cleanup — COMPLETED
+# Performance Cleanup — 3b, 3c, 3d — COMPLETED
 
 ## Summary
 
-Deleted ~25 orphaned files and cleaned up App.tsx routes, dashboard hook index, and performance exports.
+Removed dual toast system, over-engineered ConsoleOptimizer, and bootstrap.ts indirection. Net result: fewer dependencies, simpler boot path, cleaner logging.
+
+### 3b. Toast Consolidation
+- Removed Radix `<Toaster />` from `App.tsx`, kept Sonner only
+- Deleted `src/components/ui/toaster.tsx` and `src/components/ui/toast.tsx`
+- Simplified `src/hooks/use-toast.ts` to thin Sonner wrapper (all 59 consumers unchanged)
+- Removed `@radix-ui/react-toast` dependency
+
+### 3c. ConsoleOptimizer Removal
+- Deleted `src/lib/performance/ConsoleOptimizer.ts` (212 lines of over-engineering)
+- Rewrote `src/lib/performance/ConsoleReplacementUtility.ts` to use `@/lib/logger` directly
+- Removed `consoleOptimizer` imports and calls from `src/main.tsx`
+- All 38 consumer files unchanged — they import from `ConsoleReplacementUtility`, not ConsoleOptimizer
+- Production console stripping handled by Terser (`drop_console` in vite config)
+
+### 3d. Bootstrap.ts Removal
+- Changed `index.html` to load `src/main.tsx` directly (no intermediate hop)
+- Deleted `src/bootstrap.ts` (154 lines)
+- Removed Service Worker registration from `main.tsx`
+- App loads faster without forced preview-host reload cycle
 
 ### Files Deleted
+- `src/bootstrap.ts`
+- `src/lib/performance/ConsoleOptimizer.ts`
+- `src/components/ui/toaster.tsx`
+- `src/components/ui/toast.tsx`
 
-**Tier 1 — Completely Orphaned:**
-- `src/pages/MyClientsOptimized.tsx`
-- `src/hooks/useAuthSimplified.ts`
-- `src/components/debug/RenderTracker.tsx`
-- `src/lib/dev/devUtils.tsx`
-- `src/hooks/dashboard/useOptimizedDashboardData.ts`
-- `src/hooks/dashboard/useOptimizedDashboardStatsHook.ts`
-- `src/hooks/dashboard/useOptimizedDashboardStatsVersion.ts`
-- `src/hooks/dashboard/useUnifiedDashboardData.ts`
-- `src/hooks/dashboard/useOptimizedAgentPortfolio.ts`
-- `src/services/optimizedDataService.ts`
-- `src/lib/performance/BundleOptimization.ts`
-- `src/docs/` (5 markdown files)
-
-**Tier 2 — Dead Dependency Chains:**
-- `src/hooks/dashboard/useDashboardComputedData.ts`
-- `src/hooks/dashboard/useOptimizedDashboardComputedData.ts`
-- `src/hooks/dashboard/useDashboardStats.ts`
-- `src/hooks/dashboard/useOptimizedDashboardStats.ts`
-- `src/hooks/dashboard/useDashboardPerformanceTracking.ts`
-- `src/lib/performance/DashboardPerformanceMonitor.ts`
-- `src/hooks/dashboard/useAgentCommissionStats.ts`
-- `src/hooks/dashboard/useOptimizedAgentCommissionStats.ts`
-
-**Tier 3 — Dev/Debug Pages:**
-- `src/pages/SimplifiedIndex.tsx`
-- `src/pages/EmbeddedGame.tsx`
-- `src/pages/TestPage.tsx`
-- `src/pages/TestingSuite.tsx`
-- `src/components/testing/` (2 files)
-- `src/components/diagnostics/CSSFallbackDiagnostics.tsx`
-
-### Code Updates
-- **App.tsx**: Removed 4 dead imports and 4 dead routes (`/debug-home`, `/game`, `/test`, `/testing`)
-- **dashboard/index.ts**: Removed re-exports of deleted hooks
-- **dashboard/types.ts**: Inlined `AgentCommissionStats` interface (was imported from deleted file)
-- **performance/index.ts**: Removed `DashboardPerformanceMonitor` re-export
+### Dependencies Removed
+- `@radix-ui/react-toast`
