@@ -295,44 +295,60 @@ serve(async (req) => {
     // Map frontend signature type to database enum
     const dbSignatureType = signatureType === 'canvas' ? 'electronic_signature' : 'typed_name';
     
-    const { data: newAgreement, error: agreementError } = await supabase
+    // Check for existing agreement to prevent duplicates from retries
+    const { data: existingAgreement } = await supabase
       .from('proposal_agreements')
-      .insert({
-        proposal_id: proposal.id,
-        signed_by: signedBy,
-        signature_type: dbSignatureType,
-        signature_image_url: signatureImageUrl,
-        typed_name: typedName?.trim() || null,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        accepted_terms_version: '2.0',
-        witness_1_name: 'DIGITAL WITNESS 1',
-        witness_1_verified_at: witnessTimestamp,
-        witness_1_ip_address: ipAddress,
-        witness_2_name: 'DIGITAL WITNESS 2',
-        witness_2_verified_at: witnessTimestamp,
-        witness_2_ip_address: ipAddress,
-        witness_method: 'automatic_system',
-        metadata: {
-          signed_via: token ? 'acceptance_link' : 'authenticated_user',
-          token_used: token ? token.substring(0, 8) + '...' : null,
-          proposal_id_used: proposalId || null,
-          timestamp: new Date().toISOString(),
-          signing_location: 'South Africa',
-          witness_info: {
-            method: 'automatic_system',
-            witness_1: 'DIGITAL WITNESS 1',
-            witness_2: 'DIGITAL WITNESS 2',
-            witnessed_at: witnessTimestamp
-          }
-        }
-      })
-      .select()
+      .select('id')
+      .eq('proposal_id', proposal.id)
+      .limit(1)
       .single();
+    
+    let newAgreement;
+    
+    if (existingAgreement) {
+      console.log(`⚠️ Agreement already exists for proposal ${proposal.id}: ${existingAgreement.id}, reusing it`);
+      newAgreement = existingAgreement;
+    } else {
+      const { data: createdAgreement, error: agreementError } = await supabase
+        .from('proposal_agreements')
+        .insert({
+          proposal_id: proposal.id,
+          signed_by: signedBy,
+          signature_type: dbSignatureType,
+          signature_image_url: signatureImageUrl,
+          typed_name: typedName?.trim() || null,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          accepted_terms_version: '2.0',
+          witness_1_name: 'DIGITAL WITNESS 1',
+          witness_1_verified_at: witnessTimestamp,
+          witness_1_ip_address: ipAddress,
+          witness_2_name: 'DIGITAL WITNESS 2',
+          witness_2_verified_at: witnessTimestamp,
+          witness_2_ip_address: ipAddress,
+          witness_method: 'automatic_system',
+          metadata: {
+            signed_via: token ? 'acceptance_link' : 'authenticated_user',
+            token_used: token ? token.substring(0, 8) + '...' : null,
+            proposal_id_used: proposalId || null,
+            timestamp: new Date().toISOString(),
+            signing_location: 'South Africa',
+            witness_info: {
+              method: 'automatic_system',
+              witness_1: 'DIGITAL WITNESS 1',
+              witness_2: 'DIGITAL WITNESS 2',
+              witnessed_at: witnessTimestamp
+            }
+          }
+        })
+        .select()
+        .single();
 
-    if (agreementError || !newAgreement) {
-      console.error("Error creating agreement:", agreementError);
-      throw new Error("Failed to record agreement");
+      if (agreementError || !createdAgreement) {
+        console.error("Error creating agreement:", agreementError);
+        throw new Error("Failed to record agreement");
+      }
+      newAgreement = createdAgreement;
     }
 
     console.log(`✅ Agreement created with ID: ${newAgreement.id}`);
