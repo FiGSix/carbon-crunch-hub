@@ -1,53 +1,34 @@
 
+# Performance Cleanup — 3b, 3c, 3d — COMPLETED
 
-# Root Cause: "Failed to update proposal status" for Keystone Client
+## Summary
 
-## Problem
-When the Keystone client (Lartsa Chicks / Keystone Hatchery) tries to sign the cession agreement, the `accept-proposal` edge function fails at the proposal status update step (line 341-347). The agreement record IS created successfully (there are 7 duplicate agreement records from repeated attempts), but the proposal remains stuck at "delivered" status.
+Removed dual toast system, over-engineered ConsoleOptimizer, and bootstrap.ts indirection. Net result: fewer dependencies, simpler boot path, cleaner logging.
 
-## Root Cause
-The `create_onboarding_on_signature` database trigger fires AFTER the proposal update sets `signed_at`. Inside the trigger, it attempts to cast proposal content fields to their target types:
+### 3b. Toast Consolidation
+- Removed Radix `<Toaster />` from `App.tsx`, kept Sonner only
+- Deleted `src/components/ui/toaster.tsx` and `src/components/ui/toast.tsx`
+- Simplified `src/hooks/use-toast.ts` to thin Sonner wrapper (all 59 consumers unchanged)
+- Removed `@radix-ui/react-toast` dependency
 
-```sql
-commissioning_date_val := COALESCE((project_info->>'commissionDate')::DATE, NULL);
-panel_total_kwp_val := COALESCE(NEW.system_size_kwp, (project_info->>'size')::NUMERIC, NULL);
-```
+### 3c. ConsoleOptimizer Removal
+- Deleted `src/lib/performance/ConsoleOptimizer.ts` (212 lines of over-engineering)
+- Rewrote `src/lib/performance/ConsoleReplacementUtility.ts` to use `@/lib/logger` directly
+- Removed `consoleOptimizer` imports and calls from `src/main.tsx`
+- All 38 consumer files unchanged — they import from `ConsoleReplacementUtility`, not ConsoleOptimizer
+- Production console stripping handled by Terser (`drop_console` in vite config)
 
-For this proposal, both `commissionDate` and `size` are **empty strings** (`""`) rather than `null`. Postgres cannot cast an empty string to DATE or NUMERIC — it throws an exception, which rolls back the entire UPDATE transaction.
+### 3d. Bootstrap.ts Removal
+- Changed `index.html` to load `src/main.tsx` directly (no intermediate hop)
+- Deleted `src/bootstrap.ts` (154 lines)
+- Removed Service Worker registration from `main.tsx`
+- App loads faster without forced preview-host reload cycle
 
-The `COALESCE` wrapper does NOT protect against this because the cast `''::DATE` throws before `COALESCE` evaluates.
+### Files Deleted
+- `src/bootstrap.ts`
+- `src/lib/performance/ConsoleOptimizer.ts`
+- `src/components/ui/toaster.tsx`
+- `src/components/ui/toast.tsx`
 
-## Evidence
-- Proposal `47d928bc` has `content.projectInfo.commissionDate = ""` and `content.projectInfo.size = ""`
-- 7 agreement records exist from repeated signing attempts (all succeeded because the INSERT happens before the proposal UPDATE)
-- The error is reproducible via direct edge function call
-
-## Fix (Two Parts)
-
-### Part 1: Fix the trigger function (database migration)
-Replace unsafe casts with `NULLIF` to convert empty strings to NULL before casting:
-
-```sql
-commissioning_date_val := COALESCE(
-  (NULLIF(project_info->>'commissionDate', '')::DATE),
-  NULL
-);
-
-panel_total_kwp_val := COALESCE(
-  NEW.system_size_kwp,
-  (NULLIF(project_info->>'size', '')::NUMERIC),
-  NULL
-);
-```
-
-Apply `NULLIF` to all string-to-type casts in the trigger: `commissionDate`, `size`, `gpsLat`, `gpsLng`.
-
-### Part 2: Clean up duplicate agreement records
-Delete the 7 orphaned agreement records that were created from failed signing attempts, keeping only the most recent one (or none, since the proposal was never actually approved).
-
-### Part 3: Edge function hardening
-Add a uniqueness guard in `accept-proposal` to check for existing agreements before inserting a new one, preventing duplicate records when the downstream update fails.
-
-## Impact
-This fix will immediately unblock the Keystone client (and any other client with empty-string project info fields) from signing proposals.
-
+### Dependencies Removed
+- `@radix-ui/react-toast`
