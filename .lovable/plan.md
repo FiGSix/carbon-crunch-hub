@@ -1,34 +1,38 @@
 
-# Performance Cleanup — 3b, 3c, 3d — COMPLETED
 
-## Summary
+# Fix: Simplify vite.config.ts Build Configuration
 
-Removed dual toast system, over-engineered ConsoleOptimizer, and bootstrap.ts indirection. Net result: fewer dependencies, simpler boot path, cleaner logging.
+## Problem
+The published site still returns completely stripped HTML — no scripts, no styles, no head content. The plugins were removed but the build is **still failing** because the remaining `build` configuration is too aggressive for Lovable's deployment pipeline.
 
-### 3b. Toast Consolidation
-- Removed Radix `<Toaster />` from `App.tsx`, kept Sonner only
-- Deleted `src/components/ui/toaster.tsx` and `src/components/ui/toast.tsx`
-- Simplified `src/hooks/use-toast.ts` to thin Sonner wrapper (all 59 consumers unchanged)
-- Removed `@radix-ui/react-toast` dependency
+## Root Cause
+The `vite.config.ts` has extensive custom build options that likely conflict with how Lovable processes and serves the production build:
 
-### 3c. ConsoleOptimizer Removal
-- Deleted `src/lib/performance/ConsoleOptimizer.ts` (212 lines of over-engineering)
-- Rewrote `src/lib/performance/ConsoleReplacementUtility.ts` to use `@/lib/logger` directly
-- Removed `consoleOptimizer` imports and calls from `src/main.tsx`
-- All 38 consumer files unchanged — they import from `ConsoleReplacementUtility`, not ConsoleOptimizer
-- Production console stripping handled by Terser (`drop_console` in vite config)
+1. **`manualChunks` function** — Returns `undefined` for application code (no explicit return), which can cause Rollup to produce unexpected chunk structures
+2. **Custom `chunkFileNames`, `entryFileNames`, `assetFileNames`** — Relocates all output files into `js/`, `css/`, `img/` subdirectories, which may not match what Lovable's hosting expects
+3. **`minify: 'terser'` with `terserOptions`** — Forces Terser instead of Vite's default esbuild minifier; the aggressive `drop_console` and `pure_funcs` options reference `mode` which may not behave as expected in the Lovable build environment
+4. **`sourcemap: true`** — Doubles output size and may cause build timeouts
 
-### 3d. Bootstrap.ts Removal
-- Changed `index.html` to load `src/main.tsx` directly (no intermediate hop)
-- Deleted `src/bootstrap.ts` (154 lines)
-- Removed Service Worker registration from `main.tsx`
-- App loads faster without forced preview-host reload cycle
+## Fix
+Strip the `build` section back to minimal, safe defaults. Keep only what's necessary:
 
-### Files Deleted
-- `src/bootstrap.ts`
-- `src/lib/performance/ConsoleOptimizer.ts`
-- `src/components/ui/toaster.tsx`
-- `src/components/ui/toast.tsx`
+```typescript
+build: {
+  target: 'es2020',
+  chunkSizeWarningLimit: 1000,
+},
+```
 
-### Dependencies Removed
-- `@radix-ui/react-toast`
+Remove:
+- `minify: 'terser'` and all `terserOptions` (let Vite use its default esbuild minifier)
+- `rollupOptions.output` entirely (custom chunk names, file paths, manualChunks)
+- `sourcemap: true`
+- `cssCodeSplit` and `cssMinify` (Vite handles these well by default)
+
+Also remove `terser` from `package.json` dependencies since it's no longer needed.
+
+Keep the `css`, `optimizeDeps`, `resolve`, `server`, and `plugins` sections unchanged — those are fine.
+
+## Expected Result
+After this change and a re-publish, the Lovable build will produce standard Vite output that the hosting platform can serve correctly. Both `crunchcarbon.com` and `crunch-carbon-hub.lovable.app` will load.
+
