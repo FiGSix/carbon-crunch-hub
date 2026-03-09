@@ -12,8 +12,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === 'development' && componentTagger(),
-    createHtmlPlugin({ minify: true }),
-    visualizer({ open: true }),
   ].filter(Boolean),
   resolve: {
     alias: {
