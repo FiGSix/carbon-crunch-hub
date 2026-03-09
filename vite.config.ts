@@ -20,66 +20,8 @@ export default defineConfig(({ mode }) => ({
     dedupe: ['react', 'react-dom'],
   },
   build: {
-    minify: 'terser',
     target: 'es2020',
-    cssCodeSplit: true,
-    cssMinify: true,
-    sourcemap: true,
     chunkSizeWarningLimit: 1000,
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // Ultra-simplified chunking to prevent all initialization issues
-          if (id.includes('node_modules')) {
-            // Split heavy CSS libraries separately
-            if (id.includes('@radix-ui') || id.includes('cmdk')) {
-              return 'vendor-ui';
-            }
-            return 'vendor';
-          }
-          // Split auth-related code which isn't needed on homepage
-          if (id.includes('/auth/') || id.includes('LoginForm') || id.includes('RegisterForm')) {
-            return 'auth';
-          }
-          // Split admin code which isn't needed on homepage  
-          if (id.includes('/admin/') || id.includes('Admin')) {
-            return 'admin';
-          }
-        },
-        chunkFileNames: (chunkInfo) => {
-          return `js/[name]-[hash].js`;
-        },
-        entryFileNames: 'js/[name]-[hash].js',
-        assetFileNames: (assetInfo) => {
-          const info = assetInfo.name!.split('.');
-          const extType = info[info.length - 1];
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
-            return `img/[name]-[hash].[ext]`;
-          }
-          if (/css/i.test(extType)) {
-            return `css/[name]-[hash].[ext]`;
-          }
-          return `assets/[name]-[hash].[ext]`;
-        },
-      },
-    },
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production',
-        pure_funcs: mode === 'production' ? [
-          'console.log', 
-          'console.info', 
-          'console.debug', 
-          'console.warn'
-        ] : [],
-        unsafe_arrows: false,
-        unsafe_methods: false,
-      },
-      mangle: {
-        safari10: true,
-      },
-    },
   },
   css: {
     devSourcemap: false,
