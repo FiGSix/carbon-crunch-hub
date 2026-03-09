@@ -1,8 +1,6 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { createHtmlPlugin } from 'vite-plugin-html';
-import { visualizer } from 'rollup-plugin-visualizer';
 import { componentTagger } from "lovable-tagger";
 import path from 'path';
 
@@ -14,8 +12,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === 'development' && componentTagger(),
-    createHtmlPlugin({ minify: true }),
-    visualizer({ open: true }),
   ].filter(Boolean),
   resolve: {
     alias: {
