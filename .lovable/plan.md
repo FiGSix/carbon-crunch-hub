@@ -1,25 +1,34 @@
 
+# Performance Cleanup — 3b, 3c, 3d — COMPLETED
 
-# Clarification: Production Domain (crunchcarbon.com)
+## Summary
 
-## Current Situation
+Removed dual toast system, over-engineered ConsoleOptimizer, and bootstrap.ts indirection. Net result: fewer dependencies, simpler boot path, cleaner logging.
 
-The published URL from Lovable is `crunch-carbon-hub.lovable.app`. The fix (replacing `sw.js` with a self-destructing version) will apply to that domain when you publish.
+### 3b. Toast Consolidation
+- Removed Radix `<Toaster />` from `App.tsx`, kept Sonner only
+- Deleted `src/components/ui/toaster.tsx` and `src/components/ui/toast.tsx`
+- Simplified `src/hooks/use-toast.ts` to thin Sonner wrapper (all 59 consumers unchanged)
+- Removed `@radix-ui/react-toast` dependency
 
-However, **crunchcarbon.com** is a custom domain. If it points to the same Lovable deployment (which it likely does), then yes — publishing will fix both domains simultaneously, since they serve the same built files including `sw.js`.
+### 3c. ConsoleOptimizer Removal
+- Deleted `src/lib/performance/ConsoleOptimizer.ts` (212 lines of over-engineering)
+- Rewrote `src/lib/performance/ConsoleReplacementUtility.ts` to use `@/lib/logger` directly
+- Removed `consoleOptimizer` imports and calls from `src/main.tsx`
+- All 38 consumer files unchanged — they import from `ConsoleReplacementUtility`, not ConsoleOptimizer
+- Production console stripping handled by Terser (`drop_console` in vite config)
 
-## What Happens When You Publish
+### 3d. Bootstrap.ts Removal
+- Changed `index.html` to load `src/main.tsx` directly (no intermediate hop)
+- Deleted `src/bootstrap.ts` (154 lines)
+- Removed Service Worker registration from `main.tsx`
+- App loads faster without forced preview-host reload cycle
 
-1. The new `sw.js` deploys to the Lovable hosting
-2. Both `crunch-carbon-hub.lovable.app` AND `crunchcarbon.com` serve the updated files
-3. When Connor, Jordan, or any user visits either domain, the browser fetches the new `sw.js`, which clears all caches and unregisters itself
-4. The app loads fresh from the server
+### Files Deleted
+- `src/bootstrap.ts`
+- `src/lib/performance/ConsoleOptimizer.ts`
+- `src/components/ui/toaster.tsx`
+- `src/components/ui/toast.tsx`
 
-## Plan (unchanged)
-
-1. Replace `public/sw.js` with the self-destructing version that clears caches and unregisters
-2. Publish
-3. Ask affected users to hard-refresh (Ctrl+Shift+R / Cmd+Shift+R) on crunchcarbon.com
-
-Both domains will be fixed by a single publish.
-
+### Dependencies Removed
+- `@radix-ui/react-toast`
