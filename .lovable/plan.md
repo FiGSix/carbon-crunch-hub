@@ -1,34 +1,33 @@
 
-# Performance Cleanup — 3b, 3c, 3d — COMPLETED
 
-## Summary
+# Fix: Refresh session before accept-proposal edge function call
 
-Removed dual toast system, over-engineered ConsoleOptimizer, and bootstrap.ts indirection. Net result: fewer dependencies, simpler boot path, cleaner logging.
+## Problem
+The `ProposalAcceptance/index.tsx` page calls `supabase.functions.invoke('accept-proposal', ...)` at line 251 **without refreshing the session first**. Even though the edge function has `verify_jwt = false` and uses the service role key internally, the Supabase JS client still attaches the user's JWT as the `Authorization` header. If that token is expired, the gateway (or signing-keys validation) rejects the request before the function code even runs.
 
-### 3b. Toast Consolidation
-- Removed Radix `<Toaster />` from `App.tsx`, kept Sonner only
-- Deleted `src/components/ui/toaster.tsx` and `src/components/ui/toast.tsx`
-- Simplified `src/hooks/use-toast.ts` to thin Sonner wrapper (all 59 consumers unchanged)
-- Removed `@radix-ui/react-toast` dependency
+## Fix
 
-### 3c. ConsoleOptimizer Removal
-- Deleted `src/lib/performance/ConsoleOptimizer.ts` (212 lines of over-engineering)
-- Rewrote `src/lib/performance/ConsoleReplacementUtility.ts` to use `@/lib/logger` directly
-- Removed `consoleOptimizer` imports and calls from `src/main.tsx`
-- All 38 consumer files unchanged — they import from `ConsoleReplacementUtility`, not ConsoleOptimizer
-- Production console stripping handled by Terser (`drop_console` in vite config)
+**File: `src/pages/ProposalAcceptance/index.tsx`**
 
-### 3d. Bootstrap.ts Removal
-- Changed `index.html` to load `src/main.tsx` directly (no intermediate hop)
-- Deleted `src/bootstrap.ts` (154 lines)
-- Removed Service Worker registration from `main.tsx`
-- App loads faster without forced preview-host reload cycle
+Add a session refresh call immediately before `supabase.functions.invoke()` in the `handleSubmit` function (around line 250):
 
-### Files Deleted
-- `src/bootstrap.ts`
-- `src/lib/performance/ConsoleOptimizer.ts`
-- `src/components/ui/toaster.tsx`
-- `src/components/ui/toast.tsx`
+```typescript
+// Refresh session to ensure valid JWT before edge function call
+await supabase.auth.getSession();
 
-### Dependencies Removed
-- `@radix-ui/react-toast`
+// Call the public Edge Function
+const { data, error } = await supabase.functions.invoke('accept-proposal', { ... });
+```
+
+This is a single-line addition. `getSession()` triggers the SDK's built-in token refresh if the current access token is expired, ensuring a valid JWT is sent with the request.
+
+## Why this works
+- `supabase.functions.invoke()` does NOT auto-refresh tokens (unlike database queries)
+- `supabase.auth.getSession()` checks the token expiry and refreshes it if needed using the refresh token
+- This is the same pattern already documented in the project's memory (`edge-function-token-refresh-guard`)
+
+## Scope
+- One file changed, one line added
+- No database changes needed
+- No edge function changes needed
+
