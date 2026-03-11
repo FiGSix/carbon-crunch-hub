@@ -247,6 +247,9 @@ export default function ProposalAcceptance() {
         console.warn('Failed to get IP address:', e);
       }
 
+      // Refresh session to ensure valid JWT before edge function call
+      await supabase.auth.getSession();
+
       // Call the public Edge Function
       const { data, error } = await supabase.functions.invoke('accept-proposal', {
         body: {
