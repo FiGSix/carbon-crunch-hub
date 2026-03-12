@@ -489,8 +489,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       logger.info("Fields saved successfully, validating", { projectId });
 
-      // Cascade sync system_name AND panel_total_kwp to proposals table
-      const shouldSyncProposal = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0);
+      // Cascade sync system_name, panel_total_kwp, and phases to proposals table
+      const hasPhases2 = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+      const shouldSyncProposal = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0) || hasPhases2;
       if (shouldSyncProposal) {
         const { data: projectOnboardingData } = await supabase
           .from('project_onboarding')
@@ -499,16 +500,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .single();
 
         if (projectOnboardingData?.proposal_id) {
+          const { data: proposalData } = await supabase
+            .from('proposals')
+            .select('project_info, content')
+            .eq('id', projectOnboardingData.proposal_id)
+            .single();
+
           const proposalUpdatePayload: Record<string, any> = {};
+          const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
 
           if (formData.system_name) {
-            const { data: proposalData } = await supabase
-              .from('proposals')
-              .select('project_info')
-              .eq('id', projectOnboardingData.proposal_id)
-              .single();
-
-            const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
             proposalUpdatePayload.title = formData.system_name;
             proposalUpdatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
           }
@@ -518,6 +519,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             proposalUpdatePayload.system_size_kwp = newSizeKwp;
             proposalUpdatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
             proposalUpdatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
+          }
+
+          if (hasPhases2 && proposalData?.content) {
+            const content = proposalData.content as Record<string, any>;
+            proposalUpdatePayload.content = {
+              ...content,
+              projectInfo: {
+                ...(content.projectInfo || {}),
+                phases: formData.phases_json,
+              },
+            };
           }
 
           if (Object.keys(proposalUpdatePayload).length > 0) {
