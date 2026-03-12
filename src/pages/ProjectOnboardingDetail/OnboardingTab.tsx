@@ -817,39 +817,25 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             {formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0 && (
               <div className="col-span-full space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label>Commission Dates & Sizes (Multi-Phase Project) <span className="text-destructive">*</span></Label>
+                  <Label>Commission Dates (Multi-Phase Project) <span className="text-destructive">*</span></Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>Edit the commission date and size for each phase. Changes will sync back to the proposal.</p>
+                        <p>Edit the commission date for each phase. Changes will sync back to the proposal.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="p-4 bg-muted rounded-lg space-y-3">
                   {(formData.phases_json as PhaseDetail[]).map((phase, idx) => (
-                    <div key={idx} className="grid grid-cols-3 gap-3 items-end">
+                    <div key={idx} className="grid grid-cols-2 gap-3 items-end">
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">
                           {phase.phaseName || `Phase ${phase.phaseNumber}`}
                         </Label>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Size (kWp)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={phase.sizeKWp || ''}
-                          onChange={(e) => {
-                            const newPhases = [...(formData.phases_json as PhaseDetail[])];
-                            newPhases[idx] = { ...newPhases[idx], sizeKWp: parseFloat(e.target.value) || 0 };
-                            setFormData(prev => ({ ...prev, phases_json: newPhases }));
-                          }}
-                          placeholder="e.g. 325.61"
-                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Commission Date</Label>

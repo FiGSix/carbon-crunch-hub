@@ -1,23 +1,25 @@
 
+# Multi-Phase Onboarding — COMPLETED
 
-# Remove phase sizes from System Details section
+## Summary
 
-## Problem
-The System Details section shows editable size (kWp) inputs per phase, but this data is already captured in the Solar Panels section via `panel_total_kwp`. Entering sizes in both places is redundant.
+Added `phases_json` JSONB column to `onboarding_fields` to properly support multi-phase projects. Phase dates and sizes are now editable during onboarding and cascade-sync back to the proposal.
 
-## Changes
+### Database Changes
+- Added `phases_json` column to `onboarding_fields` (JSONB, nullable)
+- Backfilled Keystone Hatchery's phases from proposal content
+- Updated `create_onboarding_on_signature` trigger to copy phases on onboarding creation
+- Updated `validate_onboarding_completion` RPC: multi-phase projects skip `commissioning_date` check (dates live in `phases_json`)
 
-**File: `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`**
+### Frontend Changes
+- Added `PhaseDetail` type to `src/types/onboarding.ts`
+- `OnboardingTab.tsx`: Replaced read-only phase display with editable date pickers + size inputs per phase
+- `getSectionCompletionInfo('system')`: For multi-phase, requires `system_address` + all phase dates filled (not `commissioning_date`)
+- Both `handleSaveDraft` and `handleValidateAndComplete` cascade-sync `phases_json` back to `proposals.content.projectInfo.phases`
+- Single-phase projects unchanged — still use `commissioning_date` field
 
-1. **Remove the "Size (kWp)" column** from the multi-phase grid (~lines 840-853). Change the grid from `grid-cols-3` to `grid-cols-2` — keeping only the phase name label and the commission date input.
-
-2. **Update the section header** (~line 820): Change from `"Commission Dates & Sizes (Multi-Phase Project)"` to `"Commission Dates (Multi-Phase Project)"`.
-
-3. **Update the tooltip** (~line 827): Change to `"Edit the commission date for each phase. Changes will sync back to the proposal."`.
-
-4. **Remove the total size summary row** below the phases (around lines 869-880) if it exists, since sizes are no longer displayed here.
-
-5. **Keep `sizeKWp` in `phases_json` data** — no changes to the data model or save logic. The size values remain stored and synced; they're just not editable in this section since panel details handle system sizing.
-
-No database changes. One file modified.
-
+### Data Flow
+```
+onboarding_fields.phases_json  ←→  proposals.content.projectInfo.phases
+       (editable in UI)              (synced on save)
+```
