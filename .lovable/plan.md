@@ -1,34 +1,25 @@
 
-# Performance Cleanup — 3b, 3c, 3d — COMPLETED
+# Multi-Phase Onboarding — COMPLETED
 
 ## Summary
 
-Removed dual toast system, over-engineered ConsoleOptimizer, and bootstrap.ts indirection. Net result: fewer dependencies, simpler boot path, cleaner logging.
+Added `phases_json` JSONB column to `onboarding_fields` to properly support multi-phase projects. Phase dates and sizes are now editable during onboarding and cascade-sync back to the proposal.
 
-### 3b. Toast Consolidation
-- Removed Radix `<Toaster />` from `App.tsx`, kept Sonner only
-- Deleted `src/components/ui/toaster.tsx` and `src/components/ui/toast.tsx`
-- Simplified `src/hooks/use-toast.ts` to thin Sonner wrapper (all 59 consumers unchanged)
-- Removed `@radix-ui/react-toast` dependency
+### Database Changes
+- Added `phases_json` column to `onboarding_fields` (JSONB, nullable)
+- Backfilled Keystone Hatchery's phases from proposal content
+- Updated `create_onboarding_on_signature` trigger to copy phases on onboarding creation
+- Updated `validate_onboarding_completion` RPC: multi-phase projects skip `commissioning_date` check (dates live in `phases_json`)
 
-### 3c. ConsoleOptimizer Removal
-- Deleted `src/lib/performance/ConsoleOptimizer.ts` (212 lines of over-engineering)
-- Rewrote `src/lib/performance/ConsoleReplacementUtility.ts` to use `@/lib/logger` directly
-- Removed `consoleOptimizer` imports and calls from `src/main.tsx`
-- All 38 consumer files unchanged — they import from `ConsoleReplacementUtility`, not ConsoleOptimizer
-- Production console stripping handled by Terser (`drop_console` in vite config)
+### Frontend Changes
+- Added `PhaseDetail` type to `src/types/onboarding.ts`
+- `OnboardingTab.tsx`: Replaced read-only phase display with editable date pickers + size inputs per phase
+- `getSectionCompletionInfo('system')`: For multi-phase, requires `system_address` + all phase dates filled (not `commissioning_date`)
+- Both `handleSaveDraft` and `handleValidateAndComplete` cascade-sync `phases_json` back to `proposals.content.projectInfo.phases`
+- Single-phase projects unchanged — still use `commissioning_date` field
 
-### 3d. Bootstrap.ts Removal
-- Changed `index.html` to load `src/main.tsx` directly (no intermediate hop)
-- Deleted `src/bootstrap.ts` (154 lines)
-- Removed Service Worker registration from `main.tsx`
-- App loads faster without forced preview-host reload cycle
-
-### Files Deleted
-- `src/bootstrap.ts`
-- `src/lib/performance/ConsoleOptimizer.ts`
-- `src/components/ui/toaster.tsx`
-- `src/components/ui/toast.tsx`
-
-### Dependencies Removed
-- `@radix-ui/react-toast`
+### Data Flow
+```
+onboarding_fields.phases_json  ←→  proposals.content.projectInfo.phases
+       (editable in UI)              (synced on save)
+```
