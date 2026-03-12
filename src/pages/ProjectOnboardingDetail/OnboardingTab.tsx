@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { OnboardingFields, OnboardingDocument, ProjectOnboarding } from "@/types/onboarding";
+import type { OnboardingFields, OnboardingDocument, ProjectOnboarding, PhaseDetail } from "@/types/onboarding";
 import { useAuth } from "@/contexts/auth";
 import { getAllAdminUserIds } from "@/services/adminService";
 import { createNotification } from "@/services/notificationService";
