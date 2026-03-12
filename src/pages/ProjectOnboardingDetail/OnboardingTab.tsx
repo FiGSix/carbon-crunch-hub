@@ -369,8 +369,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       if (error) throw error;
 
-      // Cascade sync system_name AND panel_total_kwp to proposals table
-      const shouldSync = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0);
+      // Cascade sync system_name, panel_total_kwp, and phases to proposals table
+      const hasPhases = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+      const shouldSync = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0) || hasPhases;
       if (shouldSync) {
         const { data: projectData } = await supabase
           .from('project_onboarding')
@@ -379,16 +380,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .single();
 
         if (projectData?.proposal_id) {
+          // Always fetch proposal content when syncing (needed for phases and system_name)
+          const { data: proposalData } = await supabase
+            .from('proposals')
+            .select('project_info, content')
+            .eq('id', projectData.proposal_id)
+            .single();
+
           const updatePayload: Record<string, any> = {};
+          const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
 
           if (formData.system_name) {
-            const { data: proposalData } = await supabase
-              .from('proposals')
-              .select('project_info')
-              .eq('id', projectData.proposal_id)
-              .single();
-
-            const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
             updatePayload.title = formData.system_name;
             updatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
           }
@@ -398,6 +400,19 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             updatePayload.system_size_kwp = newSizeKwp;
             updatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
             updatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
+          }
+
+          // Sync phases back to proposal content
+          if (hasPhases && proposalData?.content) {
+            const content = proposalData.content as Record<string, any>;
+            const updatedContent = {
+              ...content,
+              projectInfo: {
+                ...(content.projectInfo || {}),
+                phases: formData.phases_json,
+              },
+            };
+            updatePayload.content = updatedContent;
           }
 
           if (Object.keys(updatePayload).length > 0) {
