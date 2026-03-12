@@ -1346,6 +1346,7 @@ export type Database = {
           panel_quantity: number | null
           panel_size_wp: number | null
           panel_total_kwp: number | null
+          phases_json: Json | null
           project_id: string
           system_address: string | null
           system_gps_lat: number | null
@@ -1391,6 +1392,7 @@ export type Database = {
           panel_quantity?: number | null
           panel_size_wp?: number | null
           panel_total_kwp?: number | null
+          phases_json?: Json | null
           project_id: string
           system_address?: string | null
           system_gps_lat?: number | null
@@ -1436,6 +1438,7 @@ export type Database = {
           panel_quantity?: number | null
           panel_size_wp?: number | null
           panel_total_kwp?: number | null
+          phases_json?: Json | null
           project_id?: string
           system_address?: string | null
           system_gps_lat?: number | null
