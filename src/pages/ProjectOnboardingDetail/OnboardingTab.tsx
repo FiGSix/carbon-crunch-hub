@@ -817,7 +817,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             {formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0 && (
               <div className="col-span-full space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label>Commission Dates & Sizes (Multi-Phase Project) <span className="text-destructive">*</span></Label>
+                  <Label>Commission Dates (Multi-Phase Project) <span className="text-destructive">*</span></Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
