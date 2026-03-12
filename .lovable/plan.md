@@ -1,22 +1,25 @@
 
+# Multi-Phase Onboarding — COMPLETED
 
-# Fix: Multi-Phase Client-Side Validation
+## Summary
 
-## The Real Issue
+Added `phases_json` JSONB column to `onboarding_fields` to properly support multi-phase projects. Phase dates and sizes are now editable during onboarding and cascade-sync back to the proposal.
 
-The `commissioning_date` being NULL for multi-phase projects is **correct by design** — there is no single commissioning date when a project has multiple phases. Setting it to some arbitrary value would be the band-aid. The proper fix is making the client-side validation layer multi-phase-aware, matching what the server-side RPC already does.
+### Database Changes
+- Added `phases_json` column to `onboarding_fields` (JSONB, nullable)
+- Backfilled Keystone Hatchery's phases from proposal content
+- Updated `create_onboarding_on_signature` trigger to copy phases on onboarding creation
+- Updated `validate_onboarding_completion` RPC: multi-phase projects skip `commissioning_date` check (dates live in `phases_json`)
 
-The server-side `validate_onboarding_completion` RPC was already updated to handle this correctly: it checks `phases_json` dates instead of `commissioning_date` when a project is multi-phase. But the client-side `getAllErrors()` in `useOnboardingValidation.ts` was never updated to match, so it blocks submission before the RPC is ever called.
+### Frontend Changes
+- Added `PhaseDetail` type to `src/types/onboarding.ts`
+- `OnboardingTab.tsx`: Replaced read-only phase display with editable date pickers + size inputs per phase
+- `getSectionCompletionInfo('system')`: For multi-phase, requires `system_address` + all phase dates filled (not `commissioning_date`)
+- Both `handleSaveDraft` and `handleValidateAndComplete` cascade-sync `phases_json` back to `proposals.content.projectInfo.phases`
+- Single-phase projects unchanged — still use `commissioning_date` field
 
-## Changes
-
-**File: `src/hooks/useOnboardingValidation.ts`** — `getAllErrors` function (lines 86-98)
-
-1. Detect multi-phase: check if `formData.phases_json` is a non-empty array
-2. If multi-phase: remove `commissioning_date` from the required fields list, and instead validate that every phase in `phases_json` has a non-empty `commissionDate`
-3. If single-phase: keep existing `commissioning_date` requirement (no change)
-
-**File: `src/lib/validation/onboardingSchema.ts`** — no changes needed (field-level `validateField` for `commissioning_date` is only called when the field is in the required list)
-
-This is a ~15-line change in one file. No database changes.
-
+### Data Flow
+```
+onboarding_fields.phases_json  ←→  proposals.content.projectInfo.phases
+       (editable in UI)              (synced on save)
+```

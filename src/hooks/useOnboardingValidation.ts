@@ -90,12 +90,26 @@ export function useOnboardingValidation(): UseOnboardingValidationResult {
   ): Record<string, string> => {
     const allErrors: Record<string, string> = {};
     
+    // Detect multi-phase projects (dates live in phases_json, not commissioning_date)
+    const isMultiPhase = Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+    
     // System details validation
-    const requiredFields = ["system_address", "commissioning_date"];
+    const requiredFields = isMultiPhase
+      ? ["system_address"]
+      : ["system_address", "commissioning_date"];
     requiredFields.forEach(field => {
       const error = validateField(field, formData[field as keyof OnboardingFields], formData);
       if (error) allErrors[field] = error;
     });
+    
+    // Multi-phase: validate each phase has a commission date
+    if (isMultiPhase) {
+      (formData.phases_json as Array<{ phaseNumber: number; phaseName?: string; commissionDate: string }>).forEach((phase, idx) => {
+        if (!phase.commissionDate || phase.commissionDate.trim() === '') {
+          allErrors[`phase_${idx}_date`] = `Phase ${phase.phaseName || idx + 1} requires a commission date`;
+        }
+      });
+    }
     
     // Optional fields validation
     const optionalFields = ["system_name", "installer_email", "system_gps_lat", "system_gps_lng"];
