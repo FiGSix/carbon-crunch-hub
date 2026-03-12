@@ -624,6 +624,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const getSectionCompletionInfo = (sectionKey: string): { complete: boolean; remaining: number; total: number } => {
     switch (sectionKey) {
       case 'system': {
+        const isMultiPhase = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+        if (isMultiPhase) {
+          // For multi-phase: require system_address + all phases have valid dates
+          const phases = formData.phases_json as PhaseDetail[];
+          const phasesWithDates = phases.filter(p => p.commissionDate && p.commissionDate.trim() !== '');
+          const hasAddress = !!formData.system_address;
+          const total = 1 + phases.length; // address + each phase date
+          const filled = (hasAddress ? 1 : 0) + phasesWithDates.length;
+          return { complete: filled === total, remaining: total - filled, total };
+        }
         const requiredFields = ['system_address', 'commissioning_date'];
         const filled = requiredFields.filter(f => formData[f as keyof OnboardingFields]);
         return { complete: filled.length === requiredFields.length, remaining: requiredFields.length - filled.length, total: requiredFields.length };
