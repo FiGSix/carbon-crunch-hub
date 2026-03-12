@@ -75,7 +75,7 @@ export default function ProjectOnboardingDetail() {
         .single();
 
       if (fieldsError && fieldsError.code !== 'PGRST116') throw fieldsError;
-      setFields(fieldsData);
+      setFields(fieldsData ? { ...fieldsData, phases_json: fieldsData.phases_json as any } as OnboardingFields : null);
 
     } catch (error) {
       console.error('Error fetching project:', error);

@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { OnboardingFields, OnboardingDocument, ProjectOnboarding } from "@/types/onboarding";
+import type { OnboardingFields, OnboardingDocument, ProjectOnboarding, PhaseDetail } from "@/types/onboarding";
 import { useAuth } from "@/contexts/auth";
 import { getAllAdminUserIds } from "@/services/adminService";
 import { createNotification } from "@/services/notificationService";
@@ -369,8 +369,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       if (error) throw error;
 
-      // Cascade sync system_name AND panel_total_kwp to proposals table
-      const shouldSync = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0);
+      // Cascade sync system_name, panel_total_kwp, and phases to proposals table
+      const hasPhases = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+      const shouldSync = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0) || hasPhases;
       if (shouldSync) {
         const { data: projectData } = await supabase
           .from('project_onboarding')
@@ -379,16 +380,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .single();
 
         if (projectData?.proposal_id) {
+          // Always fetch proposal content when syncing (needed for phases and system_name)
+          const { data: proposalData } = await supabase
+            .from('proposals')
+            .select('project_info, content')
+            .eq('id', projectData.proposal_id)
+            .single();
+
           const updatePayload: Record<string, any> = {};
+          const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
 
           if (formData.system_name) {
-            const { data: proposalData } = await supabase
-              .from('proposals')
-              .select('project_info')
-              .eq('id', projectData.proposal_id)
-              .single();
-
-            const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
             updatePayload.title = formData.system_name;
             updatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
           }
@@ -398,6 +400,19 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             updatePayload.system_size_kwp = newSizeKwp;
             updatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
             updatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
+          }
+
+          // Sync phases back to proposal content
+          if (hasPhases && proposalData?.content) {
+            const content = proposalData.content as Record<string, any>;
+            const updatedContent = {
+              ...content,
+              projectInfo: {
+                ...(content.projectInfo || {}),
+                phases: formData.phases_json,
+              },
+            };
+            updatePayload.content = updatedContent;
           }
 
           if (Object.keys(updatePayload).length > 0) {
@@ -474,8 +489,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
 
       logger.info("Fields saved successfully, validating", { projectId });
 
-      // Cascade sync system_name AND panel_total_kwp to proposals table
-      const shouldSyncProposal = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0);
+      // Cascade sync system_name, panel_total_kwp, and phases to proposals table
+      const hasPhases2 = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+      const shouldSyncProposal = formData.system_name || (formData.panel_total_kwp && formData.panel_total_kwp > 0) || hasPhases2;
       if (shouldSyncProposal) {
         const { data: projectOnboardingData } = await supabase
           .from('project_onboarding')
@@ -484,16 +500,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           .single();
 
         if (projectOnboardingData?.proposal_id) {
+          const { data: proposalData } = await supabase
+            .from('proposals')
+            .select('project_info, content')
+            .eq('id', projectOnboardingData.proposal_id)
+            .single();
+
           const proposalUpdatePayload: Record<string, any> = {};
+          const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
 
           if (formData.system_name) {
-            const { data: proposalData } = await supabase
-              .from('proposals')
-              .select('project_info')
-              .eq('id', projectOnboardingData.proposal_id)
-              .single();
-
-            const currentProjectInfo = (proposalData?.project_info as Record<string, unknown>) || {};
             proposalUpdatePayload.title = formData.system_name;
             proposalUpdatePayload.project_info = { ...currentProjectInfo, name: formData.system_name };
           }
@@ -503,6 +519,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             proposalUpdatePayload.system_size_kwp = newSizeKwp;
             proposalUpdatePayload.annual_energy = calculateAnnualEnergy(newSizeKwp);
             proposalUpdatePayload.carbon_credits = calculateCarbonCredits(newSizeKwp);
+          }
+
+          if (hasPhases2 && proposalData?.content) {
+            const content = proposalData.content as Record<string, any>;
+            proposalUpdatePayload.content = {
+              ...content,
+              projectInfo: {
+                ...(content.projectInfo || {}),
+                phases: formData.phases_json,
+              },
+            };
           }
 
           if (Object.keys(proposalUpdatePayload).length > 0) {
@@ -624,6 +651,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const getSectionCompletionInfo = (sectionKey: string): { complete: boolean; remaining: number; total: number } => {
     switch (sectionKey) {
       case 'system': {
+        const isMultiPhase = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
+        if (isMultiPhase) {
+          // For multi-phase: require system_address + all phases have valid dates
+          const phases = formData.phases_json as PhaseDetail[];
+          const phasesWithDates = phases.filter(p => p.commissionDate && p.commissionDate.trim() !== '');
+          const hasAddress = !!formData.system_address;
+          const total = 1 + phases.length; // address + each phase date
+          const filled = (hasAddress ? 1 : 0) + phasesWithDates.length;
+          return { complete: filled === total, remaining: total - filled, total };
+        }
         const requiredFields = ['system_address', 'commissioning_date'];
         const filled = requiredFields.filter(f => formData[f as keyof OnboardingFields]);
         return { complete: filled.length === requiredFields.length, remaining: requiredFields.length - filled.length, total: requiredFields.length };
@@ -776,49 +813,70 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               <FormError message={touched.system_address ? errors.system_address : undefined} />
             </div>
 
-            {/* Multi-Phase Commission Dates Display */}
-            {proposal?.content?.projectInfo?.isMultiPhase && 
-             proposal?.content?.projectInfo?.phases?.length > 0 && (
+            {/* Multi-Phase Commission Dates - Editable */}
+            {formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0 && (
               <div className="col-span-full space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label>Commission Dates (Multi-Phase Project)</Label>
+                  <Label>Commission Dates & Sizes (Multi-Phase Project) <span className="text-destructive">*</span></Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>This project has multiple phases with different commission dates. Each phase will generate carbon credits from its respective commission date.</p>
+                        <p>Edit the commission date and size for each phase. Changes will sync back to the proposal.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  {proposal.content.projectInfo.phases.map((phase: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center">
-                      <span className="font-medium">
-                        {phase.phaseName || `Phase ${phase.phaseNumber}`}
-                      </span>
-                      <div className="text-right">
-                        <span className="text-sm text-muted-foreground mr-3">
-                          {phase.sizeKWp} kWp
-                        </span>
-                        <span className="font-mono">
-                          {new Date(phase.commissionDate).toLocaleDateString()}
-                        </span>
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  {(formData.phases_json as PhaseDetail[]).map((phase, idx) => (
+                    <div key={idx} className="grid grid-cols-3 gap-3 items-end">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          {phase.phaseName || `Phase ${phase.phaseNumber}`}
+                        </Label>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Size (kWp)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={phase.sizeKWp || ''}
+                          onChange={(e) => {
+                            const newPhases = [...(formData.phases_json as PhaseDetail[])];
+                            newPhases[idx] = { ...newPhases[idx], sizeKWp: parseFloat(e.target.value) || 0 };
+                            setFormData(prev => ({ ...prev, phases_json: newPhases }));
+                          }}
+                          placeholder="e.g. 325.61"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Commission Date</Label>
+                        <Input
+                          type="date"
+                          value={phase.commissionDate || ''}
+                          onChange={(e) => {
+                            const newPhases = [...(formData.phases_json as PhaseDetail[])];
+                            newPhases[idx] = { ...newPhases[idx], commissionDate: e.target.value };
+                            setFormData(prev => ({ ...prev, phases_json: newPhases }));
+                          }}
+                          className={cn(!phase.commissionDate && "border-destructive")}
+                        />
                       </div>
                     </div>
                   ))}
                   <div className="pt-2 border-t mt-2 flex justify-between text-sm">
                     <span className="text-muted-foreground">Earliest Commission Date:</span>
                     <span className="font-semibold">
-                      {new Date(
-                        Math.min(
-                          ...proposal.content.projectInfo.phases.map((p: any) => 
-                            new Date(p.commissionDate).getTime()
-                          )
-                        )
-                      ).toLocaleDateString()}
+                      {(() => {
+                        const dates = (formData.phases_json as PhaseDetail[])
+                          .filter(p => p.commissionDate)
+                          .map(p => new Date(p.commissionDate).getTime());
+                        return dates.length > 0 
+                          ? new Date(Math.min(...dates)).toLocaleDateString() 
+                          : 'Not set';
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -826,7 +884,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             )}
 
             {/* Single Commission Date Field - only show for single-phase projects */}
-            {(!proposal?.content?.projectInfo?.isMultiPhase) && (
+            {(!(formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0)) && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="commissioning_date">

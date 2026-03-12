@@ -74,6 +74,14 @@ export interface OnboardingFields {
   updated_at: string;
   validated_at: string | null;
   validated_by: string | null;
+  phases_json: PhaseDetail[] | null;
+}
+
+export interface PhaseDetail {
+  phaseNumber: number;
+  phaseName?: string;
+  sizeKWp: number;
+  commissionDate: string;
 }
 
 export interface OnboardingDocument {
