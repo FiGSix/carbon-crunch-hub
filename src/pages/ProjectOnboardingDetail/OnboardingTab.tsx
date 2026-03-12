@@ -786,49 +786,70 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               <FormError message={touched.system_address ? errors.system_address : undefined} />
             </div>
 
-            {/* Multi-Phase Commission Dates Display */}
-            {proposal?.content?.projectInfo?.isMultiPhase && 
-             proposal?.content?.projectInfo?.phases?.length > 0 && (
+            {/* Multi-Phase Commission Dates - Editable */}
+            {formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0 && (
               <div className="col-span-full space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label>Commission Dates (Multi-Phase Project)</Label>
+                  <Label>Commission Dates & Sizes (Multi-Phase Project) <span className="text-destructive">*</span></Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>This project has multiple phases with different commission dates. Each phase will generate carbon credits from its respective commission date.</p>
+                        <p>Edit the commission date and size for each phase. Changes will sync back to the proposal.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  {proposal.content.projectInfo.phases.map((phase: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center">
-                      <span className="font-medium">
-                        {phase.phaseName || `Phase ${phase.phaseNumber}`}
-                      </span>
-                      <div className="text-right">
-                        <span className="text-sm text-muted-foreground mr-3">
-                          {phase.sizeKWp} kWp
-                        </span>
-                        <span className="font-mono">
-                          {new Date(phase.commissionDate).toLocaleDateString()}
-                        </span>
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  {(formData.phases_json as PhaseDetail[]).map((phase, idx) => (
+                    <div key={idx} className="grid grid-cols-3 gap-3 items-end">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          {phase.phaseName || `Phase ${phase.phaseNumber}`}
+                        </Label>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Size (kWp)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={phase.sizeKWp || ''}
+                          onChange={(e) => {
+                            const newPhases = [...(formData.phases_json as PhaseDetail[])];
+                            newPhases[idx] = { ...newPhases[idx], sizeKWp: parseFloat(e.target.value) || 0 };
+                            setFormData(prev => ({ ...prev, phases_json: newPhases }));
+                          }}
+                          placeholder="e.g. 325.61"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Commission Date</Label>
+                        <Input
+                          type="date"
+                          value={phase.commissionDate || ''}
+                          onChange={(e) => {
+                            const newPhases = [...(formData.phases_json as PhaseDetail[])];
+                            newPhases[idx] = { ...newPhases[idx], commissionDate: e.target.value };
+                            setFormData(prev => ({ ...prev, phases_json: newPhases }));
+                          }}
+                          className={cn(!phase.commissionDate && "border-destructive")}
+                        />
                       </div>
                     </div>
                   ))}
                   <div className="pt-2 border-t mt-2 flex justify-between text-sm">
                     <span className="text-muted-foreground">Earliest Commission Date:</span>
                     <span className="font-semibold">
-                      {new Date(
-                        Math.min(
-                          ...proposal.content.projectInfo.phases.map((p: any) => 
-                            new Date(p.commissionDate).getTime()
-                          )
-                        )
-                      ).toLocaleDateString()}
+                      {(() => {
+                        const dates = (formData.phases_json as PhaseDetail[])
+                          .filter(p => p.commissionDate)
+                          .map(p => new Date(p.commissionDate).getTime());
+                        return dates.length > 0 
+                          ? new Date(Math.min(...dates)).toLocaleDateString() 
+                          : 'Not set';
+                      })()}
                     </span>
                   </div>
                 </div>
