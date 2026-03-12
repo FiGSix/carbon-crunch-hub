@@ -857,7 +857,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             )}
 
             {/* Single Commission Date Field - only show for single-phase projects */}
-            {(!proposal?.content?.projectInfo?.isMultiPhase) && (
+            {(!(formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0)) && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="commissioning_date">
