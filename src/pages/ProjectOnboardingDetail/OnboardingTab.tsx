@@ -824,7 +824,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                         <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>Edit the commission date and size for each phase. Changes will sync back to the proposal.</p>
+                        <p>Edit the commission date for each phase. Changes will sync back to the proposal.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
