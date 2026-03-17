@@ -355,7 +355,7 @@ export function QuickCalculatorModal({ open, onOpenChange }: QuickCalculatorModa
                   <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
                     <p className="text-sm font-medium text-muted-foreground">Calculated System Size</p>
                     <p className="text-2xl font-bold text-primary">
-                      {calculatedSystemSize.toFixed(2)} kWp
+                      {parseFloat(calculatedSystemSize.toFixed(3))} kWp
                     </p>
                   </div>
                 )}

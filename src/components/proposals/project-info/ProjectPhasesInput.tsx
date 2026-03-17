@@ -120,7 +120,7 @@ export function ProjectPhasesInput({ phases, onChange }: ProjectPhasesInputProps
       <div className="p-4 bg-muted rounded-lg">
         <div className="flex items-center justify-between">
           <span className="font-semibold">Total System Size:</span>
-          <span className="text-lg font-bold">{totalSize.toFixed(2)} kWp</span>
+          <span className="text-lg font-bold">{parseFloat(totalSize.toFixed(3))} kWp</span>
         </div>
         {totalSize >= 15000 && (
           <p className="text-xs text-destructive mt-2">

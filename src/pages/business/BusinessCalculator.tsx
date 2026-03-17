@@ -28,9 +28,9 @@ export function BusinessCalculator() {
 
   const formatSize = (kWp: number) => {
     if (kWp >= 1000) {
-      return `${(kWp / 1000).toFixed(1)} MW`;
+      return `${parseFloat((kWp / 1000).toFixed(3))} MW`;
     }
-    return `${kWp} kWp`;
+    return `${parseFloat(kWp.toFixed(3))} kWp`;
   };
 
   return (

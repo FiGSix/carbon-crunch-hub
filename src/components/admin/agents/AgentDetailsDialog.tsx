@@ -216,7 +216,7 @@ export function AgentDetailsDialog({
                           <p className="text-xs font-medium mb-1">Tier-based Commission:</p>
                           <p className="text-xs">{getDefaultCommissionDescription()}</p>
                           <p className="text-xs mt-1 text-muted-foreground">
-                            Current portfolio: {(agent.portfolio_size_kwp / 1000).toFixed(2)} MWp
+                            Current portfolio: {parseFloat((agent.portfolio_size_kwp / 1000).toFixed(3))} MWp
                           </p>
                         </TooltipContent>
                       </Tooltip>
