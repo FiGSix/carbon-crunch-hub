@@ -315,7 +315,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                       <span className="text-sm font-medium text-crunch-black">Your System Size:</span>
                     </div>
                     <p className="text-2xl font-bold text-crunch-black">
-                      {calculatedSystemSize.toFixed(2)} kWp
+                      {parseFloat(calculatedSystemSize.toFixed(3))} kWp
                     </p>
                     <p className="text-xs text-crunch-black/60 mt-1">
                       {numberOfPanels} panels × {panelWattage === 'custom' ? customWattage : panelWattage}W each
