@@ -1,25 +1,28 @@
 
-# Multi-Phase Onboarding — COMPLETED
 
-## Summary
+# Clean up: Remove client users from agent company_members table
 
-Added `phases_json` JSONB column to `onboarding_fields` to properly support multi-phase projects. Phase dates and sizes are now editable during onboarding and cascade-sync back to the proposal.
+## Problem
+Lutendo Muti and Tumelo Manaleng are incorrectly listed in the **agent** `company_members` table for "New Planet Energy" (company ID: `3e2f76a8-dc8f-49d8-9aec-f613d5f01fd6`). They are client-role users and already correctly exist in `client_company_members`. This is the cross-contamination the `prevent_client_in_agent_teams` trigger should have prevented.
 
-### Database Changes
-- Added `phases_json` column to `onboarding_fields` (JSONB, nullable)
-- Backfilled Keystone Hatchery's phases from proposal content
-- Updated `create_onboarding_on_signature` trigger to copy phases on onboarding creation
-- Updated `validate_onboarding_completion` RPC: multi-phase projects skip `commissioning_date` check (dates live in `phases_json`)
+## Records to delete
 
-### Frontend Changes
-- Added `PhaseDetail` type to `src/types/onboarding.ts`
-- `OnboardingTab.tsx`: Replaced read-only phase display with editable date pickers + size inputs per phase
-- `getSectionCompletionInfo('system')`: For multi-phase, requires `system_address` + all phase dates filled (not `commissioning_date`)
-- Both `handleSaveDraft` and `handleValidateAndComplete` cascade-sync `phases_json` back to `proposals.content.projectInfo.phases`
-- Single-phase projects unchanged — still use `commissioning_date` field
+| Name | company_members.id | email |
+|------|-------------------|-------|
+| Lutendo Muti | `1a11d8b6-8e65-46f9-a801-81748290b9b4` | lutendo@newplanet.co.za |
+| Tumelo Manaleng | `98263a6b-e716-4879-a093-4b8b8221c1f2` | npehmonitoring@newplanet.co.za |
 
-### Data Flow
+## Action
+
+Run this SQL in the Supabase SQL Editor (RLS blocks client-side deletes on this table, so it must be run with admin/service role privileges):
+
+```sql
+DELETE FROM company_members 
+WHERE id IN (
+  '1a11d8b6-8e65-46f9-a801-81748290b9b4',
+  '98263a6b-e716-4879-a093-4b8b8221c1f2'
+);
 ```
-onboarding_fields.phases_json  ←→  proposals.content.projectInfo.phases
-       (editable in UI)              (synced on save)
-```
+
+No code changes needed — this is a data cleanup only.
+
