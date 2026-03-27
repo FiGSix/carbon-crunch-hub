@@ -59,9 +59,10 @@ export function useRevenueCalculations({
         const portfolioSize = portfolioData?.totalKWp || systemSizeKWp;
         
         // Build specs based on whether this is multi-phase or single-phase
+        const overrideValue = clientShareOverride != null ? clientShareOverride : undefined;
         const specs = phases && phases.length > 0
-          ? { sizeKwp: systemSizeKWp, phases }
-          : { sizeKwp: systemSizeKWp, commissionDate };
+          ? { sizeKwp: systemSizeKWp, phases, clientShareOverride: overrideValue }
+          : { sizeKwp: systemSizeKWp, commissionDate, clientShareOverride: overrideValue };
         
         // Use the unified service to calculate complete financials
         const result = await UnifiedCarbonService.calculateComplete(specs, portfolioSize);

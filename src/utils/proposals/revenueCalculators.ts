@@ -75,12 +75,14 @@ export async function calculateAgentCommissionRevenue(
 export async function calculateCompleteProposalFinancials(
   systemSizeKWp: number,
   portfolioKWp?: number,
-  commissionDate?: string
+  commissionDate?: string,
+  clientShareOverride?: number
 ) {
   try {
     const result = await UnifiedCarbonService.calculateComplete({
       sizeKwp: systemSizeKWp,
-      commissionDate
+      commissionDate,
+      clientShareOverride
     }, portfolioKWp);
 
     return result;

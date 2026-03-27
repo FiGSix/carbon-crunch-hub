@@ -95,7 +95,7 @@ async function calculateMultiPhaseComplete(
 
   // OPTIMIZATION: Memoize portfolio-based percentages (Phase 3)
   const effectivePortfolioKWp = portfolioKWp || totalSystemSizeKwp;
-  const clientSharePercentage = getClientSharePercentage(effectivePortfolioKWp);
+  const clientSharePercentage = specs.clientShareOverride ?? getClientSharePercentage(effectivePortfolioKWp);
   const agentCommissionPercentage = getAgentCommissionPercentage(effectivePortfolioKWp);
   const crunchCommissionPercentage = getCrunchCommissionPercentage(clientSharePercentage, agentCommissionPercentage);
 
