@@ -22,7 +22,8 @@ export function useRevenueCalculations({
   portfolioData,
   proposalId,
   phases,
-  isMultiPhase
+  isMultiPhase,
+  clientShareOverride
 }: UseRevenueCalculationsProps) {
   const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
