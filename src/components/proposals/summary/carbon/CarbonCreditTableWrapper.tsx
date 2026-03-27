@@ -33,7 +33,8 @@ export function CarbonCreditTableWrapper({
   portfolioSize,
   totalMWhGenerated,
   totalCarbonCredits,
-  totalClientSpecificRevenue
+  totalClientSpecificRevenue,
+  clientShareOverride
 }: CarbonCreditTableWrapperProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
