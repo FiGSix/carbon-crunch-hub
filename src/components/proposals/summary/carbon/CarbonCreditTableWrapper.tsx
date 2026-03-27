@@ -125,6 +125,7 @@ export function CarbonCreditTableWrapper({
                   totalCarbonCredits={calculatePhaseTotalCredits(phase)}
                   totalClientSpecificRevenue={calculatePhaseTotalRevenue(phase)}
                   isPhaseTable={true}
+                  clientShareOverride={clientShareOverride}
                 />
               </div>
             ))}
