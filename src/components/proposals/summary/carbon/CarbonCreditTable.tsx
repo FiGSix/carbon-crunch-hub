@@ -75,8 +75,8 @@ export function CarbonCreditTable({
             ? preCalculatedYearlyCredits[year]
             : calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
           
-          const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize);
-          const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize);
+          const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize, clientShareOverride);
+          const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize, clientShareOverride);
           
           data.push({
             year,
