@@ -41,7 +41,8 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     portfolioData,
     proposalId,
     phases,
-    isMultiPhase
+    isMultiPhase,
+    clientShareOverride
   });
 
   const loading = portfolioLoading || revenueLoading;

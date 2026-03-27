@@ -45,7 +45,8 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
     portfolioData: null,
     proposalId: proposal.id,
     phases,
-    isMultiPhase
+    isMultiPhase,
+    clientShareOverride: proposal.client_share_percentage
   });
 
   // Calculate agent and platform revenues by year
