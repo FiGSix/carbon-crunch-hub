@@ -41,7 +41,7 @@ export async function calculateComplete(
   const carbonCreditsPerYear = calculateCarbonCredits(systemSizeKwp, yieldFactor);
 
   const effectivePortfolioKWp = portfolioKWp || systemSizeKwp;
-  const clientSharePercentage = getClientSharePercentage(effectivePortfolioKWp);
+  const clientSharePercentage = specs.clientShareOverride ?? getClientSharePercentage(effectivePortfolioKWp);
   const agentCommissionPercentage = getAgentCommissionPercentage(effectivePortfolioKWp);
 
   const revenueByYear = await calculateRevenueByYear(
