@@ -13,6 +13,7 @@ interface UseRevenueCalculationsProps {
   proposalId?: string | null;
   phases?: ProjectPhase[];
   isMultiPhase?: boolean;
+  clientShareOverride?: number | null;
 }
 
 export function useRevenueCalculations({
