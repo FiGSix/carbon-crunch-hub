@@ -46,7 +46,8 @@ export function CarbonCreditTable({
   totalClientSpecificRevenue,
   isPhaseTable = false,
   preCalculatedYearlyMWh,
-  preCalculatedYearlyCredits
+  preCalculatedYearlyCredits,
+  clientShareOverride
 }: CarbonCreditTableProps) {
   const [tableData, setTableData] = useState<TableRowData[]>([]);
   const [loading, setLoading] = useState(true);
