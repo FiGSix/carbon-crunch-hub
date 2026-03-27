@@ -163,6 +163,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
         totalMWhGenerated={totalMWhGenerated}
         totalCarbonCredits={totalCarbonCredits}
         totalClientSpecificRevenue={totalClientSpecificRevenue}
+        clientShareOverride={clientShareOverride ?? undefined}
       />
       
       {commissionDate && (

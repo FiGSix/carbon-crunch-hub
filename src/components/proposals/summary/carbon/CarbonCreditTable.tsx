@@ -25,6 +25,7 @@ interface CarbonCreditTableProps {
   isPhaseTable?: boolean;
   preCalculatedYearlyMWh?: Record<string, number>;
   preCalculatedYearlyCredits?: Record<string, number>;
+  clientShareOverride?: number;
 }
 
 interface TableRowData {
@@ -45,7 +46,8 @@ export function CarbonCreditTable({
   totalClientSpecificRevenue,
   isPhaseTable = false,
   preCalculatedYearlyMWh,
-  preCalculatedYearlyCredits
+  preCalculatedYearlyCredits,
+  clientShareOverride
 }: CarbonCreditTableProps) {
   const [tableData, setTableData] = useState<TableRowData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,8 +75,8 @@ export function CarbonCreditTable({
             ? preCalculatedYearlyCredits[year]
             : calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
           
-          const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize);
-          const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize);
+          const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize, clientShareOverride);
+          const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize, clientShareOverride);
           
           data.push({
             year,
@@ -95,7 +97,7 @@ export function CarbonCreditTable({
     };
     
     loadTableData();
-  }, [revenue, systemSizeKWp, commissionDate, portfolioSize, preCalculatedYearlyMWh, preCalculatedYearlyCredits]);
+  }, [revenue, systemSizeKWp, commissionDate, portfolioSize, preCalculatedYearlyMWh, preCalculatedYearlyCredits, clientShareOverride]);
 
   if (loading) {
     return (
