@@ -25,6 +25,7 @@ interface CarbonCreditTableProps {
   isPhaseTable?: boolean;
   preCalculatedYearlyMWh?: Record<string, number>;
   preCalculatedYearlyCredits?: Record<string, number>;
+  clientShareOverride?: number;
 }
 
 interface TableRowData {
