@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { ProposalListItem } from '@/types/proposals';
+import { getClientSharePercentage } from '@/services/calculations/carbon/pricing';
 
 interface ClientShareCellProps {
   proposal: ProposalListItem;
@@ -7,7 +8,8 @@ interface ClientShareCellProps {
 
 export function ClientShareCell({ proposal }: ClientShareCellProps) {
   const percentage = proposal.client_share_percentage || 0;
-  const isOverride = proposal.client_share_override_enabled;
+  const autoShare = getClientSharePercentage(proposal.agent_portfolio_kwp || proposal.size || 0);
+  const isOverride = proposal.client_share_override_enabled || Math.abs(percentage - autoShare) > 0.01;
 
   return (
     <div className="flex items-center gap-2">
