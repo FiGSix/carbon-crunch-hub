@@ -20,9 +20,10 @@ interface CarbonCreditSectionProps {
   proposalId?: string | null;
   phases?: any[];
   isMultiPhase?: boolean;
+  clientShareOverride?: number | null;
 }
 
-export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId, phases, isMultiPhase }: CarbonCreditSectionProps) {
+export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId, phases, isMultiPhase, clientShareOverride }: CarbonCreditSectionProps) {
   const { portfolioData, loading: portfolioLoading } = usePortfolioData({
     selectedClientId,
     systemSize,
@@ -40,7 +41,8 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     portfolioData,
     proposalId,
     phases,
-    isMultiPhase
+    isMultiPhase,
+    clientShareOverride
   });
 
   const loading = portfolioLoading || revenueLoading;

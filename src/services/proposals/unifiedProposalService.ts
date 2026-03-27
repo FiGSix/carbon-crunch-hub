@@ -213,11 +213,13 @@ export async function createProposal(
       ? {
           sizeKwp: systemSizeKWp,
           phases: projectInfo.phases,
-          commissionDate: projectInfo.phases[0]?.commissionDate
+          commissionDate: projectInfo.phases[0]?.commissionDate,
+          clientShareOverride: clientSharePercentage
         }
       : {
           sizeKwp: systemSizeKWp,
-          commissionDate: projectInfo.commissionDate
+          commissionDate: projectInfo.commissionDate,
+          clientShareOverride: clientSharePercentage
         };
 
     const { revenueByYear } = await UnifiedCarbonService.calculateComplete(

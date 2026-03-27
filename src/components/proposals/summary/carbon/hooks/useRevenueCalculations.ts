@@ -13,6 +13,7 @@ interface UseRevenueCalculationsProps {
   proposalId?: string | null;
   phases?: ProjectPhase[];
   isMultiPhase?: boolean;
+  clientShareOverride?: number | null;
 }
 
 export function useRevenueCalculations({
@@ -21,7 +22,8 @@ export function useRevenueCalculations({
   portfolioData,
   proposalId,
   phases,
-  isMultiPhase
+  isMultiPhase,
+  clientShareOverride
 }: UseRevenueCalculationsProps) {
   const [clientSpecificRevenue, setClientSpecificRevenue] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -35,8 +37,8 @@ export function useRevenueCalculations({
   const cacheKey = useMemo(() => {
     const portfolioSize = portfolioData?.totalKWp || systemSizeKWp;
     const phaseKey = phases ? phases.map(p => `${p.sizeKWp}-${p.commissionDate}`).join('_') : 'no-phases';
-    return `revenue_${systemSizeKWp}_${commissionDate || 'no-date'}_${portfolioSize}_${proposalId || 'no-id'}_${isMultiPhase ? 'multi' : 'single'}_${phaseKey}`;
-  }, [systemSizeKWp, commissionDate, portfolioData?.totalKWp, proposalId, phases, isMultiPhase]);
+    return `revenue_${systemSizeKWp}_${commissionDate || 'no-date'}_${portfolioSize}_${proposalId || 'no-id'}_${isMultiPhase ? 'multi' : 'single'}_${phaseKey}_${clientShareOverride || 'no-override'}`;
+  }, [systemSizeKWp, commissionDate, portfolioData?.totalKWp, proposalId, phases, isMultiPhase, clientShareOverride]);
 
   const [calculationResult, setCalculationResult] = useState<any>(null);
 
@@ -57,9 +59,10 @@ export function useRevenueCalculations({
         const portfolioSize = portfolioData?.totalKWp || systemSizeKWp;
         
         // Build specs based on whether this is multi-phase or single-phase
+        const overrideValue = clientShareOverride != null ? clientShareOverride : undefined;
         const specs = phases && phases.length > 0
-          ? { sizeKwp: systemSizeKWp, phases }
-          : { sizeKwp: systemSizeKWp, commissionDate };
+          ? { sizeKwp: systemSizeKWp, phases, clientShareOverride: overrideValue }
+          : { sizeKwp: systemSizeKWp, commissionDate, clientShareOverride: overrideValue };
         
         // Use the unified service to calculate complete financials
         const result = await UnifiedCarbonService.calculateComplete(specs, portfolioSize);

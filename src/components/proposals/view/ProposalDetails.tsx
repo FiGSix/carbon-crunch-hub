@@ -120,6 +120,7 @@ export function ProposalDetails({
                 proposalId={proposal.id}
                 phases={projectInfo.phases}
                 isMultiPhase={projectInfo.isMultiPhase}
+                clientShareOverride={proposal.client_share_percentage}
               />
               <RevenueDistributionSection 
                 systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}

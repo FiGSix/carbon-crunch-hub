@@ -8,6 +8,7 @@ export interface SystemSpecs {
   commissionDate?: string | Date;
   phases?: ProjectPhase[];
   province?: string;
+  clientShareOverride?: number;
 }
 
 export interface PhaseRevenue {
