@@ -21,6 +21,7 @@ interface CarbonCreditTableWrapperProps {
   totalMWhGenerated: number;
   totalCarbonCredits: number;
   totalClientSpecificRevenue: number;
+  clientShareOverride?: number;
 }
 
 export function CarbonCreditTableWrapper({
