@@ -50,6 +50,7 @@ export function CarbonCreditTableWrapper({
         totalCarbonCredits={totalCarbonCredits}
         totalClientSpecificRevenue={totalClientSpecificRevenue}
         isPhaseTable={false}
+        clientShareOverride={clientShareOverride}
       />
     );
   }
