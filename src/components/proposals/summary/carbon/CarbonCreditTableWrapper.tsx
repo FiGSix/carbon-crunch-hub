@@ -148,6 +148,7 @@ export function CarbonCreditTableWrapper({
           preCalculatedYearlyMWh={aggregateYearlyMWhFromPhases(phases, Object.keys(consolidatedRevenue))}
           preCalculatedYearlyCredits={aggregateYearlyCarbonCreditsFromPhases(phases, Object.keys(consolidatedRevenue))}
           isPhaseTable={false}
+          clientShareOverride={clientShareOverride}
         />
       </div>
     </div>

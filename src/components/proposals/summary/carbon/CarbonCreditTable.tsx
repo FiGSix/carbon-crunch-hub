@@ -97,7 +97,7 @@ export function CarbonCreditTable({
     };
     
     loadTableData();
-  }, [revenue, systemSizeKWp, commissionDate, portfolioSize, preCalculatedYearlyMWh, preCalculatedYearlyCredits]);
+  }, [revenue, systemSizeKWp, commissionDate, portfolioSize, preCalculatedYearlyMWh, preCalculatedYearlyCredits, clientShareOverride]);
 
   if (loading) {
     return (
