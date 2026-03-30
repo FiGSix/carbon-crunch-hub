@@ -1,67 +1,66 @@
 
 
-# Fix: Client Company Team Members Can't Fully Access Onboarding Projects
+# Fix: Add Commission Date Validation to All Entry Points
 
-## Problem
+## Root Cause Analysis
 
-Mpho from Blume Energy (and other client team members) can **see** proposals and project onboarding list items, but cannot:
-1. **Update** project onboarding records (e.g. mark steps complete)
-2. **View/download** documents stored in the onboarding-documents storage bucket
+The "Boland Superspar" project bypassed date validation because the 2022-09-15 minimum commission date check is **only enforced in one narrow path**: the single-phase commission date input field in `ProjectInfoStep.tsx`. Three other entry paths have no validation:
 
-This is because two RLS policies are missing the "client company member" check (check 6):
+### Gaps Found
 
-```text
-✓ proposals SELECT         — has company member check
-✓ project_onboarding SELECT — has company member check
-✗ project_onboarding UPDATE — MISSING company member check
-✓ onboarding_fields ALL     — uses is_project_stakeholder() which has it
-✓ onboarding_documents ALL  — has inline company member check
-✓ storage INSERT/DELETE      — has company member check
-✗ storage SELECT (2 policies) — MISSING company member check
-```
+| Entry Path | Validation Status | Issue |
+|---|---|---|
+| Single-phase proposal (UI) | Partial | Frontend-only; no server-side guard |
+| **Multi-phase proposal (UI)** | **MISSING** | `handlePhasesChange` does zero date checks; `validateAndProceed` only checks `dateValidationError` which is never set for phases |
+| **Bulk upload edge function** | **MISSING** | Hardcodes `commissionedAfter2022: true` without checking the actual date (line 217) |
+| **Partner API** | **WRONG DATE** | Uses `2022-01-01` instead of `2022-09-15` (line 112 in `partner-validation.ts`) |
+| Eligibility proposal edge function | OK | Validates against `2022-09-15` |
 
-## Fix — 1 database migration
+## Fix Plan (4 changes)
 
-### 1. Update `project_onboarding` UPDATE policy
-
-Add the client company member EXISTS clause (matching check 6 from `is_project_stakeholder`):
+### 1. Database trigger — ultimate server-side guard (migration)
+Create a `BEFORE UPDATE` trigger on `proposals` that blocks status changing to `'signed'` if the stored commission date is before 2022-09-15. This catches ALL paths regardless of frontend/API validation gaps.
 
 ```sql
-DROP POLICY "Stakeholders can update onboarding" ON project_onboarding;
-CREATE POLICY "Stakeholders can update onboarding" ON project_onboarding
-FOR UPDATE USING (
-  is_current_user_admin()
-  OR EXISTS (
-    SELECT 1 FROM proposals p
-    WHERE p.id = project_onboarding.proposal_id
-    AND (
-      p.agent_id = auth.uid()
-      OR p.client_id = auth.uid()
-      OR p.client_reference_id = auth.uid()
-      OR EXISTS (SELECT 1 FROM clients WHERE id = p.client_reference_id AND user_id = auth.uid())
-      OR EXISTS (
-        SELECT 1 FROM company_members cm1
-        JOIN company_members cm2 ON cm1.company_id = cm2.company_id
-        WHERE cm1.user_id = auth.uid() AND cm2.user_id = p.agent_id
-        AND cm1.status = 'active' AND cm2.status = 'active'
-      )
-      OR EXISTS (  -- NEW: client company member check
-        SELECT 1 FROM clients c
-        JOIN client_company_members ccm ON ccm.client_company_id = c.client_company_id
-        WHERE c.id = p.client_reference_id
-        AND ccm.user_id = auth.uid() AND ccm.status = 'active'
-      )
-    )
-  )
-);
+CREATE OR REPLACE FUNCTION check_commission_date_before_signing()
+RETURNS TRIGGER AS $$
+DECLARE comm_date text;
+BEGIN
+  IF NEW.status = 'signed' AND OLD.status IS DISTINCT FROM 'signed' THEN
+    comm_date := COALESCE(
+      NEW.project_info->>'commissionDate',
+      NEW.content->'projectInfo'->>'commissionDate'
+    );
+    IF comm_date IS NOT NULL AND comm_date::date < '2022-09-15'::date THEN
+      RAISE EXCEPTION 'Cannot sign: commissioning date % is before 2022-09-15', comm_date;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
-### 2. Update two storage SELECT policies
+### 2. Multi-phase date validation in frontend (`ProjectInfoStep.tsx`)
+In `handlePhasesChange`, validate each phase's `commissionDate` against `validateCommissionDate()`. Set `dateValidationError` if any phase fails. This blocks the "Next" button for multi-phase proposals with invalid dates.
 
-Both "Users can view own project documents" and "Authorized users can read onboarding documents" need the client company member EXISTS clause added to their WHERE conditions.
+### 3. Bulk upload date validation (`supabase/functions/bulk-upload-legacy-projects/index.ts`)
+Replace hardcoded `commissionedAfter2022: true` with an actual date check:
+```typescript
+const minDate = new Date('2022-09-15');
+if (new Date(row.commissioning_date) < minDate) {
+  throw new Error(`Commissioning date ${row.commissioning_date} is before minimum 2022-09-15`);
+}
+```
+
+### 4. Partner API date fix (`supabase/functions/_shared/partner-validation.ts`)
+Change line 112 from `new Date('2022-01-01')` to `new Date('2022-09-15')` and update the error message.
+
+## Regarding "Boland Superspar"
+This existing project needs a manual decision — either update its commission date or flag it as an exception. The database trigger only blocks future signings.
 
 ## Summary
-- 1 migration with 3 policy updates (drop + recreate each)
-- No code changes needed — the frontend queries and component logic are already correct
-- This aligns these policies with the pattern already used in `is_project_stakeholder()`, storage INSERT/DELETE, and `onboarding_documents`
+- 1 migration (trigger)
+- 1 frontend fix (multi-phase validation)
+- 2 edge function fixes (bulk upload + partner API)
+- All paths will enforce 2022-09-15 minimum, with the database trigger as the last line of defense
 
