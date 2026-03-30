@@ -119,6 +119,13 @@ serve(async (req) => {
 
         if (clientError) throw clientError;
 
+        // 2b. Validate commission date (must be on or after 2022-09-15)
+        const minCommissionDate = new Date('2022-09-15');
+        const commDate = new Date(row.commissioning_date);
+        if (isNaN(commDate.getTime()) || commDate < minCommissionDate) {
+          throw new Error(`Commissioning date ${row.commissioning_date} is before minimum allowed date 2022-09-15`);
+        }
+
         // 3. Calculate carbon credits (simplified)
         const systemSizeKwp = row.system_size_kwp;
         const annualEnergy = systemSizeKwp * 1500; // kWh per year
@@ -214,7 +221,7 @@ serve(async (req) => {
               inSouthAfrica: true,
               notRegistered: true,
               under15MWp: true,
-              commissionedAfter2022: true,
+              commissionedAfter2022: commDate >= minCommissionDate,
               legalOwnership: true,
               noGovernmentFunding: true
             },
