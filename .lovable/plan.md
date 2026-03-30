@@ -1,25 +1,67 @@
 
 
-# Fix: Thread client share override into rate-per-ton display
+# Fix: Client Company Team Members Can't Fully Access Onboarding Projects
 
-## Status
-The previous fix correctly updated the **calculation engine** (`calculateComplete`) to respect `clientShareOverride`, but the **table display** still calls `clientPricing.ts` functions that ignore the override. This means the "Client Carbon Price (R/tCO₂e)" column and per-row revenue in the table still use the tier-calculated share (60.20%) instead of the override (e.g. 65%).
+## Problem
 
-## Changes (4 files, ~15 lines)
+Mpho from Blume Energy (and other client team members) can **see** proposals and project onboarding list items, but cannot:
+1. **Update** project onboarding records (e.g. mark steps complete)
+2. **View/download** documents stored in the onboarding-documents storage bucket
 
-**1. `src/lib/calculations/carbon/clientPricing.ts`**
-Add optional `clientShareOverride?: number` parameter to both functions. Use it instead of `getClientSharePercentage()` when provided.
+This is because two RLS policies are missing the "client company member" check (check 6):
 
-**2. `src/components/proposals/summary/carbon/CarbonCreditTable.tsx`**
-- Add `clientShareOverride?: number` to props interface
-- Pass it to `getFormattedClientSpecificCarbonPrice` and `calculateClientSpecificRevenue` calls
+```text
+✓ proposals SELECT         — has company member check
+✓ project_onboarding SELECT — has company member check
+✗ project_onboarding UPDATE — MISSING company member check
+✓ onboarding_fields ALL     — uses is_project_stakeholder() which has it
+✓ onboarding_documents ALL  — has inline company member check
+✓ storage INSERT/DELETE      — has company member check
+✗ storage SELECT (2 policies) — MISSING company member check
+```
 
-**3. `src/components/proposals/summary/carbon/CarbonCreditTableWrapper.tsx`**
-- Add `clientShareOverride?: number` to props interface
-- Forward it to all `CarbonCreditTable` instances
+## Fix — 1 database migration
 
-**4. `src/components/proposals/summary/CarbonCreditSection.tsx`**
-- Pass `clientShareOverride` to `CarbonCreditTableWrapper` (value already available as a prop)
+### 1. Update `project_onboarding` UPDATE policy
 
-No database changes.
+Add the client company member EXISTS clause (matching check 6 from `is_project_stakeholder`):
+
+```sql
+DROP POLICY "Stakeholders can update onboarding" ON project_onboarding;
+CREATE POLICY "Stakeholders can update onboarding" ON project_onboarding
+FOR UPDATE USING (
+  is_current_user_admin()
+  OR EXISTS (
+    SELECT 1 FROM proposals p
+    WHERE p.id = project_onboarding.proposal_id
+    AND (
+      p.agent_id = auth.uid()
+      OR p.client_id = auth.uid()
+      OR p.client_reference_id = auth.uid()
+      OR EXISTS (SELECT 1 FROM clients WHERE id = p.client_reference_id AND user_id = auth.uid())
+      OR EXISTS (
+        SELECT 1 FROM company_members cm1
+        JOIN company_members cm2 ON cm1.company_id = cm2.company_id
+        WHERE cm1.user_id = auth.uid() AND cm2.user_id = p.agent_id
+        AND cm1.status = 'active' AND cm2.status = 'active'
+      )
+      OR EXISTS (  -- NEW: client company member check
+        SELECT 1 FROM clients c
+        JOIN client_company_members ccm ON ccm.client_company_id = c.client_company_id
+        WHERE c.id = p.client_reference_id
+        AND ccm.user_id = auth.uid() AND ccm.status = 'active'
+      )
+    )
+  )
+);
+```
+
+### 2. Update two storage SELECT policies
+
+Both "Users can view own project documents" and "Authorized users can read onboarding documents" need the client company member EXISTS clause added to their WHERE conditions.
+
+## Summary
+- 1 migration with 3 policy updates (drop + recreate each)
+- No code changes needed — the frontend queries and component logic are already correct
+- This aligns these policies with the pattern already used in `is_project_stakeholder()`, storage INSERT/DELETE, and `onboarding_documents`
 
