@@ -109,8 +109,8 @@ export function validateCreateProposal(body: unknown): ValidationResult<CreatePr
       errors.push({ field: 'project.commissioning_date', message: 'Valid commissioning date is required (YYYY-MM-DD)', received: commissioningDate });
     } else {
       const date = new Date(commissioningDate);
-      if (date < new Date('2022-01-01')) {
-        errors.push({ field: 'project.commissioning_date', message: 'Commissioning date must be 2022 or later', received: commissioningDate });
+      if (date < new Date('2022-09-15')) {
+        errors.push({ field: 'project.commissioning_date', message: 'Commissioning date must be on or after 2022-09-15', received: commissioningDate });
       }
     }
     

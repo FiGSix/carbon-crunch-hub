@@ -221,7 +221,7 @@ serve(async (req) => {
               inSouthAfrica: true,
               notRegistered: true,
               under15MWp: true,
-              commissionedAfter2022: true,
+              commissionedAfter2022: commDate >= minCommissionDate,
               legalOwnership: true,
               noGovernmentFunding: true
             },

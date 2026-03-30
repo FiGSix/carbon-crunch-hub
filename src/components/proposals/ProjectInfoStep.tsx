@@ -145,10 +145,27 @@ export function ProjectInfoStep({
     }
   };
 
-  // Handle phases change
+  // Handle phases change with date validation
   const handlePhasesChange = (phases: any[]) => {
     if (setProjectInfo) {
       const totalSize = phases.reduce((sum, p) => sum + (p.sizeKWp || 0), 0);
+      
+      // Validate each phase's commission date
+      const invalidPhase = phases.find(p => {
+        if (p.commissionDate) {
+          const validation = validateCommissionDate(p.commissionDate);
+          return !validation.isValid;
+        }
+        return false;
+      });
+      
+      if (invalidPhase && invalidPhase.commissionDate) {
+        const validation = validateCommissionDate(invalidPhase.commissionDate);
+        setDateValidationError(validation.error || 'Invalid phase date');
+      } else {
+        setDateValidationError(null);
+      }
+      
       setProjectInfo({
         ...projectInfo,
         phases,
