@@ -5,13 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "lucide-react";
-import { MapboxAddressAutocomplete } from "@/components/common/MapboxAddressAutocomplete";
-import { AddressInputMode } from "@/components/common/AddressInputMode";
 import { MapAddressPicker } from "@/components/common/MapAddressPicker";
 import { ProjectInformation } from "@/types/proposals";
 import { getMinimumDateString } from "@/utils/dateValidation";
 import { ProjectPhasesInput } from "./ProjectPhasesInput";
-import { SelectedLocationDisplay } from "./SelectedLocationDisplay";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProjectInfoFormProps {
@@ -32,10 +29,8 @@ export function ProjectInfoForm({
   setProjectInfo
 }: ProjectInfoFormProps) {
   const { toast } = useToast();
-  const [addressMode, setAddressMode] = useState<'search' | 'map'>('search');
 
   const handleMapLocationSelect = (lat: number, lng: number, address: string) => {
-    // Use setProjectInfo for consolidated state update if available
     if (setProjectInfo) {
       setProjectInfo({
         ...projectInfo,
@@ -45,30 +40,20 @@ export function ProjectInfoForm({
         addressSource: 'pin_drop'
       });
     } else {
-      // Fallback to synthetic events for backwards compatibility
       const event = {
-        target: {
-          name: 'address',
-          value: address
-        }
+        target: { name: 'address', value: address }
       } as React.ChangeEvent<HTMLInputElement>;
-      
       updateProjectInfo(event);
       
       const gpsEvent = {
-        target: {
-          name: 'gpsData',
-          value: JSON.stringify({ lat, lng, addressSource: 'pin_drop' })
-        }
+        target: { name: 'gpsData', value: JSON.stringify({ lat, lng, addressSource: 'pin_drop' }) }
       } as React.ChangeEvent<HTMLInputElement>;
       updateProjectInfo(gpsEvent);
     }
     
-    setAddressMode('search');
-    
     toast({
       title: "Location Selected",
-      description: "Your pin-dropped location has been saved successfully.",
+      description: "Your location has been saved successfully.",
     });
   };
 
@@ -89,50 +74,21 @@ export function ProjectInfoForm({
         
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="address">Project Address</Label>
-          <AddressInputMode mode={addressMode} onModeChange={setAddressMode} />
-          
-          {addressMode === 'search' ? (
-            <>
-              {projectInfo.address && projectInfo.gpsLat && projectInfo.gpsLng ? (
-                <SelectedLocationDisplay
-                  address={projectInfo.address}
-                  gpsLat={projectInfo.gpsLat}
-                  gpsLng={projectInfo.gpsLng}
-                  addressSource={projectInfo.addressSource}
-                  onEdit={() => setAddressMode('map')}
-                />
-              ) : (
-                <>
-                  <MapboxAddressAutocomplete
-                    value={projectInfo.address}
-                    onChange={(address, coords) => {
-                      handleAddressChange(address);
-                      if (coords && setProjectInfo) {
-                        setProjectInfo({
-                          ...projectInfo,
-                          address,
-                          gpsLat: coords.lat,
-                          gpsLng: coords.lng,
-                          addressSource: 'autocomplete'
-                        });
-                      }
-                    }}
-                    className="retro-input"
-                    required
-                    placeholder="Enter the project's physical address"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Can't find your address? Try "Pin Drop on Map" for rural locations
-                  </p>
-                </>
-              )}
-            </>
-          ) : (
-            <MapAddressPicker
-              onLocationSelect={handleMapLocationSelect}
-              initialLat={projectInfo.gpsLat}
-              initialLng={projectInfo.gpsLng}
-            />
+          <p className="text-xs text-muted-foreground mb-2">
+            Search for an address or drop a pin on the map to set the project location.
+          </p>
+          <MapAddressPicker
+            onLocationSelect={handleMapLocationSelect}
+            initialLat={projectInfo.gpsLat}
+            initialLng={projectInfo.gpsLng}
+          />
+          {projectInfo.address && projectInfo.gpsLat && projectInfo.gpsLng && (
+            <div className="mt-2 p-2 bg-muted rounded text-sm">
+              <p className="font-medium">Selected: {projectInfo.address}</p>
+              <p className="text-xs text-muted-foreground">
+                GPS: {projectInfo.gpsLat.toFixed(6)}, {projectInfo.gpsLng.toFixed(6)}
+              </p>
+            </div>
           )}
         </div>
       </div>

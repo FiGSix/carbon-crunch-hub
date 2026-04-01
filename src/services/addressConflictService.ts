@@ -2,10 +2,13 @@
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 
+export type ProximityLevel = 'conflict' | 'warning' | 'notice' | null;
+
 export interface AddressConflictResult {
   hasConflict: boolean;
-  distanceMeters?: number; // Distance from conflicting project (if GPS-based)
-  matchMethod?: 'gps' | 'address'; // How the conflict was detected
+  proximityLevel: ProximityLevel;
+  distanceMeters?: number;
+  matchMethod?: 'gps';
   conflictingProposal?: {
     id: string;
     agentName: string;
@@ -22,21 +25,29 @@ export interface AddressConflictCheck {
   zipCode: string;
   gpsLat?: number;
   gpsLng?: number;
-  excludeProposalId?: string; // Exclude current proposal when editing
+  excludeProposalId?: string;
 }
 
-// Distance threshold in meters - projects within this distance are considered conflicts
-const CONFLICT_DISTANCE_THRESHOLD_METERS = 50;
+// Proximity thresholds in meters
+const CONFLICT_THRESHOLD = 50;
+const WARNING_THRESHOLD = 200;
+const NOTICE_THRESHOLD = 500;
+
+function getProximityLevel(distanceMeters: number): ProximityLevel {
+  if (distanceMeters <= CONFLICT_THRESHOLD) return 'conflict';
+  if (distanceMeters <= WARNING_THRESHOLD) return 'warning';
+  if (distanceMeters <= NOTICE_THRESHOLD) return 'notice';
+  return null;
+}
 
 /**
  * Calculate distance between two GPS coordinates using Haversine formula
- * Returns distance in meters
  */
 function calculateDistanceMeters(
   lat1: number, lng1: number,
   lat2: number, lng2: number
 ): number {
-  const R = 6371000; // Earth's radius in meters
+  const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a =
@@ -48,13 +59,13 @@ function calculateDistanceMeters(
 }
 
 /**
- * Check if an address already exists in the proposals table
+ * Check if an address already exists in the proposals table.
+ * Uses GPS-only matching with three proximity tiers:
+ * - ≤50m: Conflict (blocks submission)
+ * - ≤200m: Warning (advisory)
+ * - ≤500m: Notice (advisory)
  */
 export async function checkAddressConflict({
-  street,
-  city,
-  state,
-  zipCode,
   gpsLat,
   gpsLng,
   excludeProposalId
@@ -64,18 +75,15 @@ export async function checkAddressConflict({
     feature: 'conflict-detection'
   });
 
-  try {
-    conflictLogger.info('Checking address conflict', {
-      street,
-      city,
-      state,
-      zipCode,
-      gpsLat,
-      gpsLng,
-      excludeProposalId
-    });
+  // GPS coordinates are required for conflict detection
+  if (!gpsLat || !gpsLng) {
+    conflictLogger.info('No GPS coordinates provided, skipping conflict check');
+    return { hasConflict: false, proximityLevel: null };
+  }
 
-    // Build the query to check for existing proposals with the same address in project_info JSON
+  try {
+    conflictLogger.info('Checking address conflict', { gpsLat, gpsLng, excludeProposalId });
+
     let query = supabase
       .from('proposals')
       .select(`
@@ -93,9 +101,8 @@ export async function checkAddressConflict({
           last_name
         )
       `)
-      .neq('status', 'archived'); // Don't check archived proposals
+      .neq('status', 'archived');
 
-    // Exclude current proposal if editing
     if (excludeProposalId) {
       query = query.neq('id', excludeProposalId);
     }
@@ -109,95 +116,67 @@ export async function checkAddressConflict({
 
     if (!existingProposals || existingProposals.length === 0) {
       conflictLogger.info('No proposals found to check');
-      return { hasConflict: false };
+      return { hasConflict: false, proximityLevel: null };
     }
 
-    // Filter proposals by matching - GPS-based (primary) or address-based (fallback)
-    let conflictingProposal: typeof existingProposals[0] | undefined;
-    let conflictDistance: number | undefined;
-    let matchMethod: 'gps' | 'address' | undefined;
+    // Find the nearest project within the notice threshold
+    let nearestProposal: typeof existingProposals[0] | undefined;
+    let nearestDistance = Infinity;
 
     for (const proposal of existingProposals) {
       const projectInfo = proposal.project_info as any;
       const existingLat = projectInfo?.gpsLat;
       const existingLng = projectInfo?.gpsLng;
 
-      // GPS-based check (primary method) - most accurate
-      if (gpsLat && gpsLng && existingLat && existingLng) {
-        const distance = calculateDistanceMeters(
-          gpsLat, gpsLng, existingLat, existingLng
-        );
+      if (!existingLat || !existingLng) continue;
 
-        if (distance <= CONFLICT_DISTANCE_THRESHOLD_METERS) {
-          conflictingProposal = proposal;
-          conflictDistance = Math.round(distance);
-          matchMethod = 'gps';
-          conflictLogger.info('GPS-based conflict detected', { distance, threshold: CONFLICT_DISTANCE_THRESHOLD_METERS });
-          break;
-        }
-        // If both have GPS but are far apart, they're NOT conflicts
-        // (even if address strings look similar)
-        continue;
-      }
+      const distance = calculateDistanceMeters(gpsLat, gpsLng, existingLat, existingLng);
 
-      // Fallback to address string matching (only if GPS unavailable on either side)
-      const proposalAddress = projectInfo?.address || '';
-      if (proposalAddress && street && city) {
-        const inputAddress = `${street} ${city} ${state} ${zipCode}`.toLowerCase().trim();
-        const existingAddress = proposalAddress.toLowerCase().trim();
-
-        const isAddressMatch = inputAddress === existingAddress ||
-          (street && proposalAddress.toLowerCase().includes(street.toLowerCase()) &&
-           city && proposalAddress.toLowerCase().includes(city.toLowerCase()) &&
-           state && proposalAddress.toLowerCase().includes(state.toLowerCase()) &&
-           zipCode && proposalAddress.toLowerCase().includes(zipCode.toLowerCase()));
-
-        if (isAddressMatch) {
-          conflictingProposal = proposal;
-          matchMethod = 'address';
-          conflictLogger.info('Address-based conflict detected (GPS unavailable)');
-          break;
-        }
+      if (distance < nearestDistance && distance <= NOTICE_THRESHOLD) {
+        nearestDistance = distance;
+        nearestProposal = proposal;
       }
     }
 
-    if (!conflictingProposal) {
-      conflictLogger.info('No address conflict found');
-      return { hasConflict: false };
+    if (!nearestProposal) {
+      conflictLogger.info('No nearby projects found within 500m');
+      return { hasConflict: false, proximityLevel: null };
     }
 
-    // Found a conflict - return details of the conflicting proposal
-    const agentProfile = conflictingProposal.profiles;
+    const roundedDistance = Math.round(nearestDistance);
+    const proximityLevel = getProximityLevel(nearestDistance);
+
+    const agentProfile = nearestProposal.profiles;
     const agentName = agentProfile 
       ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim()
       : 'Unknown Agent';
     
-    const clientData = conflictingProposal.clients;
+    const clientData = nearestProposal.clients;
     const clientName = clientData
       ? clientData.company_name || `${clientData.first_name || ''} ${clientData.last_name || ''}`.trim()
       : 'Unknown Client';
 
-    conflictLogger.warn('Address conflict detected', {
-      conflictingProposalId: conflictingProposal.id,
-      agentName,
-      clientName
+    conflictLogger.warn('Proximity match detected', {
+      proximityLevel,
+      distance: roundedDistance,
+      conflictingProposalId: nearestProposal.id,
     });
 
     return {
-      hasConflict: true,
-      distanceMeters: conflictDistance,
-      matchMethod,
+      hasConflict: proximityLevel === 'conflict',
+      proximityLevel,
+      distanceMeters: roundedDistance,
+      matchMethod: 'gps',
       conflictingProposal: {
-        id: conflictingProposal.id,
+        id: nearestProposal.id,
         agentName,
         clientName,
-        createdAt: conflictingProposal.created_at,
-        status: conflictingProposal.status
+        createdAt: nearestProposal.created_at,
+        status: nearestProposal.status
       }
     };
   } catch (error) {
     conflictLogger.error('Failed to check address conflict', { error });
-    // Return no conflict on error to avoid blocking users
-    return { hasConflict: false };
+    return { hasConflict: false, proximityLevel: null };
   }
 }

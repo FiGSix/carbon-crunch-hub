@@ -43,7 +43,7 @@ export function useAddressConflictCheck() {
     } catch (error) {
       conflictLogger.error('Error during conflict check', { error });
       // Set no conflict on error to avoid blocking users
-      setConflictResult({ hasConflict: false });
+      setConflictResult({ hasConflict: false, proximityLevel: null });
     } finally {
       setIsChecking(false);
     }
