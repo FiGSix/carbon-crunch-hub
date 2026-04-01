@@ -1,54 +1,40 @@
 
 
-# Consolidate Address Input to Map-Only + Add Proximity Warning Tiers
+# Improve Address Conflict UX Messaging
 
-## Clarification
+## Problem
 
-Both "Search Address" and "Pin Drop on Map" already use **Mapbox** (not Google). The `MapboxAddressAutocomplete` component calls the `mapbox-geocode` Supabase edge function. There is zero Google dependency in the address flow.
+The current conflict warning messages are technical and unclear from a user's perspective:
+- "This project is already registered within 50m" — users don't think in meters
+- "Matched by address - GPS data not available" — internal system detail exposed
+- The red alert is visually alarming but doesn't clearly tell the user what to **do**
+- Conflict details show raw status values and technical metadata
 
-However, your broader point is valid: having two separate modes creates confusion and the "Search Address" mode can produce results without reliable GPS coordinates. Consolidating to the map picker (which already has its own search bar) ensures every project always has GPS coordinates, making conflict detection reliable.
+## Changes
 
-## Plan
+### 1. Rewrite tier messages for clarity (`AddressConflictWarning.tsx`)
 
-### 1. Remove dual-mode toggle, default to map view (`ProjectInfoForm.tsx`)
-- Remove the `AddressInputMode` component and the `addressMode` state
-- Always render `MapAddressPicker` as the sole address input
-- Remove the `MapboxAddressAutocomplete` standalone usage and the `SelectedLocationDisplay` conditional block
-- The `MapAddressPicker` already has a built-in search bar, so users lose nothing
+**Conflict (red, ≤50m):**
+- Title: "This Location May Already Be Registered"
+- Message: "We found an existing project very close to this location. If you believe this is a different site, please reach out to the Crunch Carbon team for assistance."
 
-### 2. Add proximity warning tiers to conflict service (`addressConflictService.ts`)
-- Keep the existing 50m hard conflict (blocks submission)
-- Add two new **advisory** tiers in the return type:
-  - **200m**: "Warning — another project is within 200m"
-  - **500m**: "Notice — another project is within 500m"
-- Update `AddressConflictResult` to include a `proximityLevel` field: `'conflict' | 'warning' | 'notice' | null`
-- Update the loop: after checking the 50m threshold, continue scanning for the nearest project within 500m and return the closest match with its tier
+**Warning (amber, ≤200m):**
+- Title: "Nearby Project Detected"
+- Message: "There's an existing project close to this location. Please confirm this is a separate site before continuing."
 
-### 3. Update conflict warning UI (`AddressConflictWarning.tsx`)
-- Render different severity styles based on `proximityLevel`:
-  - `conflict` (≤50m): red, blocks submission (existing behavior)
-  - `warning` (≤200m): amber/orange, advisory only
-  - `notice` (≤500m): blue/info, advisory only
-- Show distance in meters for all tiers
+**Notice (blue, ≤500m):**
+- Title: "Heads Up — Nearby Project"
+- Message: "An existing project is located in the same area. No action needed — this is just for your reference."
 
-### 4. Remove fallback address string matching (`addressConflictService.ts`)
-- Since all projects will now have GPS coordinates (map picker is mandatory), remove the loose string-matching fallback (lines 143-161) that caused the false positive
-- This eliminates the root cause of the "Mount Ashley Farming" issue entirely
+### 2. Clean up the conflict detail card
+- Replace raw `status` with human-readable labels (e.g., "signed" → "Active", "draft" → "In Progress")
+- Show distance as "~Xm away" in a friendlier format
+- Remove "Matched by address - GPS data not available" line (no longer relevant since we removed string fallback)
 
-### 5. Clean up unused components
-- Delete `src/components/common/AddressInputMode.tsx` (no longer used)
-- Remove `MapboxAddressAutocomplete` import from `ProjectInfoForm.tsx`
-- Remove `SelectedLocationDisplay` import and usage from `ProjectInfoForm.tsx`
+### 3. Improve action buttons for conflict tier
+- Change "Contact Support" button text to "Get Help"
+- Change "Continue Anyway (Admin Override)" to "I confirm this is a different site"
 
 ## Files Changed
-- `src/components/proposals/project-info/ProjectInfoForm.tsx` — remove dual mode, always use MapAddressPicker
-- `src/services/addressConflictService.ts` — add 200m/500m tiers, remove string fallback
-- `src/components/proposals/project-info/AddressConflictWarning.tsx` — tiered severity UI
-- Delete `src/components/common/AddressInputMode.tsx`
-
-## Summary
-- No Google code exists — both modes are already Mapbox
-- Consolidating to map-only ensures GPS coordinates are always captured
-- Three-tier proximity system: 50m (block), 200m (warn), 500m (notice)
-- Removes the loose string matching that caused false positives
+- `src/components/proposals/project-info/AddressConflictWarning.tsx` — rewrite messages, humanize details, improve button labels
 
