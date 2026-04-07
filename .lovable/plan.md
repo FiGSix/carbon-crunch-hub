@@ -1,40 +1,53 @@
 
 
-# Improve Address Conflict UX Messaging
+# Backfill GPS Coordinates for Existing Proposals
 
-## Problem
+## Current State
 
-The current conflict warning messages are technical and unclear from a user's perspective:
-- "This project is already registered within 50m" — users don't think in meters
-- "Matched by address - GPS data not available" — internal system detail exposed
-- The red alert is visually alarming but doesn't clearly tell the user what to **do**
-- Conflict details show raw status values and technical metadata
+- **1,141** total proposals (non-deleted)
+- **70** have GPS coordinates (6%)
+- **1,021** have an address string but no GPS
+- **50** have neither address nor GPS
+- The `onboarding_fields` table has 257 records, 72 with GPS
 
-## Changes
+## Approach: Edge Function Batch Geocoder
 
-### 1. Rewrite tier messages for clarity (`AddressConflictWarning.tsx`)
+Create a new edge function `backfill-geocode` that an admin can trigger to forward-geocode all proposals missing GPS data using the existing Mapbox integration.
 
-**Conflict (red, ≤50m):**
-- Title: "This Location May Already Be Registered"
-- Message: "We found an existing project very close to this location. If you believe this is a different site, please reach out to the Crunch Carbon team for assistance."
+### How it works
 
-**Warning (amber, ≤200m):**
-- Title: "Nearby Project Detected"
-- Message: "There's an existing project close to this location. Please confirm this is a separate site before continuing."
+1. **New edge function: `backfill-geocode`**
+   - Admin-only (validates JWT + admin role)
+   - Queries proposals where `project_info->>'address'` exists but `project_info->>'gpsLat'` is null
+   - Processes in batches of 50 with a small delay between each Mapbox API call to respect rate limits
+   - For each address, calls Mapbox forward geocoding (same logic as `mapbox-geocode`)
+   - Updates `project_info` JSONB with `gpsLat`, `gpsLng`, and `addressSource: 'backfill'`
+   - Skips records with blank/invalid addresses (e.g., "N/A", empty string)
+   - Returns a summary: processed, succeeded, failed, skipped
 
-**Notice (blue, ≤500m):**
-- Title: "Heads Up — Nearby Project"
-- Message: "An existing project is located in the same area. No action needed — this is just for your reference."
+2. **Also backfill `onboarding_fields`**
+   - For records with `system_address` but no `system_gps_lat`/`system_gps_lng`, geocode and update those columns too
 
-### 2. Clean up the conflict detail card
-- Replace raw `status` with human-readable labels (e.g., "signed" → "Active", "draft" → "In Progress")
-- Show distance as "~Xm away" in a friendlier format
-- Remove "Matched by address - GPS data not available" line (no longer relevant since we removed string fallback)
+3. **Admin trigger UI**
+   - Add a button on the admin settings or data management page
+   - Shows progress and results after completion
+   - One-click operation with confirmation dialog
 
-### 3. Improve action buttons for conflict tier
-- Change "Contact Support" button text to "Get Help"
-- Change "Continue Anyway (Admin Override)" to "I confirm this is a different site"
+### Technical Details
 
-## Files Changed
-- `src/components/proposals/project-info/AddressConflictWarning.tsx` — rewrite messages, humanize details, improve button labels
+- **Rate limiting**: Mapbox allows 600 requests/minute on most plans. We'll add a 150ms delay between calls (~400/min)
+- **Skipped addresses**: "N/A", empty strings, and addresses shorter than 5 characters will be skipped
+- **Idempotent**: Only processes records missing GPS; safe to run multiple times
+- **Service role**: The edge function uses `SUPABASE_SERVICE_ROLE_KEY` to update `project_info` JSONB directly
+
+### Files
+
+| File | Action |
+|------|--------|
+| `supabase/functions/backfill-geocode/index.ts` | New edge function |
+| `src/pages/admin/DataManagement.tsx` (or similar admin page) | Add "Backfill GPS" button |
+
+### Estimated Impact
+
+~1,021 proposals will gain GPS coordinates, enabling accurate proximity-based conflict detection going forward.
 
