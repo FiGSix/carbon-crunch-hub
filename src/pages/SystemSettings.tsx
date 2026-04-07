@@ -5,6 +5,7 @@ import { RegionalSolarYieldManager } from "@/components/admin/RegionalSolarYield
 import { DataCorrectionManager } from "@/components/admin/DataCorrectionManager";
 import { ClientPopulationManager } from "@/components/admin/ClientPopulationManager";
 import { VintageDeadlineManager } from "@/components/admin/VintageDeadlineManager";
+import { GpsBackfillManager } from "@/components/admin/GpsBackfillManager";
 import { useAuth } from "@/contexts/auth";
 
 const SystemSettings = () => {
@@ -34,6 +35,7 @@ const SystemSettings = () => {
         <ClientPopulationManager />
         <RegionalSolarYieldManager />
         <CarbonPriceManager />
+        <GpsBackfillManager />
       </div>
     </DashboardLayout>
   );
