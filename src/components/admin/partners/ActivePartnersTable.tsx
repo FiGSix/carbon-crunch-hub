@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Key, MoreHorizontal } from "lucide-react";
+import { Loader2, Key, MoreHorizontal, Shield } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ApiKeyRevealDialog } from "./ApiKeyRevealDialog";
 import { PartnerDetailsDialog } from "./PartnerDetailsDialog";
+import { ManageScopesDialog } from "./ManageScopesDialog";
 
 interface Partner {
   id: string;
