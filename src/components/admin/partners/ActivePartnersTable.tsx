@@ -264,6 +264,10 @@ export function ActivePartnersTable({ onRefresh }: ActivePartnersTableProps) {
                         <DropdownMenuItem onClick={() => setSelectedPartner(partner)}>
                           View Details
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setScopesPartner(partner)}>
+                          <Shield className="h-4 w-4 mr-2" />
+                          Manage Scopes
+                        </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => handleRegenerateKey(partner)}
                           disabled={regeneratingId === partner.id}
