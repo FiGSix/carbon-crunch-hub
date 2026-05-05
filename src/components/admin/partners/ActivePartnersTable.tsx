@@ -51,6 +51,7 @@ export function ActivePartnersTable({ onRefresh }: ActivePartnersTableProps) {
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [scopesPartner, setScopesPartner] = useState<Partner | null>(null);
   const { toast } = useToast();
 
   const fetchPartners = async () => {
