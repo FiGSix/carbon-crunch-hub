@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Copy, Check, AlertTriangle } from "lucide-react";
+import { AVAILABLE_SCOPES } from "./scopes";
 
 const formSchema = z.object({
   email: z.string().email("Valid email is required"),
@@ -28,16 +29,6 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
-
-const AVAILABLE_SCOPES = [
-  { id: "proposals:create", label: "Create Proposals", description: "Create new proposals" },
-  { id: "proposals:read", label: "Read Proposals", description: "View proposal details" },
-  { id: "proposals:acceptance", label: "Send Acceptance Links", description: "Trigger client acceptance emails" },
-  { id: "projects:onboarding:read", label: "Read Onboarding", description: "View project onboarding status" },
-  { id: "projects:onboarding:write", label: "Write Onboarding", description: "Update project onboarding data" },
-  { id: "projects:documents:write", label: "Upload Documents", description: "Upload project documents" },
-  { id: "projects:data-access:write", label: "Configure Data Access", description: "Set up monitoring access" },
-];
 
 interface PartnerInvitationDialogProps {
   open: boolean;
