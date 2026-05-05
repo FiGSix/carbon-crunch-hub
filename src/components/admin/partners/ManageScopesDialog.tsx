@@ -58,7 +58,7 @@ export function ManageScopesDialog({ partner, onClose, onSaved }: ManageScopesDi
     try {
       const { error } = await supabase
         .from("partner_api_keys")
-        .update({ scopes: selected, updated_at: new Date().toISOString() })
+        .update({ scopes: selected })
         .eq("id", activeKey.id);
       if (error) throw error;
       toast({
@@ -67,9 +67,13 @@ export function ManageScopesDialog({ partner, onClose, onSaved }: ManageScopesDi
       });
       onSaved();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to update scopes:", err);
-      toast({ title: "Error", description: "Failed to update scopes", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err?.message ?? "Failed to update scopes",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
