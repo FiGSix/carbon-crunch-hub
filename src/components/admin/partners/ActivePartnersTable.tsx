@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Key, MoreHorizontal } from "lucide-react";
+import { Loader2, Key, MoreHorizontal, Shield } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ApiKeyRevealDialog } from "./ApiKeyRevealDialog";
 import { PartnerDetailsDialog } from "./PartnerDetailsDialog";
+import { ManageScopesDialog } from "./ManageScopesDialog";
 
 interface Partner {
   id: string;
@@ -50,6 +51,7 @@ export function ActivePartnersTable({ onRefresh }: ActivePartnersTableProps) {
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [scopesPartner, setScopesPartner] = useState<Partner | null>(null);
   const { toast } = useToast();
 
   const fetchPartners = async () => {
@@ -262,6 +264,10 @@ export function ActivePartnersTable({ onRefresh }: ActivePartnersTableProps) {
                         <DropdownMenuItem onClick={() => setSelectedPartner(partner)}>
                           View Details
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setScopesPartner(partner)}>
+                          <Shield className="h-4 w-4 mr-2" />
+                          Manage Scopes
+                        </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => handleRegenerateKey(partner)}
                           disabled={regeneratingId === partner.id}
@@ -291,6 +297,12 @@ export function ActivePartnersTable({ onRefresh }: ActivePartnersTableProps) {
       <PartnerDetailsDialog
         partner={selectedPartner}
         onClose={() => setSelectedPartner(null)}
+      />
+
+      <ManageScopesDialog
+        partner={scopesPartner}
+        onClose={() => setScopesPartner(null)}
+        onSaved={fetchPartners}
       />
     </>
   );

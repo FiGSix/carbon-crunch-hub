@@ -1,38 +1,38 @@
-# Provision Partner Access for data@keios.tech
+# Add "Manage Scopes" UI for Existing Partner API Keys
 
 ## Goal
-Create a live-environment partner account for `data@keios.tech` with all 7 API scopes and deliver the API key.
+Allow admins to edit the scopes on an existing active API key directly from `/admin/partners` — no SQL, no key rotation.
 
-## Scopes (all 7)
-- `proposals:create`
-- `proposals:read`
-- `proposals:acceptance`
-- `projects:onboarding:read`
-- `projects:onboarding:write`
-- `projects:documents:write`
-- `projects:data-access:write`
+## Changes
 
-## Approach
-Reuse the existing `send-partner-invitation` edge function (already deployed, used by the Admin → Partners UI). It generates an API key, hashes it (SHA-256), creates the `partners` + `partner_api_keys` rows, and emails the partner with the one-time key.
+### 1. New dialog: `src/components/admin/partners/ManageScopesDialog.tsx`
+- Props: `partner` (with active key), `onClose`, `onSaved`
+- Reuses the `AVAILABLE_SCOPES` list (extract to a shared file `src/components/admin/partners/scopes.ts`)
+- Renders the same checkbox grid as `PartnerInvitationDialog`, pre-checked from the active key's current scopes
+- Save button updates `partner_api_keys.scopes` (jsonb) + `updated_at` for the active key id via `supabase.from('partner_api_keys').update(...)` — RLS already permits admins
+- Toast on success, refresh table
 
-Two execution options — recommend **Option A** (no code, audit-trailed via UI):
+### 2. Extract shared scopes list
+- Create `src/components/admin/partners/scopes.ts` exporting `AVAILABLE_SCOPES`
+- Update `PartnerInvitationDialog.tsx` to import from it (remove duplicate)
 
-### Option A — Use the existing Admin UI (recommended)
-1. Navigate to `/admin/partners`
-2. Click **Invite Partner**
-3. Fill in:
-   - Email: `data@keios.tech`
-   - Company Name: *(confirm — defaulting to "Keios")*
-   - Environment: **Live**
-   - Scopes: tick all 7
-4. Submit → copy the revealed key (shown once) and confirm the partner received the email.
+### 3. Wire into `ActivePartnersTable.tsx`
+- Add new state `scopesPartner`
+- Add dropdown item "Manage Scopes" between "View Details" and "Regenerate Key"
+- Render `<ManageScopesDialog partner={scopesPartner} onClose={...} onSaved={fetchPartners} />`
 
-### Option B — Provision via script (if you prefer I do it directly)
-Invoke `send-partner-invitation` from an authenticated admin session with the same payload above. Result: same row inserts + email + one-time key returned in the response, which I'd surface back to you in chat (then it's gone).
+### 4. Immediate fix for Keios
+After the UI ships, open Keios → Manage Scopes → tick the 5 missing scopes → save. Same key, no rotation.
 
-## Open Questions
-- **Company Name** for the partner record? (e.g. "Keios", "Keios Tech")
-- **Contact Name** (optional)?
-- Any internal notes to attach?
+## Files
+| File | Action |
+|------|--------|
+| `src/components/admin/partners/scopes.ts` | New (shared scope list) |
+| `src/components/admin/partners/ManageScopesDialog.tsx` | New |
+| `src/components/admin/partners/PartnerInvitationDialog.tsx` | Import shared scopes |
+| `src/components/admin/partners/ActivePartnersTable.tsx` | Add menu item + dialog |
 
-Once you confirm the company name and pick Option A or B, I'll proceed.
+## Out of scope
+- No DB migration (RLS already lets admins update `partner_api_keys`)
+- No edge function changes
+- Key value stays the same — only the `scopes` jsonb column changes
