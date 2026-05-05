@@ -298,6 +298,12 @@ export function ActivePartnersTable({ onRefresh }: ActivePartnersTableProps) {
         partner={selectedPartner}
         onClose={() => setSelectedPartner(null)}
       />
+
+      <ManageScopesDialog
+        partner={scopesPartner}
+        onClose={() => setScopesPartner(null)}
+        onSaved={fetchPartners}
+      />
     </>
   );
 }
