@@ -81,31 +81,42 @@ serve(async (req) => {
 
     let pdfAttachment = null;
 
-    // Fetch PDF from storage if URL exists
+    // Fetch PDF via storage (private buckets) using service role
     if (pdfUrl) {
       try {
-        console.log(`[Cession Email] Fetching PDF from: ${pdfUrl}`);
-        const pdfResponse = await fetch(pdfUrl);
-        
-        if (pdfResponse.ok) {
-          const pdfBuffer = await pdfResponse.arrayBuffer();
+        const signedMatch = (pdfUrl as string).match(/\/object\/(?:public|sign)\/signed-agreements\/([^?]+)/);
+        const proposalMatch = (pdfUrl as string).match(/\/object\/(?:public|sign)\/proposal-pdfs\/([^?]+)/);
+        let pdfBuffer: ArrayBuffer | null = null;
+
+        if (signedMatch) {
+          const path = decodeURIComponent(signedMatch[1]);
+          console.log(`[Cession Email] Downloading from signed-agreements: ${path}`);
+          const { data: blob, error } = await supabase.storage.from('signed-agreements').download(path);
+          if (error) throw error;
+          pdfBuffer = await blob!.arrayBuffer();
+        } else if (proposalMatch) {
+          const path = decodeURIComponent(proposalMatch[1]);
+          console.log(`[Cession Email] Downloading from proposal-pdfs: ${path}`);
+          const { data: blob, error } = await supabase.storage.from('proposal-pdfs').download(path);
+          if (error) throw error;
+          pdfBuffer = await blob!.arrayBuffer();
+        } else {
+          // Legacy fallback
+          const r = await fetch(pdfUrl);
+          if (r.ok) pdfBuffer = await r.arrayBuffer();
+        }
+
+        if (pdfBuffer) {
           const filename = `Cession_Agreement_${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-          
-          // Convert ArrayBuffer to base64 string for Resend
           const uint8Array = new Uint8Array(pdfBuffer);
           const base64String = btoa(String.fromCharCode(...uint8Array));
-          
-          pdfAttachment = {
-            filename,
-            content: base64String,
-          };
-          console.log(`[Cession Email] PDF fetched successfully, size: ${pdfBuffer.byteLength} bytes`);
+          pdfAttachment = { filename, content: base64String };
+          console.log(`[Cession Email] PDF fetched, size: ${pdfBuffer.byteLength} bytes`);
         } else {
-          console.warn(`[Cession Email] Failed to fetch PDF: ${pdfResponse.status}`);
+          console.warn('[Cession Email] PDF buffer empty');
         }
       } catch (error) {
         console.error('[Cession Email] Error fetching PDF:', error);
-        // Continue without attachment
       }
     }
 
