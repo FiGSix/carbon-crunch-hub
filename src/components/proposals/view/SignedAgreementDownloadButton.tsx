@@ -64,56 +64,45 @@ export function SignedAgreementDownloadButton({
     }
 
     setLoading(true);
-    downloadLogger.info('Starting signed PDF download', { proposalId, signedPdfUrl });
+    downloadLogger.info('Starting signed PDF download', { proposalId });
 
     try {
       const filename = `Signed_Agreement_${proposalTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-      
-      downloadLogger.info('Fetching PDF from public URL', { signedPdfUrl });
-      
-      // Use fetch directly since the signed-agreements bucket is public
-      // This bypasses RLS and works reliably for public files
-      const response = await fetch(signedPdfUrl);
-      
+
+      // Mint a fresh signed URL via the edge function (private bucket)
+      const { data: signed, error: signErr } = await supabase.functions.invoke('get-pdf-signed-url', {
+        body: { proposalId, kind: 'signed_agreement', download: filename },
+      });
+
+      if (signErr || !signed?.signed_url) {
+        throw new Error(signErr?.message || 'Could not generate download link');
+      }
+
+      const response = await fetch(signed.signed_url);
       if (!response.ok) {
         throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
       }
-      
+
       const blob = await response.blob();
-      
-      if (!blob || blob.size === 0) {
-        throw new Error('No data received from storage');
-      }
-      
-      // Create blob URL and trigger download
+      if (!blob || blob.size === 0) throw new Error('No data received from storage');
+
       const blobUrl = URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      // Clean up the blob URL
       URL.revokeObjectURL(blobUrl);
-      
+
       downloadLogger.info('Signed PDF download completed', { filename });
-      
-      toast({
-        title: "Download Started",
-        description: "Your signed agreement is downloading.",
-      });
+      toast({ title: "Download Started", description: "Your signed agreement is downloading." });
     } catch (error) {
-      downloadLogger.error('Signed PDF download failed', { error, signedPdfUrl });
-      
+      downloadLogger.error('Signed PDF download failed', { error });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
       toast({
         title: "Download Failed",
-        description: errorMessage.includes('not found') || errorMessage.includes('404')
-          ? "The file could not be found. It may have been moved or deleted."
-          : errorMessage.includes('403') || errorMessage.includes('unauthorized')
+        description: errorMessage.includes('Forbidden') || errorMessage.includes('403')
           ? "You don't have permission to download this file."
           : "Could not download the signed agreement. Please try again.",
         variant: "destructive",
