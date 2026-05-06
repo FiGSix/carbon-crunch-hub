@@ -5,6 +5,8 @@ import { useProjectAgreement } from "@/hooks/useProjectAgreement";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileSignature, Calendar, User, Monitor, MapPin, Shield, FileText } from "lucide-react";
 import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AgreementTabProps {
   proposalId: string;
@@ -13,6 +15,23 @@ interface AgreementTabProps {
 
 export function AgreementTab({ proposalId, proposalTitle }: AgreementTabProps) {
   const { data: agreement, isLoading } = useProjectAgreement(proposalId);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!agreement?.signature_image_url) {
+      setSignatureUrl(null);
+      return;
+    }
+    (async () => {
+      const { data, error } = await supabase.functions.invoke('get-pdf-signed-url', {
+        body: { proposalId, kind: 'signature_image' },
+      });
+      if (!cancelled && !error && data?.signed_url) setSignatureUrl(data.signed_url);
+    })();
+    return () => { cancelled = true; };
+  }, [proposalId, agreement?.signature_image_url]);
+
 
   if (isLoading) {
     return (
@@ -126,12 +145,12 @@ export function AgreementTab({ proposalId, proposalTitle }: AgreementTabProps) {
             </div>
           </div>
 
-          {agreement.signature_image_url && (
+          {agreement.signature_image_url && signatureUrl && (
             <div className="pt-4 border-t">
               <p className="text-sm font-medium mb-2">Signature Image</p>
               <div className="border rounded-lg p-4 bg-muted/20 inline-block">
                 <img 
-                  src={agreement.signature_image_url} 
+                  src={signatureUrl} 
                   alt="Signature" 
                   className="max-h-24 max-w-xs"
                 />
