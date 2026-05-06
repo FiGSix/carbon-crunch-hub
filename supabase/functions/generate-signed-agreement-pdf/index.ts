@@ -82,13 +82,17 @@ serve(async (req) => {
       proposal.pdf_url = pdfResult.pdf_url;
     }
 
-    // 4. Fetch the base PDF
-    console.log(`[Signed PDF] Fetching base PDF from: ${proposal.pdf_url}`);
-    const pdfResponse = await fetch(proposal.pdf_url);
-    if (!pdfResponse.ok) {
-      throw new Error(`Failed to fetch base PDF: ${pdfResponse.status}`);
+    // 4. Fetch the base PDF from storage (private bucket — use service role download)
+    const basePathMatch = (proposal.pdf_url as string).match(/\/object\/(?:public|sign)\/proposal-pdfs\/([^?]+)/);
+    const basePath = basePathMatch ? decodeURIComponent(basePathMatch[1]) : `proposal-${proposalId}-v${proposal.pdf_version || 1}.pdf`;
+    console.log(`[Signed PDF] Downloading base PDF from storage: ${basePath}`);
+    const { data: baseBlob, error: baseDlErr } = await supabaseAdmin.storage
+      .from('proposal-pdfs')
+      .download(basePath);
+    if (baseDlErr || !baseBlob) {
+      throw new Error(`Failed to download base PDF: ${baseDlErr?.message ?? 'unknown'}`);
     }
-    const basePdfBytes = new Uint8Array(await pdfResponse.arrayBuffer());
+    const basePdfBytes = new Uint8Array(await baseBlob.arrayBuffer());
 
     // 5. Generate signed PDF using pdf-lib
     const signedPdfBytes = await generateSignedPdf(
