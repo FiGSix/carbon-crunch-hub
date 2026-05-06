@@ -93,24 +93,20 @@ serve(async (req) => {
             if (proposal.agent_id === user.id) {
               authorized = true;
             } else {
-              const { data: shared } = await admin.rpc('is_company_member_with_agent' as any, {}).maybeSingle?.() ?? { data: null };
-              // Fallback: query company_members directly
-              if (!shared) {
-                const { data: cm } = await admin
+              const { data: cm } = await admin
+                .from('company_members')
+                .select('company_id')
+                .eq('user_id', user.id)
+                .eq('status', 'active');
+              if (cm && cm.length) {
+                const ids = cm.map((r: any) => r.company_id);
+                const { data: agentCm } = await admin
                   .from('company_members')
-                  .select('company_id')
-                  .eq('user_id', user.id)
-                  .eq('status', 'active');
-                if (cm && cm.length) {
-                  const ids = cm.map((r: any) => r.company_id);
-                  const { data: agentCm } = await admin
-                    .from('company_members')
-                    .select('user_id')
-                    .eq('user_id', proposal.agent_id)
-                    .eq('status', 'active')
-                    .in('company_id', ids);
-                  if (agentCm && agentCm.length) authorized = true;
-                }
+                  .select('user_id')
+                  .eq('user_id', proposal.agent_id)
+                  .eq('status', 'active')
+                  .in('company_id', ids);
+                if (agentCm && agentCm.length) authorized = true;
               }
             }
           }
