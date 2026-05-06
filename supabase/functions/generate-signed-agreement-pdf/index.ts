@@ -319,15 +319,31 @@ async function generateSignedPdf(
     });
   };
 
-  // Embed signature image if provided
+  // Embed signature image if provided (download from private bucket via service role)
   let signatureImage = null;
   if (signatureImageUrl && agreement.signature_type === 'electronic_signature') {
     try {
-      console.log('[Signed PDF] Fetching signature image:', signatureImageUrl);
-      const sigImageResponse = await fetch(signatureImageUrl);
-      if (sigImageResponse.ok) {
-        const sigImageBytes = await sigImageResponse.arrayBuffer();
-        signatureImage = await pdfDoc.embedPng(new Uint8Array(sigImageBytes));
+      const sigUrl: string = signatureImageUrl;
+      const m = sigUrl.match(/\/object\/(?:public|sign)\/signed-agreements\/([^?]+)/);
+      const sigPath = m ? decodeURIComponent(m[1]) : null;
+      const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey2 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const adminLocal = (await import("https://esm.sh/@supabase/supabase-js@2.38.4")).createClient(
+        supabaseUrl2, supabaseServiceKey2, { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      let sigBytes: ArrayBuffer | null = null;
+      if (sigPath) {
+        console.log('[Signed PDF] Downloading signature image from storage:', sigPath);
+        const { data: blob, error: dlErr } = await adminLocal.storage.from('signed-agreements').download(sigPath);
+        if (!dlErr && blob) sigBytes = await blob.arrayBuffer();
+      }
+      if (!sigBytes) {
+        // Fallback: try direct fetch (works while bucket public)
+        const r = await fetch(sigUrl);
+        if (r.ok) sigBytes = await r.arrayBuffer();
+      }
+      if (sigBytes) {
+        signatureImage = await pdfDoc.embedPng(new Uint8Array(sigBytes));
         console.log('[Signed PDF] Signature image embedded successfully');
       }
     } catch (err) {
