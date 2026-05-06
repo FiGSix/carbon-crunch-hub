@@ -251,7 +251,8 @@ serve(async (req) => {
     
     console.log('✅ signedBy identified:', signedBy);
 
-    // Upload signature image if provided
+    // Upload signature image if provided. We persist the STORAGE PATH (not a public URL)
+    // because the `signed-agreements` bucket is private; consumers mint signed URLs on demand.
     let signatureImageUrl: string | null = null;
     if (signatureImage && signatureType === 'canvas') {
       console.log(`📸 Uploading signature image for proposal ${proposal.id}`, {
@@ -260,29 +261,24 @@ serve(async (req) => {
       });
       try {
         const base64Data = signatureImage.replace(/^data:image\/\w+;base64,/, '');
-        console.log('📸 Base64 data length:', base64Data.length);
         const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-        console.log('📸 Buffer size:', buffer.length);
-        
+
         const fileName = `signature_${proposal.id}_${Date.now()}.png`;
         const filePath = `signatures/${fileName}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('signed-agreements')
           .upload(filePath, buffer, {
             contentType: 'image/png',
             upsert: false
           });
-        
+
         if (uploadError) {
           console.error('❌ Error uploading signature image:', uploadError);
         } else {
-          const { data: { publicUrl } } = supabase.storage
-            .from('signed-agreements')
-            .getPublicUrl(filePath);
-          
-          signatureImageUrl = publicUrl;
-          console.log(`✅ Signature image uploaded: ${signatureImageUrl}`);
+          // Store the storage path; AgreementTab/get-pdf-signed-url will create a signed URL on read.
+          signatureImageUrl = filePath;
+          console.log(`✅ Signature image uploaded at path: ${filePath}`);
         }
       } catch (uploadErr) {
         console.error('❌ Exception uploading signature:', uploadErr);
