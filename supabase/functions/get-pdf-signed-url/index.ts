@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type Kind = 'proposal' | 'signed_agreement';
+type Kind = 'proposal' | 'signed_agreement' | 'signature_image';
 
 interface Body {
   proposalId: string;
@@ -140,7 +140,7 @@ serve(async (req) => {
     if (kind === 'proposal') {
       bucket = 'proposal-pdfs';
       path = extractStoragePath(proposal.pdf_url ?? '', bucket);
-    } else {
+    } else if (kind === 'signed_agreement') {
       bucket = 'signed-agreements';
       const { data: agreement } = await admin
         .from('proposal_agreements')
@@ -150,6 +150,17 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
       path = extractStoragePath(agreement?.signed_pdf_url ?? '', bucket);
+    } else {
+      // signature_image
+      bucket = 'signed-agreements';
+      const { data: agreement } = await admin
+        .from('proposal_agreements')
+        .select('signature_image_url')
+        .eq('proposal_id', proposalId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      path = extractStoragePath(agreement?.signature_image_url ?? '', bucket);
     }
 
     if (!path) {
