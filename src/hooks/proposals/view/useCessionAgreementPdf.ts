@@ -17,36 +17,32 @@ export function useCessionAgreementPdf() {
     pdfLogger.info('Starting cession agreement PDF generation', { proposalId });
 
     try {
-      // Refresh session before edge function call
       await supabase.auth.getSession();
 
+      // 1. Generate (or refresh) the cession agreement PDF
       const { data, error } = await supabase.functions.invoke('generate-cession-agreement-pdf', {
-        body: { proposalId }
+        body: { proposalId },
       });
 
-      if (error) {
-        pdfLogger.error('Edge function error', { error });
-        toast({
-          title: "PDF Generation Failed",
-          description: "There was an error generating the agreement PDF. Please try again.",
-          variant: "destructive",
-        });
+      if (error || !data?.success) {
+        pdfLogger.error('Edge function error', { error, data });
+        toast({ title: 'PDF Generation Failed', description: data?.error || 'Unknown error.', variant: 'destructive' });
         return;
       }
 
-      if (!data?.success || !data?.pdf_url) {
-        pdfLogger.error('PDF generation failed', { data });
-        toast({
-          title: "PDF Generation Failed",
-          description: data?.error || "Unknown error occurred",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Download as blob
+      // 2. Mint a fresh signed URL through get-pdf-signed-url
       const downloadFilename = filename || `cession-agreement-${proposalId}.pdf`;
-      const response = await fetch(`${data.pdf_url}?download=${encodeURIComponent(downloadFilename)}`);
+      const { data: signed, error: signErr } = await supabase.functions.invoke('get-pdf-signed-url', {
+        body: { proposalId, kind: 'proposal', download: downloadFilename },
+      });
+
+      if (signErr || !signed?.signed_url) {
+        pdfLogger.error('Failed to mint signed URL', { signErr });
+        toast({ title: 'PDF Unavailable', description: 'Could not generate a download link.', variant: 'destructive' });
+        return;
+      }
+
+      const response = await fetch(signed.signed_url);
       if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.statusText}`);
 
       const blob = await response.blob();
@@ -59,16 +55,11 @@ export function useCessionAgreementPdf() {
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
 
-      toast({ title: "Success", description: "Agreement PDF downloaded" });
+      toast({ title: 'Success', description: 'Agreement PDF downloaded' });
       pdfLogger.info('Cession agreement PDF downloaded', { proposalId });
-
     } catch (error) {
       pdfLogger.error('Cession agreement PDF error', { error });
-      toast({
-        title: "Download Failed",
-        description: "Could not download the agreement PDF. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: 'Download Failed', description: 'Could not download the agreement PDF.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
