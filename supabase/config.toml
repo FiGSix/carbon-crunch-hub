@@ -116,5 +116,14 @@ verify_jwt = false
 [functions.generate-cession-agreement-pdf]
 verify_jwt = false
 
+[functions.get-pdf-signed-url]
+verify_jwt = false
+
+[functions.generate-signed-agreement-pdf]
+verify_jwt = false
+
+[functions.send-cession-agreement-email]
+verify_jwt = false
+
 [functions.backfill-geocode]
 verify_jwt = false
