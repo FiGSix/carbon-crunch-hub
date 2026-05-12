@@ -68,6 +68,9 @@ function StatsCardComponent({
     if (color === 'blue') {
       return 'text-[#FFCD03]';
     }
+    if (color === 'yellow') {
+      return 'text-crunch-yellow';
+    }
     return '';
   }, [color]);
 
