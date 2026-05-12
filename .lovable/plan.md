@@ -1,51 +1,52 @@
-# Signed Project(s) Cards — Scope Fix
+# Cleanup: remove misleading `DEFAULT_CLIENT_SHARE = 75`
 
-## Goal
-Make the two yellow `Signed Project(s)` cards represent **signed but NOT yet audit-ready** projects, so the dashboard reads as a clean three-stage pipeline with no overlap:
+## Why
 
-```text
-Pending  →  Signed (in progress)  →  Audit Ready
-  red             yellow                  green
+`DEFAULT_CLIENT_SHARE = 75` was defined as a "canonical default" but is **never actually consumed anywhere in business logic**. Confirmed by searching all source files: the only references are the definition itself plus three pure re-exports. Real proposal client shares come from the tiered `getClientSharePercentage(portfolioKWp)` function (60.20% → 70% based on portfolio size), and stored per-proposal `client_share_percentage` columns. The orphan `75` constant is misleading because it implies a default that doesn't match the real first-tier default of 60.20%.
+
+In addition, `RevenueTab.tsx` has a hand-rolled `|| 75` fallback (and `|| 4` agent fallback) that hardcodes the same misleading value instead of using the tiered function the rest of the app uses.
+
+## Scope (frontend only — no DB / SQL changes)
+
+This cleanup is limited to TypeScript constants and one component fallback. It does **not** touch the dashboard SQL function (separate item we discussed earlier).
+
+## Changes
+
+### 1. `src/services/calculations/carbon/constants.ts`
+Remove line: `export const DEFAULT_CLIENT_SHARE = 75; // 75%`
+
+### 2. `src/services/calculations/carbon/index.ts`
+- Remove `DEFAULT_CLIENT_SHARE` from the re-export block
+- Remove `static readonly DEFAULT_CLIENT_SHARE = 75;` from `UnifiedCarbonService`
+
+### 3. `src/lib/calculations/carbon/constants.ts`
+Remove `DEFAULT_CLIENT_SHARE` from the re-export block
+
+### 4. `src/pages/ProjectOnboardingDetail/RevenueTab.tsx`
+Replace the misleading literal fallbacks with the canonical tiered functions:
+
+```ts
+// before
+const clientSharePercentage = proposal.client_share_percentage || 75;
+const agentCommissionPercentage = proposal.agent_commission_percentage || 4;
+
+// after
+const portfolioKWp = proposal.agent_portfolio_kwp || proposal.system_size_kwp || 0;
+const clientSharePercentage =
+  proposal.client_share_percentage ?? getClientSharePercentage(portfolioKWp);
+const agentCommissionPercentage =
+  proposal.agent_commission_percentage ??
+  getAgentCommissionPercentage(portfolioKWp, undefined, !!proposal.agent_id);
 ```
 
-## Current behaviour (problem)
-The DB function `get_dashboard_metrics_by_stage` defines the "onboarding" bucket as:
-- `signed_at IS NOT NULL` AND `(onboarding_complete = false OR IS NULL)`
-
-This is "in-onboarding" — close, but not the same as "signed but not audit-ready". A project can be `audit_ready = true` while `onboarding_complete = false`, in which case it would appear in BOTH the yellow and green cards.
-
-## Change
-
-### Database — single migration to update `get_dashboard_metrics_by_stage`
-
-In the `onboarding_projects` CTE, replace the completion filter with an audit-ready filter:
-
-```sql
--- Before
-AND (po.onboarding_complete = false OR po.onboarding_complete IS NULL)
-
--- After
-AND (po.audit_ready = false OR po.audit_ready IS NULL)
-```
-
-Everything else (role-based filtering, revenue formula using `v_carbon_price_6yr = 891.71` for 2025–2030, MWp aggregation) stays exactly the same — math is already correct and consistent across the three card pairs.
-
-Result:
-- `Signed Project(s)` MWp = sum of system_size_kwp for signed, non-archived projects whose `audit_ready` is not true
-- `Signed Project(s) Est. Revenue (2025-2030)` = same role-aware 6-year revenue formula, applied to the same set
-- No overlap with the green Audit Ready cards
-- Sum of yellow + green MWp = total signed-project MWp
-
-### Frontend
-No changes needed — `useDashboardMetricsByStage` already exposes `onboardingMwp` / `onboardingRevenue`, and the cards are already wired to them with the new labels and yellow colour.
-
-## Out of scope
-- No changes to the green Audit Ready cards or the red Pending cards.
-- No changes to role filtering, pricing constant, or the surrounding query keys / cache.
-- No code rename of internal field names (`onboardingMwp`, `onboarding_revenue`, etc.) — keeping the migration minimal. Can be cleaned up in a later refactor pass if desired.
+Add the imports from `@/services/calculations/carbon/pricing`. Use `??` (not `||`) so a legitimate stored `0` isn't replaced by the fallback.
 
 ## Verification
-1. Run the function for an admin and confirm: yellow MWp + green MWp ≈ total signed MWp, with no double counting.
-2. Spot-check a project that is signed and audit-ready — should appear only in green.
-3. Spot-check a project that is signed but not yet audit-ready — should appear only in yellow.
-4. Visual check on the dashboard for admin / agent / client roles.
+
+- TypeScript build must pass (the harness runs it automatically)
+- `rg "DEFAULT_CLIENT_SHARE" src` should return zero results after the change
+- RevenueTab still renders for existing proposals (stored values dominate; fallback only triggers on null)
+
+## Out of scope
+
+- Dashboard SQL function `get_dashboard_metrics_by_stage` still has `COALESCE(..., 70)` / `COALESCE(..., 4)` fallbacks. That's a separate DB migration discussed earlier and is **not** included here.

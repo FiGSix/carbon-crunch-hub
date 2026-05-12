@@ -5,7 +5,6 @@
 export { 
   DEFAULT_ANNUAL_GENERATION_FACTOR,
   DEFAULT_CARBON_FACTOR,
-  DEFAULT_CLIENT_SHARE,
   AGENT_COMMISSION_LOW,
   AGENT_COMMISSION_HIGH
 } from '@/services/calculations/carbon/constants';

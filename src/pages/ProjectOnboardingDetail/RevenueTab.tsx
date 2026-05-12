@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/auth";
 import { Loader2 } from "lucide-react";
 import type { ProjectOnboarding } from "@/types/onboarding";
 import { useRevenueCalculations } from "@/components/proposals/summary/carbon/hooks/useRevenueCalculations";
+import { getClientSharePercentage, getAgentCommissionPercentage } from "@/services/calculations/carbon/pricing";
 
 // Currency formatter
 const formatCurrency = (amount: number): string => {
@@ -34,8 +35,12 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
   const commissionDate = proposal.content?.projectInfo?.commissionDate;
   const phases = proposal.content?.projectInfo?.phases;
   const isMultiPhase = proposal.content?.projectInfo?.isMultiPhase;
-  const clientSharePercentage = proposal.client_share_percentage || 75;
-  const agentCommissionPercentage = proposal.agent_commission_percentage || 4;
+  const portfolioKWp = proposal.agent_portfolio_kwp || proposal.system_size_kwp || 0;
+  const clientSharePercentage =
+    proposal.client_share_percentage ?? getClientSharePercentage(portfolioKWp);
+  const agentCommissionPercentage =
+    proposal.agent_commission_percentage ??
+    getAgentCommissionPercentage(portfolioKWp, undefined, !!proposal.agent_id);
   const crunchCommissionPercentage = parseFloat((100 - clientSharePercentage - agentCommissionPercentage).toFixed(2));
 
   // Calculate revenues using existing hook
