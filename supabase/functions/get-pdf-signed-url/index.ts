@@ -65,11 +65,18 @@ serve(async (req) => {
 
     // Authorize the caller
     let authorized = false;
+    let authReason = 'none';
+    let authedUserId: string | null = null;
 
     // 1) Invitation-token path (anonymous)
     if (invitationToken && proposal.invitation_token === invitationToken) {
       const exp = proposal.invitation_expires_at ? new Date(proposal.invitation_expires_at) : null;
-      if (exp && exp.getTime() > Date.now()) authorized = true;
+      if (exp && exp.getTime() > Date.now()) {
+        authorized = true;
+        authReason = 'invitation_token';
+      } else {
+        authReason = 'invitation_token_expired';
+      }
     }
 
     // 2) Authenticated user path
@@ -77,8 +84,10 @@ serve(async (req) => {
       const authHeader = req.headers.get('Authorization');
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.replace('Bearer ', '');
-        const { data: { user } } = await admin.auth.getUser(token);
+        const { data: { user }, error: userErr } = await admin.auth.getUser(token);
+        if (userErr) console.warn('[get-pdf-signed-url] auth.getUser error', userErr.message);
         if (user) {
+          authedUserId = user.id;
           // Admin?
           const { data: roleRow } = await admin
             .from('user_roles')
@@ -86,12 +95,13 @@ serve(async (req) => {
             .eq('user_id', user.id)
             .eq('role', 'admin')
             .maybeSingle();
-          if (roleRow) authorized = true;
+          if (roleRow) { authorized = true; authReason = 'admin'; }
 
           // Agent / company member of agent?
           if (!authorized && proposal.agent_id) {
             if (proposal.agent_id === user.id) {
               authorized = true;
+              authReason = 'owning_agent';
             } else {
               const { data: cm } = await admin
                 .from('company_members')
@@ -106,13 +116,13 @@ serve(async (req) => {
                   .eq('user_id', proposal.agent_id)
                   .eq('status', 'active')
                   .in('company_id', ids);
-                if (agentCm && agentCm.length) authorized = true;
+                if (agentCm && agentCm.length) { authorized = true; authReason = 'company_teammate'; }
               }
             }
           }
 
           // Direct client?
-          if (!authorized && proposal.client_id === user.id) authorized = true;
+          if (!authorized && proposal.client_id === user.id) { authorized = true; authReason = 'direct_client'; }
 
           // Client via client_reference_id (clients.user_id)
           if (!authorized && proposal.client_reference_id) {
@@ -121,14 +131,27 @@ serve(async (req) => {
               .select('user_id')
               .eq('id', proposal.client_reference_id)
               .maybeSingle();
-            if (c?.user_id === user.id) authorized = true;
+            if (c?.user_id === user.id) { authorized = true; authReason = 'client_reference'; }
           }
+        } else {
+          authReason = 'no_user_for_token';
         }
+      } else {
+        authReason = authReason === 'none' ? 'no_auth_header_or_token' : authReason;
       }
     }
 
+    console.log('[get-pdf-signed-url] auth decision', {
+      proposalId,
+      kind,
+      authorized,
+      authReason,
+      authedUserId,
+      hasInvitationToken: !!invitationToken,
+    });
+
     if (!authorized) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      return new Response(JSON.stringify({ error: 'Forbidden', reason: authReason }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
