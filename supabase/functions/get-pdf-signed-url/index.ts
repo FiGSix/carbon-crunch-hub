@@ -65,11 +65,18 @@ serve(async (req) => {
 
     // Authorize the caller
     let authorized = false;
+    let authReason = 'none';
+    let authedUserId: string | null = null;
 
     // 1) Invitation-token path (anonymous)
     if (invitationToken && proposal.invitation_token === invitationToken) {
       const exp = proposal.invitation_expires_at ? new Date(proposal.invitation_expires_at) : null;
-      if (exp && exp.getTime() > Date.now()) authorized = true;
+      if (exp && exp.getTime() > Date.now()) {
+        authorized = true;
+        authReason = 'invitation_token';
+      } else {
+        authReason = 'invitation_token_expired';
+      }
     }
 
     // 2) Authenticated user path
@@ -77,8 +84,10 @@ serve(async (req) => {
       const authHeader = req.headers.get('Authorization');
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.replace('Bearer ', '');
-        const { data: { user } } = await admin.auth.getUser(token);
+        const { data: { user }, error: userErr } = await admin.auth.getUser(token);
+        if (userErr) console.warn('[get-pdf-signed-url] auth.getUser error', userErr.message);
         if (user) {
+          authedUserId = user.id;
           // Admin?
           const { data: roleRow } = await admin
             .from('user_roles')
