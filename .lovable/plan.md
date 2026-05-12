@@ -1,61 +1,74 @@
-# Fix: Client signup verification emails not being delivered
+## What we know
 
-## What's actually happening
+Both users have a confirmation email sent but never confirmed:
 
-Conrad and Lauren both completed registration on the proposal page. Supabase recorded the signup attempts:
-- Lauren: created 2026-05-08, `confirmation_sent_at` 2026-05-08 11:38, never confirmed
-- Conrad: created 2026-03-27, `confirmation_sent_at` 2026-05-11 11:49, never confirmed
+| User | Created | Last confirmation sent | Confirmed? |
+|---|---|---|---|
+| `lauren@laurensmith.co.za` | 2026-05-08 11:30 | 2026-05-08 11:38 | No |
+| `conrad@trewirgietimber.co.za` | 2026-03-27 | 2026-05-11 11:49 | No |
 
-But `email_events` (the table populated by Resend webhooks) shows **zero verification emails** ever sent — only proposal/cession/contact emails. So the verification emails simply aren't being delivered through our Resend pipeline.
+The `send-auth-email` hook is firing correctly (verified by a live test signup yesterday — Resend accepted, email delivered, hook returned 200). So the email IS being sent. The link is then never successfully consumed.
 
-## Root cause
+Auth logs only retain a few hours, so I cannot directly prove a scanner pre-fetched their specific tokens. But the symptom — corporate domains, link clicked but user lands on "expired/invalid" — is the classic fingerprint of:
 
-The project has a custom `supabase/functions/send-auth-email` function with branded templates (the "Welcome to the Crunch Carbon team!" email), but it is **not registered as a Supabase Auth Send-Email Hook**. `supabase/config.toml` only declares it as a regular function (`[functions.send-auth-email] verify_jwt = false`) — there is no `[auth.hook.send_email]` block.
+- **Microsoft 365 Safe Links / Defender for Office 365**
+- **Mimecast URL Defense**
+- **Proofpoint URL Defense / Barracuda LinkProtect**
 
-Result: Supabase Auth falls back to its built-in default email service, which on the hosted plan is heavily rate-limited (a handful of emails per hour) and frequently silently drops messages — especially for new sender reputation against business mail servers like Microsoft 365 (which both `trewirgietimber.co.za` and `laurensmith.co.za` likely use). Resend is never invoked, so nothing shows in `email_events`, nothing shows in our edge logs, and DKIM/SPF on `crunchcarbon.com` doesn't help because the mail isn't going through our verified domain at all.
+These scanners issue a `GET` against the verification URL **before** the user ever clicks. Supabase's `/auth/v1/verify` endpoint is **single-use** — the first GET consumes the token, marks the user confirmed in the scanner's IP, and any subsequent click by the human returns "Email link is invalid or has expired."
 
-This also explains why the proposal invitation emails (which DO go through `send-cession-agreement-email`/proposal automation → Resend) reach the clients fine, but the auth verification email does not.
+A secondary failure mode also exists: clients click "Resend verification email" (your `VerifyEmail.tsx` page exposes this), which **invalidates the prior token immediately** — if the original was already in flight or sitting in spam, both links now fail.
 
-## Fix
+## Goal
 
-### 1. Register `send-auth-email` as the Supabase Auth send-email hook
+Make verification reliable for users behind corporate mail security, without breaking the experience for normal mailboxes.
 
-Add to `supabase/config.toml`:
+## The fix: hybrid OTP + link verification
 
-```toml
-[auth.hook.send_email]
-enabled = true
-uri = "https://<project-ref>.supabase.co/functions/v1/send-auth-email"
-secrets = "env(SEND_EMAIL_HOOK_SECRET)"
+Switch the auth email from "click a single-use link" to "click a link **OR** type a 6-digit code". The OTP path is immune to link pre-fetching because scanners cannot type a code into a form.
+
+This is the same pattern Vercel, GitHub, Linear, Notion and Supabase Dashboard itself use, and it's a one-line change on the Supabase side because every email confirmation already has a 6-digit token attached to the same `token_hash`.
+
+### Changes
+
+**1. Update `supabase/functions/send-auth-email/index.ts`**
+- The webhook payload already includes `email_data.token` (the 6-digit OTP) alongside `token_hash`. We are currently discarding it.
+- Show the OTP prominently in the email body (large, monospace, copy-friendly) **above** the "Verify Email Address" button.
+- Keep the link as a secondary option for users on normal mail.
+- Add anti-prefetch hardening to the email HTML: the link itself stays, but framed with text like "If you're using a corporate email and the button doesn't work, paste this 6-digit code on the verify page instead."
+
+**2. Update `src/pages/VerifyEmail.tsx`**
+- Add an OTP input (6-digit) above the existing "Resend" button.
+- On submit: call `supabase.auth.verifyOtp({ email, token, type: 'signup' })`.
+- On success: redirect to `/auth/callback` (or straight to onboarding) with the established session.
+- Keep "Resend" but add a 60-second cooldown to stop users invalidating fresh tokens by hammering it.
+
+**3. Increase OTP expiry from 24h → 72h**
+- In Supabase Dashboard → Auth → Email → set `Mailer OTP expiry` to `259200` (72h).
+- Update the wording on `VerifyEmail.tsx` and in the email template from "24 hours" to "72 hours".
+- Rationale: corporate mail can sit in quarantine for 24–48h before an admin releases it; current window is too tight.
+
+**4. Manually re-issue verification for Lauren and Conrad**
+- Use the admin `generate_link` flow to mint a fresh OTP for each, send via the existing hook, and email them the 6-digit code directly so they can self-verify on the new page. Do this **after** the page changes ship so the OTP they receive actually has somewhere to be entered.
+
+### Out of scope (deferred)
+
+- Disabling email verification entirely — not recommended; it's the only spam guard on signup.
+- Adding magic-link login as a parallel path — bigger change, can be a follow-up.
+- DMARC/SPF tuning on `crunchcarbon.com` — already passing per Resend, not the cause here.
+
+## Technical notes
+
+- `verifyOtp({ type: 'signup' })` returns a `Session` directly, so the user is logged in immediately on success — no second redirect dance needed.
+- The 6-digit token in `email_data.token` is the same secret as `token_hash` in a different encoding; using it does not weaken security.
+- No database migration required.
+- No new secrets required.
+
+## Files to touch
+
+```text
+supabase/functions/send-auth-email/index.ts   # surface the OTP in email HTML
+src/pages/VerifyEmail.tsx                     # add OTP input + verify call + cooldown
 ```
 
-Confirm `SEND_EMAIL_HOOK_SECRET` is set in Edge Function secrets (the function already calls `new Webhook(hookSecret).verify(...)`, so the secret must match what's configured in the Auth dashboard hook settings). If it isn't set, add it.
-
-### 2. Verify the function works end-to-end
-
-- Redeploy `send-auth-email`.
-- Trigger one signup via the proposal flow (or use `supabase.auth.admin.generateLink` against a throwaway address).
-- Confirm a row appears in `email_events` with subject "Verify your email" / "Welcome to the Crunch Carbon team!" and `event_type = email.delivered`.
-- Confirm the edge function logs show a 200 from the hook invocation.
-
-### 3. Resend the verification to Conrad and Lauren
-
-Once the hook is live, call `supabase.auth.admin.generateLink({ type: 'signup', email })` (or use the existing "Resend verification email" button on the success dialog — it'll now route through Resend) for both clients so they get a fresh, deliverable link.
-
-### 4. Tell the clients to check spam once
-
-First-time auth mail from a freshly-warmed sender often lands in Junk on M365/Google Workspace tenants. Ask them to whitelist `proposals@crunchcarbon.com` (or whichever `from` address `send-auth-email` uses — verify it matches a verified Resend domain) the first time.
-
-## Out of scope
-
-- No template changes. The existing branded HTML in `send-auth-email/index.ts` is fine.
-- No change to the post-signup `RegistrationSuccessDialog` UI.
-- No change to proposal/cession email pipelines — those already work.
-
-## Verification checklist
-
-- [ ] `[auth.hook.send_email]` block present and pointing at the deployed function URL
-- [ ] `SEND_EMAIL_HOOK_SECRET` exists and matches the hook config
-- [ ] Test signup produces a row in `email_events` (status `email.delivered`) within ~10s
-- [ ] Edge logs for `send-auth-email` show a 200 with the standardwebhooks signature verified
-- [ ] Conrad and Lauren receive a fresh verification link and can confirm
+Plus one Supabase Dashboard change (OTP expiry → 72h) and a one-off re-invite for Lauren and Conrad after deploy.
