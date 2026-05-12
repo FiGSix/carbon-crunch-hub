@@ -1,59 +1,61 @@
-## Findings
+# Fix: Client signup verification emails not being delivered
 
-The previous config fix was only partial. It did fix the Supabase gateway-level `403` problem for `get-pdf-signed-url`: the function now executes.
+## What's actually happening
 
-What I verified live for proposal `Oudam Citrus` (`77220360-f54f-4fa6-9de9-7681118ec048`):
+Conrad and Lauren both completed registration on the proposal page. Supabase recorded the signup attempts:
+- Lauren: created 2026-05-08, `confirmation_sent_at` 2026-05-08 11:38, never confirmed
+- Conrad: created 2026-03-27, `confirmation_sent_at` 2026-05-11 11:49, never confirmed
 
-- `proposal-pdfs` is private, as intended.
-- The generated PDF object exists in storage.
-- Calling `get-pdf-signed-url` with the valid invitation token returns `200` and a signed URL.
-- Fetching that signed URL returns `200`, `content-type: application/pdf`, and a non-empty PDF body.
-- Calling `get-pdf-signed-url` without a valid app auth token or invitation token returns the function’s own `403 Forbidden`, not the gateway `403`.
+But `email_events` (the table populated by Resend webhooks) shows **zero verification emails** ever sent — only proposal/cession/contact emails. So the verification emails simply aren't being delivered through our Resend pipeline.
 
-So the root cause is now narrowed to the authenticated UI flow, not missing storage bytes.
+## Root cause
 
-## Likely root cause
+The project has a custom `supabase/functions/send-auth-email` function with branded templates (the "Welcome to the Crunch Carbon team!" email), but it is **not registered as a Supabase Auth Send-Email Hook**. `supabase/config.toml` only declares it as a regular function (`[functions.send-auth-email] verify_jwt = false`) — there is no `[auth.hook.send_email]` block.
 
-The current frontend always calls `generate-proposal-pdf` before asking for a signed URL. That function still has `verify_jwt = true`, so if the browser session is stale/invalid or the user is viewing via a token/public context, generation fails before signing/download can happen.
+Result: Supabase Auth falls back to its built-in default email service, which on the hosted plan is heavily rate-limited (a handful of emails per hour) and frequently silently drops messages — especially for new sender reputation against business mail servers like Microsoft 365 (which both `trewirgietimber.co.za` and `laurensmith.co.za` likely use). Resend is never invoked, so nothing shows in `email_events`, nothing shows in our edge logs, and DKIM/SPF on `crunchcarbon.com` doesn't help because the mail isn't going through our verified domain at all.
 
-There is also legacy behavior still present:
+This also explains why the proposal invitation emails (which DO go through `send-cession-agreement-email`/proposal automation → Resend) reach the clients fine, but the auth verification email does not.
 
-- `generate-proposal-pdf` still stores a public storage URL in `proposals.pdf_url`, even though the bucket is now private.
-- Several PDF functions still call `getPublicUrl(...)` and persist public-looking URLs.
-- The user-facing toast hides the real failing step, so a `401`, `403`, signed-url failure, or storage fetch failure all collapse into “Could not download the PDF.”
+## Fix
 
-## Implementation plan
+### 1. Register `send-auth-email` as the Supabase Auth send-email hook
 
-1. **Make proposal download use the correct fast path**
-   - Update `useProposalPdf` so normal “Download PDF” first asks `get-pdf-signed-url` for an existing PDF.
-   - Only call `generate-proposal-pdf` if the signed-url function returns “PDF not available yet” or the user explicitly chooses “Regenerate & Download”.
-   - This avoids unnecessary protected generation calls for already-generated PDFs.
+Add to `supabase/config.toml`:
 
-2. **Keep generation protected, but make errors clear**
-   - Preserve `generate-proposal-pdf` as authenticated-only for agents/admins.
-   - Improve frontend error handling so the toast/log distinguishes:
-     - not logged in / stale session,
-     - forbidden access,
-     - PDF not generated yet,
-     - signed storage fetch failed.
+```toml
+[auth.hook.send_email]
+enabled = true
+uri = "https://<project-ref>.supabase.co/functions/v1/send-auth-email"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
+```
 
-3. **Remove public-URL assumptions at the root**
-   - Change `generate-proposal-pdf` to store the storage object path instead of a public URL, or at minimum return/store a path-compatible value.
-   - Keep `get-pdf-signed-url.extractStoragePath(...)` backwards-compatible with old public URLs already in the database.
-   - Review the remaining `getPublicUrl(...)` calls in the touched PDF/agreement functions and convert the proposal/signed-agreement paths to private-bucket-safe storage paths.
+Confirm `SEND_EMAIL_HOOK_SECRET` is set in Edge Function secrets (the function already calls `new Webhook(hookSecret).verify(...)`, so the secret must match what's configured in the Auth dashboard hook settings). If it isn't set, add it.
 
-4. **Add server-side diagnostics to `get-pdf-signed-url`**
-   - Log authorization branch decisions without exposing tokens.
-   - Log whether the caller was authorized as admin, owning agent, teammate, client, or invitation-token viewer.
-   - This makes future “admin but forbidden” cases directly traceable in logs.
+### 2. Verify the function works end-to-end
 
-5. **Verify after implementation**
-   - Test unauthenticated without token: expect `403`.
-   - Test valid invitation token: expect `200` signed URL and PDF download.
-   - Test the current preview/admin session with `curl_edge_functions`: expect `200` if the preview is logged in as a real admin.
-   - Test storage signed URL fetch: expect `200 application/pdf`.
-   - Search for remaining direct public proposal/signed-agreement URL usage outside backwards-compatibility code.
+- Redeploy `send-auth-email`.
+- Trigger one signup via the proposal flow (or use `supabase.auth.admin.generateLink` against a throwaway address).
+- Confirm a row appears in `email_events` with subject "Verify your email" / "Welcome to the Crunch Carbon team!" and `event_type = email.delivered`.
+- Confirm the edge function logs show a 200 from the hook invocation.
 
-## Expected outcome
+### 3. Resend the verification to Conrad and Lauren
 
-For Brian and admins, downloading an existing generated proposal PDF should no longer depend on regenerating the PDF first. The app will mint a fresh signed URL and download the private PDF directly, while regeneration remains available when explicitly requested.
+Once the hook is live, call `supabase.auth.admin.generateLink({ type: 'signup', email })` (or use the existing "Resend verification email" button on the success dialog — it'll now route through Resend) for both clients so they get a fresh, deliverable link.
+
+### 4. Tell the clients to check spam once
+
+First-time auth mail from a freshly-warmed sender often lands in Junk on M365/Google Workspace tenants. Ask them to whitelist `proposals@crunchcarbon.com` (or whichever `from` address `send-auth-email` uses — verify it matches a verified Resend domain) the first time.
+
+## Out of scope
+
+- No template changes. The existing branded HTML in `send-auth-email/index.ts` is fine.
+- No change to the post-signup `RegistrationSuccessDialog` UI.
+- No change to proposal/cession email pipelines — those already work.
+
+## Verification checklist
+
+- [ ] `[auth.hook.send_email]` block present and pointing at the deployed function URL
+- [ ] `SEND_EMAIL_HOOK_SECRET` exists and matches the hook config
+- [ ] Test signup produces a row in `email_events` (status `email.delivered`) within ~10s
+- [ ] Edge logs for `send-auth-email` show a 200 with the standardwebhooks signature verified
+- [ ] Conrad and Lauren receive a fresh verification link and can confirm
