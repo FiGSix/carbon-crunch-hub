@@ -18,7 +18,7 @@ const EMAIL_SYSTEM_ID = "CC-EF-V1";
 
 // ============= INLINED EMAIL TEMPLATES =============
 
-function generateSignupVerificationEmail(verificationUrl: string, userEmail: string): string {
+function generateSignupVerificationEmail(verificationUrl: string, userEmail: string, otpCode: string, verifyPageUrl: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -34,26 +34,41 @@ function generateSignupVerificationEmail(verificationUrl: string, userEmail: str
       Hi there! We're excited to have you join us in the carbon credit revolution.
     </p>
 
-    <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
-      Please verify your email address by clicking the button below:
+    <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 12px;">
+      <strong>Your 6-digit verification code:</strong>
     </p>
 
-    <div style="margin: 32px 0;">
+    <div style="margin: 8px 0 24px; padding: 20px; background-color: #FFF8DB; border: 2px dashed #F5D547; border-radius: 8px; text-align: center;">
+      <div style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1a1a1a;">
+        ${otpCode}
+      </div>
+    </div>
+
+    <p style="color: #1a1a1a; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+      Enter this code on the verification page:
+      <a href="${verifyPageUrl}" style="color: #2563eb;">${verifyPageUrl}</a>
+    </p>
+
+    <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 24px 0 12px; text-align: center;">
+      — or —
+    </p>
+
+    <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+      Click the button below to verify (note: some corporate email scanners may consume this link before you click it — if that happens, use the 6-digit code above instead):
+    </p>
+
+    <div style="margin: 16px 0 32px;">
       <a href="${verificationUrl}" style="background-color: #F5D547; border-radius: 6px; color: #1a1a1a; font-size: 16px; font-weight: 600; text-decoration: none; text-align: center; display: inline-block; padding: 14px 24px;">
         Verify Email Address
       </a>
     </div>
 
-    <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
-      Or copy and paste this link into your browser:
-    </p>
-
-    <p style="color: #2563eb; font-size: 14px; word-break: break-all; margin: 0 0 16px;">
-      ${verificationUrl}
+    <p style="color: #666666; font-size: 13px; word-break: break-all; margin: 0 0 16px;">
+      Or copy this link: ${verificationUrl}
     </p>
 
     <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0 0 12px; font-style: italic;">
-      This verification link will expire in 24 hours for security reasons.
+      This verification code and link will expire in 72 hours for security reasons.
     </p>
 
     <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0 0 12px; font-style: italic;">
@@ -313,7 +328,9 @@ serve(async (req) => {
       case "invite":
         html = generateSignupVerificationEmail(
           `${siteUrl}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${encodedRedirectTo}`,
-          user.email
+          user.email,
+          email_data.token,
+          `${siteUrl}/verify-email?email=${encodeURIComponent(user.email)}`
         );
         subject = "Welcome to Crunch Carbon - Verify Your Email";
         break;
