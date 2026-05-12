@@ -245,7 +245,7 @@ const VerifyEmail = () => {
 
               <div className="text-xs text-carbon-gray-500 space-y-1">
                 <p>• Check your spam/junk folder if you don't see the email</p>
-                <p>• Code and link both expire in 72 hours</p>
+                <p>• Code and link both expire in 24 hours</p>
                 <p>• Resending invalidates any previously sent code</p>
                 <p>• On a corporate email and the link doesn't work? Use the 6-digit code instead — security scanners can sometimes consume the link before you click it.</p>
               </div>

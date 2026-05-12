@@ -68,7 +68,7 @@ function generateSignupVerificationEmail(verificationUrl: string, userEmail: str
     </p>
 
     <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0 0 12px; font-style: italic;">
-      This verification code and link will expire in 72 hours for security reasons.
+      This verification code and link will expire in 24 hours for security reasons.
     </p>
 
     <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0 0 12px; font-style: italic;">
