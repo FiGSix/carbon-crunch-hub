@@ -328,7 +328,9 @@ serve(async (req) => {
       case "invite":
         html = generateSignupVerificationEmail(
           `${siteUrl}/auth/callback?token_hash=${token_hash}&type=${verifyType}&redirect_to=${encodedRedirectTo}`,
-          user.email
+          user.email,
+          email_data.token,
+          `${siteUrl}/verify-email?email=${encodeURIComponent(user.email)}`
         );
         subject = "Welcome to Crunch Carbon - Verify Your Email";
         break;
