@@ -1,36 +1,51 @@
-# Dashboard Cards Update
+# Signed Project(s) Cards — Scope Fix
 
 ## Goal
-Rename one card and add a sixth card showing the signed projects' revenue. Frontend-only change — the underlying `onboardingRevenue` value is already returned by the `get_dashboard_metrics_by_stage` DB function and exposed by `useDashboardMetricsByStage`.
+Make the two yellow `Signed Project(s)` cards represent **signed but NOT yet audit-ready** projects, so the dashboard reads as a clean three-stage pipeline with no overlap:
 
-## Changes
+```text
+Pending  →  Signed (in progress)  →  Audit Ready
+  red             yellow                  green
+```
 
-### File: `src/components/dashboard/sections/DashboardMetricsByStageCards.tsx`
+## Current behaviour (problem)
+The DB function `get_dashboard_metrics_by_stage` defines the "onboarding" bucket as:
+- `signed_at IS NOT NULL` AND `(onboarding_complete = false OR IS NULL)`
 
-1. Update the grid to fit 6 cards instead of 5:
-   - Change `lg:grid-cols-5` → `lg:grid-cols-3 xl:grid-cols-6` (keeps a clean responsive layout: 1 col mobile, 2 cols sm, 3 cols lg, 6 cols xl).
+This is "in-onboarding" — close, but not the same as "signed but not audit-ready". A project can be `audit_ready = true` while `onboarding_complete = false`, in which case it would appear in BOTH the yellow and green cards.
 
-2. Rename Card 3 title:
-   - `"Onboarding Projects"` → `"Signed Project(s)"`
-   - Keep the same icon (Clock) and `metrics.onboardingMwp` value.
+## Change
 
-3. Add new Card 4 immediately after Signed Project(s):
-   - Title: `"Signed Project(s) Est. Revenue (2025-2030)"`
-   - Value: `formatRevenue(metrics.onboardingRevenue)`
-   - Icon: `DollarSign`
-   - Color: `yellow` (matching Signed Projects card)
+### Database — single migration to update `get_dashboard_metrics_by_stage`
 
-4. Final order will be:
-   1. Proposal(s) Pending (red)
-   2. Proposal(s) Pending Est. Revenue (red)
-   3. Signed Project(s) (yellow) — renamed
-   4. Signed Project(s) Est. Revenue (yellow) — new
-   5. Vintage 2025 Audit Ready Projects (green)
-   6. Vintage 2025 Est. Revenue (green)
+In the `onboarding_projects` CTE, replace the completion filter with an audit-ready filter:
+
+```sql
+-- Before
+AND (po.onboarding_complete = false OR po.onboarding_complete IS NULL)
+
+-- After
+AND (po.audit_ready = false OR po.audit_ready IS NULL)
+```
+
+Everything else (role-based filtering, revenue formula using `v_carbon_price_6yr = 891.71` for 2025–2030, MWp aggregation) stays exactly the same — math is already correct and consistent across the three card pairs.
+
+Result:
+- `Signed Project(s)` MWp = sum of system_size_kwp for signed, non-archived projects whose `audit_ready` is not true
+- `Signed Project(s) Est. Revenue (2025-2030)` = same role-aware 6-year revenue formula, applied to the same set
+- No overlap with the green Audit Ready cards
+- Sum of yellow + green MWp = total signed-project MWp
+
+### Frontend
+No changes needed — `useDashboardMetricsByStage` already exposes `onboardingMwp` / `onboardingRevenue`, and the cards are already wired to them with the new labels and yellow colour.
 
 ## Out of scope
-- No DB / edge function / RPC changes (data already present).
-- No changes to role-based filtering — the existing RPC already scopes `onboarding_revenue` per user/role identically to the other metrics.
+- No changes to the green Audit Ready cards or the red Pending cards.
+- No changes to role filtering, pricing constant, or the surrounding query keys / cache.
+- No code rename of internal field names (`onboardingMwp`, `onboarding_revenue`, etc.) — keeping the migration minimal. Can be cleaned up in a later refactor pass if desired.
 
 ## Verification
-- Visual check on dashboard for admin, agent, and client roles to confirm the new card renders the user's own signed-project revenue and the layout reflows correctly across breakpoints.
+1. Run the function for an admin and confirm: yellow MWp + green MWp ≈ total signed MWp, with no double counting.
+2. Spot-check a project that is signed and audit-ready — should appear only in green.
+3. Spot-check a project that is signed but not yet audit-ready — should appear only in yellow.
+4. Visual check on the dashboard for admin / agent / client roles.
