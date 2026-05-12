@@ -10,7 +10,6 @@ export type { SystemSpecs, CarbonCalculationResult, ValidationResult, PortfolioT
 export { 
   DEFAULT_ANNUAL_GENERATION_FACTOR,
   DEFAULT_CARBON_FACTOR,
-  DEFAULT_CLIENT_SHARE,
   AGENT_COMMISSION_LOW,
   AGENT_COMMISSION_HIGH
 } from './constants';
@@ -51,7 +50,6 @@ export class UnifiedCarbonService {
   // Re-export constants as static properties for backward compatibility
   static readonly DEFAULT_ANNUAL_GENERATION_FACTOR = 1642.50;
   static readonly DEFAULT_CARBON_FACTOR = 1.0334;
-  static readonly DEFAULT_CLIENT_SHARE = 75;
   static readonly AGENT_COMMISSION_LOW = 4;
   static readonly AGENT_COMMISSION_HIGH = 7;
 
