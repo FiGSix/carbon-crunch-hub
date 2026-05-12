@@ -57,7 +57,7 @@ function DashboardMetricsByStageCardsComponent({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
       {/* Card 1: Proposals Pending */}
       <StatsCard 
         title="Proposal(s) Pending" 
@@ -74,15 +74,23 @@ function DashboardMetricsByStageCardsComponent({
         color="red"
       />
       
-      {/* Card 3: Onboarding Projects */}
+      {/* Card 3: Signed Projects */}
       <StatsCard 
-        title="Onboarding Projects" 
+        title="Signed Project(s)" 
         value={formatMwp(metrics.onboardingMwp)} 
         icon={<Clock className="h-5 w-5" />}
-        color="blue"
+        color="yellow"
       />
       
-      {/* Card 4: Vintage 2025 Audit Ready Projects */}
+      {/* Card 4: Signed Projects Est. Revenue */}
+      <StatsCard 
+        title="Signed Project(s) Est. Revenue (2025-2030)" 
+        value={formatRevenue(metrics.onboardingRevenue)} 
+        icon={<DollarSign className="h-5 w-5" />}
+        color="yellow"
+      />
+      
+      {/* Card 5: Vintage 2025 Audit Ready Projects */}
       <StatsCard 
         title="Vintage 2025 Audit Ready Projects" 
         value={formatMwp(metrics.auditReadyMwp)} 
