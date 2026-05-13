@@ -110,14 +110,26 @@ serve(async (req) => {
       );
     }
 
-    const { data: { publicUrl } } = supabaseAdmin.storage
+    // Mint a short-lived signed URL for the freshly written cession PDF.
+    // We do NOT route through get-pdf-signed-url because that resolves
+    // `kind: 'proposal'` to proposals.pdf_url (the standard proposal PDF).
+    const downloadName = `cession-agreement-${proposalId}.pdf`;
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
       .from('proposal-pdfs')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 300, { download: downloadName });
 
-    console.log(`[Cession PDF] Generated successfully: ${publicUrl}`);
+    if (signErr || !signed?.signedUrl) {
+      console.error('[Cession PDF] Sign URL error:', signErr);
+      return new Response(
+        JSON.stringify({ error: 'Failed to sign cession PDF URL' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[Cession PDF] Generated successfully for proposal ${proposalId}`);
 
     return new Response(
-      JSON.stringify({ success: true, pdf_url: publicUrl }),
+      JSON.stringify({ success: true, signed_url: signed.signedUrl, file_name: fileName }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
