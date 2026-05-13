@@ -1264,8 +1264,9 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (targetAgent) {
           const metrics = calculateAgentMetrics(targetAgent, proposals, onboardingMap, teamMetrics);
-          const subject = `[TEST] ${buildAgentEmailSubject(metrics)}`;
-          const html = await buildAgentEmailHtml(metrics, platformMetrics);
+          const built = await buildAgentEmail(targetAgent, metrics, proposals);
+          const subject = `[TEST] ${built.subject}`;
+          const html = built.html;
           
           console.log(`Sending TEST agent email to: ${testAgentEmail}`);
           
@@ -1312,8 +1313,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`\n--- Sending ${agents.length} Agent Roundup emails ---`);
       for (const agent of agents) {
         const metrics = calculateAgentMetrics(agent, proposals, onboardingMap, teamMetrics);
-        const subject = buildAgentEmailSubject(metrics);
-        const html = await buildAgentEmailHtml(metrics, platformMetrics);
+        const built = await buildAgentEmail(agent, metrics, proposals);
+        const subject = built.subject;
+        const html = built.html;
         
         console.log(`Sending to agent: ${agent.email} (${metrics.segment})`);
         
