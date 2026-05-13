@@ -294,7 +294,66 @@ export function ClientsTableContent({
     
     setIsDeleting(false);
   };
-  
+
+  const confirmVerifyEmail = async () => {
+    if (!clientToVerify?.client_email) return;
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-auth-verification', {
+        body: { action: 'verify_user', email: clientToVerify.client_email },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: 'Email Verified',
+        description: data?.message || `Email confirmed for ${clientToVerify.client_email}.`,
+      });
+      setVerifyConfirmOpen(false);
+      setClientToVerify(null);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      toast({
+        title: 'Verify Failed',
+        description: err?.message || 'Could not verify email',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const confirmResendInvitation = async () => {
+    if (!clientToResend?.client_email) return;
+    setIsResending(true);
+    try {
+      const [firstName, ...rest] = (clientToResend.client_name || '').trim().split(' ');
+      const lastName = rest.join(' ') || undefined;
+      const { data, error } = await supabase.functions.invoke('send-client-invitation', {
+        body: {
+          email: clientToResend.client_email,
+          firstName: firstName || undefined,
+          lastName,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: 'Invitation Sent',
+        description: `An invitation email has been sent to ${clientToResend.client_email}.`,
+      });
+      setResendConfirmOpen(false);
+      setClientToResend(null);
+    } catch (err: any) {
+      toast({
+        title: 'Send Failed',
+        description: err?.message || 'Could not send invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Header with title and filters */}
