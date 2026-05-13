@@ -190,7 +190,8 @@ async function getVintageCountdown(): Promise<{ days: number; hours: number; min
 function calculateRevenue2025to2030(carbonCredits: number, sharePercent: number): number {
   let total = 0;
   for (let year = 2025; year <= 2030; year++) {
-    total += carbonCredits * CARBON_PRICES[year] * (sharePercent / 100);
+    const price = CARBON_PRICES_CACHE[String(year)] ?? 0;
+    total += carbonCredits * price * (sharePercent / 100);
   }
   return total;
 }
