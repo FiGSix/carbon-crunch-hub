@@ -4,7 +4,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVintageDeadlines, getNextVintageDeadline } from "../_shared/vintageConfig.ts";
 import { getCarbonPrices, type CarbonPrices } from "../_shared/carbonPricing.ts";
 import { buildAgentBlockers, categoriseBlockers } from "./blockers.ts";
-import { buildAgentSubject, buildAgentHtml, type AgentEmailInput } from "./agentEmail.ts";
+import { buildAgentSubject, buildAgentHtml, type AgentEmailInput, type VintageProjectAtRisk } from "./agentEmail.ts";
+import { readPreviousSnapshot, writeSnapshot, computeDeltas, type AgentSnapshot } from "./snapshots.ts";
+import { buildAgentFunnel, funnelToRows } from "./funnel.ts";
+import { calculateAgentRevenueLens } from "./revenue.ts";
+import { links } from "./links.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
