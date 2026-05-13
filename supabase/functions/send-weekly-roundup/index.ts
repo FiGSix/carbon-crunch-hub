@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVintageDeadlines, getNextVintageDeadline } from "../_shared/vintageConfig.ts";
+import { getCarbonPrices, type CarbonPrices } from "../_shared/carbonPricing.ts";
+import { buildAgentBlockers, categoriseBlockers } from "./blockers.ts";
+import { buildAgentSubject, buildAgentHtml, type AgentEmailInput } from "./agentEmail.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -20,15 +23,9 @@ const corsHeaders = {
 
 const PLATFORM_2026_GOAL_MWP = 250;
 
-const CARBON_PRICES: Record<number, number> = {
-  2024: 97.34,
-  2025: 97.34,
-  2026: 127.03,
-  2027: 143.12,
-  2028: 158.79,
-  2029: 174.88,
-  2030: 190.55,
-};
+// Dynamic carbon prices loaded once per invocation. Source of truth:
+// system_settings.carbon_prices (same as the frontend dynamicCarbonPricingService).
+let CARBON_PRICES_CACHE: CarbonPrices = {};
 
 // ============================================================================
 // TYPES
