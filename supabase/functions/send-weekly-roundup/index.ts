@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVintageDeadlines, getNextVintageDeadline } from "../_shared/vintageConfig.ts";
+import { getCarbonPrices, type CarbonPrices } from "../_shared/carbonPricing.ts";
+import { buildAgentBlockers, categoriseBlockers } from "./blockers.ts";
+import { buildAgentSubject, buildAgentHtml, type AgentEmailInput } from "./agentEmail.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -20,15 +23,9 @@ const corsHeaders = {
 
 const PLATFORM_2026_GOAL_MWP = 250;
 
-const CARBON_PRICES: Record<number, number> = {
-  2024: 97.34,
-  2025: 97.34,
-  2026: 127.03,
-  2027: 143.12,
-  2028: 158.79,
-  2029: 174.88,
-  2030: 190.55,
-};
+// Dynamic carbon prices loaded once per invocation. Source of truth:
+// system_settings.carbon_prices (same as the frontend dynamicCarbonPricingService).
+let CARBON_PRICES_CACHE: CarbonPrices = {};
 
 // ============================================================================
 // TYPES
@@ -54,6 +51,7 @@ interface ProposalData {
   client_share_percentage: number | null;
   agent_commission_percentage: number | null;
   agent_id: string;
+  client_reference_id: string | null;
   signed_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -193,7 +191,8 @@ async function getVintageCountdown(): Promise<{ days: number; hours: number; min
 function calculateRevenue2025to2030(carbonCredits: number, sharePercent: number): number {
   let total = 0;
   for (let year = 2025; year <= 2030; year++) {
-    total += carbonCredits * CARBON_PRICES[year] * (sharePercent / 100);
+    const price = CARBON_PRICES_CACHE[String(year)] ?? 0;
+    total += carbonCredits * price * (sharePercent / 100);
   }
   return total;
 }
@@ -314,7 +313,7 @@ async function fetchAllProposals(): Promise<ProposalData[]> {
   
   const { data, error } = await supabase
     .from("proposals")
-    .select("id, title, status, system_size_kwp, carbon_credits, client_share_percentage, agent_commission_percentage, agent_id, signed_at, created_at, updated_at")
+    .select("id, title, status, system_size_kwp, carbon_credits, client_share_percentage, agent_commission_percentage, agent_id, client_reference_id, signed_at, created_at, updated_at")
     .is("deleted_at", null)
     .is("archived_at", null);
   
@@ -697,6 +696,71 @@ function calculateAgentMetrics(
 // ============================================================================
 // EMAIL TEMPLATES
 // ============================================================================
+
+/**
+ * Adapter: builds the new agent email (subject + HTML) from existing metrics
+ * by additionally fetching categorised, actionable blockers.
+ */
+async function buildAgentEmail(
+  agent: AgentData,
+  metrics: AgentMetrics,
+  proposals: ProposalData[]
+): Promise<{ subject: string; html: string }> {
+  // Signed proposals for this agent — pass to blocker builder with audit_ready hint
+  const signedForAgent = proposals
+    .filter((p) => p.agent_id === agent.id && p.signed_at)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      system_size_kwp: p.system_size_kwp,
+      signed_at: p.signed_at,
+      client_reference_id: p.client_reference_id,
+      audit_ready: p.audit_ready,
+    }));
+
+  const rawBlockers = await buildAgentBlockers(supabase, agent.id, signedForAgent);
+  const blockers = categoriseBlockers(rawBlockers);
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const newProposalsThisWeek = proposals.filter(
+    (p) => p.agent_id === agent.id && new Date(p.created_at) > sevenDaysAgo
+  ).length;
+
+  const vintageCountdown = await getVintageCountdown();
+
+  const input: AgentEmailInput = {
+    agent: {
+      first_name: agent.first_name,
+      is_team_lead: agent.is_team_lead,
+    },
+    segment: metrics.segment,
+    metrics: {
+      audit_ready_mwp: metrics.personal_audit_ready_mwp,
+      onboarding_mwp: metrics.personal_onboarding_mwp,
+      pending_mwp: metrics.personal_pending_mwp,
+      revenue_2025_2030: metrics.personal_revenue_2025_2030,
+      signed_this_week_count: metrics.week_movements.length,
+      signed_this_week_mwp: metrics.week_movements.reduce((s, m) => s + m.mwp, 0),
+      new_proposals_this_week: newProposalsThisWeek,
+    },
+    team: {
+      name: metrics.team_name,
+      audit_ready_mwp: metrics.team_audit_ready_mwp,
+      revenue_2025_2030: metrics.team_revenue_2025_2030,
+      member_count: metrics.team_member_count,
+      contribution_percent: metrics.agent_team_contribution_percent,
+    },
+    blockers,
+    vintage: vintageCountdown,
+    weekEndingLabel: getWeekEndDate(),
+  };
+
+  return {
+    subject: buildAgentSubject(input),
+    html: buildAgentHtml(input),
+  };
+}
 
 function buildAgentEmailSubject(metrics: AgentMetrics): string {
   switch (metrics.segment) {
@@ -1158,6 +1222,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
   
   try {
+    // Load dynamic carbon prices once per invocation (replaces hardcoded constants)
+    CARBON_PRICES_CACHE = await getCarbonPrices(supabase);
+    console.log("Loaded dynamic carbon prices:", CARBON_PRICES_CACHE);
+
     // Fetch all data
     const [agents, admins, proposals, onboarding, newAgents] = await Promise.all([
       fetchActiveAgents(),
