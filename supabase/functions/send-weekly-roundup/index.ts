@@ -697,6 +697,71 @@ function calculateAgentMetrics(
 // EMAIL TEMPLATES
 // ============================================================================
 
+/**
+ * Adapter: builds the new agent email (subject + HTML) from existing metrics
+ * by additionally fetching categorised, actionable blockers.
+ */
+async function buildAgentEmail(
+  agent: AgentData,
+  metrics: AgentMetrics,
+  proposals: ProposalData[]
+): Promise<{ subject: string; html: string }> {
+  // Signed proposals for this agent — pass to blocker builder with audit_ready hint
+  const signedForAgent = proposals
+    .filter((p) => p.agent_id === agent.id && p.signed_at)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      system_size_kwp: p.system_size_kwp,
+      signed_at: p.signed_at,
+      client_reference_id: p.client_reference_id,
+      audit_ready: p.audit_ready,
+    }));
+
+  const rawBlockers = await buildAgentBlockers(supabase, agent.id, signedForAgent);
+  const blockers = categoriseBlockers(rawBlockers);
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const newProposalsThisWeek = proposals.filter(
+    (p) => p.agent_id === agent.id && new Date(p.created_at) > sevenDaysAgo
+  ).length;
+
+  const vintageCountdown = await getVintageCountdown();
+
+  const input: AgentEmailInput = {
+    agent: {
+      first_name: agent.first_name,
+      is_team_lead: agent.is_team_lead,
+    },
+    segment: metrics.segment,
+    metrics: {
+      audit_ready_mwp: metrics.personal_audit_ready_mwp,
+      onboarding_mwp: metrics.personal_onboarding_mwp,
+      pending_mwp: metrics.personal_pending_mwp,
+      revenue_2025_2030: metrics.personal_revenue_2025_2030,
+      signed_this_week_count: metrics.week_movements.length,
+      signed_this_week_mwp: metrics.week_movements.reduce((s, m) => s + m.mwp, 0),
+      new_proposals_this_week: newProposalsThisWeek,
+    },
+    team: {
+      name: metrics.team_name,
+      audit_ready_mwp: metrics.team_audit_ready_mwp,
+      revenue_2025_2030: metrics.team_revenue_2025_2030,
+      member_count: metrics.team_member_count,
+      contribution_percent: metrics.agent_team_contribution_percent,
+    },
+    blockers,
+    vintage: vintageCountdown,
+    weekEndingLabel: getWeekEndDate(),
+  };
+
+  return {
+    subject: buildAgentSubject(input),
+    html: buildAgentHtml(input),
+  };
+}
+
 function buildAgentEmailSubject(metrics: AgentMetrics): string {
   switch (metrics.segment) {
     case "new":
