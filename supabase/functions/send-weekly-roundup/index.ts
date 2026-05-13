@@ -8,7 +8,18 @@ import { buildAgentSubject, buildAgentHtml, type AgentEmailInput, type VintagePr
 import { readPreviousSnapshot, writeSnapshot, computeDeltas, type AgentSnapshot } from "./snapshots.ts";
 import { buildAgentFunnel, funnelToRows } from "./funnel.ts";
 import { calculateAgentRevenueLens } from "./revenue.ts";
-import { links } from "./links.ts";
+import { links, setEmailContext } from "./links.ts";
+import {
+  classifyAgent,
+  pickVariant,
+  getSubject,
+  getOpening,
+  SEGMENT_CONFIG,
+  type SegmentInput,
+  type AgentSegmentV2,
+} from "./segmentation.ts";
+import { buildMilestones } from "./milestones.ts";
+import { pickRotatingBlock } from "./rotatingContent.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
