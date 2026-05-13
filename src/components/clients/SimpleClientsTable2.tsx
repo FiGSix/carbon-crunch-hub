@@ -359,6 +359,41 @@ export function SimpleClientsTable2({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!verifyClient} onOpenChange={(open) => !open && setVerifyClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Manually verify this client's email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark <strong>{verifyClient?.client_email}</strong> as confirmed,
+              skipping the email verification link. The client will be able to log in immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleVerifyConfirm} disabled={isVerifying}>
+              {isVerifying ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>) : 'Verify Email'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!resendClient} onOpenChange={(open) => !open && setResendClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resend invitation email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A new invitation email will be sent to <strong>{resendClient?.client_email}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResendConfirm} disabled={isResending}>
+              {isResending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</>) : 'Send Invitation'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
