@@ -3,7 +3,10 @@ import type { ActionableBlocker, CategorisedBlockers } from "./blockers.ts";
 import type { AgentDeltas } from "./snapshots.ts";
 import type { FunnelRow } from "./funnel.ts";
 import type { AgentRevenueLens } from "./revenue.ts";
+import type { Milestone } from "./milestones.ts";
+import type { RotatingBlock } from "./rotatingContent.ts";
 
+// Legacy v1 segment kept for back-compat; v2 segment drives Phase 3 copy.
 type AgentSegment = "new" | "active" | "top_performer";
 
 export interface VintageProjectAtRisk {
