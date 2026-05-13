@@ -172,17 +172,73 @@ function thisWeeksFocusSection(focus: { headline: string; detail: string; cta?: 
   </div>`;
 }
 
+function deltaBadge(delta: number, unit: "mwp" | "currency", hasBaseline: boolean): string {
+  if (!hasBaseline) {
+    return `<span style="font-size:11px;color:#888;font-weight:400;margin-left:6px;">baseline week</span>`;
+  }
+  if (Math.abs(delta) < (unit === "mwp" ? 0.001 : 1)) {
+    return `<span style="font-size:11px;color:#888;font-weight:400;margin-left:6px;">no change</span>`;
+  }
+  const up = delta > 0;
+  const color = up ? "#16a34a" : "#dc2626";
+  const arrow = up ? "▲" : "▼";
+  const formatted = unit === "mwp" ? `${formatMwp(Math.abs(delta))} MWp` : formatCurrency(Math.abs(delta));
+  return `<span style="font-size:11px;color:${color};font-weight:600;margin-left:6px;">${arrow} ${formatted}</span>`;
+}
+
 function revenueSnapshot(input: AgentEmailInput): string {
   const m = input.metrics;
+  const d = input.deltas;
   return `
   <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Portfolio Snapshot</h2>
   <table style="width:100%;border-collapse:collapse;font-size:14px;">
-    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Audit-ready</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatMwp(m.audit_ready_mwp)} MWp</td></tr>
-    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">In onboarding</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.onboarding_mwp)} MWp</td></tr>
-    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Pending signature</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.pending_mwp)} MWp</td></tr>
-    <tr><td style="padding:10px 0;color:#555;">Est. commission (2025–2030)</td><td style="padding:10px 0;text-align:right;color:${BRAND_YELLOW};font-weight:700;">${formatCurrency(m.revenue_2025_2030)}</td></tr>
+    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Audit-ready</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatMwp(m.audit_ready_mwp)} MWp${d ? deltaBadge(d.audit_ready_mwp.delta, "mwp", d.audit_ready_mwp.has_baseline) : ""}</td></tr>
+    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">In onboarding</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.onboarding_mwp)} MWp${d ? deltaBadge(d.onboarding_mwp.delta, "mwp", d.onboarding_mwp.has_baseline) : ""}</td></tr>
+    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Pending signature</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.pending_mwp)} MWp${d ? deltaBadge(d.pending_signature_mwp.delta, "mwp", d.pending_signature_mwp.has_baseline) : ""}</td></tr>
+    <tr><td style="padding:10px 0;color:#555;">Est. commission (2025–2030)</td><td style="padding:10px 0;text-align:right;color:${BRAND_YELLOW};font-weight:700;">${formatCurrency(m.revenue_2025_2030)}${d ? deltaBadge(d.estimated_commission_2025_2030.delta, "currency", d.estimated_commission_2025_2030.has_baseline) : ""}</td></tr>
   </table>`;
 }
+
+function revenueLensSection(input: AgentEmailInput): string {
+  const r = input.revenue;
+  if (!r) return "";
+  const lockedRow = r.locked_behind_blockers > 0
+    ? `<tr><td style="padding:10px 12px;border-bottom:1px solid #eee;color:#dc2626;">Revenue locked behind blockers</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:#dc2626;font-weight:700;">${formatCurrency(r.locked_behind_blockers)}</td></tr>`
+    : "";
+  const pendingRow = r.pending_signature > 0
+    ? `<tr><td style="padding:10px 12px;color:#f59e0b;">Revenue pending signature</td><td style="padding:10px 12px;text-align:right;color:#f59e0b;font-weight:700;">${formatCurrency(r.pending_signature)}</td></tr>`
+    : "";
+  return `
+  <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Revenue Lens</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fafafa;border-radius:8px;overflow:hidden;">
+    <tr><td style="padding:10px 12px;border-bottom:1px solid #eee;color:#555;">Short-term — 2026 commission</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatCurrency(r.short_term_2026)}</td></tr>
+    <tr><td style="padding:10px 12px;border-bottom:1px solid #eee;color:#555;">Long-term — 2025–2030 commission</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatCurrency(r.long_term_2025_2030)}</td></tr>
+    ${lockedRow}
+    ${pendingRow}
+  </table>
+  ${(r.locked_behind_blockers > 0 || r.pending_signature > 0)
+    ? `<p style="font-size:12px;color:#888;margin:8px 0 0;">Inaction has a price tag. Resolve blockers and follow up pending signatures to unlock these numbers.</p>`
+    : ""}`;
+}
+
+function funnelSection(input: AgentEmailInput): string {
+  const f = input.funnel;
+  if (!f || f.every((r) => r.count === 0)) return "";
+  const rows = f.map((row) => {
+    const cellLeft = `<td style="padding:10px 12px;border-bottom:1px solid #eee;color:${row.emphasis ? "#dc2626" : "#555"};">${escapeHtml(row.label)}</td>`;
+    const cellMid = `<td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:${row.emphasis ? "#dc2626" : BRAND_DARK};font-weight:600;width:60px;">${row.count}</td>`;
+    const cellCta = `<td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;width:120px;">${
+      row.cta_label && row.cta_url
+        ? `<a href="${row.cta_url}" style="color:${BRAND_DARK};font-weight:600;text-decoration:none;font-size:13px;">${escapeHtml(row.cta_label)} &rarr;</a>`
+        : ""
+    }</td>`;
+    return `<tr>${cellLeft}${cellMid}${cellCta}</tr>`;
+  }).join("");
+  return `
+  <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Proposal Funnel</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>`;
+}
+
 
 function pipelineActionsSection(input: AgentEmailInput): string {
   const m = input.metrics;
