@@ -67,6 +67,8 @@ const BRAND_DARK = "#1a1a1a";
 // ----------------------------------------------------------------------------
 
 export function buildAgentSubject(input: AgentEmailInput): string {
+  if (input.subjectOverride) return input.subjectOverride;
+
   const totalBlockers =
     input.blockers.client.length +
     input.blockers.agent.length +
@@ -74,7 +76,6 @@ export function buildAgentSubject(input: AgentEmailInput): string {
   const blockedMwp = input.blockers.total_blocked_mwp;
   const auditMwp = input.metrics.audit_ready_mwp;
 
-  // Most urgent: client-action blockers with material MWp
   if (input.blockers.client.length > 0 && blockedMwp >= 0.1) {
     return `${formatMwp(blockedMwp)} MWp waiting on client action`;
   }
