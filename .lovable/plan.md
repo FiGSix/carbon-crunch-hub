@@ -1,132 +1,112 @@
-# Plan: Transform `send-weekly-roundup` Agent Email into a Sales-Performance Engine
+# Phases 2 & 3 — Agent Weekly Roundup
 
-## 1. Audit of current implementation
+Phase 1 is complete and validated:
+- Dynamic pricing wired to `system_settings` (parity with dashboard).
+- Modular split: `blockers.ts`, `links.ts`, `agentEmail.ts`, thin `index.ts`.
+- Categorised blockers (client / agent / Crunch) with missing items, owner, and per-blocker resolve buttons.
+- Header CTAs (Dashboard, Add Proposal, Resolve Blocked, Follow Up Pending).
+- Test send to `shaun@crunchcarbon.com` returned 200, 1/1 sent.
 
-**File:** `supabase/functions/send-weekly-roundup/index.ts` (1,318 lines, monolithic).
-
-**What exists today:**
-- One file handles both agent and admin emails.
-- Hardcoded `CARBON_PRICES` constant (2024–2030) — does NOT match `dynamicCarbonPricingService` used in the app.
-- Hardcoded `PLATFORM_2026_GOAL_MWP = 250`.
-- 3-tier segmentation only: `new` / `active` / `top_performer` based on tenure + signed MWp.
-- `Blocker` type captures only `project_name`, `blocker_type`, `mwp` — no missing-item, no owner, no link.
-- `WeekMovement` exists but no week-on-week metric deltas (no snapshot table).
-- No proposal funnel data (views, multi-views, expiring, viewed-not-signed) — `email_events` table exists but is unused here.
-- No deep-link helpers — buttons (where present) likely go to a generic dashboard.
-- Vintage countdown is generic (platform-wide), not personal.
-- No "This Week's Focus" section.
-- No A/B test or CTA-click tracking.
-
-**Available data (confirmed in schema):**
-- `email_events` (event_type, click_url, occurred_at, proposal_id) — usable for funnel + CTA tracking.
-- `proposals` (status, signed_at, created_at, updated_at, system_size_kwp, agent_id, client_reference_id).
-- `project_onboarding` + `onboarding_fields` + `onboarding_documents` + `data_access_config` — usable to compute exact missing items per project.
-- `clients`, `client_company_members` — for owner-of-action attribution.
-- `vintageConfig` shared util — already integrated.
-- `dynamicCarbonPricingService` lives in `src/lib/calculations/carbon/dynamicPricing.ts` (frontend). Need a Deno-compatible equivalent in `supabase/functions/_shared/`.
-
-**Gaps requiring new infrastructure:**
-- No `agent_weekly_snapshots` table → cannot compute week-on-week deltas reliably.
-- No `email_cta_events` table (or extended `email_events` rows) for CTA click attribution.
-- No shared Deno `carbonPricing.ts` util.
+Recommendation: proceed. Phase 2 delivers the commercial uplift agents will feel immediately; Phase 3 layers intelligence and learning on top.
 
 ---
 
-## 2. Recommended refactor & data model
+## Phase 2 — Make It Commercial
 
-### 2a. Refactor monolith into modules
-Split `send-weekly-roundup/index.ts` into:
-```
-supabase/functions/send-weekly-roundup/
-  index.ts                  // HTTP entry, orchestration only
-  agent/
-    metrics.ts              // queries + aggregation
-    segmentation.ts         // 7-segment classifier
-    blockers.ts             // categorised blockers w/ missing items + owner + link
-    funnel.ts               // proposal funnel from email_events
-    focus.ts                // "This Week's Focus" selector
-    deltas.ts               // week-on-week from snapshots
-    template.ts             // HTML composition
-    links.ts                // deep-link builder
-  admin/
-    index.ts                // existing admin email, untouched logic moved here
-  _shared/
-    carbonPricing.ts        // dynamic pricing (replaces hardcoded const)
-```
-Admin email logic is moved verbatim, no behaviour change.
+Goal: every number tells a revenue story; every blocker shows the rand cost of inaction.
 
-### 2b. New shared util — `_shared/carbonPricing.ts`
-Reads from same source as `dynamicCarbonPricingService` (likely `system_settings` row `carbon_prices` or a `carbon_prices` table — to be confirmed during implementation). Exports `getCarbonPrices()` and `calculateRevenue(credits, sharePct, fromYear, toYear)`.
+### 2.1 Week-on-week deltas
+- New table `agent_weekly_snapshots` (one row per agent per run).
+  Stores: audit-ready MWp, onboarding MWp, pending-signature MWp, signed-this-week MWp, new-proposal count, est. commission 2026, est. commission 2025–2030.
+- New module `agent/deltas.ts`: read previous snapshot, compute Δ vs this week, expose `{value, delta, direction}` for each metric.
+- Snapshot write happens at end of every successful run.
+- First run after deploy = "baseline week" (deltas hidden gracefully).
 
-### 2c. New table — `agent_weekly_snapshots`
-```
-id, agent_id, snapshot_date,
-audit_ready_mwp, onboarding_mwp, pending_signature_mwp,
-signed_this_week_mwp, new_proposals_count,
-estimated_commission_2026, estimated_commission_2025_2030
-```
-Written at the end of every weekly run; read at the start of next run for deltas.
+### 2.2 Proposal funnel
+- New module `agent/funnel.ts` joining `email_events` × `proposals` for the agent:
+  - Created this week
+  - Viewed (first open)
+  - Multi-viewed (≥3 opens, not signed) — strong follow-up signal
+  - Viewed but not signed (>7 days)
+  - Expiring within 7 days
+  - Signed this week
+- Render as a 6-cell funnel with counts + direct "Follow up" CTA per row (deep-link to filtered proposals view).
 
-### 2d. New table — `email_cta_events` (Phase 3)
-```
-id, email_send_id, agent_id, cta_type, target_url, clicked_at, variant
-```
-Populated via Resend webhook + URL param tagging (`?utm_email=weekly&utm_cta=resolve_project&utm_pid=...`).
+### 2.3 Revenue lens
+- Replace single revenue figure with four numbers, all using dynamic pricing:
+  1. Short-term revenue 2026 (audit-ready × 2026 price × share)
+  2. Long-term revenue 2025–2030 (cumulative)
+  3. **Revenue locked behind blockers** (sum MWp of blocked projects × pricing)
+  4. **Revenue pending signature** (sent-not-signed proposals)
+- Numbers 3 and 4 are the new wedge — they monetise inaction.
 
-### 2e. New segmentation (7 segments)
-`new_agent`, `activated`, `stuck` (no activity 21d), `growing`, `top_performer`, `at_risk_pipeline` (high pending, low conversion), `audit_momentum`.
-Each segment drives subject line, opening, focus block, and CTA priority via a config map.
+### 2.4 Personal vintage impact
+- Filter agent's onboarding-stage projects against the next vintage cutoff.
+- For each at-risk project: list missing items + resolve button.
+- Headline: "X MWp of yours can still make Vintage YYYY if resolved by DD MMM."
 
----
+### 2.5 This Week's Focus
+- New module `agent/focus.ts`: scoring function over blockers + pending + funnel.
+  Score = MWp × revenue-per-MWp × (1 / effort-to-resolve).
+- Picks the single highest-impact action and renders a hero block at the top of the email with: project, what's missing, who acts, deadline, primary CTA, secondary "view all".
 
-## 3. Phased implementation
-
-### **Phase 1 — Quick Wins** (deliver first)
-1. Extract `_shared/carbonPricing.ts` and replace hardcoded `CARBON_PRICES`. Verify parity with dashboard.
-2. Refactor monolith → modular structure (above). Admin email moved untouched.
-3. Build `links.ts` deep-link helper (dashboard, proposal/:id, onboarding/:id, blocker actions).
-4. Rewrite `Blocker` type + builder:
-   - Adds `missing_items[]`, `action_owner: 'agent'|'client'|'crunch'`, `resolve_url`, `mwp`, `status`, `category`.
-   - Source missing items from `onboarding_fields` (nulls), `onboarding_documents` (missing categories), `data_access_config` (missing creds), `cession_signed_at` IS NULL, etc.
-5. Categorise blockers into the 3 sections (Client / Agent / Crunch) in template.
-6. Add prominent header CTAs: Open Dashboard, Add Proposal, Resolve Blocked, Follow Up Pending.
-7. Per-blocker action button.
-
-**Exit criteria:** Email visibly action-led, all numbers match dashboard, every blocker shows missing item + owner + button.
-
-### **Phase 2 — Make It Commercial**
-8. Create `agent_weekly_snapshots` migration; write snapshot at end of run; compute deltas at start.
-9. Add `funnel.ts`: query `email_events` joined with `proposals` for viewed-not-signed, multi-views, expiring-7d, signed-this-week, created-this-week.
-10. Revenue lens: 2026 short-term + 2025–2030 long-term + revenue-locked-behind-blockers + revenue-pending-signature.
-11. Personal vintage impact: filter agent's onboarding-stage projects against next vintage deadline; list each with missing items.
-12. `focus.ts`: scoring function picking single highest-MWp-unlock action; render dedicated "This Week's Focus" block at top.
-
-### **Phase 3 — Make It Intelligent**
-13. New 7-segment classifier + per-segment subject/opening/focus/CTA config.
-14. Milestones engine (threshold proximity, streaks, team rank).
-15. Team section upgrade: deltas, contribution %, nearest peer.
-16. Rotating content block (tip/story/feature/objection) — pick by `weekNumber % N`.
-17. A/B subject testing: random variant assignment, log via `email_cta_events`; Resend webhook captures opens + clicks tagged with variant.
+### Phase 2 exit criteria
+- All four revenue numbers reconcile with dashboard.
+- Snapshot table populated for every agent after first run.
+- Focus block always present (falls back to "add a new proposal" when no blockers/pending exist).
 
 ---
 
-## 4. Risks & open questions
+## Phase 3 — Make It Intelligent
 
-- **Pricing source confirmation** — need to verify exactly where `dynamicCarbonPricingService` reads from before writing the Deno equivalent (likely `system_settings`). Will inspect `src/lib/calculations/carbon/dynamicPricing.ts` first thing in implementation.
-- **Snapshot bootstrap** — first run after deploy will have no prior snapshot → deltas show "baseline week" (graceful degrade per spec).
-- **Email size** — adding funnel + per-blocker buttons can balloon HTML; cap each list at top 5 with "…and N more — open dashboard".
-- **Deep-link routes** — need to confirm exact frontend routes for `/proposals/:id`, `/onboarding/:id`, blocker resolution pages. Will grep `src/pages` during Phase 1.
-- **Admin email isolation** — must regression-test admin email after refactor (no behaviour change intended).
-- **CTA tracking** requires Resend click-tracking enabled on the domain; if not, defer Phase 3.17.
+Goal: the email adapts to who the agent is and what changed, and we learn what works.
+
+### 3.1 7-segment classifier
+Replace the 3-tier segmentation with: `new_agent`, `activated`, `stuck` (no activity 21 d), `growing`, `top_performer`, `at_risk_pipeline` (high pending, low conversion), `audit_momentum`.
+Each segment maps to subject line, opening line, focus weighting, and CTA priority via a single config map.
+
+### 3.2 Milestones engine
+Detects threshold proximity (e.g. "0.4 MWp from 10 MWp audit-ready"), streaks (3 consecutive weeks signing), and team rank changes. Renders as a small badge row above the focus block.
+
+### 3.3 Team section upgrade
+- Team deltas (this week vs last).
+- Agent's contribution % to team.
+- Nearest peer ahead/behind by audit-ready MWp (motivational, no leaderboard exposed in full).
+
+### 3.4 Rotating content block
+One slot at the bottom rotating by `weekNumber % 4`: tip / customer story / new feature / objection-handler. Static content registry, no CMS needed.
+
+### 3.5 A/B subject testing + CTA tracking
+- New table `email_cta_events` (email_send_id, agent_id, cta_type, target_url, variant, clicked_at).
+- All CTA links tagged with `?utm_email=weekly&utm_cta=...&utm_variant=A|B`.
+- Random A/B subject assignment per send, variant logged.
+- Resend webhook (already in project for delivery events) extended to log opens + clicks into `email_cta_events`.
+- Weekly admin report adds: open rate, CTR per CTA type, winning variant.
+- **Dependency:** Resend click-tracking must be enabled on the sending domain. If disabled, ship 3.1–3.4 only and flag 3.5 as blocked.
+
+### Phase 3 exit criteria
+- Two agents in different segments receive visibly different emails (subject + opening + focus).
+- `email_cta_events` records at least one click within 24 h of first live send.
+- Admin email surfaces A/B + CTR.
 
 ---
 
-## 5. What I will change in code (Phase 1 only, on approval)
+## Sequencing & risk
 
-- **New:** `supabase/functions/_shared/carbonPricing.ts`
-- **New:** `supabase/functions/send-weekly-roundup/agent/{metrics,segmentation,blockers,template,links}.ts`
-- **New:** `supabase/functions/send-weekly-roundup/admin/index.ts` (moved code)
-- **Edit:** `supabase/functions/send-weekly-roundup/index.ts` → thin orchestrator
-- **No DB migration in Phase 1.** First migration (`agent_weekly_snapshots`) lands at start of Phase 2.
+- Phase 2 ships in one PR per sub-section (2.1 → 2.5) so each can be verified in isolation against the dashboard.
+- Phase 2.1 is the only DB migration in this batch.
+- Phase 3 ships after Phase 2 is live for one full weekly cycle (so we have a real snapshot baseline + funnel data before layering segmentation on top).
+- Admin email remains untouched throughout.
+- Email size: cap every list at top 5 with "…and N more — open dashboard" to keep render under Gmail's 102 KB clip threshold.
 
-Admin email behaviour unchanged. Agent email backward-compatible: any section lacking data is hidden, never shown empty.
+## Files & migrations
+
+**Phase 2**
+- New migration: `agent_weekly_snapshots` table.
+- New: `send-weekly-roundup/deltas.ts`, `funnel.ts`, `focus.ts`, `revenue.ts`, `vintageImpact.ts`.
+- Edit: `agentEmail.ts` (new sections), `index.ts` (snapshot write).
+
+**Phase 3**
+- New migration: `email_cta_events` table + Resend webhook handler edit.
+- New: `segmentation.ts`, `milestones.ts`, `rotatingContent.ts`.
+- Edit: `agentEmail.ts` (segment-driven copy), admin email (A/B reporting).
