@@ -19,13 +19,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2, MailCheck, Send } from 'lucide-react';
 import { EditClientDialog } from './EditClientDialog';
 import { PortfolioClientShareDialog } from './PortfolioClientShareDialog';
 import { EditAssignedAgentDialog } from './EditAssignedAgentDialog';
 import { ClientDeleter } from '@/services/unified/clients/operations/ClientDeleter';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // ── Memoized row component defined OUTSIDE parent ──
 const ClientRow2 = memo(function ClientRow2({
