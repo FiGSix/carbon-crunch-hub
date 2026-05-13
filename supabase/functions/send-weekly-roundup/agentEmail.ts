@@ -1,7 +1,17 @@
 import { links } from "./links.ts";
 import type { ActionableBlocker, CategorisedBlockers } from "./blockers.ts";
+import type { AgentDeltas } from "./snapshots.ts";
+import type { FunnelRow } from "./funnel.ts";
+import type { AgentRevenueLens } from "./revenue.ts";
 
 type AgentSegment = "new" | "active" | "top_performer";
+
+export interface VintageProjectAtRisk {
+  project_name: string;
+  mwp: number;
+  resolve_url: string;
+  missing_items: string[];
+}
 
 export interface AgentEmailInput {
   agent: {
@@ -33,6 +43,12 @@ export interface AgentEmailInput {
     year: number;
   } | null;
   weekEndingLabel: string;
+  // Phase 2 additions (all optional — email gracefully degrades if absent)
+  deltas?: AgentDeltas;
+  funnel?: FunnelRow[];
+  revenue?: AgentRevenueLens;
+  vintageAtRisk?: VintageProjectAtRisk[];
+  vintageDeadlineLabel?: string;
 }
 
 const BRAND_YELLOW = "#FFCD03";
