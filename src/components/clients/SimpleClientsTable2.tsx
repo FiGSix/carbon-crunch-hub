@@ -109,6 +109,21 @@ const ClientRow2 = memo(function ClientRow2({
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onVerifyEmail(client)}
+                    disabled={!client.client_email}
+                  >
+                    <MailCheck className="mr-2 h-4 w-4" />
+                    Verify Email Now
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onResendInvitation(client)}
+                    disabled={!client.client_email}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Resend Invitation Email
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => onDelete(client)}
                     className="text-destructive focus:text-destructive"
