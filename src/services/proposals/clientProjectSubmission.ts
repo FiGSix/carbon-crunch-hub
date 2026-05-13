@@ -62,7 +62,9 @@ export async function submitClientProject(
       : normalizeToKWp(projectInfo.size);
 
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
-    const carbonCredits = calculateCarbonCredits(annualEnergy);
+    // BUGFIX: calculateCarbonCredits expects kWp, not kWh. Passing annualEnergy
+    // produced credits ~1643× too high (ratio 2787.913 credits/kWp on 5 records).
+    const carbonCredits = calculateCarbonCredits(systemSizeKWp);
 
     // 4. Get client portfolio size for tier pricing
     const { data: existingProposals } = await supabase
