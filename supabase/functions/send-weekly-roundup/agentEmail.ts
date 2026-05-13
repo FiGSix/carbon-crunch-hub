@@ -112,6 +112,10 @@ export function buildAgentHtml(input: AgentEmailInput): string {
 
     ${revenueSnapshot(input)}
 
+    ${revenueLensSection(input)}
+
+    ${funnelSection(input)}
+
     ${pipelineActionsSection(input)}
 
     ${blockersSection(input.blockers)}
