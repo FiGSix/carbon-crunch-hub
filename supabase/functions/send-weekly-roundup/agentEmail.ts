@@ -52,6 +52,11 @@ export interface AgentEmailInput {
   revenue?: AgentRevenueLens;
   vintageAtRisk?: VintageProjectAtRisk[];
   vintageDeadlineLabel?: string;
+  // Phase 3 additions
+  subjectOverride?: string;
+  openingOverride?: string;
+  milestones?: Milestone[];
+  rotatingBlock?: RotatingBlock;
 }
 
 const BRAND_YELLOW = "#FFCD03";
