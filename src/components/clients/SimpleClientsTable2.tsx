@@ -19,13 +19,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2, MailCheck, Send } from 'lucide-react';
 import { EditClientDialog } from './EditClientDialog';
 import { PortfolioClientShareDialog } from './PortfolioClientShareDialog';
 import { EditAssignedAgentDialog } from './EditAssignedAgentDialog';
 import { ClientDeleter } from '@/services/unified/clients/operations/ClientDeleter';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // ── Memoized row component defined OUTSIDE parent ──
 const ClientRow2 = memo(function ClientRow2({
@@ -35,6 +36,8 @@ const ClientRow2 = memo(function ClientRow2({
   onPortfolio,
   onReassign,
   onDelete,
+  onVerifyEmail,
+  onResendInvitation,
 }: {
   client: ClientData;
   isAdmin: boolean;
@@ -42,6 +45,8 @@ const ClientRow2 = memo(function ClientRow2({
   onPortfolio: (client: ClientData) => void;
   onReassign: (client: ClientData) => void;
   onDelete: (client: ClientData) => void;
+  onVerifyEmail: (client: ClientData) => void;
+  onResendInvitation: (client: ClientData) => void;
 }) {
   return (
     <tr className="border-b hover:bg-muted/30 transition-colors">
@@ -104,6 +109,21 @@ const ClientRow2 = memo(function ClientRow2({
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onVerifyEmail(client)}
+                    disabled={!client.client_email}
+                  >
+                    <MailCheck className="mr-2 h-4 w-4" />
+                    Verify Email Now
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onResendInvitation(client)}
+                    disabled={!client.client_email}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Resend Invitation Email
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => onDelete(client)}
                     className="text-destructive focus:text-destructive"
@@ -146,12 +166,57 @@ export function SimpleClientsTable2({
   const [reassignClient, setReassignClient] = useState<ClientData | null>(null);
   const [deleteClient, setDeleteClient] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [verifyClient, setVerifyClient] = useState<ClientData | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendClient, setResendClient] = useState<ClientData | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   // Stable callbacks
   const handleEdit = useCallback((client: ClientData) => setEditingClient(client), []);
   const handlePortfolio = useCallback((client: ClientData) => setPortfolioClient(client), []);
   const handleReassign = useCallback((client: ClientData) => setReassignClient(client), []);
   const handleDelete = useCallback((client: ClientData) => setDeleteClient(client), []);
+  const handleVerifyEmail = useCallback((client: ClientData) => setVerifyClient(client), []);
+  const handleResendInvitation = useCallback((client: ClientData) => setResendClient(client), []);
+
+  const handleVerifyConfirm = async () => {
+    if (!verifyClient?.client_email) return;
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-auth-verification', {
+        body: { action: 'verify_user', email: verifyClient.client_email },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Email verified', description: data?.message || `Email confirmed for ${verifyClient.client_email}.` });
+      setVerifyClient(null);
+      onRefresh();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Verify failed', description: err?.message || 'Could not verify email' });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendConfirm = async () => {
+    if (!resendClient?.client_email) return;
+    setIsResending(true);
+    try {
+      const [firstName, ...rest] = (resendClient.client_name || '').trim().split(' ');
+      const lastName = rest.join(' ') || undefined;
+      const { data, error } = await supabase.functions.invoke('send-client-invitation', {
+        body: { email: resendClient.client_email, firstName: firstName || undefined, lastName },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Invitation sent', description: `An invitation email has been sent to ${resendClient.client_email}.` });
+      setResendClient(null);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Send failed', description: err?.message || 'Could not send invitation' });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteClient) return;
@@ -218,6 +283,8 @@ export function SimpleClientsTable2({
                     onPortfolio={handlePortfolio}
                     onReassign={handleReassign}
                     onDelete={handleDelete}
+                    onVerifyEmail={handleVerifyEmail}
+                    onResendInvitation={handleResendInvitation}
                   />
                 ))
               )}
@@ -288,6 +355,41 @@ export function SimpleClientsTable2({
               ) : (
                 'Delete'
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!verifyClient} onOpenChange={(open) => !open && setVerifyClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Manually verify this client's email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark <strong>{verifyClient?.client_email}</strong> as confirmed,
+              skipping the email verification link. The client will be able to log in immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleVerifyConfirm} disabled={isVerifying}>
+              {isVerifying ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>) : 'Verify Email'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!resendClient} onOpenChange={(open) => !open && setResendClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resend invitation email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A new invitation email will be sent to <strong>{resendClient?.client_email}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResendConfirm} disabled={isResending}>
+              {isResending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</>) : 'Send Invitation'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
