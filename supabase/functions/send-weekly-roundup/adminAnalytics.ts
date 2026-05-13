@@ -86,7 +86,7 @@ export async function getRoundupAnalytics(
     const clicked = !!r.clicked_at;
 
     // Per-segment / variant: count unique sends (one per message_id+segment+variant)
-    const sendKey = `${r.raw_payload?.message_id || r.sent_at}|${segment}|${variant}`;
+    const sendKey = `${r.message_id || r.sent_at}|${segment}|${variant}`;
     const isNewSend = !sendKeys.has(sendKey);
     if (isNewSend) sendKeys.add(sendKey);
 
