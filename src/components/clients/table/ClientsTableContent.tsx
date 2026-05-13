@@ -171,6 +171,12 @@ export function ClientsTableContent({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof ClientData | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [verifyConfirmOpen, setVerifyConfirmOpen] = useState(false);
+  const [clientToVerify, setClientToVerify] = useState<ClientData | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendConfirmOpen, setResendConfirmOpen] = useState(false);
+  const [clientToResend, setClientToResend] = useState<ClientData | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
 
   const deferredQuery = useDeferredValue(searchQuery);
