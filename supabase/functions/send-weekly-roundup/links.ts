@@ -15,6 +15,9 @@ export const links = {
   dashboard: () => withTracking("/dashboard", "open_dashboard"),
   createProposal: () => withTracking("/create-proposal", "add_proposal"),
   proposalsList: () => withTracking("/proposals", "view_proposals"),
+  proposalsPending: () => withTracking("/proposals?filter=pending_signature", "follow_up_pending"),
+  proposalsExpiring: () => withTracking("/proposals?filter=expiring", "re_engage_expiring"),
+  proposalsViewedNotSigned: () => withTracking("/proposals?filter=viewed_not_signed", "follow_up_viewed"),
   myClients: () => withTracking("/my-clients", "view_clients"),
 
   proposal: (id: string, cta = "open_proposal") =>
