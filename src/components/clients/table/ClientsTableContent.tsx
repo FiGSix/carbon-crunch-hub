@@ -242,6 +242,16 @@ export function ClientsTableContent({
     setReassignDialogOpen(true);
   }, []);
 
+  const handleVerifyEmailClick = useCallback((client: ClientData) => {
+    setClientToVerify(client);
+    setVerifyConfirmOpen(true);
+  }, []);
+
+  const handleResendInvitationClick = useCallback((client: ClientData) => {
+    setClientToResend(client);
+    setResendConfirmOpen(true);
+  }, []);
+
   const handleSort = (column: keyof ClientData) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
