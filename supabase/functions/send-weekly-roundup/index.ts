@@ -1261,6 +1261,8 @@ async function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMe
     <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⚠️ Platform Blockers Overview</h2>
     ${blockersSection}
     
+    ${analyticsHtml}
+    
     <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⏳ Vintage ${vintageYear} Countdown</h2>
     <div style="background-color: #1a1a1a; color: #FFCD03; padding: 25px; border-radius: 6px; text-align: center; margin: 15px 0;">
       <span style="font-size: 32px; font-weight: bold;">${days}</span><span style="font-size: 14px; margin-right: 15px;"> days</span>
