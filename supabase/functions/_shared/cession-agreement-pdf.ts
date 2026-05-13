@@ -31,14 +31,40 @@ export async function addCessionAgreementPages(
   fonts: { regular: PDFFont; bold: PDFFont },
   proposalData: any
 ): Promise<void> {
-  // Extract dynamic values
+  // Resolve owner from live client record (preferred) with snapshot fallback.
+  // Mirrors src/utils/proposals/resolveClientInfo.ts: live client wins.
+  const client = proposalData.client || null;
+  const snapshot = proposalData.content?.clientInfo || {};
+  const projectInfo = proposalData.content?.projectInfo || {};
+
+  const liveFullName = client
+    ? [client.first_name, client.last_name].filter(Boolean).join(' ').trim()
+    : '';
+
+  // Owner = the legal entity (company) when available, otherwise the individual
+  const ownerName =
+    (client?.company_name && client.company_name.trim()) ||
+    (snapshot.companyName && String(snapshot.companyName).trim()) ||
+    liveFullName ||
+    snapshot.name ||
+    "[Owner Name]";
+
+  const ownerEmail = client?.email || snapshot.email || "[Owner Email]";
+  const registrationNumber =
+    client?.registration_number || snapshot.registrationNumber || "Not Applicable";
+
+  // No dedicated registered-office field exists on clients; fall back to snapshot
+  // address, then premises address (existing behaviour) as a last resort.
+  const companyAddress =
+    snapshot.address || projectInfo.address || "[Company Address]";
+
   const data: CessionAgreementData = {
-    ownerName: proposalData.content?.clientInfo?.name || "[Owner Name]",
-    ownerEmail: proposalData.content?.clientInfo?.email || "[Owner Email]",
-    registrationNumber: proposalData.content?.clientInfo?.registrationNumber || "Not Applicable",
-    companyAddress: proposalData.content?.clientInfo?.address || proposalData.content?.projectInfo?.address || "[Company Address]",
-    premisesAddress: proposalData.content?.projectInfo?.address || "[Premises Address]",
-    installationDate: proposalData.content?.projectInfo?.commissionDate?.split('T')[0] || "[Installation Date]",
+    ownerName,
+    ownerEmail,
+    registrationNumber,
+    companyAddress,
+    premisesAddress: projectInfo.address || "[Premises Address]",
+    installationDate: projectInfo.commissionDate?.split('T')[0] || "[Installation Date]",
     signingDate: new Date().toISOString().split('T')[0],
     clientSharePercentage: proposalData.client_share_percentage || 0,
     ownerPercentage: (proposalData.client_share_percentage || 0).toFixed(1),
