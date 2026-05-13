@@ -54,7 +54,7 @@ export async function getRoundupAnalytics(
   // Pull all events for the window. Volume is small (one row per CTA per send).
   const { data, error } = await (supabase as any)
     .from("email_cta_events")
-    .select("agent_id,email_type,cta_type,target_url,variant,subject,sent_at,opened_at,clicked_at,raw_payload")
+    .select("agent_id,email_type,cta_type,target_url,variant,subject,message_id,sent_at,opened_at,clicked_at,raw_payload")
     .gte("sent_at", since)
     .limit(10000);
 
