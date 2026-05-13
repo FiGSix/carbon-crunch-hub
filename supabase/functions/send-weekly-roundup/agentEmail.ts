@@ -1,7 +1,17 @@
 import { links } from "./links.ts";
 import type { ActionableBlocker, CategorisedBlockers } from "./blockers.ts";
+import type { AgentDeltas } from "./snapshots.ts";
+import type { FunnelRow } from "./funnel.ts";
+import type { AgentRevenueLens } from "./revenue.ts";
 
 type AgentSegment = "new" | "active" | "top_performer";
+
+export interface VintageProjectAtRisk {
+  project_name: string;
+  mwp: number;
+  resolve_url: string;
+  missing_items: string[];
+}
 
 export interface AgentEmailInput {
   agent: {
@@ -33,6 +43,12 @@ export interface AgentEmailInput {
     year: number;
   } | null;
   weekEndingLabel: string;
+  // Phase 2 additions (all optional — email gracefully degrades if absent)
+  deltas?: AgentDeltas;
+  funnel?: FunnelRow[];
+  revenue?: AgentRevenueLens;
+  vintageAtRisk?: VintageProjectAtRisk[];
+  vintageDeadlineLabel?: string;
 }
 
 const BRAND_YELLOW = "#FFCD03";
@@ -96,6 +112,10 @@ export function buildAgentHtml(input: AgentEmailInput): string {
 
     ${revenueSnapshot(input)}
 
+    ${revenueLensSection(input)}
+
+    ${funnelSection(input)}
+
     ${pipelineActionsSection(input)}
 
     ${blockersSection(input.blockers)}
@@ -152,23 +172,79 @@ function thisWeeksFocusSection(focus: { headline: string; detail: string; cta?: 
   </div>`;
 }
 
+function deltaBadge(delta: number, unit: "mwp" | "currency", hasBaseline: boolean): string {
+  if (!hasBaseline) {
+    return `<span style="font-size:11px;color:#888;font-weight:400;margin-left:6px;">baseline week</span>`;
+  }
+  if (Math.abs(delta) < (unit === "mwp" ? 0.001 : 1)) {
+    return `<span style="font-size:11px;color:#888;font-weight:400;margin-left:6px;">no change</span>`;
+  }
+  const up = delta > 0;
+  const color = up ? "#16a34a" : "#dc2626";
+  const arrow = up ? "▲" : "▼";
+  const formatted = unit === "mwp" ? `${formatMwp(Math.abs(delta))} MWp` : formatCurrency(Math.abs(delta));
+  return `<span style="font-size:11px;color:${color};font-weight:600;margin-left:6px;">${arrow} ${formatted}</span>`;
+}
+
 function revenueSnapshot(input: AgentEmailInput): string {
   const m = input.metrics;
+  const d = input.deltas;
   return `
   <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Portfolio Snapshot</h2>
   <table style="width:100%;border-collapse:collapse;font-size:14px;">
-    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Audit-ready</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatMwp(m.audit_ready_mwp)} MWp</td></tr>
-    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">In onboarding</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.onboarding_mwp)} MWp</td></tr>
-    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Pending signature</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.pending_mwp)} MWp</td></tr>
-    <tr><td style="padding:10px 0;color:#555;">Est. commission (2025–2030)</td><td style="padding:10px 0;text-align:right;color:${BRAND_YELLOW};font-weight:700;">${formatCurrency(m.revenue_2025_2030)}</td></tr>
+    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Audit-ready</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatMwp(m.audit_ready_mwp)} MWp${d ? deltaBadge(d.audit_ready_mwp.delta, "mwp", d.audit_ready_mwp.has_baseline) : ""}</td></tr>
+    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">In onboarding</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.onboarding_mwp)} MWp${d ? deltaBadge(d.onboarding_mwp.delta, "mwp", d.onboarding_mwp.has_baseline) : ""}</td></tr>
+    <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#555;">Pending signature</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${formatMwp(m.pending_mwp)} MWp${d ? deltaBadge(d.pending_signature_mwp.delta, "mwp", d.pending_signature_mwp.has_baseline) : ""}</td></tr>
+    <tr><td style="padding:10px 0;color:#555;">Est. commission (2025–2030)</td><td style="padding:10px 0;text-align:right;color:${BRAND_YELLOW};font-weight:700;">${formatCurrency(m.revenue_2025_2030)}${d ? deltaBadge(d.estimated_commission_2025_2030.delta, "currency", d.estimated_commission_2025_2030.has_baseline) : ""}</td></tr>
   </table>`;
 }
+
+function revenueLensSection(input: AgentEmailInput): string {
+  const r = input.revenue;
+  if (!r) return "";
+  const lockedRow = r.locked_behind_blockers > 0
+    ? `<tr><td style="padding:10px 12px;border-bottom:1px solid #eee;color:#dc2626;">Revenue locked behind blockers</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:#dc2626;font-weight:700;">${formatCurrency(r.locked_behind_blockers)}</td></tr>`
+    : "";
+  const pendingRow = r.pending_signature > 0
+    ? `<tr><td style="padding:10px 12px;color:#f59e0b;">Revenue pending signature</td><td style="padding:10px 12px;text-align:right;color:#f59e0b;font-weight:700;">${formatCurrency(r.pending_signature)}</td></tr>`
+    : "";
+  return `
+  <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Revenue Lens</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fafafa;border-radius:8px;overflow:hidden;">
+    <tr><td style="padding:10px 12px;border-bottom:1px solid #eee;color:#555;">Short-term — 2026 commission</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatCurrency(r.short_term_2026)}</td></tr>
+    <tr><td style="padding:10px 12px;border-bottom:1px solid #eee;color:#555;">Long-term — 2025–2030 commission</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:${BRAND_DARK};font-weight:600;">${formatCurrency(r.long_term_2025_2030)}</td></tr>
+    ${lockedRow}
+    ${pendingRow}
+  </table>
+  ${(r.locked_behind_blockers > 0 || r.pending_signature > 0)
+    ? `<p style="font-size:12px;color:#888;margin:8px 0 0;">Inaction has a price tag. Resolve blockers and follow up pending signatures to unlock these numbers.</p>`
+    : ""}`;
+}
+
+function funnelSection(input: AgentEmailInput): string {
+  const f = input.funnel;
+  if (!f || f.every((r) => r.count === 0)) return "";
+  const rows = f.map((row) => {
+    const cellLeft = `<td style="padding:10px 12px;border-bottom:1px solid #eee;color:${row.emphasis ? "#dc2626" : "#555"};">${escapeHtml(row.label)}</td>`;
+    const cellMid = `<td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:${row.emphasis ? "#dc2626" : BRAND_DARK};font-weight:600;width:60px;">${row.count}</td>`;
+    const cellCta = `<td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;width:120px;">${
+      row.cta_label && row.cta_url
+        ? `<a href="${row.cta_url}" style="color:${BRAND_DARK};font-weight:600;text-decoration:none;font-size:13px;">${escapeHtml(row.cta_label)} &rarr;</a>`
+        : ""
+    }</td>`;
+    return `<tr>${cellLeft}${cellMid}${cellCta}</tr>`;
+  }).join("");
+  return `
+  <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Proposal Funnel</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>`;
+}
+
 
 function pipelineActionsSection(input: AgentEmailInput): string {
   const m = input.metrics;
   if (m.pending_mwp <= 0 && m.new_proposals_this_week === 0) return "";
   const pendingLine = m.pending_mwp > 0
-    ? `<li style="margin-bottom:6px;"><strong>${formatMwp(m.pending_mwp)} MWp</strong> in proposals awaiting client signature — <a href="${links.proposalsList()}" style="color:${BRAND_DARK};font-weight:600;">follow up &rarr;</a></li>`
+    ? `<li style="margin-bottom:6px;"><strong>${formatMwp(m.pending_mwp)} MWp</strong> in proposals awaiting client signature — <a href="${links.proposalsPending()}" style="color:${BRAND_DARK};font-weight:600;">follow up &rarr;</a></li>`
     : "";
   const createdLine = m.new_proposals_this_week > 0
     ? `<li style="margin-bottom:6px;">${m.new_proposals_this_week} new proposal${m.new_proposals_this_week === 1 ? "" : "s"} created this week.</li>`
@@ -223,10 +299,35 @@ function blockerCard(b: ActionableBlocker, accent: string): string {
 function personalVintageSection(input: AgentEmailInput): string {
   if (!input.vintage) return "";
   const v = input.vintage;
-  // Only show personal stake when there is onboarding MWp at risk
-  const personalLine = input.metrics.onboarding_mwp > 0.001
-    ? `<p style="color:#555;line-height:1.55;margin:10px 0 0;font-size:14px;">You have <strong>${formatMwp(input.metrics.onboarding_mwp)} MWp</strong> in onboarding that could still make Vintage ${v.year} if completed before the deadline.</p>`
-    : `<p style="color:#888;font-size:13px;font-style:italic;margin:10px 0 0;">Projects added later roll into the next vintage — momentum carries forward.</p>`;
+  const atRisk = input.vintageAtRisk ?? [];
+  const atRiskMwp = atRisk.reduce((s, p) => s + p.mwp, 0);
+  const deadlineLabel = input.vintageDeadlineLabel ? ` by ${escapeHtml(input.vintageDeadlineLabel)}` : "";
+
+  let body = "";
+  if (atRisk.length > 0) {
+    const top = atRisk.slice(0, 5);
+    const more = atRisk.length - top.length;
+    const rows = top.map((p) => `
+      <li style="margin-bottom:8px;">
+        <strong>${escapeHtml(p.project_name)}</strong> <span style="color:#888;">— ${formatMwp(p.mwp)} MWp</span>
+        <div style="font-size:12px;color:#666;margin:2px 0 4px;">Missing: ${escapeHtml(p.missing_items.join(", "))}</div>
+        <a href="${p.resolve_url}" style="font-size:13px;color:${BRAND_DARK};font-weight:600;">Resolve &rarr;</a>
+      </li>`).join("");
+    const moreNote = more > 0
+      ? `<p style="font-size:12px;color:#888;margin:6px 0 0;">…and ${more} more — <a href="${links.dashboard()}" style="color:${BRAND_DARK};">open dashboard</a>.</p>`
+      : "";
+    body = `
+    <p style="color:#333;font-size:14px;margin:14px 0 8px;line-height:1.5;">
+      <strong>${formatMwp(atRiskMwp)} MWp</strong> of yours can still make Vintage ${v.year} if resolved${deadlineLabel}:
+    </p>
+    <ul style="padding-left:18px;margin:0;color:#555;">${rows}</ul>
+    ${moreNote}`;
+  } else if (input.metrics.onboarding_mwp > 0.001) {
+    body = `<p style="color:#555;line-height:1.55;margin:10px 0 0;font-size:14px;">You have <strong>${formatMwp(input.metrics.onboarding_mwp)} MWp</strong> in onboarding that could still make Vintage ${v.year} if completed before the deadline.</p>`;
+  } else {
+    body = `<p style="color:#888;font-size:13px;font-style:italic;margin:10px 0 0;">Projects added later roll into the next vintage — momentum carries forward.</p>`;
+  }
+
   return `
   <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Vintage ${v.year} Countdown</h2>
   <div style="background:${BRAND_DARK};color:${BRAND_YELLOW};padding:18px;border-radius:8px;text-align:center;">
@@ -234,7 +335,7 @@ function personalVintageSection(input: AgentEmailInput): string {
     <span style="font-size:26px;font-weight:700;">${v.hours}</span><span style="font-size:13px;margin-right:14px;"> hours</span>
     <span style="font-size:26px;font-weight:700;">${v.minutes}</span><span style="font-size:13px;"> minutes</span>
   </div>
-  ${personalLine}`;
+  ${body}`;
 }
 
 function teamSection(input: AgentEmailInput): string {
@@ -275,7 +376,7 @@ function pickThisWeeksFocus(
     return {
       headline: `Follow up your pending proposals`,
       detail: `<strong>${formatMwp(input.metrics.pending_mwp)} MWp</strong> is sitting in proposals awaiting client signature. A short follow-up note this week could move them.`,
-      cta: { label: "Follow up proposals", url: links.proposalsList() },
+      cta: { label: "Follow up pending", url: links.proposalsPending() },
     };
   }
   if (input.segment === "new" || input.metrics.audit_ready_mwp + input.metrics.onboarding_mwp + input.metrics.pending_mwp === 0) {

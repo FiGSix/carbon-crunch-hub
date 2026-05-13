@@ -243,6 +243,48 @@ export type Database = {
           },
         ]
       }
+      agent_weekly_snapshots: {
+        Row: {
+          agent_id: string
+          audit_ready_mwp: number
+          created_at: string
+          estimated_commission_2025_2030: number
+          estimated_commission_2026: number
+          id: string
+          new_proposals_count: number
+          onboarding_mwp: number
+          pending_signature_mwp: number
+          signed_this_week_mwp: number
+          snapshot_date: string
+        }
+        Insert: {
+          agent_id: string
+          audit_ready_mwp?: number
+          created_at?: string
+          estimated_commission_2025_2030?: number
+          estimated_commission_2026?: number
+          id?: string
+          new_proposals_count?: number
+          onboarding_mwp?: number
+          pending_signature_mwp?: number
+          signed_this_week_mwp?: number
+          snapshot_date: string
+        }
+        Update: {
+          agent_id?: string
+          audit_ready_mwp?: number
+          created_at?: string
+          estimated_commission_2025_2030?: number
+          estimated_commission_2026?: number
+          id?: string
+          new_proposals_count?: number
+          onboarding_mwp?: number
+          pending_signature_mwp?: number
+          signed_this_week_mwp?: number
+          snapshot_date?: string
+        }
+        Relationships: []
+      }
       client_access_audit: {
         Row: {
           accessed_at: string

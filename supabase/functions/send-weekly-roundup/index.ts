@@ -4,7 +4,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVintageDeadlines, getNextVintageDeadline } from "../_shared/vintageConfig.ts";
 import { getCarbonPrices, type CarbonPrices } from "../_shared/carbonPricing.ts";
 import { buildAgentBlockers, categoriseBlockers } from "./blockers.ts";
-import { buildAgentSubject, buildAgentHtml, type AgentEmailInput } from "./agentEmail.ts";
+import { buildAgentSubject, buildAgentHtml, type AgentEmailInput, type VintageProjectAtRisk } from "./agentEmail.ts";
+import { readPreviousSnapshot, writeSnapshot, computeDeltas, type AgentSnapshot } from "./snapshots.ts";
+import { buildAgentFunnel, funnelToRows } from "./funnel.ts";
+import { calculateAgentRevenueLens } from "./revenue.ts";
+import { links } from "./links.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -729,6 +733,70 @@ async function buildAgentEmail(
 
   const vintageCountdown = await getVintageCountdown();
 
+  // ---- Phase 2 enrichments ----
+
+  // Revenue lens (4 numbers, dynamic pricing)
+  const agentProposals = proposals.filter((p) => p.agent_id === agent.id);
+  const revenueLens = calculateAgentRevenueLens(
+    agentProposals.map((p) => ({
+      id: p.id,
+      carbon_credits: p.carbon_credits,
+      agent_commission_percentage: p.agent_commission_percentage,
+      system_size_kwp: p.system_size_kwp,
+      signed_at: p.signed_at,
+      audit_ready: p.audit_ready,
+    })),
+    CARBON_PRICES_CACHE
+  );
+
+  // Snapshot + deltas
+  const previousSnapshot = await readPreviousSnapshot(supabase, agent.id);
+  const currentSnapshot: AgentSnapshot = {
+    audit_ready_mwp: metrics.personal_audit_ready_mwp,
+    onboarding_mwp: metrics.personal_onboarding_mwp,
+    pending_signature_mwp: metrics.personal_pending_mwp,
+    signed_this_week_mwp: metrics.week_movements.reduce((s, m) => s + m.mwp, 0),
+    new_proposals_count: newProposalsThisWeek,
+    estimated_commission_2026: revenueLens.short_term_2026,
+    estimated_commission_2025_2030: metrics.personal_revenue_2025_2030,
+  };
+  const deltas = computeDeltas(currentSnapshot, previousSnapshot);
+
+  // Proposal funnel from email_events
+  const funnelMetrics = await buildAgentFunnel(
+    supabase,
+    agent.id,
+    proposals.map((p) => ({
+      id: p.id,
+      agent_id: p.agent_id,
+      status: p.status,
+      signed_at: p.signed_at,
+      created_at: p.created_at,
+    }))
+  );
+  const funnelRows = funnelToRows(funnelMetrics);
+
+  // Personal vintage impact: blockers that are still resolvable and roll up to onboarding-stage
+  const vintageAtRisk: VintageProjectAtRisk[] = rawBlockers
+    .filter((b) => b.category !== "crunch") // Crunch-side review doesn't unblock the agent
+    .slice(0, 5)
+    .map((b) => ({
+      project_name: b.project_name,
+      mwp: b.mwp,
+      resolve_url: b.resolve_url,
+      missing_items: b.missing_items,
+    }));
+
+  let vintageDeadlineLabel: string | undefined;
+  if (vintageCountdown) {
+    const deadlines = await getVintageDeadlines(supabase);
+    const iso = deadlines[String(vintageCountdown.year)];
+    if (iso) {
+      const d = new Date(iso);
+      vintageDeadlineLabel = `${d.toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`;
+    }
+  }
+
   const input: AgentEmailInput = {
     agent: {
       first_name: agent.first_name,
@@ -754,7 +822,15 @@ async function buildAgentEmail(
     blockers,
     vintage: vintageCountdown,
     weekEndingLabel: getWeekEndDate(),
+    deltas,
+    funnel: funnelRows,
+    revenue: revenueLens,
+    vintageAtRisk,
+    vintageDeadlineLabel,
   };
+
+  // Persist this run's snapshot for next week's deltas
+  await writeSnapshot(supabase, agent.id, currentSnapshot);
 
   return {
     subject: buildAgentSubject(input),
