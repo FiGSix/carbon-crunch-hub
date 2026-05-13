@@ -51,6 +51,12 @@ serve(async (req) => {
       to: event.data.to[0]
     });
 
+    // Phase 3: Update weekly_roundup CTA events if this email_id matches one we sent.
+    // Best-effort, fire-and-forget — does not block proposal-event processing.
+    await updateWeeklyRoundupCtaEvent(supabaseAdmin, event).catch((e) =>
+      console.error('[email_cta_events] update failed:', e?.message)
+    );
+
     // Extract proposal_id from email metadata
     const proposalId = await extractProposalIdFromEmail(
       supabaseAdmin,
