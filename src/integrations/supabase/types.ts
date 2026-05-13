@@ -850,6 +850,63 @@ export type Database = {
           },
         ]
       }
+      email_cta_events: {
+        Row: {
+          agent_id: string
+          clicked_at: string | null
+          created_at: string
+          cta_type: string | null
+          email_send_id: string | null
+          email_type: string
+          id: string
+          ip_address: unknown
+          message_id: string | null
+          opened_at: string | null
+          raw_payload: Json | null
+          sent_at: string | null
+          subject: string | null
+          target_url: string | null
+          user_agent: string | null
+          variant: string | null
+        }
+        Insert: {
+          agent_id: string
+          clicked_at?: string | null
+          created_at?: string
+          cta_type?: string | null
+          email_send_id?: string | null
+          email_type?: string
+          id?: string
+          ip_address?: unknown
+          message_id?: string | null
+          opened_at?: string | null
+          raw_payload?: Json | null
+          sent_at?: string | null
+          subject?: string | null
+          target_url?: string | null
+          user_agent?: string | null
+          variant?: string | null
+        }
+        Update: {
+          agent_id?: string
+          clicked_at?: string | null
+          created_at?: string
+          cta_type?: string | null
+          email_send_id?: string | null
+          email_type?: string
+          id?: string
+          ip_address?: unknown
+          message_id?: string | null
+          opened_at?: string | null
+          raw_payload?: Json | null
+          sent_at?: string | null
+          subject?: string | null
+          target_url?: string | null
+          user_agent?: string | null
+          variant?: string | null
+        }
+        Relationships: []
+      }
       email_events: {
         Row: {
           bounce_reason: string | null

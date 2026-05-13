@@ -3,7 +3,10 @@ import type { ActionableBlocker, CategorisedBlockers } from "./blockers.ts";
 import type { AgentDeltas } from "./snapshots.ts";
 import type { FunnelRow } from "./funnel.ts";
 import type { AgentRevenueLens } from "./revenue.ts";
+import type { Milestone } from "./milestones.ts";
+import type { RotatingBlock } from "./rotatingContent.ts";
 
+// Legacy v1 segment kept for back-compat; v2 segment drives Phase 3 copy.
 type AgentSegment = "new" | "active" | "top_performer";
 
 export interface VintageProjectAtRisk {
@@ -49,6 +52,11 @@ export interface AgentEmailInput {
   revenue?: AgentRevenueLens;
   vintageAtRisk?: VintageProjectAtRisk[];
   vintageDeadlineLabel?: string;
+  // Phase 3 additions
+  subjectOverride?: string;
+  openingOverride?: string;
+  milestones?: Milestone[];
+  rotatingBlock?: RotatingBlock;
 }
 
 const BRAND_YELLOW = "#FFCD03";
@@ -59,6 +67,8 @@ const BRAND_DARK = "#1a1a1a";
 // ----------------------------------------------------------------------------
 
 export function buildAgentSubject(input: AgentEmailInput): string {
+  if (input.subjectOverride) return input.subjectOverride;
+
   const totalBlockers =
     input.blockers.client.length +
     input.blockers.agent.length +
@@ -66,7 +76,6 @@ export function buildAgentSubject(input: AgentEmailInput): string {
   const blockedMwp = input.blockers.total_blocked_mwp;
   const auditMwp = input.metrics.audit_ready_mwp;
 
-  // Most urgent: client-action blockers with material MWp
   if (input.blockers.client.length > 0 && blockedMwp >= 0.1) {
     return `${formatMwp(blockedMwp)} MWp waiting on client action`;
   }
@@ -104,9 +113,11 @@ export function buildAgentHtml(input: AgentEmailInput): string {
     </div>
 
     <p style="color:#333;font-size:16px;margin:0 0 12px;">Hi ${escapeHtml(firstName)},</p>
-    <p style="color:#555;line-height:1.55;margin:0 0 24px;">${openingLine(input)}</p>
+    <p style="color:#555;line-height:1.55;margin:0 0 24px;">${input.openingOverride ?? openingLine(input)}</p>
 
     ${headerCtaRow()}
+
+    ${milestonesSection(input.milestones)}
 
     ${thisWeeksFocusSection(focus)}
 
@@ -124,6 +135,8 @@ export function buildAgentHtml(input: AgentEmailInput): string {
 
     ${teamSection(input)}
 
+    ${rotatingBlockSection(input.rotatingBlock)}
+
     ${finalCtaSection()}
 
     <hr style="border:none;border-top:1px solid #eee;margin:30px 0;">
@@ -131,6 +144,25 @@ export function buildAgentHtml(input: AgentEmailInput): string {
     <p style="color:${BRAND_DARK};margin:18px 0 0;">— Crunch Carbon</p>
   </div>
 </body></html>`;
+}
+
+function milestonesSection(ms?: Milestone[]): string {
+  if (!ms || ms.length === 0) return "";
+  const chips = ms.map((m) => `
+    <span style="display:inline-block;background:${BRAND_YELLOW};color:${BRAND_DARK};padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;margin:0 6px 6px 0;">
+      ${m.emoji} ${escapeHtml(m.label)}
+    </span>`).join("");
+  return `
+  <div style="margin:0 0 22px;">${chips}</div>`;
+}
+
+function rotatingBlockSection(block?: RotatingBlock): string {
+  if (!block) return "";
+  return `
+  <div style="margin:28px 0 0;padding:18px 20px;background:#fafafa;border-left:3px solid ${BRAND_YELLOW};border-radius:6px;">
+    <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:#888;font-weight:600;">${escapeHtml(block.title)}</p>
+    <p style="margin:0;color:#444;line-height:1.6;font-size:14px;">${block.bodyHtml}</p>
+  </div>`;
 }
 
 // ----------------------------------------------------------------------------

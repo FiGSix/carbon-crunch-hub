@@ -8,7 +8,18 @@ import { buildAgentSubject, buildAgentHtml, type AgentEmailInput, type VintagePr
 import { readPreviousSnapshot, writeSnapshot, computeDeltas, type AgentSnapshot } from "./snapshots.ts";
 import { buildAgentFunnel, funnelToRows } from "./funnel.ts";
 import { calculateAgentRevenueLens } from "./revenue.ts";
-import { links } from "./links.ts";
+import { links, setEmailContext } from "./links.ts";
+import {
+  classifyAgent,
+  pickVariant,
+  getSubject,
+  getOpening,
+  SEGMENT_CONFIG,
+  type SegmentInput,
+  type AgentSegmentV2,
+} from "./segmentation.ts";
+import { buildMilestones } from "./milestones.ts";
+import { pickRotatingBlock } from "./rotatingContent.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -708,8 +719,13 @@ function calculateAgentMetrics(
 async function buildAgentEmail(
   agent: AgentData,
   metrics: AgentMetrics,
-  proposals: ProposalData[]
-): Promise<{ subject: string; html: string }> {
+  proposals: ProposalData[],
+  rankInfo: { currentRank: number | null; previousRank: number | null; totalRanked: number },
+  sendCtx: { sendId: string; variant: "A" | "B" }
+): Promise<{ subject: string; html: string; segmentV2: AgentSegmentV2 }> {
+  // Activate per-send link tracking
+  setEmailContext(sendCtx);
+
   // Signed proposals for this agent — pass to blocker builder with audit_ready hint
   const signedForAgent = proposals
     .filter((p) => p.agent_id === agent.id && p.signed_at)
@@ -734,8 +750,6 @@ async function buildAgentEmail(
   const vintageCountdown = await getVintageCountdown();
 
   // ---- Phase 2 enrichments ----
-
-  // Revenue lens (4 numbers, dynamic pricing)
   const agentProposals = proposals.filter((p) => p.agent_id === agent.id);
   const revenueLens = calculateAgentRevenueLens(
     agentProposals.map((p) => ({
@@ -749,7 +763,6 @@ async function buildAgentEmail(
     CARBON_PRICES_CACHE
   );
 
-  // Snapshot + deltas
   const previousSnapshot = await readPreviousSnapshot(supabase, agent.id);
   const currentSnapshot: AgentSnapshot = {
     audit_ready_mwp: metrics.personal_audit_ready_mwp,
@@ -762,7 +775,6 @@ async function buildAgentEmail(
   };
   const deltas = computeDeltas(currentSnapshot, previousSnapshot);
 
-  // Proposal funnel from email_events
   const funnelMetrics = await buildAgentFunnel(
     supabase,
     agent.id,
@@ -776,9 +788,8 @@ async function buildAgentEmail(
   );
   const funnelRows = funnelToRows(funnelMetrics);
 
-  // Personal vintage impact: blockers that are still resolvable and roll up to onboarding-stage
   const vintageAtRisk: VintageProjectAtRisk[] = rawBlockers
-    .filter((b) => b.category !== "crunch") // Crunch-side review doesn't unblock the agent
+    .filter((b) => b.category !== "crunch")
     .slice(0, 5)
     .map((b) => ({
       project_name: b.project_name,
@@ -797,19 +808,53 @@ async function buildAgentEmail(
     }
   }
 
+  // ---- Phase 3: segmentation, milestones, rotating block ----
+
+  // Last activity timestamp for "stuck" detection
+  const activityTimes = agentProposals
+    .flatMap((p) => [p.created_at, p.signed_at, p.updated_at].filter(Boolean) as string[])
+    .map((t) => new Date(t).getTime());
+  const msSinceLastActivity = activityTimes.length
+    ? Date.now() - Math.max(...activityTimes)
+    : null;
+
+  const segCtx: SegmentInput = {
+    joinDate: agent.join_date,
+    signedCount: signedForAgent.length,
+    auditReadyMwp: metrics.personal_audit_ready_mwp,
+    pendingMwp: metrics.personal_pending_mwp,
+    signedThisWeekMwp: currentSnapshot.signed_this_week_mwp,
+    newProposalsThisWeek,
+    blockedMwp: blockers.total_blocked_mwp,
+    msSinceLastActivity,
+  };
+  const segmentV2 = classifyAgent(segCtx);
+  const subjectOverride = getSubject(segmentV2, sendCtx.variant, segCtx);
+  const openingOverride = getOpening(segmentV2, segCtx, agent.first_name || "there");
+
+  const milestones = buildMilestones({
+    current: currentSnapshot,
+    previous: previousSnapshot,
+    currentRank: rankInfo.currentRank,
+    previousRank: rankInfo.previousRank,
+    totalRanked: rankInfo.totalRanked,
+  });
+
+  const rotatingBlock = pickRotatingBlock();
+
   const input: AgentEmailInput = {
     agent: {
       first_name: agent.first_name,
       is_team_lead: agent.is_team_lead,
     },
-    segment: metrics.segment,
+    segment: metrics.segment, // legacy v1 — still drives some fallback copy
     metrics: {
       audit_ready_mwp: metrics.personal_audit_ready_mwp,
       onboarding_mwp: metrics.personal_onboarding_mwp,
       pending_mwp: metrics.personal_pending_mwp,
       revenue_2025_2030: metrics.personal_revenue_2025_2030,
       signed_this_week_count: metrics.week_movements.length,
-      signed_this_week_mwp: metrics.week_movements.reduce((s, m) => s + m.mwp, 0),
+      signed_this_week_mwp: currentSnapshot.signed_this_week_mwp,
       new_proposals_this_week: newProposalsThisWeek,
     },
     team: {
@@ -827,15 +872,23 @@ async function buildAgentEmail(
     revenue: revenueLens,
     vintageAtRisk,
     vintageDeadlineLabel,
+    subjectOverride,
+    openingOverride,
+    milestones,
+    rotatingBlock,
   };
 
-  // Persist this run's snapshot for next week's deltas
   await writeSnapshot(supabase, agent.id, currentSnapshot);
 
-  return {
+  const result = {
     subject: buildAgentSubject(input),
     html: buildAgentHtml(input),
+    segmentV2,
   };
+
+  // Clear context so next agent starts fresh
+  setEmailContext(null);
+  return result;
 }
 
 function buildAgentEmailSubject(metrics: AgentMetrics): string {
@@ -1232,36 +1285,80 @@ async function sendEmailWithRetry(
   subject: string,
   html: string,
   maxRetries = 3
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await resend.emails.send({
+      const response: any = await resend.emails.send({
         from: "Crunch Carbon <noreply@crunchcarbon.com>",
         to: [to],
         subject,
         html,
       });
-      
+
       console.log(`Email sent successfully to ${to}:`, response);
-      return { success: true };
+      const messageId = response?.data?.id ?? response?.id;
+      return { success: true, messageId };
     } catch (error: any) {
       console.error(`Email send attempt ${attempt} failed for ${to}:`, error);
-      
-      // Check for rate limit error (429)
+
       if (error?.statusCode === 429 && attempt < maxRetries) {
-        const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        const backoffMs = Math.pow(2, attempt) * 1000;
         console.log(`Rate limited. Waiting ${backoffMs}ms before retry...`);
         await sleep(backoffMs);
         continue;
       }
-      
+
       if (attempt === maxRetries) {
         return { success: false, error: error.message || "Unknown error" };
       }
     }
   }
-  
+
   return { success: false, error: "Max retries exceeded" };
+}
+
+// ============================================================================
+// PHASE 3: Ranking + CTA event logging
+// ============================================================================
+
+interface RankSnapshot {
+  agentId: string;
+  auditReadyMwp: number;
+}
+
+function rankAgents(snapshots: RankSnapshot[]): Map<string, number> {
+  const sorted = snapshots
+    .filter((s) => s.auditReadyMwp > 0)
+    .sort((a, b) => b.auditReadyMwp - a.auditReadyMwp);
+  const ranks = new Map<string, number>();
+  sorted.forEach((s, i) => ranks.set(s.agentId, i + 1));
+  return ranks;
+}
+
+async function logEmailCtaEvent(params: {
+  agentId: string;
+  sendId: string;
+  messageId?: string;
+  subject: string;
+  variant: "A" | "B";
+  segment: AgentSegmentV2;
+}): Promise<void> {
+  try {
+    await supabase.from("email_cta_events").insert({
+      agent_id: params.agentId,
+      email_send_id: params.sendId,
+      message_id: params.messageId ?? null,
+      email_type: "weekly_roundup",
+      cta_type: "email_sent",
+      target_url: null,
+      variant: params.variant,
+      subject: params.subject,
+      sent_at: new Date().toISOString(),
+      raw_payload: { segment: params.segment },
+    });
+  } catch (e: any) {
+    console.error(`[email_cta_events] insert failed for ${params.agentId}:`, e?.message);
+  }
 }
 
 // ============================================================================
@@ -1318,37 +1415,80 @@ const handler = async (req: Request): Promise<Response> => {
     // Calculate platform metrics (needed for both email types)
     const platformMetrics = calculatePlatformMetrics(agents, proposals, onboardingMap, newAgents);
     const teamMetrics = platformMetrics.teams;
-    
+
     console.log("Platform Metrics:", {
       audit_ready_mwp: platformMetrics.platform_audit_ready_mwp,
       total_mwp: platformMetrics.platform_total_mwp,
       goal_progress: platformMetrics.goal_progress_percent,
       active_agents: platformMetrics.active_agent_count,
     });
-    
+
+    // ---- Phase 3: rankings (current vs previous snapshot) ----
+    const currentRankInputs: RankSnapshot[] = agents.map((a) => {
+      const m = calculateAgentMetrics(a, proposals, onboardingMap, teamMetrics);
+      return { agentId: a.id, auditReadyMwp: m.personal_audit_ready_mwp };
+    });
+    const currentRanks = rankAgents(currentRankInputs);
+
+    const { data: priorSnapshotRows } = await supabase
+      .from("agent_weekly_snapshots")
+      .select("agent_id, audit_ready_mwp, snapshot_date")
+      .lt("snapshot_date", new Date().toISOString().slice(0, 10))
+      .order("snapshot_date", { ascending: false });
+
+    const priorByAgent = new Map<string, number>();
+    (priorSnapshotRows || []).forEach((r: any) => {
+      if (!priorByAgent.has(r.agent_id)) priorByAgent.set(r.agent_id, Number(r.audit_ready_mwp));
+    });
+    const previousRanks = rankAgents(
+      Array.from(priorByAgent.entries()).map(([agentId, auditReadyMwp]) => ({ agentId, auditReadyMwp }))
+    );
+    const totalRanked = currentRanks.size;
+
     let agentEmailsSent = 0;
     let agentEmailsFailed = 0;
     let adminEmailsSent = 0;
     let adminEmailsFailed = 0;
-    
+
+    // helper to generate a per-send id
+    const makeSendId = () => crypto.randomUUID();
+
     // TEST MODE: Send to specific test emails only
     if (isTestMode) {
-      // Send test agent email
       if (testAgentEmail) {
-        // Find the agent by email, or use first agent as template
         const targetAgent = agents.find((a) => a.email.toLowerCase() === testAgentEmail.toLowerCase()) || agents[0];
-        
+
         if (targetAgent) {
           const metrics = calculateAgentMetrics(targetAgent, proposals, onboardingMap, teamMetrics);
-          const built = await buildAgentEmail(targetAgent, metrics, proposals);
+          const sendId = makeSendId();
+          const variant = pickVariant();
+          const built = await buildAgentEmail(
+            targetAgent,
+            metrics,
+            proposals,
+            {
+              currentRank: currentRanks.get(targetAgent.id) ?? null,
+              previousRank: previousRanks.get(targetAgent.id) ?? null,
+              totalRanked,
+            },
+            { sendId, variant }
+          );
           const subject = `[TEST] ${built.subject}`;
           const html = built.html;
-          
-          console.log(`Sending TEST agent email to: ${testAgentEmail}`);
-          
+
+          console.log(`Sending TEST agent email to: ${testAgentEmail} (variant ${variant}, segment ${built.segmentV2})`);
+
           const result = await sendEmailWithRetry(testAgentEmail, subject, html);
           if (result.success) {
             agentEmailsSent++;
+            await logEmailCtaEvent({
+              agentId: targetAgent.id,
+              sendId,
+              messageId: result.messageId,
+              subject,
+              variant,
+              segment: built.segmentV2,
+            });
             console.log(`TEST agent email sent successfully to ${testAgentEmail}`);
           } else {
             agentEmailsFailed++;
@@ -1358,18 +1498,16 @@ const handler = async (req: Request): Promise<Response> => {
           console.log("No agents found to use as template for test email");
         }
       }
-      
-      // Send test admin email
+
       if (testAdminEmail) {
-        // Find the admin by email, or use first admin as template
         const targetAdmin = admins.find((a) => a.email.toLowerCase() === testAdminEmail.toLowerCase()) || admins[0];
-        
+
         if (targetAdmin) {
           const subject = `[TEST] ${buildAdminEmailSubject(platformMetrics)}`;
           const html = await buildAdminEmailHtml(targetAdmin, platformMetrics);
-          
+
           console.log(`Sending TEST admin email to: ${testAdminEmail}`);
-          
+
           const result = await sendEmailWithRetry(testAdminEmail, subject, html);
           if (result.success) {
             adminEmailsSent++;
@@ -1383,21 +1521,39 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
     } else {
-      // PRODUCTION MODE: Send to all agents and admins
-      
-      // Send Agent Roundup emails
+      // PRODUCTION MODE
       console.log(`\n--- Sending ${agents.length} Agent Roundup emails ---`);
       for (const agent of agents) {
         const metrics = calculateAgentMetrics(agent, proposals, onboardingMap, teamMetrics);
-        const built = await buildAgentEmail(agent, metrics, proposals);
+        const sendId = makeSendId();
+        const variant = pickVariant();
+        const built = await buildAgentEmail(
+          agent,
+          metrics,
+          proposals,
+          {
+            currentRank: currentRanks.get(agent.id) ?? null,
+            previousRank: previousRanks.get(agent.id) ?? null,
+            totalRanked,
+          },
+          { sendId, variant }
+        );
         const subject = built.subject;
         const html = built.html;
-        
-        console.log(`Sending to agent: ${agent.email} (${metrics.segment})`);
-        
+
+        console.log(`Sending to agent: ${agent.email} (${built.segmentV2}, variant ${variant})`);
+
         const result = await sendEmailWithRetry(agent.email, subject, html);
         if (result.success) {
           agentEmailsSent++;
+          await logEmailCtaEvent({
+            agentId: agent.id,
+            sendId,
+            messageId: result.messageId,
+            subject,
+            variant,
+            segment: built.segmentV2,
+          });
         } else {
           agentEmailsFailed++;
           console.error(`Failed to send to ${agent.email}: ${result.error}`);
