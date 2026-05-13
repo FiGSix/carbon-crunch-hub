@@ -376,7 +376,7 @@ function pickThisWeeksFocus(
     return {
       headline: `Follow up your pending proposals`,
       detail: `<strong>${formatMwp(input.metrics.pending_mwp)} MWp</strong> is sitting in proposals awaiting client signature. A short follow-up note this week could move them.`,
-      cta: { label: "Follow up proposals", url: links.proposalsList() },
+      cta: { label: "Follow up pending", url: links.proposalsPending() },
     };
   }
   if (input.segment === "new" || input.metrics.audit_ready_mwp + input.metrics.onboarding_mwp + input.metrics.pending_mwp === 0) {
