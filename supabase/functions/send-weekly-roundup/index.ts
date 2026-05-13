@@ -51,6 +51,7 @@ interface ProposalData {
   client_share_percentage: number | null;
   agent_commission_percentage: number | null;
   agent_id: string;
+  client_reference_id: string | null;
   signed_at: string | null;
   created_at: string;
   updated_at: string | null;
