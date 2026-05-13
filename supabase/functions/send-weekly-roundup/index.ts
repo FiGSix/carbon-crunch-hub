@@ -1285,36 +1285,80 @@ async function sendEmailWithRetry(
   subject: string,
   html: string,
   maxRetries = 3
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await resend.emails.send({
+      const response: any = await resend.emails.send({
         from: "Crunch Carbon <noreply@crunchcarbon.com>",
         to: [to],
         subject,
         html,
       });
-      
+
       console.log(`Email sent successfully to ${to}:`, response);
-      return { success: true };
+      const messageId = response?.data?.id ?? response?.id;
+      return { success: true, messageId };
     } catch (error: any) {
       console.error(`Email send attempt ${attempt} failed for ${to}:`, error);
-      
-      // Check for rate limit error (429)
+
       if (error?.statusCode === 429 && attempt < maxRetries) {
-        const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        const backoffMs = Math.pow(2, attempt) * 1000;
         console.log(`Rate limited. Waiting ${backoffMs}ms before retry...`);
         await sleep(backoffMs);
         continue;
       }
-      
+
       if (attempt === maxRetries) {
         return { success: false, error: error.message || "Unknown error" };
       }
     }
   }
-  
+
   return { success: false, error: "Max retries exceeded" };
+}
+
+// ============================================================================
+// PHASE 3: Ranking + CTA event logging
+// ============================================================================
+
+interface RankSnapshot {
+  agentId: string;
+  auditReadyMwp: number;
+}
+
+function rankAgents(snapshots: RankSnapshot[]): Map<string, number> {
+  const sorted = snapshots
+    .filter((s) => s.auditReadyMwp > 0)
+    .sort((a, b) => b.auditReadyMwp - a.auditReadyMwp);
+  const ranks = new Map<string, number>();
+  sorted.forEach((s, i) => ranks.set(s.agentId, i + 1));
+  return ranks;
+}
+
+async function logEmailCtaEvent(params: {
+  agentId: string;
+  sendId: string;
+  messageId?: string;
+  subject: string;
+  variant: "A" | "B";
+  segment: AgentSegmentV2;
+}): Promise<void> {
+  try {
+    await supabase.from("email_cta_events").insert({
+      agent_id: params.agentId,
+      email_send_id: params.sendId,
+      message_id: params.messageId ?? null,
+      email_type: "weekly_roundup",
+      cta_type: "email_sent",
+      target_url: null,
+      variant: params.variant,
+      subject: params.subject,
+      sent_at: new Date().toISOString(),
+      raw_payload: { segment: params.segment },
+    });
+  } catch (e: any) {
+    console.error(`[email_cta_events] insert failed for ${params.agentId}:`, e?.message);
+  }
 }
 
 // ============================================================================
