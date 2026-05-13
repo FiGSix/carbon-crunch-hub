@@ -1264,8 +1264,9 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (targetAgent) {
           const metrics = calculateAgentMetrics(targetAgent, proposals, onboardingMap, teamMetrics);
-          const subject = `[TEST] ${buildAgentEmailSubject(metrics)}`;
-          const html = await buildAgentEmailHtml(metrics, platformMetrics);
+          const built = await buildAgentEmail(targetAgent, metrics, proposals);
+          const subject = `[TEST] ${built.subject}`;
+          const html = built.html;
           
           console.log(`Sending TEST agent email to: ${testAgentEmail}`);
           
