@@ -1157,6 +1157,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
   
   try {
+    // Load dynamic carbon prices once per invocation (replaces hardcoded constants)
+    CARBON_PRICES_CACHE = await getCarbonPrices(supabase);
+    console.log("Loaded dynamic carbon prices:", CARBON_PRICES_CACHE);
+
     // Fetch all data
     const [agents, admins, proposals, onboarding, newAgents] = await Promise.all([
       fetchActiveAgents(),
