@@ -1,47 +1,40 @@
-## Why R 50,798,903 is still wrong for 18 MWp signed projects
+## Goal
 
-### Sanity-check math
-Standard formula: `kWp × 1642.5 × 1.0334 / 1000 = ~1.697 tonnes/kWp/year`.
+Give admins a one-click way, from the Clients table, to:
+1. **Manually confirm** a client's auth email (override the verification click), and
+2. **Resend** the original client invitation email.
 
-For 18.25 MWp (the actual signed/non-audit-ready total) you should see roughly:
-- ~30,973 tonnes CO₂ / year
-- × ~R140/t average (2025–2030 prices: 97 → 191) × 6 years ≈ **R 26M gross**
-- × admin platform share (~35.8%) ≈ **R 9–10M** for the "Signed Projects Est. Revenue (2025–2030)" card
+## What already exists (reuse, don't rebuild)
 
-### What's actually in the database
-Sum of stored `carbon_credits` for the 18.25 MWp of signed-but-not-audit-ready proposals = **153,887 tonnes/year**, ~5× higher than physically possible. That inflation is what produces R 50.8M.
+- Edge function `test-auth-verification` already implements `check_status`, `verify_user`, and `resend_confirmation` actions — admin-gated server-side. Used today only by the test panel on `/admin/EmailAutomation`.
+- Edge function `send-client-invitation` already sends the branded client invite email.
+- `ClientsTableContent.tsx` already has a per-row dropdown menu (Edit / Reassign / Delete) — just needs two more items.
 
-### Where the inflation is concentrated
-Bucketed by `carbon_credits / system_size_kwp` ratio (correct value ≈ 1.697):
+We will **not** create new edge functions; we'll wire the existing ones into the Clients table.
 
-| Bucket | Rows | Sum credits | Notes |
-|---|---|---|---|
-| ~1.7 (correct) | 60 | 23,653 | OK |
-| ~0.95 | 8 | 3,368 | Slightly under-stated, minor effect |
-| **>100× corrupt** | **4** | **126,850** | Drives ~82% of the card |
-| other | 2 | 16 | Negligible |
+## Changes
 
-### The 4 corrupt records
-All four share an identical broken ratio of **2787.913 credits per kWp** (≈ 1642.5 × 1.697 — formula applied twice / yield factor multiplied where it should have been divided):
+### 1. `src/components/clients/table/ClientsTableContent.tsx`
+- Add admin-only menu items to the per-row dropdown:
+  - **Verify email now** → calls `test-auth-verification` with `action: "verify_user"`. On success, toasts "Email confirmed for {email}" and refreshes the row.
+  - **Resend invitation email** → calls `send-client-invitation` with the client's email + name + (existing) referral context. Toasts result.
+- Both items are wrapped in a confirm `AlertDialog` (so admins don't fire by mistake) and disabled while their mutation is pending.
+- Optional small badge in the Status column: `Verified` / `Unverified` (queried lazily via `check_status` only when the dropdown opens, to avoid bulk listUsers calls on table render).
 
-| ID | kWp | Stored credits | Should be | Commission | Signed |
-|---|---|---|---|---|---|
-| b49bf320…85e64de8a8d | 21 | 58,546.17 | 35.64 | 2026-01-01 | 2026-03-05 |
-| 075adcea…435822679 | 8.8 | 24,533.63 | 14.94 | 2023-07-17 | 2026-05-07 |
-| 0a0f26c5…2fe76707c | 8.0 | 22,303.30 | 13.58 | 2025-04-14 | 2026-03-16 |
-| 5dead156…1889a1901ab | 7.7 | 21,466.93 | 13.07 | 2024-01-19 | 2026-04-17 |
+### 2. `src/components/clients/SimpleClientsTable2.tsx` (parent)
+- Pass an `isAdmin` flag (already available) and a `refetch` callback so the row can revalidate after a successful verify.
 
-All four were created Mar–May 2026 and signed shortly after, so they came through a recent code path (not legacy import) — same defect produced all four. Worth investigating where in the create-proposal flow `carbon_credits` is being calculated/saved for these tiny systems.
+### 3. No DB migration, no new edge function, no schema change.
 
-### Proposed fix (this turn)
+## Out of scope
 
-1. **Recompute `carbon_credits` for the 4 corrupt records** using the same standard formula (`kWp × 1642.5 × 1.0334 / 1000`). One UPDATE.
-2. **Re-check the dashboard card.** Expected new value ≈ **R 9–11M** for Signed Projects Est. Revenue (2025–2030) at admin scope (or ~R 18–20M client-share, ~R 1–2M agent-commission, depending on viewer role).
+- Bulk verify / bulk resend (can be added later if needed).
+- Client-team-member pending approvals (separate flow in `ClientPendingApprovalsCard` — already has Approve/Decline buttons).
+- Changing the auth email-hook or template logic.
 
-### Out of scope (call out, don't fix here)
+## Acceptance
 
-- The 8 records in the ~0.95 bucket — minor (~3,368 t total), probably an older/regional yield assumption. Confirm before touching.
-- The **root cause in the proposal-creation code** that produced 5 corrupt records (Boland Superspar already fixed + these 4). Recommend a follow-up to (a) find the buggy calculation site and (b) add a DB sanity guard (e.g. trigger flagging `carbon_credits / system_size_kwp` outside 0.5–3.0).
-- No backfill of missing `commission_date` (only the Boland record has it null among the inflated ones now).
-
-Approve and I'll run the UPDATE and re-verify the card.
+- As admin on `/clients` (or wherever `SimpleClientsTable2` renders), opening a client row's `⋮` menu shows **Verify email now** and **Resend invitation email**.
+- Clicking **Verify email now** → confirm dialog → success toast; the user can immediately log in without clicking the email link.
+- Clicking **Resend invitation email** → success toast; new email arrives at the client's inbox.
+- Non-admins see no change.

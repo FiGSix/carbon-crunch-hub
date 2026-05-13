@@ -25,7 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown, Search, MailCheck, Send } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { ClientData } from '@/hooks/clients/types';
 import { useState, useMemo, useCallback, useDeferredValue, memo } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
@@ -42,6 +43,8 @@ const ClientRow = memo(function ClientRow({
   onEdit,
   onReassign,
   onDelete,
+  onVerifyEmail,
+  onResendInvitation,
 }: {
   client: ClientData;
   isAdmin: boolean;
@@ -49,6 +52,8 @@ const ClientRow = memo(function ClientRow({
   onEdit: (client: ClientData) => void;
   onReassign: (client: ClientData) => void;
   onDelete: (client: ClientData) => void;
+  onVerifyEmail: (client: ClientData) => void;
+  onResendInvitation: (client: ClientData) => void;
 }) {
   return (
     <TableRow className={isRefreshing ? 'opacity-70' : ''}>
@@ -98,6 +103,21 @@ const ClientRow = memo(function ClientRow({
                 <DropdownMenuItem onClick={() => onReassign(client)}>
                   <UserCheck className="h-4 w-4 mr-2" />
                   Edit Assigned Agent
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onVerifyEmail(client)}
+                  disabled={!client.client_email}
+                >
+                  <MailCheck className="h-4 w-4 mr-2" />
+                  Verify Email Now
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onResendInvitation(client)}
+                  disabled={!client.client_email}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Resend Invitation Email
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -151,6 +171,12 @@ export function ClientsTableContent({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof ClientData | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [verifyConfirmOpen, setVerifyConfirmOpen] = useState(false);
+  const [clientToVerify, setClientToVerify] = useState<ClientData | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendConfirmOpen, setResendConfirmOpen] = useState(false);
+  const [clientToResend, setClientToResend] = useState<ClientData | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
 
   const deferredQuery = useDeferredValue(searchQuery);
@@ -216,6 +242,16 @@ export function ClientsTableContent({
     setReassignDialogOpen(true);
   }, []);
 
+  const handleVerifyEmailClick = useCallback((client: ClientData) => {
+    setClientToVerify(client);
+    setVerifyConfirmOpen(true);
+  }, []);
+
+  const handleResendInvitationClick = useCallback((client: ClientData) => {
+    setClientToResend(client);
+    setResendConfirmOpen(true);
+  }, []);
+
   const handleSort = (column: keyof ClientData) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -258,7 +294,66 @@ export function ClientsTableContent({
     
     setIsDeleting(false);
   };
-  
+
+  const confirmVerifyEmail = async () => {
+    if (!clientToVerify?.client_email) return;
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-auth-verification', {
+        body: { action: 'verify_user', email: clientToVerify.client_email },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: 'Email Verified',
+        description: data?.message || `Email confirmed for ${clientToVerify.client_email}.`,
+      });
+      setVerifyConfirmOpen(false);
+      setClientToVerify(null);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      toast({
+        title: 'Verify Failed',
+        description: err?.message || 'Could not verify email',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const confirmResendInvitation = async () => {
+    if (!clientToResend?.client_email) return;
+    setIsResending(true);
+    try {
+      const [firstName, ...rest] = (clientToResend.client_name || '').trim().split(' ');
+      const lastName = rest.join(' ') || undefined;
+      const { data, error } = await supabase.functions.invoke('send-client-invitation', {
+        body: {
+          email: clientToResend.client_email,
+          firstName: firstName || undefined,
+          lastName,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: 'Invitation Sent',
+        description: `An invitation email has been sent to ${clientToResend.client_email}.`,
+      });
+      setResendConfirmOpen(false);
+      setClientToResend(null);
+    } catch (err: any) {
+      toast({
+        title: 'Send Failed',
+        description: err?.message || 'Could not send invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Header with title and filters */}
@@ -415,6 +510,8 @@ export function ClientsTableContent({
                   onEdit={handleEditClick}
                   onReassign={handleReassignClick}
                   onDelete={handleDeleteClick}
+                  onVerifyEmail={handleVerifyEmailClick}
+                  onResendInvitation={handleResendInvitationClick}
                 />
               ))
             )}
@@ -462,6 +559,41 @@ export function ClientsTableContent({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={verifyConfirmOpen} onOpenChange={setVerifyConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Manually verify this client's email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark <strong>{clientToVerify?.client_email}</strong> as confirmed,
+              skipping the email verification link. The client will be able to log in immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmVerifyEmail} disabled={isVerifying}>
+              {isVerifying ? 'Verifying...' : 'Verify Email'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resendConfirmOpen} onOpenChange={setResendConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resend invitation email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A new invitation email will be sent to <strong>{clientToResend?.client_email}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResendInvitation} disabled={isResending}>
+              {isResending ? 'Sending...' : 'Send Invitation'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
