@@ -299,10 +299,35 @@ function blockerCard(b: ActionableBlocker, accent: string): string {
 function personalVintageSection(input: AgentEmailInput): string {
   if (!input.vintage) return "";
   const v = input.vintage;
-  // Only show personal stake when there is onboarding MWp at risk
-  const personalLine = input.metrics.onboarding_mwp > 0.001
-    ? `<p style="color:#555;line-height:1.55;margin:10px 0 0;font-size:14px;">You have <strong>${formatMwp(input.metrics.onboarding_mwp)} MWp</strong> in onboarding that could still make Vintage ${v.year} if completed before the deadline.</p>`
-    : `<p style="color:#888;font-size:13px;font-style:italic;margin:10px 0 0;">Projects added later roll into the next vintage — momentum carries forward.</p>`;
+  const atRisk = input.vintageAtRisk ?? [];
+  const atRiskMwp = atRisk.reduce((s, p) => s + p.mwp, 0);
+  const deadlineLabel = input.vintageDeadlineLabel ? ` by ${escapeHtml(input.vintageDeadlineLabel)}` : "";
+
+  let body = "";
+  if (atRisk.length > 0) {
+    const top = atRisk.slice(0, 5);
+    const more = atRisk.length - top.length;
+    const rows = top.map((p) => `
+      <li style="margin-bottom:8px;">
+        <strong>${escapeHtml(p.project_name)}</strong> <span style="color:#888;">— ${formatMwp(p.mwp)} MWp</span>
+        <div style="font-size:12px;color:#666;margin:2px 0 4px;">Missing: ${escapeHtml(p.missing_items.join(", "))}</div>
+        <a href="${p.resolve_url}" style="font-size:13px;color:${BRAND_DARK};font-weight:600;">Resolve &rarr;</a>
+      </li>`).join("");
+    const moreNote = more > 0
+      ? `<p style="font-size:12px;color:#888;margin:6px 0 0;">…and ${more} more — <a href="${links.dashboard()}" style="color:${BRAND_DARK};">open dashboard</a>.</p>`
+      : "";
+    body = `
+    <p style="color:#333;font-size:14px;margin:14px 0 8px;line-height:1.5;">
+      <strong>${formatMwp(atRiskMwp)} MWp</strong> of yours can still make Vintage ${v.year} if resolved${deadlineLabel}:
+    </p>
+    <ul style="padding-left:18px;margin:0;color:#555;">${rows}</ul>
+    ${moreNote}`;
+  } else if (input.metrics.onboarding_mwp > 0.001) {
+    body = `<p style="color:#555;line-height:1.55;margin:10px 0 0;font-size:14px;">You have <strong>${formatMwp(input.metrics.onboarding_mwp)} MWp</strong> in onboarding that could still make Vintage ${v.year} if completed before the deadline.</p>`;
+  } else {
+    body = `<p style="color:#888;font-size:13px;font-style:italic;margin:10px 0 0;">Projects added later roll into the next vintage — momentum carries forward.</p>`;
+  }
+
   return `
   <h2 style="color:${BRAND_DARK};font-size:16px;margin:28px 0 12px;">Vintage ${v.year} Countdown</h2>
   <div style="background:${BRAND_DARK};color:${BRAND_YELLOW};padding:18px;border-radius:8px;text-align:center;">
@@ -310,7 +335,7 @@ function personalVintageSection(input: AgentEmailInput): string {
     <span style="font-size:26px;font-weight:700;">${v.hours}</span><span style="font-size:13px;margin-right:14px;"> hours</span>
     <span style="font-size:26px;font-weight:700;">${v.minutes}</span><span style="font-size:13px;"> minutes</span>
   </div>
-  ${personalLine}`;
+  ${body}`;
 }
 
 function teamSection(input: AgentEmailInput): string {
