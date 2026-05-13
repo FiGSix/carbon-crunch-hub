@@ -719,8 +719,13 @@ function calculateAgentMetrics(
 async function buildAgentEmail(
   agent: AgentData,
   metrics: AgentMetrics,
-  proposals: ProposalData[]
-): Promise<{ subject: string; html: string }> {
+  proposals: ProposalData[],
+  rankInfo: { currentRank: number | null; previousRank: number | null; totalRanked: number },
+  sendCtx: { sendId: string; variant: "A" | "B" }
+): Promise<{ subject: string; html: string; segmentV2: AgentSegmentV2 }> {
+  // Activate per-send link tracking
+  setEmailContext(sendCtx);
+
   // Signed proposals for this agent — pass to blocker builder with audit_ready hint
   const signedForAgent = proposals
     .filter((p) => p.agent_id === agent.id && p.signed_at)
@@ -745,8 +750,6 @@ async function buildAgentEmail(
   const vintageCountdown = await getVintageCountdown();
 
   // ---- Phase 2 enrichments ----
-
-  // Revenue lens (4 numbers, dynamic pricing)
   const agentProposals = proposals.filter((p) => p.agent_id === agent.id);
   const revenueLens = calculateAgentRevenueLens(
     agentProposals.map((p) => ({
@@ -760,7 +763,6 @@ async function buildAgentEmail(
     CARBON_PRICES_CACHE
   );
 
-  // Snapshot + deltas
   const previousSnapshot = await readPreviousSnapshot(supabase, agent.id);
   const currentSnapshot: AgentSnapshot = {
     audit_ready_mwp: metrics.personal_audit_ready_mwp,
@@ -773,7 +775,6 @@ async function buildAgentEmail(
   };
   const deltas = computeDeltas(currentSnapshot, previousSnapshot);
 
-  // Proposal funnel from email_events
   const funnelMetrics = await buildAgentFunnel(
     supabase,
     agent.id,
@@ -787,9 +788,8 @@ async function buildAgentEmail(
   );
   const funnelRows = funnelToRows(funnelMetrics);
 
-  // Personal vintage impact: blockers that are still resolvable and roll up to onboarding-stage
   const vintageAtRisk: VintageProjectAtRisk[] = rawBlockers
-    .filter((b) => b.category !== "crunch") // Crunch-side review doesn't unblock the agent
+    .filter((b) => b.category !== "crunch")
     .slice(0, 5)
     .map((b) => ({
       project_name: b.project_name,
@@ -808,19 +808,53 @@ async function buildAgentEmail(
     }
   }
 
+  // ---- Phase 3: segmentation, milestones, rotating block ----
+
+  // Last activity timestamp for "stuck" detection
+  const activityTimes = agentProposals
+    .flatMap((p) => [p.created_at, p.signed_at, p.updated_at].filter(Boolean) as string[])
+    .map((t) => new Date(t).getTime());
+  const msSinceLastActivity = activityTimes.length
+    ? Date.now() - Math.max(...activityTimes)
+    : null;
+
+  const segCtx: SegmentInput = {
+    joinDate: agent.join_date,
+    signedCount: signedForAgent.length,
+    auditReadyMwp: metrics.personal_audit_ready_mwp,
+    pendingMwp: metrics.personal_pending_mwp,
+    signedThisWeekMwp: currentSnapshot.signed_this_week_mwp,
+    newProposalsThisWeek,
+    blockedMwp: blockers.total_blocked_mwp,
+    msSinceLastActivity,
+  };
+  const segmentV2 = classifyAgent(segCtx);
+  const subjectOverride = getSubject(segmentV2, sendCtx.variant, segCtx);
+  const openingOverride = getOpening(segmentV2, segCtx, agent.first_name || "there");
+
+  const milestones = buildMilestones({
+    current: currentSnapshot,
+    previous: previousSnapshot,
+    currentRank: rankInfo.currentRank,
+    previousRank: rankInfo.previousRank,
+    totalRanked: rankInfo.totalRanked,
+  });
+
+  const rotatingBlock = pickRotatingBlock();
+
   const input: AgentEmailInput = {
     agent: {
       first_name: agent.first_name,
       is_team_lead: agent.is_team_lead,
     },
-    segment: metrics.segment,
+    segment: metrics.segment, // legacy v1 — still drives some fallback copy
     metrics: {
       audit_ready_mwp: metrics.personal_audit_ready_mwp,
       onboarding_mwp: metrics.personal_onboarding_mwp,
       pending_mwp: metrics.personal_pending_mwp,
       revenue_2025_2030: metrics.personal_revenue_2025_2030,
       signed_this_week_count: metrics.week_movements.length,
-      signed_this_week_mwp: metrics.week_movements.reduce((s, m) => s + m.mwp, 0),
+      signed_this_week_mwp: currentSnapshot.signed_this_week_mwp,
       new_proposals_this_week: newProposalsThisWeek,
     },
     team: {
@@ -838,15 +872,23 @@ async function buildAgentEmail(
     revenue: revenueLens,
     vintageAtRisk,
     vintageDeadlineLabel,
+    subjectOverride,
+    openingOverride,
+    milestones,
+    rotatingBlock,
   };
 
-  // Persist this run's snapshot for next week's deltas
   await writeSnapshot(supabase, agent.id, currentSnapshot);
 
-  return {
+  const result = {
     subject: buildAgentSubject(input),
     html: buildAgentHtml(input),
+    segmentV2,
   };
+
+  // Clear context so next agent starts fresh
+  setEmailContext(null);
+  return result;
 }
 
 function buildAgentEmailSubject(metrics: AgentMetrics): string {
