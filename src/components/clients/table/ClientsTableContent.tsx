@@ -510,6 +510,8 @@ export function ClientsTableContent({
                   onEdit={handleEditClick}
                   onReassign={handleReassignClick}
                   onDelete={handleDeleteClick}
+                  onVerifyEmail={handleVerifyEmailClick}
+                  onResendInvitation={handleResendInvitationClick}
                 />
               ))
             )}
