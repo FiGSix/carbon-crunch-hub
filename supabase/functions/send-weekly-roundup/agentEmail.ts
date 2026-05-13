@@ -113,9 +113,11 @@ export function buildAgentHtml(input: AgentEmailInput): string {
     </div>
 
     <p style="color:#333;font-size:16px;margin:0 0 12px;">Hi ${escapeHtml(firstName)},</p>
-    <p style="color:#555;line-height:1.55;margin:0 0 24px;">${openingLine(input)}</p>
+    <p style="color:#555;line-height:1.55;margin:0 0 24px;">${input.openingOverride ?? openingLine(input)}</p>
 
     ${headerCtaRow()}
+
+    ${milestonesSection(input.milestones)}
 
     ${thisWeeksFocusSection(focus)}
 
@@ -133,6 +135,8 @@ export function buildAgentHtml(input: AgentEmailInput): string {
 
     ${teamSection(input)}
 
+    ${rotatingBlockSection(input.rotatingBlock)}
+
     ${finalCtaSection()}
 
     <hr style="border:none;border-top:1px solid #eee;margin:30px 0;">
@@ -140,6 +144,25 @@ export function buildAgentHtml(input: AgentEmailInput): string {
     <p style="color:${BRAND_DARK};margin:18px 0 0;">— Crunch Carbon</p>
   </div>
 </body></html>`;
+}
+
+function milestonesSection(ms?: Milestone[]): string {
+  if (!ms || ms.length === 0) return "";
+  const chips = ms.map((m) => `
+    <span style="display:inline-block;background:${BRAND_YELLOW};color:${BRAND_DARK};padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;margin:0 6px 6px 0;">
+      ${m.emoji} ${escapeHtml(m.label)}
+    </span>`).join("");
+  return `
+  <div style="margin:0 0 22px;">${chips}</div>`;
+}
+
+function rotatingBlockSection(block?: RotatingBlock): string {
+  if (!block) return "";
+  return `
+  <div style="margin:28px 0 0;padding:18px 20px;background:#fafafa;border-left:3px solid ${BRAND_YELLOW};border-radius:6px;">
+    <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:#888;font-weight:600;">${escapeHtml(block.title)}</p>
+    <p style="margin:0;color:#444;line-height:1.6;font-size:14px;">${block.bodyHtml}</p>
+  </div>`;
 }
 
 // ----------------------------------------------------------------------------
