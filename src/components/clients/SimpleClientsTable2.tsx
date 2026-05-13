@@ -36,6 +36,8 @@ const ClientRow2 = memo(function ClientRow2({
   onPortfolio,
   onReassign,
   onDelete,
+  onVerifyEmail,
+  onResendInvitation,
 }: {
   client: ClientData;
   isAdmin: boolean;
@@ -43,6 +45,8 @@ const ClientRow2 = memo(function ClientRow2({
   onPortfolio: (client: ClientData) => void;
   onReassign: (client: ClientData) => void;
   onDelete: (client: ClientData) => void;
+  onVerifyEmail: (client: ClientData) => void;
+  onResendInvitation: (client: ClientData) => void;
 }) {
   return (
     <tr className="border-b hover:bg-muted/30 transition-colors">
