@@ -1,14 +1,29 @@
 /**
  * Centralised deep-link builder for the weekly agent email.
- * Every CTA in the email goes through here so we can later append
- * UTM/CTA tracking params consistently (Phase 3 A/B testing).
+ * Phase 3: appends per-send tracking (variant, send_id) so clicks can be
+ * correlated in email_cta_events via the resend webhook (utm_send_id).
  */
 
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://crunchcarbon.com";
 
+interface EmailContext {
+  variant: "A" | "B";
+  sendId: string; // unique per email send (uuid)
+}
+
+let CTX: EmailContext | null = null;
+
+export function setEmailContext(ctx: EmailContext | null): void {
+  CTX = ctx;
+}
+
 function withTracking(path: string, cta: string): string {
   const sep = path.includes("?") ? "&" : "?";
-  return `${APP_BASE_URL}${path}${sep}utm_source=weekly_email&utm_medium=email&utm_campaign=agent_momentum&utm_content=${encodeURIComponent(cta)}`;
+  let qs = `utm_source=weekly_email&utm_medium=email&utm_campaign=agent_momentum&utm_content=${encodeURIComponent(cta)}`;
+  if (CTX) {
+    qs += `&utm_variant=${CTX.variant}&utm_send_id=${encodeURIComponent(CTX.sendId)}&utm_cta=${encodeURIComponent(cta)}`;
+  }
+  return `${APP_BASE_URL}${path}${sep}${qs}`;
 }
 
 export const links = {
