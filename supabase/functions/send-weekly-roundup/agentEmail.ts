@@ -244,7 +244,7 @@ function pipelineActionsSection(input: AgentEmailInput): string {
   const m = input.metrics;
   if (m.pending_mwp <= 0 && m.new_proposals_this_week === 0) return "";
   const pendingLine = m.pending_mwp > 0
-    ? `<li style="margin-bottom:6px;"><strong>${formatMwp(m.pending_mwp)} MWp</strong> in proposals awaiting client signature — <a href="${links.proposalsList()}" style="color:${BRAND_DARK};font-weight:600;">follow up &rarr;</a></li>`
+    ? `<li style="margin-bottom:6px;"><strong>${formatMwp(m.pending_mwp)} MWp</strong> in proposals awaiting client signature — <a href="${links.proposalsPending()}" style="color:${BRAND_DARK};font-weight:600;">follow up &rarr;</a></li>`
     : "";
   const createdLine = m.new_proposals_this_week > 0
     ? `<li style="margin-bottom:6px;">${m.new_proposals_this_week} new proposal${m.new_proposals_this_week === 1 ? "" : "s"} created this week.</li>`
