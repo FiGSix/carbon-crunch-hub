@@ -1415,37 +1415,80 @@ const handler = async (req: Request): Promise<Response> => {
     // Calculate platform metrics (needed for both email types)
     const platformMetrics = calculatePlatformMetrics(agents, proposals, onboardingMap, newAgents);
     const teamMetrics = platformMetrics.teams;
-    
+
     console.log("Platform Metrics:", {
       audit_ready_mwp: platformMetrics.platform_audit_ready_mwp,
       total_mwp: platformMetrics.platform_total_mwp,
       goal_progress: platformMetrics.goal_progress_percent,
       active_agents: platformMetrics.active_agent_count,
     });
-    
+
+    // ---- Phase 3: rankings (current vs previous snapshot) ----
+    const currentRankInputs: RankSnapshot[] = agents.map((a) => {
+      const m = calculateAgentMetrics(a, proposals, onboardingMap, teamMetrics);
+      return { agentId: a.id, auditReadyMwp: m.personal_audit_ready_mwp };
+    });
+    const currentRanks = rankAgents(currentRankInputs);
+
+    const { data: priorSnapshotRows } = await supabase
+      .from("agent_weekly_snapshots")
+      .select("agent_id, audit_ready_mwp, snapshot_date")
+      .lt("snapshot_date", new Date().toISOString().slice(0, 10))
+      .order("snapshot_date", { ascending: false });
+
+    const priorByAgent = new Map<string, number>();
+    (priorSnapshotRows || []).forEach((r: any) => {
+      if (!priorByAgent.has(r.agent_id)) priorByAgent.set(r.agent_id, Number(r.audit_ready_mwp));
+    });
+    const previousRanks = rankAgents(
+      Array.from(priorByAgent.entries()).map(([agentId, auditReadyMwp]) => ({ agentId, auditReadyMwp }))
+    );
+    const totalRanked = currentRanks.size;
+
     let agentEmailsSent = 0;
     let agentEmailsFailed = 0;
     let adminEmailsSent = 0;
     let adminEmailsFailed = 0;
-    
+
+    // helper to generate a per-send id
+    const makeSendId = () => crypto.randomUUID();
+
     // TEST MODE: Send to specific test emails only
     if (isTestMode) {
-      // Send test agent email
       if (testAgentEmail) {
-        // Find the agent by email, or use first agent as template
         const targetAgent = agents.find((a) => a.email.toLowerCase() === testAgentEmail.toLowerCase()) || agents[0];
-        
+
         if (targetAgent) {
           const metrics = calculateAgentMetrics(targetAgent, proposals, onboardingMap, teamMetrics);
-          const built = await buildAgentEmail(targetAgent, metrics, proposals);
+          const sendId = makeSendId();
+          const variant = pickVariant();
+          const built = await buildAgentEmail(
+            targetAgent,
+            metrics,
+            proposals,
+            {
+              currentRank: currentRanks.get(targetAgent.id) ?? null,
+              previousRank: previousRanks.get(targetAgent.id) ?? null,
+              totalRanked,
+            },
+            { sendId, variant }
+          );
           const subject = `[TEST] ${built.subject}`;
           const html = built.html;
-          
-          console.log(`Sending TEST agent email to: ${testAgentEmail}`);
-          
+
+          console.log(`Sending TEST agent email to: ${testAgentEmail} (variant ${variant}, segment ${built.segmentV2})`);
+
           const result = await sendEmailWithRetry(testAgentEmail, subject, html);
           if (result.success) {
             agentEmailsSent++;
+            await logEmailCtaEvent({
+              agentId: targetAgent.id,
+              sendId,
+              messageId: result.messageId,
+              subject,
+              variant,
+              segment: built.segmentV2,
+            });
             console.log(`TEST agent email sent successfully to ${testAgentEmail}`);
           } else {
             agentEmailsFailed++;
@@ -1455,18 +1498,16 @@ const handler = async (req: Request): Promise<Response> => {
           console.log("No agents found to use as template for test email");
         }
       }
-      
-      // Send test admin email
+
       if (testAdminEmail) {
-        // Find the admin by email, or use first admin as template
         const targetAdmin = admins.find((a) => a.email.toLowerCase() === testAdminEmail.toLowerCase()) || admins[0];
-        
+
         if (targetAdmin) {
           const subject = `[TEST] ${buildAdminEmailSubject(platformMetrics)}`;
           const html = await buildAdminEmailHtml(targetAdmin, platformMetrics);
-          
+
           console.log(`Sending TEST admin email to: ${testAdminEmail}`);
-          
+
           const result = await sendEmailWithRetry(testAdminEmail, subject, html);
           if (result.success) {
             adminEmailsSent++;
@@ -1480,21 +1521,39 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
     } else {
-      // PRODUCTION MODE: Send to all agents and admins
-      
-      // Send Agent Roundup emails
+      // PRODUCTION MODE
       console.log(`\n--- Sending ${agents.length} Agent Roundup emails ---`);
       for (const agent of agents) {
         const metrics = calculateAgentMetrics(agent, proposals, onboardingMap, teamMetrics);
-        const built = await buildAgentEmail(agent, metrics, proposals);
+        const sendId = makeSendId();
+        const variant = pickVariant();
+        const built = await buildAgentEmail(
+          agent,
+          metrics,
+          proposals,
+          {
+            currentRank: currentRanks.get(agent.id) ?? null,
+            previousRank: previousRanks.get(agent.id) ?? null,
+            totalRanked,
+          },
+          { sendId, variant }
+        );
         const subject = built.subject;
         const html = built.html;
-        
-        console.log(`Sending to agent: ${agent.email} (${metrics.segment})`);
-        
+
+        console.log(`Sending to agent: ${agent.email} (${built.segmentV2}, variant ${variant})`);
+
         const result = await sendEmailWithRetry(agent.email, subject, html);
         if (result.success) {
           agentEmailsSent++;
+          await logEmailCtaEvent({
+            agentId: agent.id,
+            sendId,
+            messageId: result.messageId,
+            subject,
+            variant,
+            segment: built.segmentV2,
+          });
         } else {
           agentEmailsFailed++;
           console.error(`Failed to send to ${agent.email}: ${result.error}`);
