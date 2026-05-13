@@ -599,6 +599,7 @@ export function ClientsTableContent({
         </AlertDialogContent>
       </AlertDialog>
 
+      <EditClientDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         client={clientToEdit}
