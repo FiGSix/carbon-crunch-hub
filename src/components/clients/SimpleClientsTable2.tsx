@@ -166,12 +166,57 @@ export function SimpleClientsTable2({
   const [reassignClient, setReassignClient] = useState<ClientData | null>(null);
   const [deleteClient, setDeleteClient] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [verifyClient, setVerifyClient] = useState<ClientData | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendClient, setResendClient] = useState<ClientData | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   // Stable callbacks
   const handleEdit = useCallback((client: ClientData) => setEditingClient(client), []);
   const handlePortfolio = useCallback((client: ClientData) => setPortfolioClient(client), []);
   const handleReassign = useCallback((client: ClientData) => setReassignClient(client), []);
   const handleDelete = useCallback((client: ClientData) => setDeleteClient(client), []);
+  const handleVerifyEmail = useCallback((client: ClientData) => setVerifyClient(client), []);
+  const handleResendInvitation = useCallback((client: ClientData) => setResendClient(client), []);
+
+  const handleVerifyConfirm = async () => {
+    if (!verifyClient?.client_email) return;
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-auth-verification', {
+        body: { action: 'verify_user', email: verifyClient.client_email },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Email verified', description: data?.message || `Email confirmed for ${verifyClient.client_email}.` });
+      setVerifyClient(null);
+      onRefresh();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Verify failed', description: err?.message || 'Could not verify email' });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendConfirm = async () => {
+    if (!resendClient?.client_email) return;
+    setIsResending(true);
+    try {
+      const [firstName, ...rest] = (resendClient.client_name || '').trim().split(' ');
+      const lastName = rest.join(' ') || undefined;
+      const { data, error } = await supabase.functions.invoke('send-client-invitation', {
+        body: { email: resendClient.client_email, firstName: firstName || undefined, lastName },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Invitation sent', description: `An invitation email has been sent to ${resendClient.client_email}.` });
+      setResendClient(null);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Send failed', description: err?.message || 'Could not send invitation' });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteClient) return;
