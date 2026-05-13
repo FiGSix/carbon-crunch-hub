@@ -17,32 +17,21 @@ export function useCessionAgreementPdf() {
     pdfLogger.info('Starting cession agreement PDF generation', { proposalId });
 
     try {
-      await supabase.auth.getSession();
-
-      // 1. Generate (or refresh) the cession agreement PDF
+      // Generate the cession agreement PDF and get back a signed download URL
+      // for the freshly written file (NOT the standard proposal PDF).
       const { data, error } = await supabase.functions.invoke('generate-cession-agreement-pdf', {
         body: { proposalId },
       });
 
-      if (error || !data?.success) {
+      if (error || !data?.success || !data?.signed_url) {
         pdfLogger.error('Edge function error', { error, data });
-        toast({ title: 'PDF Generation Failed', description: data?.error || 'Unknown error.', variant: 'destructive' });
+        toast({ title: 'PDF Generation Failed', description: data?.error || error?.message || 'Unknown error.', variant: 'destructive' });
         return;
       }
 
-      // 2. Mint a fresh signed URL through get-pdf-signed-url
       const downloadFilename = filename || `cession-agreement-${proposalId}.pdf`;
-      const { data: signed, error: signErr } = await supabase.functions.invoke('get-pdf-signed-url', {
-        body: { proposalId, kind: 'proposal', download: downloadFilename },
-      });
 
-      if (signErr || !signed?.signed_url) {
-        pdfLogger.error('Failed to mint signed URL', { signErr });
-        toast({ title: 'PDF Unavailable', description: 'Could not generate a download link.', variant: 'destructive' });
-        return;
-      }
-
-      const response = await fetch(signed.signed_url);
+      const response = await fetch(data.signed_url);
       if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.statusText}`);
 
       const blob = await response.blob();
