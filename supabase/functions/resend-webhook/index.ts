@@ -140,6 +140,35 @@ serve(async (req) => {
   }
 });
 
+async function updateWeeklyRoundupCtaEvent(supabase: any, event: ResendWebhookEvent): Promise<void> {
+  const messageId = event.data.email_id;
+  if (!messageId) return;
+
+  // Only act if this message_id was logged by send-weekly-roundup
+  const { data: existing } = await supabase
+    .from('email_cta_events')
+    .select('id')
+    .eq('message_id', messageId)
+    .limit(1)
+    .maybeSingle();
+  if (!existing) return;
+
+  const nowIso = event.created_at || new Date().toISOString();
+  const update: Record<string, any> = {};
+  if (event.type === 'email.opened' || event.type === 'email.delivered') {
+    update.opened_at = nowIso;
+  }
+  if (event.type === 'email.clicked') {
+    update.clicked_at = nowIso;
+    update.target_url = event.data.click?.link ?? null;
+    update.user_agent = event.data.click?.userAgent ?? null;
+  }
+  if (Object.keys(update).length === 0) return;
+
+  await supabase.from('email_cta_events').update(update).eq('message_id', messageId);
+  console.log(`[email_cta_events] updated ${event.type} for message ${messageId}`);
+}
+
 async function extractProposalIdFromEmail(
   supabase: any,
   emailId: string,
