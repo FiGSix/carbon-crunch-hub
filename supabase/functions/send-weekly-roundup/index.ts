@@ -20,6 +20,7 @@ import {
 } from "./segmentation.ts";
 import { buildMilestones } from "./milestones.ts";
 import { pickRotatingBlock } from "./rotatingContent.ts";
+import { getRoundupAnalytics, renderAnalyticsHtml } from "./adminAnalytics.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
