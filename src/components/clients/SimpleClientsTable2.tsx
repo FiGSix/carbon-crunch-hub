@@ -283,6 +283,8 @@ export function SimpleClientsTable2({
                     onPortfolio={handlePortfolio}
                     onReassign={handleReassign}
                     onDelete={handleDelete}
+                    onVerifyEmail={handleVerifyEmail}
+                    onResendInvitation={handleResendInvitation}
                   />
                 ))
               )}
