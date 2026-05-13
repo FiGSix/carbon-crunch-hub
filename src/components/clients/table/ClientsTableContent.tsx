@@ -25,7 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
+import { Users, RefreshCw, Zap, AlertTriangle, MoreVertical, Trash2, Edit, UserCheck, ArrowUpDown, ArrowUp, ArrowDown, Search, MailCheck, Send } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { ClientData } from '@/hooks/clients/types';
 import { useState, useMemo, useCallback, useDeferredValue, memo } from 'react';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
