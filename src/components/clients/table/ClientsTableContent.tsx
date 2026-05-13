@@ -43,6 +43,8 @@ const ClientRow = memo(function ClientRow({
   onEdit,
   onReassign,
   onDelete,
+  onVerifyEmail,
+  onResendInvitation,
 }: {
   client: ClientData;
   isAdmin: boolean;
@@ -50,6 +52,8 @@ const ClientRow = memo(function ClientRow({
   onEdit: (client: ClientData) => void;
   onReassign: (client: ClientData) => void;
   onDelete: (client: ClientData) => void;
+  onVerifyEmail: (client: ClientData) => void;
+  onResendInvitation: (client: ClientData) => void;
 }) {
   return (
     <TableRow className={isRefreshing ? 'opacity-70' : ''}>
@@ -99,6 +103,21 @@ const ClientRow = memo(function ClientRow({
                 <DropdownMenuItem onClick={() => onReassign(client)}>
                   <UserCheck className="h-4 w-4 mr-2" />
                   Edit Assigned Agent
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onVerifyEmail(client)}
+                  disabled={!client.client_email}
+                >
+                  <MailCheck className="h-4 w-4 mr-2" />
+                  Verify Email Now
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onResendInvitation(client)}
+                  disabled={!client.client_email}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Resend Invitation Email
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
