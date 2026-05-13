@@ -1083,6 +1083,8 @@ async function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMe
   const vintageCountdown = await getVintageCountdown();
   const { days = 0, hours = 0, minutes = 0, year: vintageYear = new Date().getFullYear() } = vintageCountdown || {};
   const firstName = admin.first_name || "Admin";
+  const analytics = await getRoundupAnalytics(supabase, 7);
+  const analyticsHtml = renderAnalyticsHtml(analytics);
   
   // Team performance table
   const teamsTable = platformMetrics.teams
