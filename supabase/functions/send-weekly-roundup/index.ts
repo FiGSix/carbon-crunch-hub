@@ -20,6 +20,7 @@ import {
 } from "./segmentation.ts";
 import { buildMilestones } from "./milestones.ts";
 import { pickRotatingBlock } from "./rotatingContent.ts";
+import { getRoundupAnalytics, renderAnalyticsHtml } from "./adminAnalytics.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -1082,6 +1083,8 @@ async function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMe
   const vintageCountdown = await getVintageCountdown();
   const { days = 0, hours = 0, minutes = 0, year: vintageYear = new Date().getFullYear() } = vintageCountdown || {};
   const firstName = admin.first_name || "Admin";
+  const analytics = await getRoundupAnalytics(supabase, 7);
+  const analyticsHtml = renderAnalyticsHtml(analytics);
   
   // Team performance table
   const teamsTable = platformMetrics.teams
@@ -1257,6 +1260,8 @@ async function buildAdminEmailHtml(admin: AgentData, platformMetrics: PlatformMe
     
     <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⚠️ Platform Blockers Overview</h2>
     ${blockersSection}
+    
+    ${analyticsHtml}
     
     <h2 style="color: #333; font-size: 18px; margin-top: 30px;">⏳ Vintage ${vintageYear} Countdown</h2>
     <div style="background-color: #1a1a1a; color: #FFCD03; padding: 25px; border-radius: 6px; text-align: center; margin: 15px 0;">
