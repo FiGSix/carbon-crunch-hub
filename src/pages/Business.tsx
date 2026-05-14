@@ -38,6 +38,17 @@ const Business = () => {
         <meta property="og:description" content="Monetise your commercial solar with verified carbon credits. Earn R10,000-R100,000+ annually with ESG reporting and zero operational burden." />
         <meta property="og:url" content="https://crunchcarbon.com/business" />
         <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Service",
+          "name": "Commercial Solar Carbon Credits",
+          "provider": { "@type": "Organization", "name": "Crunch Carbon" },
+          "description": "Monetize commercial and industrial solar systems with verified carbon credits. Earn R10,000-R100,000+ annually with ESG reporting.",
+          "areaServed": { "@type": "Country", "name": "South Africa" },
+          "serviceType": "Commercial Carbon Credit Generation",
+          "audience": { "@type": "BusinessAudience", "audienceType": "Commercial and Industrial Solar Owners" },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "ZAR", "description": "Free registration for commercial solar systems 50kWp to 1MW+" }
+        })}</script>
       </Helmet>
       <Header />
       
