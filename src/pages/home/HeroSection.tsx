@@ -10,23 +10,8 @@ export const HeroSection = () => {
   return <section className="bg-gradient-to-br from-background to-accent py-16 md:py-24 overflow-hidden">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <SafeMotionDiv initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          duration: 0.5
-        }} className="space-y-8">
-            <SafeMotionDiv initial={{
-            opacity: 0
-          }} animate={{
-            opacity: 1
-          }} transition={{
-            duration: 0.5,
-            delay: 0.2
-          }} className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
+          <div className="space-y-8">
+            <div className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
               <span className="text-sm font-medium text-muted-foreground">1,500+ Solar Systems Already Earning</span>
             </SafeMotionDiv>
 
