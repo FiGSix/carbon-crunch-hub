@@ -22,9 +22,10 @@ import { logger } from '@/lib/logger';
 
 // Immediate load for critical public pages only
 import NotFound from "./pages/NotFound";
+// Eager-load homepage so the hero renders without a chunk fetch round-trip
+import Index from "./pages/Index";
 
 // Lazy load auth pages to reduce initial bundle (not needed on homepage)
-const Index = createOptimizedLazyComponent(() => import("./pages/Index"), "Index");
 const Login = createOptimizedLazyComponent(() => import("./pages/Login"), "Login");
 const Register = createOptimizedLazyComponent(() => import("./pages/Register"), "Register");
 const ForgotPassword = createOptimizedLazyComponent(() => import("./pages/ForgotPassword"), "ForgotPassword");
@@ -133,7 +134,7 @@ function App() {
                   {/* Public routes - wrapped with page error boundaries */}
                   <Route path="/" element={
                     <PageErrorBoundary pageName="Home">
-                      <Suspense fallback={<PageLoader />}><Index /></Suspense>
+                      <Index />
                     </PageErrorBoundary>
                   } />
                   

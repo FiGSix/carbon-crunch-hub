@@ -10,25 +10,10 @@ export const HeroSection = () => {
   return <section className="bg-gradient-to-br from-background to-accent py-16 md:py-24 overflow-hidden">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <SafeMotionDiv initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          duration: 0.5
-        }} className="space-y-8">
-            <SafeMotionDiv initial={{
-            opacity: 0
-          }} animate={{
-            opacity: 1
-          }} transition={{
-            duration: 0.5,
-            delay: 0.2
-          }} className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
+          <div className="space-y-8">
+            <div className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
               <span className="text-sm font-medium text-muted-foreground">1,500+ Solar Systems Already Earning</span>
-            </SafeMotionDiv>
+            </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
               <span className="text-foreground">Turn Your Solar System</span>{" "}
@@ -66,7 +51,7 @@ export const HeroSection = () => {
               <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
               <span className="text-sm">Free setup • Verra certified • Annual payouts</span>
             </div>
-          </SafeMotionDiv>
+          </div>
           
           <SafeMotionDiv className="hidden lg:block relative" initial={{
           opacity: 0,
@@ -82,7 +67,7 @@ export const HeroSection = () => {
               <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full rounded-3xl bg-gradient-to-br from-primary/30 to-primary/10"></div>
               <div className="meta-card rounded-3xl p-6">
                 <OptimizedImage
-                  src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png"
+                  src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.webp"
                   alt="CrunchCarbon Pac-Man Style Logo"
                   className="w-full h-auto rounded-2xl transition-all hover:scale-105 duration-500"
                   width={488}
