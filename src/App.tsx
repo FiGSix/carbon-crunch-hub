@@ -134,7 +134,7 @@ function App() {
                   {/* Public routes - wrapped with page error boundaries */}
                   <Route path="/" element={
                     <PageErrorBoundary pageName="Home">
-                      <Suspense fallback={<PageLoader />}><Index /></Suspense>
+                      <Index />
                     </PageErrorBoundary>
                   } />
                   
