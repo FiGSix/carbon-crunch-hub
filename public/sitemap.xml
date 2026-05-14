@@ -40,6 +40,20 @@
   </url>
 
   <url>
+    <loc>https://crunchcarbon.com/quick-calc</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://crunchcarbon.com/knowledge-hub</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
     <loc>https://crunchcarbon.com/marketplace</loc>
     <lastmod>2026-05-14</lastmod>
     <changefreq>weekly</changefreq>
