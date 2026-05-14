@@ -8,8 +8,9 @@ import { BusinessCalculator } from "./business/BusinessCalculator";
 import { BusinessHowItWorks } from "./business/BusinessHowItWorks";
 import { BusinessFAQ } from "./business/BusinessFAQ";
 import { BusinessCTA } from "./business/BusinessCTA";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 const Business = () => {
   const navigate = useNavigate();
