@@ -79,6 +79,20 @@ Partner with us to offer carbon credit monetisation to your clients.
 - Email: info@crunchcarbon.com
 - Calculator: https://crunchcarbon.com/calculator
 
+## Pages
+
+- [Home](/): Turn solar energy into verified carbon credits and cash in South Africa
+- [Home Owners](/home-owners): Monetise your residential solar system and earn R600-R1,000+ annually
+- [Calculator](/calculator): Estimate your solar carbon credit earnings instantly
+- [Business](/business): Commercial solar carbon credits — earn R10,000-R100,000+ annually
+- [Agents](/agents): Partner program for solar installers and industry professionals
+- [Marketplace](/marketplace): Buy, sell, and trade verified carbon credits
+- [About](/about): Our mission, team, and values
+- [Contact](/contact): Get in touch with Crunch Carbon
+- [Why Choose Us](/why-choose-us): Verra VCS certification and why trust matters
+- [Login](/login): Sign in to your dashboard
+- [Register](/register): Create a free account
+
 ## Quick Facts
 
 - Location: South Africa
