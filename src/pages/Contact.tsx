@@ -88,6 +88,15 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Contact Crunch Carbon | Get In Touch</title>
+        <meta name="description" content="Contact Crunch Carbon about carbon credits, solar monetisation, or partnership opportunities. We're here to help." />
+        <link rel="canonical" href="https://crunchcarbon.com/contact" />
+        <meta property="og:title" content="Contact Crunch Carbon | Get In Touch" />
+        <meta property="og:description" content="Contact Crunch Carbon about carbon credits, solar monetisation, or partnership opportunities. We're here to help." />
+        <meta property="og:url" content="https://crunchcarbon.com/contact" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
       
       <main className="flex-1">
