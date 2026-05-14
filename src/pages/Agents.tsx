@@ -6,6 +6,7 @@ import { ArrowRight, Briefcase, CheckCircle2, DollarSign, Handshake, Rocket, Use
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
+import { Helmet } from "react-helmet-async";
 
 const Agents = () => {
   const navigate = useNavigate();
@@ -23,6 +24,15 @@ const Agents = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Partner With Crunch Carbon | Agent Program</title>
+        <meta name="description" content="Join the Crunch Carbon agent program. Earn commissions by helping clients monetise their solar systems with verified carbon credits." />
+        <link rel="canonical" href="https://crunchcarbon.com/agents" />
+        <meta property="og:title" content="Partner With Crunch Carbon | Agent Program" />
+        <meta property="og:description" content="Join the Crunch Carbon agent program. Earn commissions by helping clients monetise their solar systems with verified carbon credits." />
+        <meta property="og:url" content="https://crunchcarbon.com/agents" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
 
       <main className="flex-1">

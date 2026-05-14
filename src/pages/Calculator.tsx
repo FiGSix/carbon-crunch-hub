@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
+import { Helmet } from "react-helmet-async";
 
 // Import refactored components
 import { HeroSection } from "./calculator/HeroSection";
@@ -48,6 +49,15 @@ const Calculator = () => {
   
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Solar Carbon Credit Calculator | Crunch Carbon</title>
+        <meta name="description" content="Calculate your solar carbon credit earnings instantly. Free tool for South African homeowners and businesses." />
+        <link rel="canonical" href="https://crunchcarbon.com/calculator" />
+        <meta property="og:title" content="Solar Carbon Credit Calculator | Crunch Carbon" />
+        <meta property="og:description" content="Calculate your solar carbon credit earnings instantly. Free tool for South African homeowners and businesses." />
+        <meta property="og:url" content="https://crunchcarbon.com/calculator" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
       
       <main className="flex-1">
