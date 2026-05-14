@@ -1,6 +1,7 @@
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client'
+import { HelmetProvider } from 'react-helmet-async';
 import * as Sentry from '@sentry/react';
 import App from './App.tsx'
 import './index.css'
@@ -39,6 +40,8 @@ validateSecurityConfig();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
   </StrictMode>
 );

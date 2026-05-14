@@ -5,12 +5,22 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 const About = () => {
   const navigate = useNavigate();
   
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>About Crunch Carbon | Our Mission & Team</title>
+        <meta name="description" content="Learn about Crunch Carbon's mission to help individuals and organisations monetise renewable energy through verified carbon credits." />
+        <link rel="canonical" href="https://crunchcarbon.com/about" />
+        <meta property="og:title" content="About Crunch Carbon | Our Mission & Team" />
+        <meta property="og:description" content="Learn about Crunch Carbon's mission to help individuals and organisations monetise renewable energy through verified carbon credits." />
+        <meta property="og:url" content="https://crunchcarbon.com/about" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
       
       <main className="flex-1">
