@@ -1,37 +1,49 @@
-## Why the hero feels slow
+# Client Sign-Proposal Nudge — Bi-Weekly
 
-Three things delay the headline + image on `/`:
+## Goal
 
-1. **Homepage is lazy-loaded.** `Index` is wrapped in `createOptimizedLazyComponent`, so the browser parses `main.js` → discovers `Index.chunk.js` → fetches it → only then renders the hero. Every other route is correctly lazy, but the landing page should be in the initial bundle.
-2. **Headline starts invisible.** The `<h1>` lives inside a `SafeMotionDiv` with `initial={{ opacity: 0, y: 20 }}`. Until React hydrates and framer-motion runs, the text is `opacity: 0` — even though the HTML is on the page. LCP is effectively gated on hydration.
-3. **Hero image is a 124 KB PNG, preloaded as the original.** `index.html` preloads `9542096a-…png` (124 KB), but a `9542096a-…-optimized.png` already exists in `public/lovable-uploads/`. The `<img>` itself also points at the unoptimized file.
+Push clients to sign proposals that agents/partners have sent them. Stop the moment everything is signed — no ongoing "update" noise.
 
-## Plan
+## Audience & cadence
 
-### 1. Eager-load the homepage route
-In `src/App.tsx`, replace the lazy `Index` with a static import:
-```ts
-import Index from "./pages/Index";
-```
-Keep every other route lazy. This removes one network round-trip on first paint of `/`.
+- **Who**: Only clients with at least one proposal in a pre-signature state (sent / delivered / opened / clicked, not yet `accepted` / `signed` / `declined` / `expired`).
+- **Cadence**: Every 14 days, per client.
+- **Stop condition**: Client has zero unsigned proposals → no email that cycle.
+- **Suppression**: Skip if any unsigned proposal already received a 1:1 follow-up (existing `proposal-automation` 3-day / 5-day nudge) in the last 3 days, to avoid stacking.
 
-### 2. Don't hide the LCP text behind an animation
-In `src/pages/home/HeroSection.tsx`, render the headline + subheadline + CTAs without an opacity-0 initial state. Either:
-- Drop the outer `SafeMotionDiv` wrapper around the text column entirely (recommended — the text doesn't need to fade in), or
-- Change `initial` to `false` so motion skips the enter animation.
+## Email shape
 
-Floating badges and the image column can keep their animations.
+One email per client, listing every unsigned proposal in their portfolio:
 
-### 3. Use the optimized hero asset
-- Update both `<link rel="preload" as="image" href="…">` in `index.html` and the `<OptimizedImage src="…">` in `HeroSection.tsx` to point at `/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634-optimized.png`.
-- Confirm the optimized file is meaningfully smaller; if it's still >50 KB, generate a WebP next to it (`sharp`/`squoosh-cli`, committed to `public/`) and switch to that.
-- The image is hidden under `lg:` (≥1024 px), so on mobile the preload currently downloads bytes nobody renders. Add `media="(min-width: 1024px)"` to the preload `<link>` so phones skip it.
+- Subject (single proposal): "Your {{projectName}} proposal is waiting for your signature"
+- Subject (multiple): "You have {{n}} proposals waiting for your signature"
+- Opening: short, direct — "Signing unlocks your project and starts your 2025–2030 revenue clock."
+- Body: list of proposals with project name, agent/partner name, system size (kWp), days since sent, and a per-proposal "Review & sign" button linking to the existing proposal view URL.
+- Footer: who to contact (their agent), unsubscribe (system-managed).
 
-### 4. Verify
-After deploy, run a performance profile on `/` and confirm LCP drops (target <2.5 s on a fast 3G profile). If long tasks still dominate, profile to see whether framer-motion or another vendor chunk is the next bottleneck.
+This is transactional — each row corresponds to a real, recipient-initiated event (agent sent them a proposal). Goes through the existing Lovable Emails / `send-transactional-email` infrastructure.
 
-## Files touched
-- `src/App.tsx` — un-lazy `Index`
-- `src/pages/Index.tsx` — no change needed
-- `src/pages/home/HeroSection.tsx` — remove opacity-0 wrapper around headline; swap image src
-- `index.html` — point preload at optimized asset, add `media` query
+## Why bi-weekly + grouped
+
+- Per-proposal nudges already exist (3-day, 5-day, stale at 14d) in `proposal-automation`. Adding a weekly portfolio email on top would stack and burn deliverability.
+- Bi-weekly + grouped gives clients one consolidated reminder of *everything* outstanding, distinct from the per-proposal chase emails.
+- Naturally self-terminating: signs everything → drops out of the audience → mailbox gets quiet → trust preserved for real transactional mail (cession, vintage statements).
+
+## After signing — handoff to agent momentum
+
+Once a client signs, they exit this nudge audience. From that point the agent's Weekly Momentum Report drives the project forward (audit submission, vintage issuance). Client only hears from the platform on real milestones (audit-ready, first vintage, annual statement) — no recurring "update" emails.
+
+## Technical notes
+
+- New cron edge function: `client-signature-nudge`, scheduled every 14 days (pg_cron + pg_net), or daily with a per-client `last_nudge_sent_at` check (preferred — spreads load, handles new clients immediately).
+- Per-client query: join `proposals` → `clients`, filter `status NOT IN ('accepted','signed','declined','expired','stale')`, group by client.
+- New table column or settings field: `clients.last_signature_nudge_at TIMESTAMPTZ` (or row in existing `email_send_log` keyed by `template_name='client-signature-nudge'` — query that instead to avoid schema change).
+- New transactional template `client-signature-nudge.tsx` registered in `_shared/transactional-email-templates/registry.ts`.
+- Invokes `send-transactional-email` with `idempotencyKey = client-nudge-{clientId}-{yyyy-ww}` (biweekly bucket), `templateData = { firstName, proposals: [...] }`.
+- Respects `suppressed_emails` automatically via the existing send pipeline.
+- Skip clients with a `proposal-automation` follow-up in the last 3 days (query `email_send_log`).
+
+## Out of scope (for now)
+
+- Milestone emails (audit submitted, first vintage, annual statement) — separate workstream, only triggered post-signature.
+- Any client newsletter / product update / re-engagement content (would be marketing, not allowed on this infra).
