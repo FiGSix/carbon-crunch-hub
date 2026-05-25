@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_activities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
         ]
       }
       agent_commissions: {
@@ -107,11 +114,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_commissions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "agent_commissions_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "agent_commissions_proposal_id_fkey"
@@ -247,6 +268,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agent_invitations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_leads_converted_invitation_id_fkey"
+            columns: ["converted_invitation_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["invitation_id"]
           },
         ]
       }
@@ -495,6 +523,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
         ]
       }
       client_referrals: {
@@ -539,6 +574,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -682,11 +724,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clients_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "clients_portfolio_override_set_by_fkey"
             columns: ["portfolio_override_set_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_portfolio_override_set_by_fkey"
+            columns: ["portfolio_override_set_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -879,6 +935,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "data_access_config_configured_by_fkey"
+            columns: ["configured_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "data_access_config_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: true
@@ -886,6 +949,119 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      discovery_candidates: {
+        Row: {
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          created_lead_id: string | null
+          dedup_match_id: string | null
+          email: string | null
+          enrichment: Json
+          id: string
+          location: string | null
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          run_id: string
+          score: number
+          status: string
+          website: string | null
+        }
+        Insert: {
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          created_lead_id?: string | null
+          dedup_match_id?: string | null
+          email?: string | null
+          enrichment?: Json
+          id?: string
+          location?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          run_id: string
+          score?: number
+          status?: string
+          website?: string | null
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          created_lead_id?: string | null
+          dedup_match_id?: string | null
+          email?: string | null
+          enrichment?: Json
+          id?: string
+          location?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          run_id?: string
+          score?: number
+          status?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_candidates_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discovery_runs: {
+        Row: {
+          completed_at: string | null
+          cost_cents: number
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          leads_approved: number
+          leads_found: number
+          query: string | null
+          region: string | null
+          source: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          cost_cents?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          leads_approved?: number
+          leads_found?: number
+          query?: string | null
+          region?: string | null
+          source: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          cost_cents?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          leads_approved?: number
+          leads_found?: number
+          query?: string | null
+          region?: string | null
+          source?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       email_cta_events: {
         Row: {
@@ -1115,6 +1291,13 @@ export type Database = {
             referencedRelation: "agent_leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lead_outreach_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["lead_id"]
+          },
         ]
       }
       legal_document_acceptances: {
@@ -1294,6 +1477,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "onboarding_activity_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "onboarding_activity_log_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -1345,11 +1535,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "onboarding_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "onboarding_comments_edited_by_fkey"
             columns: ["edited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_comments_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "onboarding_comments_parent_comment_id_fkey"
@@ -1445,11 +1649,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "onboarding_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "onboarding_documents_validated_by_fkey"
             columns: ["validated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_documents_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -1614,6 +1832,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "onboarding_fields_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
         ]
       }
       onboarding_tasks: {
@@ -1677,11 +1902,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "onboarding_tasks_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "onboarding_tasks_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "onboarding_tasks_completed_by_fkey"
@@ -1691,6 +1930,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "onboarding_tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "onboarding_tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -1698,6 +1944,100 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      outreach_enrollments: {
+        Row: {
+          completed_at: string | null
+          current_step: number
+          enrolled_at: string
+          enrolled_by: string | null
+          id: string
+          lead_id: string
+          next_send_at: string | null
+          paused_reason: string | null
+          sequence_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          current_step?: number
+          enrolled_at?: string
+          enrolled_by?: string | null
+          id?: string
+          lead_id: string
+          next_send_at?: string | null
+          paused_reason?: string | null
+          sequence_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          current_step?: number
+          enrolled_at?: string
+          enrolled_by?: string | null
+          id?: string
+          lead_id?: string
+          next_send_at?: string | null
+          paused_reason?: string | null
+          sequence_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "agent_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["lead_id"]
+          },
+          {
+            foreignKeyName: "outreach_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_sequences: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          steps?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          steps?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       partner_api_keys: {
         Row: {
@@ -1871,6 +2211,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "partner_invitations_partner_id_fkey"
@@ -2116,6 +2463,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
         ]
       }
       project_onboarding: {
@@ -2197,8 +2551,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_onboarding_assigned_epc_id_fkey"
+            columns: ["assigned_epc_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "project_onboarding_audit_ready_marked_by_fkey"
             columns: ["audit_ready_marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_onboarding_audit_ready_marked_by_fkey"
+            columns: ["audit_ready_marked_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
+            foreignKeyName: "project_onboarding_last_modified_by_fkey"
+            columns: ["last_modified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2207,8 +2582,8 @@ export type Database = {
             foreignKeyName: "project_onboarding_last_modified_by_fkey"
             columns: ["last_modified_by"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "project_onboarding_proposal_id_fkey"
@@ -2588,11 +2963,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "proposals_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "proposals_client_reference_id_fkey"
@@ -2609,6 +2998,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_client_share_override_set_by_fkey"
+            columns: ["client_share_override_set_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "proposals_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -2621,6 +3017,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "proposals_partner_id_fkey"
@@ -2655,6 +3058,81 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           yield_kwh_per_kwp?: number
+        }
+        Relationships: []
+      }
+      sales_agent_runs: {
+        Row: {
+          completed_at: string | null
+          error: string | null
+          id: string
+          job_name: string
+          started_at: string
+          stats: Json
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error?: string | null
+          id?: string
+          job_name: string
+          started_at?: string
+          stats?: Json
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          error?: string | null
+          id?: string
+          job_name?: string
+          started_at?: string
+          stats?: Json
+          status?: string
+        }
+        Relationships: []
+      }
+      sales_agent_settings: {
+        Row: {
+          autopilot_discovery: boolean
+          autopilot_outreach: boolean
+          blocked_domains: string[]
+          daily_send_cap: number
+          default_sequence_id: string | null
+          id: boolean
+          quiet_hours_end: number
+          quiet_hours_start: number
+          score_threshold: number
+          target_regions: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          autopilot_discovery?: boolean
+          autopilot_outreach?: boolean
+          blocked_domains?: string[]
+          daily_send_cap?: number
+          default_sequence_id?: string | null
+          id?: boolean
+          quiet_hours_end?: number
+          quiet_hours_start?: number
+          score_threshold?: number
+          target_regions?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          autopilot_discovery?: boolean
+          autopilot_outreach?: boolean
+          blocked_domains?: string[]
+          daily_send_cap?: number
+          default_sequence_id?: string | null
+          id?: boolean
+          quiet_hours_end?: number
+          quiet_hours_start?: number
+          score_threshold?: number
+          target_regions?: string[]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -2784,6 +3262,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -3010,11 +3495,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
+          },
+          {
             foreignKeyName: "proposals_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "proposals_company_id_fkey"
@@ -3024,6 +3523,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_sales_agent_funnel: {
+        Row: {
+          accepted_at: string | null
+          agent_user_id: string | null
+          company_name: string | null
+          converted_at: string | null
+          discovered_at: string | null
+          email: string | null
+          first_proposal_at: string | null
+          funnel_stage: string | null
+          invitation_id: string | null
+          invite_status: string | null
+          invited_at: string | null
+          last_outreach_at: string | null
+          lead_id: string | null
+          lead_status: string | null
+          outreach_count: number | null
+          proposal_count: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {

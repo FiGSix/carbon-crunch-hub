@@ -71,6 +71,7 @@ const Referral = createOptimizedLazyComponent(() => import("./pages/Referral"), 
 const LegalDocuments = createOptimizedLazyComponent(() => import("./pages/Admin/LegalDocuments"), "LegalDocuments");
 const AuditStatus = createOptimizedLazyComponent(() => import("./pages/admin/AuditStatus"), "AuditStatus");
 const PartnerManagement = createOptimizedLazyComponent(() => import("./pages/admin/PartnerManagement"), "PartnerManagement");
+const SalesAgent = createOptimizedLazyComponent(() => import("./pages/admin/SalesAgent"), "SalesAgent");
 const SubmitProject = createOptimizedLazyComponent(() => import("./pages/SubmitProject"), "SubmitProject");
 const KnowledgeHub = createOptimizedLazyComponent(() => import("./pages/KnowledgeHub"), "KnowledgeHub");
 const KnowledgeHubAdmin = createOptimizedLazyComponent(() => import("./pages/admin/KnowledgeHubAdmin"), "KnowledgeHubAdmin");
@@ -483,6 +484,18 @@ function App() {
                         </PageErrorBoundary>
                       </PrivateRoute>
                     } 
+                  />
+                  <Route
+                    path="/admin/sales-agent"
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Sales Agent">
+                          <Suspense fallback={<PageLoader />}>
+                            <SalesAgent />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
                   />
                   <Route
                     path="/notifications"

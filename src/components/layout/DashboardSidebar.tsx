@@ -19,7 +19,8 @@ import {
   Calculator,
   Code2,
   BookOpen,
-  ShieldOff
+  ShieldOff,
+  Bot
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -128,6 +129,12 @@ export function DashboardSidebar() {
       href: "/referral",
       icon: UserPlus,
       roles: ["client"]
+    },
+    {
+      name: "Sales Agent",
+      href: "/admin/sales-agent",
+      icon: Bot,
+      roles: ["admin"]
     },
     {
       name: "Agent Management",
