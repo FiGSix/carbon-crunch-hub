@@ -22,6 +22,7 @@ import { FormError } from "@/components/ui/form-error";
 import { ValidationSummary } from "@/components/onboarding/ValidationSummary";
 import { cn } from "@/lib/utils";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/services/calculations/carbon/calculations";
+import { DataAccessTab } from "./DataAccessTab";
 
 interface SolarInstaller {
   id: string;
