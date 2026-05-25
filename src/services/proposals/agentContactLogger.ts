@@ -31,7 +31,7 @@ export async function logManualAgentContact(
       trigger_event: triggerEvent ?? "agent_initiated",
       created_by: userId,
       details: details ?? {},
-    });
+    } as any);
 
     if (error) {
       logLogger.warn("Failed to insert manual_agent_contact log", {
