@@ -1,50 +1,43 @@
-## Block List — QA Review (Steps 1–7)
+## Goal
 
-Reviewed: DB layer, admin UI, suppression service, in-app invite path, portfolio outreach path, public eligibility funnel, public contact funnel.
+Reduce friction toward "Audit Ready" by surfacing **Data Access** inside the Onboarding flow instead of a separate top-level tab. Agents/clients consistently miss the standalone tab, so we'll fold it in as the 8th section of the Onboarding checklist.
 
-### Overall verdict
-**Working end-to-end.** All seven surfaces are wired up correctly and the silent-block contract holds on the public funnel. Five issues found — none are blockers; one is a real UX leak worth fixing before release, the rest are polish.
+## Why this works
 
----
+- The "X of 7 sections complete" progress bar in `OnboardingTab.tsx` is the primary visual cue users follow. Today they hit 7/7, see 100%, and assume they're done — but `audit_ready` also requires `data_access_verified`.
+- Making it 8/8 keeps the single-flow mental model: finish the Onboarding tab → project is audit-ready.
 
-### Step-by-step results
+## Changes
 
-| # | Area | Status | Notes |
-|---|------|--------|-------|
-| 1 | DB: table, enum, RPC, RLS, unique index | ✅ Pass | Enum values (`manual / fatigue / bounce / complaint / unsubscribe / invalid`) match admin UI options exactly. Policies: SELECT/INSERT/DELETE all admin-only. `lower(email)` unique index prevents dupes. |
-| 2 | `/admin/blocked-emails` page + sidebar + route | ✅ Pass | Admin-only `PrivateRoute`, sidebar entry under admin section, list/add/remove + Suggested blocks panel all render. |
-| 3 | `emailSuppressionService.isEmailSuppressed` | ✅ Pass | Calls `is_client_email_suppressed` RPC; fail-open (returns `false` on RPC error) — intentional, matches existing pattern. |
-| 4 | In-app invite (`useProposalInvitations`) | ✅ Pass | Block check runs before edge call. Resend delegates to the same handler, so resend is covered too. Clear destructive toast on block. |
-| 5 | Portfolio outreach (`PortfolioReviewSection`) | ✅ Pass | Mailto click blocked with toast pointing to Admin → Blocked Emails. |
-| 6 | Public `send-eligibility-proposal` | ⚠️ Pass with leak (Bug #1) | Silent block runs before client upsert, proposal insert, and Resend call. Frontend toast is technically wrong (see Bug #1). |
-| 7 | Public `send-contact-email` | ✅ Pass | Silent block runs before DB insert and Resend; returns `success:true` with the same message the happy path uses. |
+### 1. Onboarding tab — add Data Access as 8th section
+File: `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`
+- Extend `sectionKeys` from 7 → 8 by adding `'dataAccess'`.
+- Add a `getSectionCompletionInfo('dataAccess')` branch that reads from `data_access_configs` (provider + credential filled + `last_test_status === 'success'` → complete; otherwise count remaining fields).
+- Render a new collapsible "Data Access" card at the bottom of the section list, styled identically to the others (green/amber left border, SectionBadge, same Save/Submit pattern). Embed the existing data-access form fields here, or render `<DataAccessTab>` inline as a sub-section.
+- Progress bar auto-updates to "X of 8 sections complete".
 
----
+### 2. Top-level tab — remove or downgrade
+File: `src/pages/ProjectOnboardingDetail/index.tsx`
+Two options (pick one in build):
+- **A. Remove** the `data-access` TabsTrigger and TabsContent entirely. Cleanest, fewest places to keep in sync.
+- **B. Keep** the tab as a deep-link/admin shortcut but rename to "Data Access (Advanced)" and add a banner pointing users back to the Onboarding tab.
 
-### Bug list
+Recommend **A** unless admins need the standalone view.
 
-**Bug #1 — Eligibility modal shows misleading "Check your email" toast on silent block** *(medium, fix recommended)*
-- `EligibilityModal.handleSubmit` ignores `data.blocked` and always shows: *"Proposal sent! Check your email for details."*
-- For a blocked visitor, no email is sent → they refresh inbox, find nothing, and may probe by retrying with a tweaked email. Spec called for a neutral *"Thanks, we'll be in touch"* style message.
-- **Fix:** when `data?.blocked === true`, show a generic acknowledgement toast (e.g. *"Thanks — we've received your details and will be in touch."*) instead of the email-confirmation copy. Keep `handleClose()`.
+### 3. Audit-ready gating — unchanged
+`audit_ready` still requires `data_access_verified = true` server-side. No DB/RLS/edge changes needed — we're only reorganizing the UI surface.
 
-**Bug #2 — Inconsistent confirm pattern in admin UI** *(low, polish)*
-- Unblocking uses `window.confirm()`; one-click "Block" on a Suggested row has no confirmation. Either standardise on shadcn `AlertDialog` for both, or accept the asymmetry. Existing admin pages use `AlertDialog`.
+### 4. Copy + nudges
+- Update the Onboarding tab intro copy to mention "8 sections including Data Access".
+- In `OverviewTab` audit-ready checklist (if it lists Data Access separately), keep the line but link it to the Onboarding tab anchor instead of the removed tab.
 
-**Bug #3 — No audit trail on removal** *(low)*
-- `created_by` is captured on insert, but DELETE leaves no trace of who unblocked or when. If audit matters, soft-delete (`deleted_at`, `deleted_by`) or log to `proposal_automation_log` / a new `admin_audit_log` row. Out of v1 spec; flag for product.
+## Out of scope
 
-**Bug #4 — Suggested blocks query relies on `(supabase as any)` cast** *(low)*
-- `useSuggestedBlocks` and `useBlockedEmails` bypass the generated types via `(supabase as any)`. View columns were verified live (`client_email`, `client_name`, `unsigned_count` present), but any future view change will fail silently at runtime. Regenerate Supabase types or add an explicit interface guard.
+- No changes to `DataAccessTab.tsx` internals — reuse the component/form as-is inside the new section.
+- No schema changes.
+- No changes to the actual validation logic or `useDataAccessValidation` hook.
 
-**Bug #5 — Inconsistent blocked response shape between edge functions** *(very low)*
-- `send-contact-email` returns `{ success:true, blocked:true, message:"..." }`; `send-eligibility-proposal` returns `{ success:true, blocked:true }`. Harmless today (each frontend handles its own toast) but worth aligning when Bug #1 is fixed.
+## Open questions
 
----
-
-### Out of scope but verified safe
-- **Agent invitations** (`send-agent-invitation`) are not affected — block list is client-only by design.
-- **`CreateProposal` / `SubmitProject`** require login, so blocked external emails can't reach them.
-
-### Recommended action
-Approve plan → in build mode I'll fix **Bug #1** (the only user-visible leak), align response shape from **Bug #5**, and leave #2/#3/#4 documented for product to triage.
+1. Keep the standalone Data Access tab as an admin shortcut (Option B), or remove entirely (Option A)?
+2. Should the Data Access section in Onboarding be collapsed by default (since it's the most-skipped) or expanded to draw attention?
