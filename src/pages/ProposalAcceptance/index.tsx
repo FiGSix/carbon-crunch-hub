@@ -5,12 +5,14 @@ import { ProposalData, ProposalContent } from "@/types/proposals";
 import { resolveClientInfo, LiveClientRecord } from "@/utils/proposals/resolveClientInfo";
 import { PageLoading } from "@/components/ui/loading-states";
 import { ProposalSummarySection } from "./components/ProposalSummarySection";
+import { ThirtySecondSummary } from "./components/ThirtySecondSummary";
 import { TermsAndConditionsSection } from "./components/TermsAndConditionsSection";
 import { SignatureSection } from "./components/SignatureSection";
 import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
 import { useToast } from "@/hooks/use-toast";
 import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, PenLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ProposalAcceptance() {
   const { id } = useParams();
