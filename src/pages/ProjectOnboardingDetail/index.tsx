@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { OverviewTab } from "./OverviewTab";
 import { OnboardingTab } from "./OnboardingTab";
-import { DataAccessTab } from "./DataAccessTab";
+
 import { RevenueTab } from "./RevenueTab";
 import { ActivityCommentsTab } from "./ActivityCommentsTab";
 import { AgreementTab } from "./AgreementTab";
