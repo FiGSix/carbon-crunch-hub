@@ -92,11 +92,18 @@ export function EligibilityModal({ open, onOpenChange, onQualified }: Eligibilit
       });
       
       if (error) throw error;
-      
-      toast({
-        title: "Success!",
-        description: "Proposal sent! Check your email for details."
-      });
+
+      if ((data as any)?.blocked) {
+        toast({
+          title: "Thanks!",
+          description: "We've received your details and will be in touch."
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Proposal sent! Check your email for details."
+        });
+      }
       handleClose();
     } catch (error) {
       console.error("Error sending proposal:", error);
