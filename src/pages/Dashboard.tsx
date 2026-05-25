@@ -9,6 +9,8 @@ import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
 import { AgentWarmCards } from "@/components/dashboard/sections/AgentWarmCards";
+import { PortfolioReviewSection } from "@/components/dashboard/sections/PortfolioReviewSection";
+import { CloseoutQueueSection } from "@/components/dashboard/sections/CloseoutQueueSection";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
@@ -123,8 +125,18 @@ export default function Dashboard() {
         </Alert>
       )}
       
-      {/* Agent warm cards — flagship of the v1 Agent Engine */}
-      {(userRole === "agent" || userRole === "admin") && <AgentWarmCards />}
+      {/* Agent Engine — flagship section */}
+      {(userRole === "agent" || userRole === "admin") && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-2">
+          <div className="lg:col-span-2">
+            <AgentWarmCards />
+          </div>
+          <div className="lg:col-span-1 space-y-4">
+            <PortfolioReviewSection />
+            <CloseoutQueueSection />
+          </div>
+        </div>
+      )}
 
       {/* TOP ROW: Combined grid with Placeholder Cards and Countdown */}
       <DashboardTopRow 
