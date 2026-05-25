@@ -5,12 +5,14 @@ import { ProposalData, ProposalContent } from "@/types/proposals";
 import { resolveClientInfo, LiveClientRecord } from "@/utils/proposals/resolveClientInfo";
 import { PageLoading } from "@/components/ui/loading-states";
 import { ProposalSummarySection } from "./components/ProposalSummarySection";
+import { ThirtySecondSummary } from "./components/ThirtySecondSummary";
 import { TermsAndConditionsSection } from "./components/TermsAndConditionsSection";
 import { SignatureSection } from "./components/SignatureSection";
 import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
 import { useToast } from "@/hooks/use-toast";
 import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, PenLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ProposalAcceptance() {
   const { id } = useParams();
@@ -409,39 +411,55 @@ export default function ProposalAcceptance() {
   }
 
   // Original signature flow for new clients
+  const scrollToSign = () => {
+    const el = document.getElementById("review-and-sign");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <>
       {tokenExpired && <ExpiredTokenBanner />}
-      <div className="container max-w-4xl mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Proposal & Cession Agreement</h1>
-          <p className="text-muted-foreground">
-            Please review the proposal details and terms carefully before signing.
-          </p>
-        </div>
-
+      <div className="container max-w-4xl mx-auto px-4 py-8 md:py-12 pb-24 md:pb-12">
         <div className="space-y-8">
+          <ThirtySecondSummary
+            proposal={proposal}
+            clientName={getClientName()}
+            onJumpToSign={scrollToSign}
+          />
+
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              Full proposal &amp; Cession Agreement
+            </h1>
+            <p className="text-muted-foreground">
+              Please review the proposal details and terms carefully before
+              signing.
+            </p>
+          </div>
+
           <ProposalSummarySection proposal={proposal} />
-          
-          <TermsAndConditionsSection 
+
+          <TermsAndConditionsSection
             onScrolledToBottom={() => setHasScrolledToBottom(true)}
             proposal={proposal}
           />
-          
-          <SignatureSection
-            hasScrolledToBottom={hasScrolledToBottom}
-            hasAgreed={hasAgreed}
-            onAgreeChange={setHasAgreed}
-            typedName={typedName}
-            onTypedNameChange={setTypedName}
-            signatureImage={signatureImage}
-            onSignatureImageChange={setSignatureImage}
-            clientName={getClientName()}
-            isValid={validateTypedName()}
-            canSubmit={canSubmit}
-            isSubmitting={isSubmitting}
-            onSubmit={handleSubmit}
-          />
+
+          <div id="review-and-sign">
+            <SignatureSection
+              hasScrolledToBottom={hasScrolledToBottom}
+              hasAgreed={hasAgreed}
+              onAgreeChange={setHasAgreed}
+              typedName={typedName}
+              onTypedNameChange={setTypedName}
+              signatureImage={signatureImage}
+              onSignatureImageChange={setSignatureImage}
+              clientName={getClientName()}
+              isValid={validateTypedName()}
+              canSubmit={canSubmit}
+              isSubmitting={isSubmitting}
+              onSubmit={handleSubmit}
+            />
+          </div>
         </div>
 
         <PostSignatureOnboardingModal
@@ -450,6 +468,19 @@ export default function ProposalAcceptance() {
           proposalId={proposal.id}
           token={token}
         />
+      </div>
+
+      {/* Sticky mobile "jump to sign" bar — hidden on md+ and after signing */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3">
+        <Button
+          type="button"
+          className="w-full"
+          size="lg"
+          onClick={scrollToSign}
+        >
+          <PenLine className="mr-2 h-4 w-4" />
+          Jump to sign
+        </Button>
       </div>
     </>
   );
