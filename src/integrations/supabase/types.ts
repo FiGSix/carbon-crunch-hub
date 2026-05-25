@@ -117,6 +117,13 @@ export type Database = {
             foreignKeyName: "agent_commissions_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "agent_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
@@ -990,6 +997,13 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "email_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
           {
             foreignKeyName: "email_events_proposal_id_fkey"
             columns: ["proposal_id"]
@@ -2200,6 +2214,13 @@ export type Database = {
             foreignKeyName: "project_onboarding_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: true
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "project_onboarding_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
@@ -2280,6 +2301,13 @@ export type Database = {
             foreignKeyName: "proposal_agreements_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "proposal_agreements_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
@@ -2326,6 +2354,13 @@ export type Database = {
           trigger_event?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposal_automation_log_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
           {
             foreignKeyName: "proposal_automation_log_proposal_id_fkey"
             columns: ["proposal_id"]
@@ -2379,6 +2414,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_clients_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
           },
           {
             foreignKeyName: "proposal_clients_proposal_id_fkey"
@@ -2849,7 +2891,94 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      proposal_engagement_buckets: {
+        Row: {
+          agent_id: string | null
+          archived_at: string | null
+          automation_paused: boolean | null
+          bucket: string | null
+          client_id: string | null
+          company_id: string | null
+          days_since_engagement: number | null
+          days_since_sent: number | null
+          engagement_count: number | null
+          estimated_client_revenue: number | null
+          invitation_sent_at: string | null
+          invitation_viewed_at: string | null
+          last_email_event_type: string | null
+          last_email_sent_at: string | null
+          last_engagement_at: string | null
+          proposal_id: string | null
+          signed_at: string | null
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          archived_at?: string | null
+          automation_paused?: boolean | null
+          bucket?: never
+          client_id?: string | null
+          company_id?: string | null
+          days_since_engagement?: never
+          days_since_sent?: never
+          engagement_count?: number | null
+          estimated_client_revenue?: never
+          invitation_sent_at?: string | null
+          invitation_viewed_at?: string | null
+          last_email_event_type?: string | null
+          last_email_sent_at?: string | null
+          last_engagement_at?: string | null
+          proposal_id?: string | null
+          signed_at?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          archived_at?: string | null
+          automation_paused?: boolean | null
+          bucket?: never
+          client_id?: string | null
+          company_id?: string | null
+          days_since_engagement?: never
+          days_since_sent?: never
+          engagement_count?: number | null
+          estimated_client_revenue?: never
+          invitation_sent_at?: string | null
+          invitation_viewed_at?: string | null
+          last_email_event_type?: string | null
+          last_email_sent_at?: string | null
+          last_engagement_at?: string | null
+          proposal_id?: string | null
+          signed_at?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       agent_has_proposals_with_client: {
@@ -2898,6 +3027,10 @@ export type Database = {
           proposal_id: string
           status: string
         }[]
+      }
+      classify_proposal_engagement: {
+        Args: { _proposal_id: string }
+        Returns: string
       }
       create_agent_user: {
         Args: {
