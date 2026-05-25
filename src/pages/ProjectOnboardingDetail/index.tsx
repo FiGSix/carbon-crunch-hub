@@ -175,14 +175,6 @@ export default function ProjectOnboardingDetail() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="data-access">
-                Data Access
-                {!project.data_access_verified && (
-                  <Badge variant="secondary" className="ml-2">
-                    Pending
-                  </Badge>
-                )}
-              </TabsTrigger>
               <TabsTrigger value="revenue">Revenue</TabsTrigger>
               <TabsTrigger value="activity">Activity & Comments</TabsTrigger>
             </TabsList>
