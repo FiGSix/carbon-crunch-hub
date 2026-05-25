@@ -1,7 +1,7 @@
 
 
 import { useState } from "react";
-import { CheckCircle2, ChevronLeft, Pencil } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Pencil, RotateCcw, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProposalPdfButton } from "./ProposalPdfButton";
 import { CessionAgreementPdfButton } from "./CessionAgreementPdfButton";
@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Proposal } from "@/components/proposals/types";
 import { ProposalData } from "@/types/proposals";
+import { useReactivateProposal } from "@/hooks/dashboard/useCloseoutQueue";
 
 interface ProposalHeaderProps {
   title: string;
@@ -41,6 +42,14 @@ export function ProposalHeader({
   const navigate = useNavigate();
   const { user, userRole, profile } = useAuth();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const reactivate = useReactivateProposal();
+
+  const isArchived = !!proposal?.archived_at;
+  const canManageArchive =
+    !isDeleted &&
+    !!proposalId &&
+    (userRole === "admin" ||
+      (userRole === "agent" && proposal?.agent_id === user?.id));
 
   // Statuses where editing is blocked (proposal is finalized)
   const NON_EDITABLE_STATUSES = ['approved', 'rejected', 'signed'];
@@ -107,6 +116,24 @@ export function ProposalHeader({
           </div>
         )}
         
+        {isArchived && (
+          <div className="flex items-center bg-muted text-muted-foreground px-3 py-1.5 rounded-md text-xs">
+            <Archive className="h-3.5 w-3.5 mr-1.5" />
+            Archived
+          </div>
+        )}
+        {isArchived && canManageArchive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => proposalId && reactivate.mutate(proposalId, { onSuccess: () => onProposalUpdate?.() })}
+            disabled={reactivate.isPending}
+            className="flex items-center gap-1"
+          >
+            <RotateCcw className="h-4 w-4" /> Reactivate
+          </Button>
+        )}
+
         {/* Signed Agreement Download button - Shown for all users on signed proposals */}
         {!isDeleted && proposalId && proposal?.status === 'approved' && (
           <SignedAgreementDownloadButton 
