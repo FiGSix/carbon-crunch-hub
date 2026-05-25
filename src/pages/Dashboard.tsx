@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
+import { AgentWarmCards } from "@/components/dashboard/sections/AgentWarmCards";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
@@ -122,6 +123,9 @@ export default function Dashboard() {
         </Alert>
       )}
       
+      {/* Agent warm cards — flagship of the v1 Agent Engine */}
+      {(userRole === "agent" || userRole === "admin") && <AgentWarmCards />}
+
       {/* TOP ROW: Combined grid with Placeholder Cards and Countdown */}
       <DashboardTopRow 
         loading={isLoading} 
