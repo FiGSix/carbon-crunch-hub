@@ -200,12 +200,6 @@ export default function ProjectOnboardingDetail() {
             />
             </TabsContent>
 
-            <TabsContent value="data-access" className="mt-6">
-              <DataAccessTab
-                projectId={projectId!}
-                onRefresh={fetchProjectData}
-              />
-            </TabsContent>
 
             <TabsContent value="revenue" className="mt-6">
               <RevenueTab
