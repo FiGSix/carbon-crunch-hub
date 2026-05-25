@@ -2891,6 +2891,25 @@ export type Database = {
       }
     }
     Views: {
+      portfolio_reminder_candidates: {
+        Row: {
+          agent_id: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          combined_revenue: number | null
+          company_id: string | null
+          eligible_for_email: boolean | null
+          hot_count: number | null
+          last_engagement_at: string | null
+          last_portfolio_reminder_at: string | null
+          proposal_ids: string[] | null
+          route_to_agent: boolean | null
+          unsigned_count: number | null
+          warm_count: number | null
+        }
+        Relationships: []
+      }
       proposal_engagement_buckets: {
         Row: {
           agent_id: string | null
