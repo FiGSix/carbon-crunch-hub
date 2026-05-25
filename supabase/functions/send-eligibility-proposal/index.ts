@@ -47,6 +47,22 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields");
     }
 
+    // Silent block: check suppression list before doing anything else
+    const normalizedEmail = requestData.email.toLowerCase().trim();
+    const { data: isSuppressed, error: suppressionError } = await supabase.rpc(
+      "is_client_email_suppressed",
+      { p_email: normalizedEmail }
+    );
+    if (suppressionError) {
+      console.warn("Suppression check failed, proceeding:", suppressionError);
+    } else if (isSuppressed) {
+      console.log("Blocked eligibility submission from suppressed email:", normalizedEmail);
+      return new Response(
+        JSON.stringify({ success: true, blocked: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (requestData.systemSizeKwp < 0.1 || requestData.systemSizeKwp > 30) {
       throw new Error("System size must be between 0.1 and 30 kWp");
     }

@@ -43,6 +43,22 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Silent block: drop submissions from suppressed emails
+    const normalizedEmail = email.toLowerCase().trim();
+    const { data: isSuppressed, error: suppressionError } = await supabase.rpc(
+      "is_client_email_suppressed",
+      { p_email: normalizedEmail }
+    );
+    if (suppressionError) {
+      console.warn("Suppression check failed, proceeding:", suppressionError);
+    } else if (isSuppressed) {
+      console.log("Blocked contact submission from suppressed email:", normalizedEmail);
+      return new Response(
+        JSON.stringify({ success: true, blocked: true, message: "Your message has been sent successfully!" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Get IP address and user agent for tracking
     const ipAddressRaw = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || null;
     const ipAddress = ipAddressRaw ? ipAddressRaw.split(',')[0].trim() : null;
