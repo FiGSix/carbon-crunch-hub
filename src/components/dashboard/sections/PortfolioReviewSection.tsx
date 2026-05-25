@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth";
 import { logManualAgentContact } from "@/services/proposals/agentContactLogger";
+import { isEmailSuppressed } from "@/services/proposals/emailSuppressionService";
+import { toast } from "sonner";
 import { Briefcase, ArrowRight, Phone, Mail } from "lucide-react";
 import {
   usePortfolioReviewClusters,
@@ -72,6 +74,10 @@ function ClusterRow({ cluster }: { cluster: PortfolioReviewCluster }) {
 
   const handleMailClick = async () => {
     if (!mailHref || !cluster.proposal_ids[0] || !user?.id) return;
+    if (cluster.client_email && (await isEmailSuppressed(cluster.client_email))) {
+      toast.error(`${cluster.client_email} is blocked. Manage in Admin → Blocked Emails.`);
+      return;
+    }
     await logManualAgentContact({
       proposalId: cluster.proposal_ids[0],
       userId: user.id,
