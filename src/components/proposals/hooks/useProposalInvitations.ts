@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth";
+import { logManualAgentContact } from "@/services/proposals/agentContactLogger";
 import { ClientInformation, ProjectInformation } from "../types";
 import { logger } from '@/lib/logger';
 
@@ -24,6 +26,7 @@ interface InvitationResponse {
 
 export function useProposalInvitations(onProposalUpdate?: () => void) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [sending, setSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSentProposalId, setLastSentProposalId] = useState<string | null>(null);
@@ -297,6 +300,16 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       if (sentUpdateError) {
         logger.warn("Email sent but failed to update sent timestamp", { error: sentUpdateError });
         // Don't fail the whole operation since email was actually sent
+      }
+
+      // Log manual agent contact for learning metrics
+      if (user?.id) {
+        await logManualAgentContact({
+          proposalId: id,
+          userId: user.id,
+          triggerEvent: "send_invitation",
+          details: { method: "email", action: "agent_initiated_send" },
+        });
       }
       
       logger.info("Invitation sent successfully", { debug: emailResponse.debug });
