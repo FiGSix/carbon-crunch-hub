@@ -301,6 +301,16 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
         logger.warn("Email sent but failed to update sent timestamp", { error: sentUpdateError });
         // Don't fail the whole operation since email was actually sent
       }
+
+      // Log manual agent contact for learning metrics
+      if (user?.id) {
+        await logManualAgentContact({
+          proposalId: id,
+          userId: user.id,
+          triggerEvent: "send_invitation",
+          details: { method: "email", action: "agent_initiated_send" },
+        });
+      }
       
       logger.info("Invitation sent successfully", { debug: emailResponse.debug });
       
