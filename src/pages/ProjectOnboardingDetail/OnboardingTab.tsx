@@ -22,6 +22,7 @@ import { FormError } from "@/components/ui/form-error";
 import { ValidationSummary } from "@/components/onboarding/ValidationSummary";
 import { cn } from "@/lib/utils";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/services/calculations/carbon/calculations";
+import { DataAccessTab } from "./DataAccessTab";
 
 interface SolarInstaller {
   id: string;
@@ -723,12 +724,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         const total = requiredFields.length + 1;
         return { complete: filled === total, remaining: total - filled, total };
       }
+      case 'dataAccess': {
+        const verified = !!project?.data_access_verified;
+        return { complete: verified, remaining: verified ? 0 : 1, total: 1 };
+      }
       default:
         return { complete: false, remaining: 0, total: 0 };
     }
   };
 
-  const sectionKeys = ['system', 'inverter', 'battery', 'panel', 'financial', 'documents', 'om'] as const;
+  const sectionKeys = ['system', 'inverter', 'battery', 'panel', 'financial', 'documents', 'om', 'dataAccess'] as const;
   const sectionInfos = Object.fromEntries(sectionKeys.map(k => [k, getSectionCompletionInfo(k)]));
   const completedSections = sectionKeys.filter(k => sectionInfos[k].complete).length;
 
@@ -1518,6 +1523,24 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Data Access */}
+      <Card className={cn("border-l-4", sectionInfos.dataAccess.complete ? "border-l-green-500" : "border-l-amber-500")}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Data Access</CardTitle>
+              <CardDescription>
+                Required for Audit Ready — configure inverter/meter data access and run a successful connection test.
+              </CardDescription>
+            </div>
+            <SectionBadge info={sectionInfos.dataAccess} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DataAccessTab projectId={projectId} onRefresh={onRefresh} />
         </CardContent>
       </Card>
 

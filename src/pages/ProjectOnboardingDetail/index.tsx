@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { OverviewTab } from "./OverviewTab";
 import { OnboardingTab } from "./OnboardingTab";
-import { DataAccessTab } from "./DataAccessTab";
+
 import { RevenueTab } from "./RevenueTab";
 import { ActivityCommentsTab } from "./ActivityCommentsTab";
 import { AgreementTab } from "./AgreementTab";
@@ -25,7 +25,8 @@ export default function ProjectOnboardingDetail() {
   const [fields, setFields] = useState<OnboardingFields | null>(null);
   const [proposalData, setProposalData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
+  const initialTab = searchParams.get('tab') === 'data-access' ? 'onboarding' : (searchParams.get('tab') || 'overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
     if (projectId) {
@@ -174,14 +175,6 @@ export default function ProjectOnboardingDetail() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="data-access">
-                Data Access
-                {!project.data_access_verified && (
-                  <Badge variant="secondary" className="ml-2">
-                    Pending
-                  </Badge>
-                )}
-              </TabsTrigger>
               <TabsTrigger value="revenue">Revenue</TabsTrigger>
               <TabsTrigger value="activity">Activity & Comments</TabsTrigger>
             </TabsList>
@@ -207,12 +200,6 @@ export default function ProjectOnboardingDetail() {
             />
             </TabsContent>
 
-            <TabsContent value="data-access" className="mt-6">
-              <DataAccessTab
-                projectId={projectId!}
-                onRefresh={fetchProjectData}
-              />
-            </TabsContent>
 
             <TabsContent value="revenue" className="mt-6">
               <RevenueTab
