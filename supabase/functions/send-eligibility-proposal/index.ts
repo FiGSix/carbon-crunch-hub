@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
     } else if (isSuppressed) {
       console.log("Blocked eligibility submission from suppressed email:", normalizedEmail);
       return new Response(
-        JSON.stringify({ success: true, blocked: true }),
+        JSON.stringify({ success: true, blocked: true, message: "Thanks — we've received your details and will be in touch." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
