@@ -57,18 +57,33 @@ export function PortfolioReviewSection() {
 }
 
 function ClusterRow({ cluster }: { cluster: PortfolioReviewCluster }) {
+  const { user } = useAuth();
   const revenue =
     cluster.combined_revenue > 0
       ? `R ${Math.round(cluster.combined_revenue).toLocaleString()}`
       : "—";
 
   const reason = getBlockReason(cluster);
-  const tel = cluster.client_email ? null : null; // phone not in view; email-only
   const mailHref = cluster.client_email
     ? `mailto:${cluster.client_email}?subject=${encodeURIComponent(
         "Your Crunch Carbon proposals"
       )}`
     : null;
+
+  const handleMailClick = async () => {
+    if (!mailHref || !cluster.proposal_ids[0] || !user?.id) return;
+    await logManualAgentContact({
+      proposalId: cluster.proposal_ids[0],
+      userId: user.id,
+      triggerEvent: "portfolio_review_email",
+      details: {
+        method: "mailto",
+        client_email: cluster.client_email,
+        unsigned_count: cluster.unsigned_count,
+      },
+    });
+    window.open(mailHref, "_blank");
+  };
 
   return (
     <div className="rounded-lg border bg-card p-3 flex items-start gap-3">
@@ -86,10 +101,13 @@ function ClusterRow({ cluster }: { cluster: PortfolioReviewCluster }) {
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {mailHref && (
-          <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-            <a href={mailHref}>
-              <Mail className="h-3.5 w-3.5" />
-            </a>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2"
+            onClick={handleMailClick}
+          >
+            <Mail className="h-3.5 w-3.5" />
           </Button>
         )}
         {cluster.proposal_ids[0] && (
