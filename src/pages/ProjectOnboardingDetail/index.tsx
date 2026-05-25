@@ -25,7 +25,8 @@ export default function ProjectOnboardingDetail() {
   const [fields, setFields] = useState<OnboardingFields | null>(null);
   const [proposalData, setProposalData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
+  const initialTab = searchParams.get('tab') === 'data-access' ? 'onboarding' : (searchParams.get('tab') || 'overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
     if (projectId) {
