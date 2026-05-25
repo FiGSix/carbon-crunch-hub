@@ -724,12 +724,16 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         const total = requiredFields.length + 1;
         return { complete: filled === total, remaining: total - filled, total };
       }
+      case 'dataAccess': {
+        const verified = !!project?.data_access_verified;
+        return { complete: verified, remaining: verified ? 0 : 1, total: 1 };
+      }
       default:
         return { complete: false, remaining: 0, total: 0 };
     }
   };
 
-  const sectionKeys = ['system', 'inverter', 'battery', 'panel', 'financial', 'documents', 'om'] as const;
+  const sectionKeys = ['system', 'inverter', 'battery', 'panel', 'financial', 'documents', 'om', 'dataAccess'] as const;
   const sectionInfos = Object.fromEntries(sectionKeys.map(k => [k, getSectionCompletionInfo(k)]));
   const completedSections = sectionKeys.filter(k => sectionInfos[k].complete).length;
 
