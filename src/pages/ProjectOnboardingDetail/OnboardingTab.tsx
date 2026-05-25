@@ -1526,6 +1526,24 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         </CardContent>
       </Card>
 
+      {/* Data Access */}
+      <Card className={cn("border-l-4", sectionInfos.dataAccess.complete ? "border-l-green-500" : "border-l-amber-500")}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Data Access</CardTitle>
+              <CardDescription>
+                Required for Audit Ready — configure inverter/meter data access and run a successful connection test.
+              </CardDescription>
+            </div>
+            <SectionBadge info={sectionInfos.dataAccess} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DataAccessTab projectId={projectId} onRefresh={onRefresh} />
+        </CardContent>
+      </Card>
+
       {/* Validation Summary - shown when trying to submit with errors */}
       {showValidationSummary && hasErrors && (
         <ValidationSummary 
