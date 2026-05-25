@@ -74,6 +74,7 @@ const PartnerManagement = createOptimizedLazyComponent(() => import("./pages/adm
 const SubmitProject = createOptimizedLazyComponent(() => import("./pages/SubmitProject"), "SubmitProject");
 const KnowledgeHub = createOptimizedLazyComponent(() => import("./pages/KnowledgeHub"), "KnowledgeHub");
 const KnowledgeHubAdmin = createOptimizedLazyComponent(() => import("./pages/admin/KnowledgeHubAdmin"), "KnowledgeHubAdmin");
+const BlockedEmails = createOptimizedLazyComponent(() => import("./pages/admin/BlockedEmails"), "BlockedEmails");
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
 
@@ -458,6 +459,18 @@ function App() {
                         </PageErrorBoundary>
                       </PrivateRoute>
                     } 
+                  />
+                  <Route
+                    path="/admin/blocked-emails"
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Blocked Emails">
+                          <Suspense fallback={<PageLoader />}>
+                            <BlockedEmails />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
                   />
                   <Route 
                     path="/admin/audit-status" 

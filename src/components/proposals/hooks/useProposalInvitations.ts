@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { logManualAgentContact } from "@/services/proposals/agentContactLogger";
+import { isEmailSuppressed } from "@/services/proposals/emailSuppressionService";
 import { ClientInformation, ProjectInformation } from "../types";
 import { logger } from '@/lib/logger';
 
@@ -204,6 +205,13 @@ export function useProposalInvitations(onProposalUpdate?: () => void) {
       
       if (!resolvedEmail) {
         return { success: false, error: "No client email found in the proposal" };
+      }
+
+      // Block list check
+      if (await isEmailSuppressed(resolvedEmail)) {
+        const msg = `${resolvedEmail} is on the blocked list. Remove it in Admin → Blocked Emails to send.`;
+        toast({ title: "Email blocked", description: msg, variant: "destructive" });
+        return { success: false, error: msg };
       }
       
       logger.info("Calling email function", { tokenPrefix: tokenToUse.substring(0, 8) });
