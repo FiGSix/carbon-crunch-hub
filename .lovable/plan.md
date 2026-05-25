@@ -1,43 +1,50 @@
-## Goal
+## Block List — QA Review (Steps 1–7)
 
-Make the `client_email_suppressions` block list also stop proposals created from the public "For Homes" and "For Business" eligibility modal, matching the protection that already exists on the in-app invite and portfolio outreach paths.
+Reviewed: DB layer, admin UI, suppression service, in-app invite path, portfolio outreach path, public eligibility funnel, public contact funnel.
 
-## Scope
+### Overall verdict
+**Working end-to-end.** All seven surfaces are wired up correctly and the silent-block contract holds on the public funnel. Five issues found — none are blockers; one is a real UX leak worth fixing before release, the rest are polish.
 
-In scope:
-- `send-eligibility-proposal` edge function — block before creating proposal / sending email
-- `send-contact-email` edge function — block before sending contact email (silent)
-- Frontend toast in `EligibilityModal` so the visitor sees a clean message instead of a generic error
+---
 
-Out of scope:
-- Auto-blocking, domain blocks, IP blocks, notifying the blocked email (unchanged from the v1 rules we already agreed on)
-- `CreateProposal` / `SubmitProject` (require login; blocked emails can't reach them)
+### Step-by-step results
 
-## How it works
+| # | Area | Status | Notes |
+|---|------|--------|-------|
+| 1 | DB: table, enum, RPC, RLS, unique index | ✅ Pass | Enum values (`manual / fatigue / bounce / complaint / unsubscribe / invalid`) match admin UI options exactly. Policies: SELECT/INSERT/DELETE all admin-only. `lower(email)` unique index prevents dupes. |
+| 2 | `/admin/blocked-emails` page + sidebar + route | ✅ Pass | Admin-only `PrivateRoute`, sidebar entry under admin section, list/add/remove + Suggested blocks panel all render. |
+| 3 | `emailSuppressionService.isEmailSuppressed` | ✅ Pass | Calls `is_client_email_suppressed` RPC; fail-open (returns `false` on RPC error) — intentional, matches existing pattern. |
+| 4 | In-app invite (`useProposalInvitations`) | ✅ Pass | Block check runs before edge call. Resend delegates to the same handler, so resend is covered too. Clear destructive toast on block. |
+| 5 | Portfolio outreach (`PortfolioReviewSection`) | ✅ Pass | Mailto click blocked with toast pointing to Admin → Blocked Emails. |
+| 6 | Public `send-eligibility-proposal` | ⚠️ Pass with leak (Bug #1) | Silent block runs before client upsert, proposal insert, and Resend call. Frontend toast is technically wrong (see Bug #1). |
+| 7 | Public `send-contact-email` | ✅ Pass | Silent block runs before DB insert and Resend; returns `success:true` with the same message the happy path uses. |
 
-1. **Edge function suppression check (shared helper).** Add a small helper inside each edge function (or a shared `_shared/suppression.ts`) that calls the existing `is_client_email_suppressed(p_email)` RPC using the service-role client already initialized in each function. Returns boolean.
+---
 
-2. **`send-eligibility-proposal/index.ts`** — right after input validation and email normalization, before the `clients` upsert:
-   - If suppressed → return `200` with `{ blocked: true }` (silent block; do NOT reveal block reason to the visitor). No proposal insert, no Resend call, no client row created.
-   - Log it server-side: `console.log("Blocked eligibility submission from suppressed email", email)` so admins can see it in function logs.
+### Bug list
 
-3. **`send-contact-email/index.ts`** — same pattern at the top of the handler. Silent success response, no email sent.
+**Bug #1 — Eligibility modal shows misleading "Check your email" toast on silent block** *(medium, fix recommended)*
+- `EligibilityModal.handleSubmit` ignores `data.blocked` and always shows: *"Proposal sent! Check your email for details."*
+- For a blocked visitor, no email is sent → they refresh inbox, find nothing, and may probe by retrying with a tweaked email. Spec called for a neutral *"Thanks, we'll be in touch"* style message.
+- **Fix:** when `data?.blocked === true`, show a generic acknowledgement toast (e.g. *"Thanks — we've received your details and will be in touch."*) instead of the email-confirmation copy. Keep `handleClose()`.
 
-4. **`EligibilityModal.tsx`** — when the response is `{ blocked: true }`, show the same generic success toast we show today ("Thanks, we'll be in touch"). Silent block = visitor sees no difference, so they don't just retry with a tweaked email.
-   - Internally we still want admins to know: the edge-function log line above is enough for now (no new notification surface).
+**Bug #2 — Inconsistent confirm pattern in admin UI** *(low, polish)*
+- Unblocking uses `window.confirm()`; one-click "Block" on a Suggested row has no confirmation. Either standardise on shadcn `AlertDialog` for both, or accept the asymmetry. Existing admin pages use `AlertDialog`.
 
-5. **No DB migration needed.** The `is_client_email_suppressed` RPC and `client_email_suppressions` table are already in place from the earlier migration.
+**Bug #3 — No audit trail on removal** *(low)*
+- `created_by` is captured on insert, but DELETE leaves no trace of who unblocked or when. If audit matters, soft-delete (`deleted_at`, `deleted_by`) or log to `proposal_automation_log` / a new `admin_audit_log` row. Out of v1 spec; flag for product.
 
-## Technical notes
+**Bug #4 — Suggested blocks query relies on `(supabase as any)` cast** *(low)*
+- `useSuggestedBlocks` and `useBlockedEmails` bypass the generated types via `(supabase as any)`. View columns were verified live (`client_email`, `client_name`, `unsigned_count` present), but any future view change will fail silently at runtime. Regenerate Supabase types or add an explicit interface guard.
 
-- Suppression check is case-insensitive via the RPC's `lower(email)` comparison — matches what the admin UI uses.
-- The edge function uses the service-role client, so RLS doesn't block the RPC call; the RPC is `SECURITY DEFINER` anyway.
-- Keep the silent-block pattern consistent with the in-app surfaces (we never tell the recipient they're blocked).
-- Two edge functions touched; both auto-deploy.
+**Bug #5 — Inconsistent blocked response shape between edge functions** *(very low)*
+- `send-contact-email` returns `{ success:true, blocked:true, message:"..." }`; `send-eligibility-proposal` returns `{ success:true, blocked:true }`. Harmless today (each frontend handles its own toast) but worth aligning when Bug #1 is fixed.
 
-## Files to change
+---
 
-- `supabase/functions/send-eligibility-proposal/index.ts` — add suppression check
-- `supabase/functions/send-contact-email/index.ts` — add suppression check
-- `src/pages/solar-rewards/EligibilityModal.tsx` — handle `{ blocked: true }` with the normal success toast
-- (Optional) `supabase/functions/_shared/suppression.ts` — shared helper if both functions can import it cleanly
+### Out of scope but verified safe
+- **Agent invitations** (`send-agent-invitation`) are not affected — block list is client-only by design.
+- **`CreateProposal` / `SubmitProject`** require login, so blocked external emails can't reach them.
+
+### Recommended action
+Approve plan → in build mode I'll fix **Bug #1** (the only user-visible leak), align response shape from **Bug #5**, and leave #2/#3/#4 documented for product to triage.
