@@ -413,6 +413,36 @@ export type Database = {
           },
         ]
       }
+      client_email_suppressions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          notes: string | null
+          reason: Database["public"]["Enums"]["client_suppression_reason"]
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          notes?: string | null
+          reason: Database["public"]["Enums"]["client_suppression_reason"]
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          notes?: string | null
+          reason?: Database["public"]["Enums"]["client_suppression_reason"]
+          source?: string | null
+        }
+        Relationships: []
+      }
       client_invitations: {
         Row: {
           company_name: string | null
@@ -2832,6 +2862,10 @@ export type Database = {
       }
       auth_user_id: { Args: never; Returns: string }
       auth_user_role: { Args: never; Returns: string }
+      can_send_client_email: {
+        Args: { p_cooldown_days?: number; p_email: string }
+        Returns: boolean
+      }
       can_transition_proposal_status: {
         Args: {
           current_status: string
@@ -3219,6 +3253,10 @@ export type Database = {
         Args: { company_id_param: string; user_id_param: string }
         Returns: boolean
       }
+      is_client_email_suppressed: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       is_company_member: {
         Args: { company_id_param: string; user_id_param: string }
         Returns: boolean
@@ -3395,6 +3433,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "agent" | "client"
+      client_suppression_reason:
+        | "manual"
+        | "bounce"
+        | "complaint"
+        | "unsubscribe"
+        | "fatigue"
+        | "invalid"
       signature_type:
         | "typed_name"
         | "electronic_signature"
@@ -3528,6 +3573,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "agent", "client"],
+      client_suppression_reason: [
+        "manual",
+        "bounce",
+        "complaint",
+        "unsubscribe",
+        "fatigue",
+        "invalid",
+      ],
       signature_type: [
         "typed_name",
         "electronic_signature",

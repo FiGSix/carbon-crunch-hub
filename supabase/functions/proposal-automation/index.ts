@@ -441,7 +441,28 @@ async function sendFollowUpEmail(
   const agentLastName = proposal.agent?.last_name || '';
   const agentName = `${agentFirstName} ${agentLastName}`.trim() || 'Your Agent';
   const agentEmail = proposal.agent?.email || 'support@crunchcarbon.com';
-  
+
+  // Suppression + cooldown guard — single source of truth for client email safety
+  if (clientEmail) {
+    const { data: canSend, error: guardError } = await supabase.rpc('can_send_client_email', {
+      p_email: clientEmail,
+      p_cooldown_days: 7,
+    });
+    if (guardError) {
+      console.error(`⚠️ can_send_client_email guard failed for ${clientEmail}:`, guardError);
+    } else if (canSend === false) {
+      console.log(`🛑 Skipping ${followUpType} for proposal ${proposalId} — ${clientEmail} suppressed or in cooldown window`);
+      await supabase.from('proposal_automation_log').insert({
+        proposal_id: proposalId,
+        automation_type: 'email_skipped',
+        trigger_event: 'suppression_or_cooldown',
+        email_type: followUpType,
+        details: { recipient: clientEmail, reason: 'suppressed_or_cooldown' },
+      });
+      return { skipped: true, reason: 'suppressed_or_cooldown' } as any;
+    }
+  }
+
   // Calculate carbon credits and revenue
   const systemSizeKwp = proposal.system_size_kwp || 0;
   const annualEnergy = systemSizeKwp * 1200; // Default generation factor
