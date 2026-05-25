@@ -2891,6 +2891,33 @@ export type Database = {
       }
     }
     Views: {
+      learning_metrics: {
+        Row: {
+          agent_touch_to_sign_pct: number | null
+          archived_count: number | null
+          avg_days_to_sign: number | null
+          cold_count: number | null
+          cold_revenue: number | null
+          dead_count: number | null
+          dead_revenue: number | null
+          hot_count: number | null
+          hot_revenue: number | null
+          inactive_count: number | null
+          median_days_to_sign: number | null
+          signed_count: number | null
+          signed_last_30d: number | null
+          signed_last_90d: number | null
+          signed_revenue: number | null
+          stale_rate_pct: number | null
+          total_active: number | null
+          total_signed: number | null
+          viewed_unsigned_avg_age_days: number | null
+          viewed_unsigned_count: number | null
+          warm_count: number | null
+          warm_revenue: number | null
+        }
+        Relationships: []
+      }
       portfolio_reminder_candidates: {
         Row: {
           agent_id: string | null

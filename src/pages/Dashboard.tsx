@@ -11,6 +11,7 @@ import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/Da
 import { AgentWarmCards } from "@/components/dashboard/sections/AgentWarmCards";
 import { PortfolioReviewSection } from "@/components/dashboard/sections/PortfolioReviewSection";
 import { CloseoutQueueSection } from "@/components/dashboard/sections/CloseoutQueueSection";
+import { LearningDashboardSection } from "@/components/dashboard/sections/LearningDashboardSection";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
@@ -127,15 +128,18 @@ export default function Dashboard() {
       
       {/* Agent Engine — flagship section */}
       {(userRole === "agent" || userRole === "admin") && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-2">
-          <div className="lg:col-span-2">
-            <AgentWarmCards />
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-2">
+            <div className="lg:col-span-2">
+              <AgentWarmCards />
+            </div>
+            <div className="lg:col-span-1 space-y-4">
+              <PortfolioReviewSection />
+              <CloseoutQueueSection />
+            </div>
           </div>
-          <div className="lg:col-span-1 space-y-4">
-            <PortfolioReviewSection />
-            <CloseoutQueueSection />
-          </div>
-        </div>
+          <LearningDashboardSection />
+        </>
       )}
 
       {/* TOP ROW: Combined grid with Placeholder Cards and Countdown */}
