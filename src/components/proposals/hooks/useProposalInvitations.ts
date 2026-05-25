@@ -26,6 +26,7 @@ interface InvitationResponse {
 
 export function useProposalInvitations(onProposalUpdate?: () => void) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [sending, setSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSentProposalId, setLastSentProposalId] = useState<string | null>(null);
