@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { logManualAgentContact } from "@/services/proposals/agentContactLogger";
+import { isEmailSuppressed } from "@/services/proposals/emailSuppressionService";
 import { ClientInformation, ProjectInformation } from "../types";
 import { logger } from '@/lib/logger';
 
