@@ -18,7 +18,8 @@ import {
   Scale,
   Calculator,
   Code2,
-  BookOpen
+  BookOpen,
+  ShieldOff
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -150,6 +151,12 @@ export function DashboardSidebar() {
       name: "Email Automation",
       href: "/admin/email-automation",
       icon: Mail,
+      roles: ["admin"]
+    },
+    {
+      name: "Blocked Emails",
+      href: "/admin/blocked-emails",
+      icon: ShieldOff,
       roles: ["admin"]
     },
     {
