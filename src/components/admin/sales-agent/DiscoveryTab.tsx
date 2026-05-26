@@ -10,7 +10,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
-export function DiscoveryTab() {
+export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void } = {}) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [query, setQuery] = useState("solar EPC installers");
