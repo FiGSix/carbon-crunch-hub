@@ -109,6 +109,10 @@ export function SettingsTab() {
       <div className="md:col-span-2 flex justify-end">
         <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Saving…" : "Save settings"}</Button>
       </div>
+
+      <div className="md:col-span-2">
+        <BlocklistManager />
+      </div>
     </div>
   );
 }
