@@ -96,7 +96,7 @@ serve(async (req) => {
       });
     } catch (e) { console.error("notify invoke", e); }
 
-    return new Response(JSON.stringify({ ok: true, proposal_id: proposal.id, client_id: clientId }), {
+    return new Response(JSON.stringify({ ok: true, proposal_id: proposal.id, client_reference_id: clientId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
