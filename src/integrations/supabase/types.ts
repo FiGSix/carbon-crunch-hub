@@ -320,6 +320,45 @@ export type Database = {
         }
         Relationships: []
       }
+      candidate_notes: {
+        Row: {
+          author_id: string | null
+          author_role: string
+          body: string
+          candidate_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          lead_id: string | null
+          mentioned_users: string[] | null
+          meta: Json | null
+        }
+        Insert: {
+          author_id?: string | null
+          author_role?: string
+          body: string
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          mentioned_users?: string[] | null
+          meta?: Json | null
+        }
+        Update: {
+          author_id?: string | null
+          author_role?: string
+          body?: string
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          mentioned_users?: string[] | null
+          meta?: Json | null
+        }
+        Relationships: []
+      }
       client_access_audit: {
         Row: {
           accessed_at: string
@@ -1216,6 +1255,63 @@ export type Database = {
           },
         ]
       }
+      inbound_messages: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          confidence: number | null
+          conversation_id: string | null
+          created_at: string
+          enrollment_id: string | null
+          from_email: string
+          from_name: string | null
+          graph_message_id: string
+          headers: Json | null
+          id: string
+          intent: string | null
+          lead_id: string | null
+          processed_at: string | null
+          received_at: string
+          subject: string | null
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          enrollment_id?: string | null
+          from_email: string
+          from_name?: string | null
+          graph_message_id: string
+          headers?: Json | null
+          id?: string
+          intent?: string | null
+          lead_id?: string | null
+          processed_at?: string | null
+          received_at?: string
+          subject?: string | null
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          enrollment_id?: string | null
+          from_email?: string
+          from_name?: string | null
+          graph_message_id?: string
+          headers?: Json | null
+          id?: string
+          intent?: string | null
+          lead_id?: string | null
+          processed_at?: string | null
+          received_at?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
       knowledge_hub_resources: {
         Row: {
           category: string
@@ -1412,6 +1508,89 @@ export type Database = {
           metadata?: Json | null
           status?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meetings: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          created_by: string | null
+          duration_min: number
+          enrollment_id: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          raw_confirmation_message_id: string | null
+          scheduled_at: string
+          source: string
+          status: string
+          teams_join_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_min?: number
+          enrollment_id?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          raw_confirmation_message_id?: string | null
+          scheduled_at: string
+          source?: string
+          status?: string
+          teams_join_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_min?: number
+          enrollment_id?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          raw_confirmation_message_id?: string | null
+          scheduled_at?: string
+          source?: string
+          status?: string
+          teams_join_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_raw_confirmation_message_id_fkey"
+            columns: ["raw_confirmation_message_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_state: {
+        Row: {
+          event_key: string
+          last_count: number | null
+          last_sent_at: string | null
+          meta: Json | null
+          updated_at: string
+        }
+        Insert: {
+          event_key: string
+          last_count?: number | null
+          last_sent_at?: string | null
+          meta?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          event_key?: string
+          last_count?: number | null
+          last_sent_at?: string | null
+          meta?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -2029,6 +2208,62 @@ export type Database = {
             columns: ["sequence_id"]
             isOneToOne: false
             referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_replies: {
+        Row: {
+          authored_by: string
+          created_at: string
+          draft_body: string | null
+          enrollment_id: string | null
+          graph_message_id: string | null
+          id: string
+          inbound_message_id: string | null
+          lead_id: string | null
+          reviewed_by: string | null
+          sent_at: string | null
+          sent_body: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          authored_by?: string
+          created_at?: string
+          draft_body?: string | null
+          enrollment_id?: string | null
+          graph_message_id?: string | null
+          id?: string
+          inbound_message_id?: string | null
+          lead_id?: string | null
+          reviewed_by?: string | null
+          sent_at?: string | null
+          sent_body?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          authored_by?: string
+          created_at?: string
+          draft_body?: string | null
+          enrollment_id?: string | null
+          graph_message_id?: string | null
+          id?: string
+          inbound_message_id?: string | null
+          lead_id?: string | null
+          reviewed_by?: string | null
+          sent_at?: string | null
+          sent_body?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_replies_inbound_message_id_fkey"
+            columns: ["inbound_message_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -3122,12 +3357,27 @@ export type Database = {
         Row: {
           autopilot_discovery: boolean
           autopilot_outreach: boolean
+          autopilot_replies: boolean
           blocked_domains: string[]
+          bookings_cta_label: string | null
+          bookings_url: string | null
           daily_send_cap: number
           default_sequence_id: string | null
           id: boolean
+          last_inbound_poll_at: string | null
+          mailbox_address: string | null
+          meeting_timezone: string | null
+          notify_daily_digest: boolean
+          notify_email: string | null
+          notify_enabled: boolean
+          notify_inbox_threshold: number
+          notify_min_interval_hours: number
+          notify_pending_threshold: number
+          notify_quiet_hours: Json | null
+          notify_stuck_hours: number
           quiet_hours_end: number
           quiet_hours_start: number
+          reply_confidence_threshold: number
           score_threshold: number
           target_regions: string[]
           updated_at: string
@@ -3136,12 +3386,27 @@ export type Database = {
         Insert: {
           autopilot_discovery?: boolean
           autopilot_outreach?: boolean
+          autopilot_replies?: boolean
           blocked_domains?: string[]
+          bookings_cta_label?: string | null
+          bookings_url?: string | null
           daily_send_cap?: number
           default_sequence_id?: string | null
           id?: boolean
+          last_inbound_poll_at?: string | null
+          mailbox_address?: string | null
+          meeting_timezone?: string | null
+          notify_daily_digest?: boolean
+          notify_email?: string | null
+          notify_enabled?: boolean
+          notify_inbox_threshold?: number
+          notify_min_interval_hours?: number
+          notify_pending_threshold?: number
+          notify_quiet_hours?: Json | null
+          notify_stuck_hours?: number
           quiet_hours_end?: number
           quiet_hours_start?: number
+          reply_confidence_threshold?: number
           score_threshold?: number
           target_regions?: string[]
           updated_at?: string
@@ -3150,16 +3415,61 @@ export type Database = {
         Update: {
           autopilot_discovery?: boolean
           autopilot_outreach?: boolean
+          autopilot_replies?: boolean
           blocked_domains?: string[]
+          bookings_cta_label?: string | null
+          bookings_url?: string | null
           daily_send_cap?: number
           default_sequence_id?: string | null
           id?: boolean
+          last_inbound_poll_at?: string | null
+          mailbox_address?: string | null
+          meeting_timezone?: string | null
+          notify_daily_digest?: boolean
+          notify_email?: string | null
+          notify_enabled?: boolean
+          notify_inbox_threshold?: number
+          notify_min_interval_hours?: number
+          notify_pending_threshold?: number
+          notify_quiet_hours?: Json | null
+          notify_stuck_hours?: number
           quiet_hours_end?: number
           quiet_hours_start?: number
+          reply_confidence_threshold?: number
           score_threshold?: number
           target_regions?: string[]
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      score_history: {
+        Row: {
+          candidate_id: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_score: number
+          old_score: number | null
+          reason: string
+        }
+        Insert: {
+          candidate_id: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_score: number
+          old_score?: number | null
+          reason: string
+        }
+        Update: {
+          candidate_id?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_score?: number
+          old_score?: number | null
+          reason?: string
         }
         Relationships: []
       }
@@ -3625,6 +3935,10 @@ export type Database = {
         Args: { _proposal_id: string }
         Returns: string
       }
+      compute_candidate_score: {
+        Args: { _candidate_id: string }
+        Returns: number
+      }
       create_agent_user: {
         Args: {
           access_level_param?: string
@@ -4040,6 +4354,14 @@ export type Database = {
       reject_discovery_candidate: {
         Args: { _candidate_id: string; _reason: string }
         Returns: undefined
+      }
+      rescore_pending_candidates: {
+        Args: never
+        Returns: {
+          candidate_id: string
+          new_score: number
+          old_score: number
+        }[]
       }
       search_clients: {
         Args: { search_term: string }
