@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Send, ExternalLink, PauseCircle, PlayCircle } from "lucide-react";
+import { Send, ExternalLink, PauseCircle, PlayCircle, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -81,6 +81,33 @@ export function PipelineTab() {
     onSuccess: () => { toast({ title: "Marked as replied" }); qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] }); },
   });
 
+  const inviteAsAgent = useMutation({
+    mutationFn: async (lead: { lead_id: string; email: string; company_name: string; contact_name?: string | null }) => {
+      const [firstName, ...rest] = (lead.contact_name ?? "").trim().split(/\s+/);
+      const lastName = rest.join(" ");
+      const { error } = await supabase.functions.invoke("send-agent-invitation", {
+        body: {
+          email: lead.email,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          companyName: lead.company_name,
+        },
+      });
+      if (error) throw error;
+      await (supabase as any).from("agent_leads").update({ status: "invited" }).eq("id", lead.lead_id);
+      await (supabase as any).from("candidate_notes").insert({
+        lead_id: lead.lead_id,
+        kind: "system",
+        body: `Agent invitation sent to ${lead.email}.`,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation sent", description: "Lead invited to onboard as an Agent." });
+      qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] });
+    },
+    onError: (e: any) => toast({ title: "Failed to invite", description: e.message, variant: "destructive" }),
+  });
+
   return (
     <Card>
       <CardHeader><CardTitle>Active Pipeline</CardTitle></CardHeader>
@@ -125,6 +152,16 @@ export function PipelineTab() {
                         )}
                         {enr?.status === "paused" && (
                           <Button size="sm" variant="ghost" onClick={() => toggleEnrollment.mutate({ id: enr.id, status: "active" })}><PlayCircle className="h-3.5 w-3.5" /></Button>
+                        )}
+                        {["replied", "qualified"].includes(r.funnel_stage) && r.email && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => inviteAsAgent.mutate({ lead_id: r.lead_id, email: r.email, company_name: r.company_name })}
+                            disabled={inviteAsAgent.isPending}
+                          >
+                            <UserPlus className="h-3.5 w-3.5 mr-1" /> Invite as Agent
+                          </Button>
                         )}
                         {["contacted"].includes(r.funnel_stage) && (
                           <Button size="sm" variant="ghost" onClick={() => markReplied.mutate(r.lead_id)}>Mark replied</Button>
