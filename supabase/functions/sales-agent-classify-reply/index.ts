@@ -91,15 +91,10 @@ ${(msg.body_text ?? "").substring(0, 4000)}`;
       } catch (e) { console.error("draft invoke", e); }
     }
 
-    // Bridge to Proposals: if confidently interested + enriched, draft a proposal
-    if (intent === "interested" && msg.lead_id && confidence >= 70) {
-      const { data: leadRow } = await supabase.from("agent_leads").select("email, company_name, location").eq("id", msg.lead_id).maybeSingle();
-      if (leadRow?.email && leadRow?.company_name) {
-        try {
-          await supabase.functions.invoke("sales-agent-draft-proposal", { body: { lead_id: msg.lead_id, trigger: "classified_interested" } });
-        } catch (e) { console.error("draft-proposal invoke", e); }
-      }
-    }
+    // NOTE: Auto-drafting proposals from leads has been removed.
+    // The Sales Agent's job ends at qualifying the lead and (optionally) sending an
+    // Agent invitation. Proposals are created by onboarded Agents for their own clients,
+    // who hold the project-level data (system size, address, commission date).
 
     return new Response(JSON.stringify({ ok: true, intent, confidence }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
