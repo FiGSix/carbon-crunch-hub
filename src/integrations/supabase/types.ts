@@ -1377,6 +1377,7 @@ export type Database = {
           status: string
           subject: string
           template_type: string
+          variant_id: string | null
         }
         Insert: {
           body_preview?: string | null
@@ -1391,6 +1392,7 @@ export type Database = {
           status?: string
           subject: string
           template_type: string
+          variant_id?: string | null
         }
         Update: {
           body_preview?: string | null
@@ -1405,6 +1407,7 @@ export type Database = {
           status?: string
           subject?: string
           template_type?: string
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -1420,6 +1423,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_sales_agent_funnel"
             referencedColumns: ["lead_id"]
+          },
+          {
+            foreignKeyName: "lead_outreach_history_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_template_variants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2227,6 +2237,7 @@ export type Database = {
           sent_body: string | null
           status: string
           updated_at: string
+          variant_id: string | null
         }
         Insert: {
           authored_by?: string
@@ -2242,6 +2253,7 @@ export type Database = {
           sent_body?: string | null
           status?: string
           updated_at?: string
+          variant_id?: string | null
         }
         Update: {
           authored_by?: string
@@ -2257,6 +2269,7 @@ export type Database = {
           sent_body?: string | null
           status?: string
           updated_at?: string
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -2264,6 +2277,13 @@ export type Database = {
             columns: ["inbound_message_id"]
             isOneToOne: false
             referencedRelation: "inbound_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_replies_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_template_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -2300,6 +2320,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      outreach_template_variants: {
+        Row: {
+          body_template: string
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_url: string | null
+          id: string
+          notes: string | null
+          sequence_id: string
+          status: string
+          step_index: number
+          subject: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          id?: string
+          notes?: string | null
+          sequence_id: string
+          status?: string
+          step_index: number
+          subject: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          id?: string
+          notes?: string | null
+          sequence_id?: string
+          status?: string
+          step_index?: number
+          subject?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_template_variants_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partner_api_keys: {
         Row: {
