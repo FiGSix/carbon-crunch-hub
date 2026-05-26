@@ -1431,6 +1431,13 @@ export type Database = {
             referencedRelation: "outreach_template_variants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lead_outreach_history_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_outreach_variant_stats"
+            referencedColumns: ["variant_id"]
+          },
         ]
       }
       legal_document_acceptances: {
@@ -2227,6 +2234,8 @@ export type Database = {
           authored_by: string
           created_at: string
           draft_body: string | null
+          edit_distance: number | null
+          edit_summary: string | null
           enrollment_id: string | null
           graph_message_id: string | null
           id: string
@@ -2243,6 +2252,8 @@ export type Database = {
           authored_by?: string
           created_at?: string
           draft_body?: string | null
+          edit_distance?: number | null
+          edit_summary?: string | null
           enrollment_id?: string | null
           graph_message_id?: string | null
           id?: string
@@ -2259,6 +2270,8 @@ export type Database = {
           authored_by?: string
           created_at?: string
           draft_body?: string | null
+          edit_distance?: number | null
+          edit_summary?: string | null
           enrollment_id?: string | null
           graph_message_id?: string | null
           id?: string
@@ -2285,6 +2298,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "outreach_template_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_replies_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_outreach_variant_stats"
+            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -3481,6 +3501,7 @@ export type Database = {
       }
       sales_agent_settings: {
         Row: {
+          ai_style_notes: string | null
           autopilot_discovery: boolean
           autopilot_outreach: boolean
           autopilot_replies: boolean
@@ -3511,6 +3532,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          ai_style_notes?: string | null
           autopilot_discovery?: boolean
           autopilot_outreach?: boolean
           autopilot_replies?: boolean
@@ -3541,6 +3563,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          ai_style_notes?: string | null
           autopilot_discovery?: boolean
           autopilot_outreach?: boolean
           autopilot_replies?: boolean
@@ -3986,6 +4009,36 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_outreach_variant_stats: {
+        Row: {
+          bounced: number | null
+          click_rate: number | null
+          clicked: number | null
+          last_sent_at: string | null
+          open_rate: number | null
+          opened: number | null
+          positive_replies: number | null
+          positive_reply_rate: number | null
+          replied: number | null
+          reply_rate: number | null
+          sample_size_ok: boolean | null
+          sent: number | null
+          sequence_id: string | null
+          status: string | null
+          step_index: number | null
+          subject: string | null
+          variant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_template_variants_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
             referencedColumns: ["id"]
           },
         ]
