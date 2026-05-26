@@ -28,28 +28,18 @@ export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void
 
   const discover = useMutation({
     mutationFn: async () => {
-      // 1) create a run row
-      const { data: run, error: runErr } = await (supabase as any).from("discovery_runs").insert({
-        source: "web_search", query, region: location, status: "running", started_at: new Date().toISOString(),
-      }).select().single();
-      if (runErr) throw runErr;
-
-      // 2) call existing discover-leads
       const { data, error } = await supabase.functions.invoke("discover-leads", { body: { query, location, limit } });
-      if (error) {
-        await (supabase as any).from("discovery_runs").update({ status: "failed", error: error.message, completed_at: new Date().toISOString() }).eq("id", run.id);
-        throw error;
-      }
-
-      await (supabase as any).from("discovery_runs").update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        leads_found: (data?.inserted ?? 0) + (data?.duplicates ?? 0),
-        leads_approved: data?.inserted ?? 0,
-      }).eq("id", run.id);
+      if (error) throw error;
       return data;
     },
-    onSuccess: (d) => { toast({ title: "Discovery complete", description: d?.message ?? "Done" }); qc.invalidateQueries({ queryKey: ["sales-agent-discovery-runs"] }); qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] }); qc.invalidateQueries({ queryKey: ["sales-agent-funnel"] }); },
+    onSuccess: (d) => {
+      toast({ title: "Discovery complete", description: d?.message ?? "Done" });
+      qc.invalidateQueries({ queryKey: ["sales-agent-discovery-runs"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-candidates"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-pending-count"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-funnel"] });
+    },
     onError: (e: any) => toast({ title: "Discovery failed", description: e.message, variant: "destructive" }),
   });
 
