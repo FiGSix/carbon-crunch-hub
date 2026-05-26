@@ -153,6 +153,16 @@ export function PipelineTab() {
                         {enr?.status === "paused" && (
                           <Button size="sm" variant="ghost" onClick={() => toggleEnrollment.mutate({ id: enr.id, status: "active" })}><PlayCircle className="h-3.5 w-3.5" /></Button>
                         )}
+                        {["replied", "qualified"].includes(r.funnel_stage) && r.email && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => inviteAsAgent.mutate({ lead_id: r.lead_id, email: r.email, company_name: r.company_name })}
+                            disabled={inviteAsAgent.isPending}
+                          >
+                            <UserPlus className="h-3.5 w-3.5 mr-1" /> Invite as Agent
+                          </Button>
+                        )}
                         {["contacted"].includes(r.funnel_stage) && (
                           <Button size="sm" variant="ghost" onClick={() => markReplied.mutate(r.lead_id)}>Mark replied</Button>
                         )}
