@@ -81,6 +81,33 @@ export function PipelineTab() {
     onSuccess: () => { toast({ title: "Marked as replied" }); qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] }); },
   });
 
+  const inviteAsAgent = useMutation({
+    mutationFn: async (lead: { lead_id: string; email: string; company_name: string; contact_name?: string | null }) => {
+      const [firstName, ...rest] = (lead.contact_name ?? "").trim().split(/\s+/);
+      const lastName = rest.join(" ");
+      const { error } = await supabase.functions.invoke("send-agent-invitation", {
+        body: {
+          email: lead.email,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          companyName: lead.company_name,
+        },
+      });
+      if (error) throw error;
+      await (supabase as any).from("agent_leads").update({ status: "invited" }).eq("id", lead.lead_id);
+      await (supabase as any).from("candidate_notes").insert({
+        lead_id: lead.lead_id,
+        kind: "system",
+        body: `Agent invitation sent to ${lead.email}.`,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation sent", description: "Lead invited to onboard as an Agent." });
+      qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] });
+    },
+    onError: (e: any) => toast({ title: "Failed to invite", description: e.message, variant: "destructive" }),
+  });
+
   return (
     <Card>
       <CardHeader><CardTitle>Active Pipeline</CardTitle></CardHeader>
