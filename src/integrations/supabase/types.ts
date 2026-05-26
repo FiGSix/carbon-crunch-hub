@@ -4021,6 +4021,7 @@ export type Database = {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
       }
+      email_domain_of: { Args: { email_addr: string }; Returns: string }
       extract_corporate_domain: {
         Args: { email_param: string }
         Returns: string
