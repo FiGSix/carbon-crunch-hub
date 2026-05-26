@@ -67,7 +67,15 @@ export function SettingsTab() {
             <div><Label>Auto-enroll outreach</Label><p className="text-xs text-muted-foreground">New leads with email auto-enrolled in default sequence.</p></div>
             <Switch checked={!!form.autopilot_outreach} onCheckedChange={(v) => setForm((f: any) => ({ ...f, autopilot_outreach: v }))} />
           </div>
-          <div><Label>Score threshold ({form.score_threshold})</Label><Input type="number" min={0} max={100} value={form.score_threshold ?? 60} onChange={(e) => setForm((f: any) => ({ ...f, score_threshold: parseInt(e.target.value) || 0 }))} /></div>
+          <div>
+            <Label>Score threshold ({form.score_threshold})</Label>
+            <Input type="number" min={0} max={100} value={form.score_threshold ?? 60} onChange={(e) => setForm((f: any) => ({ ...f, score_threshold: parseInt(e.target.value) || 0 }))} />
+            <p className="text-xs text-muted-foreground mt-1">Applies to new discoveries only. Use "Approve all ≥ threshold" in the Approval Queue to backfill existing pending candidates.</p>
+            <Button size="sm" variant="outline" className="mt-2" onClick={async () => {
+              const { count } = await (supabase as any).from("discovery_candidates").select("id", { count: "exact", head: true }).eq("status", "pending").gte("score", form.score_threshold ?? 60);
+              toast({ title: `${count ?? 0} pending candidate(s) would qualify`, description: `At threshold ${form.score_threshold ?? 60}` });
+            }}>Test promote (preview)</Button>
+          </div>
         </CardContent>
       </Card>
 
