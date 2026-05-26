@@ -1,52 +1,85 @@
-## You're right — the Sales Agent shouldn't be drafting proposals
+# Sales Agent Learning Loop — Build Plan
 
-The current flow conflates two very different jobs:
+Goal: make outreach emails get sharper over time by measuring what works, routing sends to winning variants, and feeding winning examples back into the AI reply drafter.
 
-- **Sales Agent's job** → qualify inbound leads (solar installers like First Energy) and convert them into **signed-up Agents** on the platform.
-- **Agent's job** → once onboarded, the installer creates proposals for *their own* end-clients (the asset owners). They have the project data (system size, address, commission date) — we don't.
+Built in 4 phases so each is shippable on its own.
 
-By auto-drafting a proposal from a lead, we:
-1. Create empty/broken proposal records (the "missing info" you saw on First Energy).
-2. Pollute the proposals list with shells that no one can complete (we don't have the project data).
-3. Skip the onboarding step that actually matters — getting the installer signed up, contracted, and trained.
-4. Confuse the agent dashboards (these ghost proposals show up in warm-cards, portfolio review, close-out queue counts).
+---
 
-## Revised plan
+## Phase 1 — Variants + per-variant tracking
 
-**1. Stop auto-drafting proposals from leads**
-- Remove the `sales-agent-draft-proposal` call from wherever the Sales Agent triggers it (likely when a lead reaches a "qualified" stage).
-- Keep the edge function file in place but no longer invoke it. We can delete it in a follow-up once we're sure nothing else calls it.
+**Schema (migration)**
+- `outreach_template_variants`
+  - `id`, `sequence_id`, `step_index` (int), `subject`, `body_template`, `cta_label`, `cta_url`
+  - `weight` (numeric, default 1.0), `status` ('active' | 'paused' | 'retired')
+  - `created_by`, `created_at`, `notes`
+- Backfill: for each existing `outreach_sequences.steps[i]`, insert one variant row (status active, weight 1).
+- `lead_outreach_history`: add `variant_id uuid null` + index.
+- `outreach_replies`: add `variant_id uuid null` (so replies can be attributed to the variant that triggered them).
+- RLS: admin-only write, read for authenticated admins (mirror `outreach_sequences`).
 
-**2. Replace it with an "invite as Agent" action**
-- When the Sales Agent marks a lead as ready, the next step should be to **send an agent invitation** to the lead's email (using the existing agent invitation / onboarding flow).
-- Surface this in the Sales Agent admin UI as the primary CTA on a qualified lead: **"Invite as Agent"** (instead of "Draft proposal").
-- Log the invite on the lead timeline (`candidate_notes` with `kind: 'system'`).
+**Editor UI**
+- Extend `SequencesTab.tsx`: under each step show its variants, with add/edit/pause/retire actions. Inline subject + body editor (textarea + token helper for `{{first_name}}` etc.).
 
-**3. Clean up the ghost proposals already created**
-- One-time migration to identify proposals where `source = 'sales_agent'` AND project data is empty AND nothing has been added since.
-- Two options — need your call:
-  - **(a)** Hard delete them (cleanest — these are noise).
-  - **(b)** Soft-archive them (set `archived_at`) so they drop out of all dashboard counts but stay auditable.
-- For each affected lead, if the installer hasn't been invited yet, queue an agent invitation instead.
+---
 
-**4. Update lead → proposal linkage expectations**
-- `proposals.lead_id` stays in the schema but is now only populated when an onboarded Agent (who originated as a lead) creates their first proposal — we can backfill it by matching the agent's email to the source lead. Optional, low priority.
+## Phase 2 — Variant stats + dashboard
 
-## Files affected
+**View**: `v_outreach_variant_stats` materialised, refreshed by cron every 15 min.
+Columns per `variant_id`:
+- `sent`, `delivered`, `opened`, `clicked`, `replied`, `positive_replies` (classified interested/question), `meetings_booked`, `bounced`, `unsubscribed`
+- Rates: open_rate, reply_rate, positive_reply_rate, meeting_rate
+- `last_sent_at`, `sample_size_ok` (bool, e.g. ≥30 sends)
 
-- `supabase/functions/sales-agent-draft-proposal/index.ts` — stop invoking (delete in a later pass)
-- Sales Agent admin UI (the component that currently triggers the draft) — swap CTA to "Invite as Agent", wire to existing agent-invite flow
-- One-time SQL migration — archive/delete ghost proposals
-- `AgentWarmCards`, `PortfolioReviewSection`, `CloseoutQueueSection` — verify their queries already filter out archived/deleted proposals (they should, but worth a quick check)
+Joins: `lead_outreach_history` → `outreach_replies` → `inbound_messages` → existing email-event tables (`email_opens`, `email_clicks` if present — verify during exploration).
 
-## Out of scope
+**UI**: new `LearningTab.tsx` under Sales Agent admin
+- Table per sequence/step showing variant performance with a confidence indicator
+- Winner badge on the top variant once `sample_size_ok`
+- Manual "promote" / "retire" buttons that update `status` and `weight`
 
-- No changes to the Agent's own proposal creation flow.
-- No changes to lead intake / scoring.
-- No changes to the proposal view itself — once ghosts are cleaned, the "missing info" problem disappears.
+---
 
-## Questions before I build
+## Phase 3 — Bandit picker in send
 
-1. **Clean up existing ghost proposals: delete or soft-archive?** Delete is cleaner; archive is safer for audit.
-2. **Where today does the Sales Agent trigger `sales-agent-draft-proposal`?** I'll find it, but if you know off the top of your head (e.g. a specific button or an automation when a lead hits a stage), tell me so I don't miss a trigger.
-3. **The "Invite as Agent" action — does the existing agent invitation flow already accept an email + name + company, or do we need a small wrapper?** I'll check, but a quick confirmation helps.
+Replace single `step.body_template` read in `sales-agent-send/index.ts` with:
+1. Load active variants for `(sequence_id, step_index)`.
+2. Weighted random pick using Thompson-sampling-lite: `score = beta(positive_replies+1, sent-positive_replies+1)` sample; fall back to uniform when no stats yet.
+3. Record chosen `variant_id` on `lead_outreach_history`.
+
+**Auto-tune job** (`sales-agent-tune`, cron daily):
+- For each step with ≥2 active variants and ≥30 sends each: retire variants whose positive_reply_rate lower-bound (Wilson) is below the leader's; bump leader's weight.
+- Log decisions into `sales_agent_runs` for auditability. Never auto-create new variants — humans/AI write them.
+
+---
+
+## Phase 4 — Feedback into the AI drafter
+
+Two loops:
+
+**a) Reply drafter few-shot injection** (`sales-agent-draft-reply`)
+- Before calling Gemini, pull top 3 `outreach_replies` where `status='sent'` AND led to a positive outcome (meeting booked or `agent_leads.status` advanced to qualified within 7 days).
+- Inject as few-shot examples in the system prompt: "Examples of replies that worked well: …".
+- Cache per-day in `system_settings` to keep cost flat.
+
+**b) Human-edit signal**
+- When an admin edits an AI draft before sending, diff `draft_body` vs `sent_body` and store on `outreach_replies.edit_distance` + `edit_summary` (LLM-generated 1-liner via Lovable AI).
+- Surface "most-edited drafts" in LearningTab so the system prompt can be tightened.
+- Weekly job summarises common edits into a short "style rules" string saved on `sales_agent_settings.ai_style_notes`, which the drafter prepends to its system prompt → the actual learning loop.
+
+---
+
+## Technical notes
+
+- All new edge functions follow the standard CORS + service-role pattern used by existing `sales-agent-*` functions.
+- All AI calls go through Lovable AI Gateway (`google/gemini-3-flash-preview` default; `google/gemini-2.5-pro` for the weekly style-rules summariser).
+- pg_cron jobs: `refresh_variant_stats` (15m), `sales-agent-tune` (daily 03:00 UTC), `sales-agent-style-rules` (weekly Mon 04:00 UTC).
+- No client-side changes to dashboards beyond the new LearningTab.
+- Safe rollout: Phase 1 ships variants with bandit OFF (single-variant per step = today's behaviour). Bandit + tune turn on in Phase 3 behind `sales_agent_settings.autopilot_learning` flag (default true once Phase 2 has been observed for a week).
+
+---
+
+## Out of scope (can be follow-ups)
+- Subject-line-only A/B (achievable today by creating variants that differ only in subject).
+- Send-time-of-day experimentation.
+- Per-segment (industry/region) variants — possible later by adding `audience_filter jsonb` to variants.
