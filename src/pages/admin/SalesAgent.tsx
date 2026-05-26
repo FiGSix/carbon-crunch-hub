@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar, Sparkles, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FunnelScoreboard } from "@/components/admin/sales-agent/FunnelScoreboard";
 import { PipelineTab } from "@/components/admin/sales-agent/PipelineTab";
@@ -16,6 +18,7 @@ import { MeetingsList } from "@/components/admin/sales-agent/MeetingsList";
 
 export default function SalesAgent() {
   const [tab, setTab] = useState("pipeline");
+  const navigate = useNavigate();
 
   const { data: pendingCount } = useQuery({
     queryKey: ["sales-agent-pending-count"],
@@ -46,6 +49,15 @@ export default function SalesAgent() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 -ml-2"
+              onClick={() => navigate('/admin')}
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <Bot className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">Sales Agent</h1>
             <Badge variant="secondary">Admin Only</Badge>
