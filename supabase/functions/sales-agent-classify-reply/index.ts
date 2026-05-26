@@ -83,11 +83,22 @@ ${(msg.body_text ?? "").substring(0, 4000)}`;
     }
 
     // Autopilot draft
-    const { data: settings } = await supabase.from("sales_agent_settings").select("autopilot_replies, reply_confidence_threshold").eq("id", true).maybeSingle();
+    const { data: settings } = await supabase.from("sales_agent_settings").select("autopilot_replies, reply_confidence_threshold, autopilot_reply_min_confidence").eq("id", true).maybeSingle();
     if ((intent === "interested" || intent === "question") && msg.lead_id) {
+      const minConf = Math.max(settings?.reply_confidence_threshold ?? 80, settings?.autopilot_reply_min_confidence ?? 90);
       try {
-        await supabase.functions.invoke("sales-agent-draft-reply", { body: { inbound_message_id: msg.id, auto_send: !!settings?.autopilot_replies && confidence >= (settings?.reply_confidence_threshold ?? 80) } });
+        await supabase.functions.invoke("sales-agent-draft-reply", { body: { inbound_message_id: msg.id, auto_send: !!settings?.autopilot_replies && confidence >= minConf } });
       } catch (e) { console.error("draft invoke", e); }
+    }
+
+    // Bridge to Proposals: if confidently interested + enriched, draft a proposal
+    if (intent === "interested" && msg.lead_id && confidence >= 70) {
+      const { data: leadRow } = await supabase.from("agent_leads").select("email, company_name, location").eq("id", msg.lead_id).maybeSingle();
+      if (leadRow?.email && leadRow?.company_name) {
+        try {
+          await supabase.functions.invoke("sales-agent-draft-proposal", { body: { lead_id: msg.lead_id, trigger: "classified_interested" } });
+        } catch (e) { console.error("draft-proposal invoke", e); }
+      }
     }
 
     return new Response(JSON.stringify({ ok: true, intent, confidence }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

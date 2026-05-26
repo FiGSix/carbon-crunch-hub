@@ -83,6 +83,10 @@ serve(async (req) => {
 
   try {
     const { data: settings } = await supabase.from("sales_agent_settings").select("*").eq("id", true).maybeSingle();
+    if (settings && settings.autopilot_outreach === false) {
+      await supabase.from("sales_agent_runs").update({ status: "completed", completed_at: new Date().toISOString(), stats: { ...stats, skipped: "autopilot_off" } }).eq("id", runId);
+      return new Response(JSON.stringify({ ok: true, skipped: "autopilot_off" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const dailyCap = settings?.daily_send_cap ?? 50;
     const quietStart = settings?.quiet_hours_start ?? 20;
     const quietEnd = settings?.quiet_hours_end ?? 8;
