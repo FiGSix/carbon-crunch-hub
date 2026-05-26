@@ -950,6 +950,33 @@ export type Database = {
           },
         ]
       }
+      discovery_blocklist: {
+        Row: {
+          company_name_normalized: string | null
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          company_name_normalized?: string | null
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          company_name_normalized?: string | null
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       discovery_candidates: {
         Row: {
           company_name: string
@@ -3631,6 +3658,10 @@ export type Database = {
         Args: { email_param: string }
         Returns: string
       }
+      extract_domain: {
+        Args: { _email: string; _website: string }
+        Returns: string
+      }
       find_or_create_client_by_email: {
         Args: {
           p_company_name: string
@@ -3992,6 +4023,10 @@ export type Database = {
         Args: { size_value: number; unit_type?: string }
         Returns: number
       }
+      promote_discovery_candidate: {
+        Args: { _candidate_id: string }
+        Returns: string
+      }
       recalculate_proposal_client_shares: {
         Args: never
         Returns: {
@@ -4001,6 +4036,10 @@ export type Database = {
           old_share: number
           proposal_id: string
         }[]
+      }
+      reject_discovery_candidate: {
+        Args: { _candidate_id: string; _reason: string }
+        Returns: undefined
       }
       search_clients: {
         Args: { search_term: string }
