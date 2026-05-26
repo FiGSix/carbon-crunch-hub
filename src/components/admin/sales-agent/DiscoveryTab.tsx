@@ -54,7 +54,7 @@ export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void
           <Button className="w-full" onClick={() => discover.mutate()} disabled={discover.isPending}>
             {discover.isPending ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Discovering…</> : <>Start discovery</>}
           </Button>
-          <p className="text-xs text-muted-foreground">Uses Firecrawl + AI to find EPCs and add net-new ones directly to the pipeline.</p>
+          <p className="text-xs text-muted-foreground">Uses Firecrawl + AI to stage candidates in the Approval Queue. Autopilot promotes any candidate scoring at or above the threshold.</p>
         </CardContent>
       </Card>
 
@@ -69,8 +69,9 @@ export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void
                   <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs">found <strong>{r.leads_found}</strong> · new <strong>{r.leads_approved}</strong></span>
+                  <span className="text-xs">found <strong>{r.leads_found}</strong> · auto-promoted <strong>{r.leads_approved}</strong></span>
                   <Badge variant={r.status === "completed" ? "secondary" : r.status === "failed" ? "destructive" : "outline"}>{r.status}</Badge>
+                  {onReviewPending && <Button size="sm" variant="ghost" onClick={onReviewPending} className="h-7 text-xs">Review</Button>}
                 </div>
               </div>
             ))}
