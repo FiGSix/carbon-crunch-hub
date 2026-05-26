@@ -29,22 +29,31 @@ import {
  *
  * Tone: "We don't want to keep unnecessary admin open on your side."
  */
-export function CloseoutQueueSection() {
-  const { data, isLoading, isError } = useCloseoutQueue(8);
+export function CloseoutQueueSection({ limit = 5 }: { limit?: number } = {}) {
+  const { data, isLoading, isError } = useCloseoutQueue(25);
   const [confirm, setConfirm] = useState<CloseoutItem | null>(null);
   const archive = useArchiveProposal();
+  const visible = data?.slice(0, limit);
+  const hiddenCount = (data?.length ?? 0) - (visible?.length ?? 0);
 
   return (
     <>
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Clock className="h-4 w-4 text-primary" />
-            Close-out queue
-          </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            30+ days, no engagement. Soft-archive to keep the pipeline honest.
-          </p>
+        <CardHeader className="pb-3 flex flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              Close-out queue
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              30+ days, no engagement. Soft-archive to keep the pipeline honest.
+            </p>
+          </div>
+          {hiddenCount > 0 && (
+            <Button asChild size="sm" variant="ghost">
+              <a href="/proposals">+{hiddenCount}</a>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="pt-0">
           {isLoading ? (
@@ -57,13 +66,13 @@ export function CloseoutQueueSection() {
             <p className="text-sm text-muted-foreground">
               Couldn't load close-out queue.
             </p>
-          ) : !data || data.length === 0 ? (
+          ) : !visible || visible.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nothing to close out — pipeline is clean.
             </p>
           ) : (
             <div className="space-y-2">
-              {data.map((item) => (
+              {visible.map((item) => (
                 <CloseoutRow
                   key={item.proposal_id}
                   item={item}

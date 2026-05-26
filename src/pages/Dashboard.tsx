@@ -129,16 +129,17 @@ export default function Dashboard() {
       {/* Agent Engine — flagship section */}
       {(userRole === "agent" || userRole === "admin") && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-2">
-            <div className="lg:col-span-2">
-              <AgentWarmCards />
-            </div>
-            <div className="lg:col-span-1 space-y-4">
-              <PortfolioReviewSection />
-              <CloseoutQueueSection />
-            </div>
+          {/* Warm cards: full-width, the single most actionable surface */}
+          <AgentWarmCards limit={5} />
+
+          {/* Secondary action lists side-by-side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
+            <PortfolioReviewSection limit={4} />
+            <CloseoutQueueSection limit={5} />
           </div>
-          <LearningDashboardSection />
+
+          {/* Learning dashboard: admin-only — aggregate KPIs aren't daily-actionable for agents */}
+          {userRole === "admin" && <LearningDashboardSection />}
         </>
       )}
 

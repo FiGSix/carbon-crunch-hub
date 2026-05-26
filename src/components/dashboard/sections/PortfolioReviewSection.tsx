@@ -17,19 +17,28 @@ import {
  * reminder on shape but are blocked by a gate (cooldown, no warm, recent
  * reminder). Becomes an agent review task — no automated email is sent.
  */
-export function PortfolioReviewSection() {
-  const { data, isLoading, isError } = usePortfolioReviewClusters(6);
+export function PortfolioReviewSection({ limit = 4 }: { limit?: number } = {}) {
+  const { data, isLoading, isError } = usePortfolioReviewClusters(20);
+  const visible = data?.slice(0, limit);
+  const hiddenCount = (data?.length ?? 0) - (visible?.length ?? 0);
 
   return (
     <Card className="mb-6">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Briefcase className="h-4 w-4 text-primary" />
-          Portfolio review
-        </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">
-          Multiple unsigned proposals — automated reminders blocked. Worth a personal touch.
-        </p>
+      <CardHeader className="pb-3 flex flex-row items-start justify-between space-y-0">
+        <div>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-primary" />
+            Portfolio review
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Multiple unsigned proposals — worth a personal touch.
+          </p>
+        </div>
+        {hiddenCount > 0 && (
+          <Button asChild size="sm" variant="ghost">
+            <a href="/proposals">+{hiddenCount}</a>
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading ? (
@@ -42,13 +51,13 @@ export function PortfolioReviewSection() {
           <p className="text-sm text-muted-foreground">
             Couldn't load portfolio review clusters.
           </p>
-        ) : !data || data.length === 0 ? (
+        ) : !visible || visible.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No portfolio clusters need agent review right now.
           </p>
         ) : (
           <div className="space-y-2">
-            {data.map((c) => (
+            {visible.map((c) => (
               <ClusterRow key={c.client_email} cluster={c} />
             ))}
           </div>
