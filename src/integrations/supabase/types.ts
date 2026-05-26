@@ -3104,6 +3104,7 @@ export type Database = {
           last_email_sent_at: string | null
           last_engagement_at: string | null
           last_modified_by: string | null
+          lead_id: string | null
           partner_id: string | null
           partner_reference_id: string | null
           pdf_generated_at: string | null
@@ -3112,6 +3113,7 @@ export type Database = {
           project_info: Json
           review_later_until: string | null
           signed_at: string | null
+          source: string
           status: string
           system_size_kwp: number | null
           title: string
@@ -3153,6 +3155,7 @@ export type Database = {
           last_email_sent_at?: string | null
           last_engagement_at?: string | null
           last_modified_by?: string | null
+          lead_id?: string | null
           partner_id?: string | null
           partner_reference_id?: string | null
           pdf_generated_at?: string | null
@@ -3161,6 +3164,7 @@ export type Database = {
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
+          source?: string
           status?: string
           system_size_kwp?: number | null
           title?: string
@@ -3202,6 +3206,7 @@ export type Database = {
           last_email_sent_at?: string | null
           last_engagement_at?: string | null
           last_modified_by?: string | null
+          lead_id?: string | null
           partner_id?: string | null
           partner_reference_id?: string | null
           pdf_generated_at?: string | null
@@ -3210,6 +3215,7 @@ export type Database = {
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
+          source?: string
           status?: string
           system_size_kwp?: number | null
           title?: string
@@ -3288,6 +3294,20 @@ export type Database = {
             referencedColumns: ["agent_user_id"]
           },
           {
+            foreignKeyName: "proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "agent_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_agent_funnel"
+            referencedColumns: ["lead_id"]
+          },
+          {
             foreignKeyName: "proposals_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
@@ -3320,6 +3340,36 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           yield_kwh_per_kwp?: number
+        }
+        Relationships: []
+      }
+      sales_agent_discovery_presets: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          last_run_at: string | null
+          limit_count: number
+          location: string
+          query: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          last_run_at?: string | null
+          limit_count?: number
+          location: string
+          query: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          last_run_at?: string | null
+          limit_count?: number
+          location?: string
+          query?: string
         }
         Relationships: []
       }
@@ -3358,6 +3408,7 @@ export type Database = {
           autopilot_discovery: boolean
           autopilot_outreach: boolean
           autopilot_replies: boolean
+          autopilot_reply_min_confidence: number
           blocked_domains: string[]
           bookings_cta_label: string | null
           bookings_url: string | null
@@ -3387,6 +3438,7 @@ export type Database = {
           autopilot_discovery?: boolean
           autopilot_outreach?: boolean
           autopilot_replies?: boolean
+          autopilot_reply_min_confidence?: number
           blocked_domains?: string[]
           bookings_cta_label?: string | null
           bookings_url?: string | null
@@ -3416,6 +3468,7 @@ export type Database = {
           autopilot_discovery?: boolean
           autopilot_outreach?: boolean
           autopilot_replies?: boolean
+          autopilot_reply_min_confidence?: number
           blocked_domains?: string[]
           bookings_cta_label?: string | null
           bookings_url?: string | null
