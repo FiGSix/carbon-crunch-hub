@@ -20,8 +20,10 @@ import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarm
  *
  * Tone rule: "We're not chasing. We're helping."
  */
-export function AgentWarmCards() {
-  const { data, isLoading, isError } = useAgentWarmCards(8);
+export function AgentWarmCards({ limit = 5 }: { limit?: number } = {}) {
+  const { data, isLoading, isError } = useAgentWarmCards(20);
+  const visible = data?.slice(0, limit);
+  const hiddenCount = (data?.length ?? 0) - (visible?.length ?? 0);
 
   return (
     <Card className="mb-6">
@@ -32,9 +34,14 @@ export function AgentWarmCards() {
             Proposals worth a personal nudge
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Hot and warm clients — ordered by signal strength and value. No emails are sent from here.
+            Top {limit} hot &amp; warm clients — ordered by signal strength and value.
           </p>
         </div>
+        {hiddenCount > 0 && (
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/proposals">View all (+{hiddenCount})</Link>
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading ? (
@@ -47,13 +54,13 @@ export function AgentWarmCards() {
           <p className="text-sm text-muted-foreground">
             Couldn't load warm cards right now.
           </p>
-        ) : !data || data.length === 0 ? (
+        ) : !visible || visible.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hot or warm proposals right now. Nice — your pipeline is either signed or cooling.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {data.map((card) => (
+            {visible.map((card) => (
               <WarmCardItem key={card.proposal_id} card={card} />
             ))}
           </div>
