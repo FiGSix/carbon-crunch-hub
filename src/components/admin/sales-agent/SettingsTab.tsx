@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { BlocklistManager } from "./BlocklistManager";
 import { ExternalLink, RefreshCw } from "lucide-react";
+import { DiscoveryPresetsCard } from "./DiscoveryPresetsCard";
 
 export function SettingsTab() {
   const { toast } = useToast();
