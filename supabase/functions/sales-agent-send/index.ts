@@ -150,12 +150,47 @@ serve(async (req) => {
         continue;
       }
 
+      // Bandit: pick a variant for this (sequence, step). Falls back to step.body_template if no variants.
+      const { data: variants } = await supabase
+        .from("outreach_template_variants")
+        .select("id, subject, body_template, cta_label, cta_url, weight")
+        .eq("sequence_id", seq.id).eq("step_index", enr.current_step).eq("status", "active");
+      let chosen: any = null;
+      if (variants && variants.length > 0) {
+        if (variants.length === 1) {
+          chosen = variants[0];
+        } else {
+          // Thompson-like: get positive_reply_rate stats; sample beta(alpha,beta)
+          const { data: vstats } = await supabase
+            .from("v_outreach_variant_stats")
+            .select("variant_id, sent, positive_replies")
+            .in("variant_id", variants.map((v) => v.id));
+          const statsMap = new Map<string, { sent: number; pos: number }>();
+          (vstats ?? []).forEach((s: any) => statsMap.set(s.variant_id, { sent: s.sent ?? 0, pos: s.positive_replies ?? 0 }));
+          // Approx beta sampling: use ratio + small random jitter weighted by sqrt(1/sample)
+          const scored = variants.map((v) => {
+            const s = statsMap.get(v.id) ?? { sent: 0, pos: 0 };
+            const alpha = s.pos + 1;
+            const beta = (s.sent - s.pos) + 1;
+            const mean = alpha / (alpha + beta);
+            const explore = Math.sqrt(1 / (alpha + beta)) * Math.random();
+            return { v, score: (Number(v.weight) || 1) * (mean + explore) };
+          });
+          scored.sort((a, b) => b.score - a.score);
+          chosen = scored[0].v;
+        }
+      }
+
       try {
-        const subject = renderTemplate(step.subject, lead, settings);
-        const bodyText = renderTemplate(step.body_template, lead, settings);
+        const stepSubject = chosen?.subject ?? step.subject;
+        const stepBody = chosen?.body_template ?? step.body_template;
+        const stepCtaLabel = chosen?.cta_label ?? step.cta_label;
+        const stepCtaUrl = chosen?.cta_url ?? step.cta_url;
+        const subject = renderTemplate(stepSubject, lead, settings);
+        const bodyText = renderTemplate(stepBody, lead, settings);
         const html = bodyToHtml(
           bodyText,
-          step.cta_url ? { label: step.cta_label, url: step.cta_url } : undefined,
+          stepCtaUrl ? { label: stepCtaLabel, url: stepCtaUrl } : undefined,
           settings?.bookings_url ? { url: settings.bookings_url, label: settings.bookings_cta_label } : undefined,
         );
 
@@ -169,6 +204,7 @@ serve(async (req) => {
           body_preview: bodyText.substring(0, 200),
           resend_message_id: null,
           status: "sent",
+          variant_id: chosen?.id ?? null,
         });
 
         const { data: cur } = await supabase.from("agent_leads").select("outreach_count").eq("id", lead.id).single();

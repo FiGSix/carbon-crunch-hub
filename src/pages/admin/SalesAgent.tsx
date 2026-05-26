@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar } from "lucide-react";
+import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FunnelScoreboard } from "@/components/admin/sales-agent/FunnelScoreboard";
 import { PipelineTab } from "@/components/admin/sales-agent/PipelineTab";
 import { DiscoveryTab } from "@/components/admin/sales-agent/DiscoveryTab";
 import { ApprovalQueueTab } from "@/components/admin/sales-agent/ApprovalQueueTab";
 import { SequencesTab } from "@/components/admin/sales-agent/SequencesTab";
+import { LearningTab } from "@/components/admin/sales-agent/LearningTab";
 import { SettingsTab } from "@/components/admin/sales-agent/SettingsTab";
 import { InboxTab } from "@/components/admin/sales-agent/InboxTab";
 import { MeetingsList } from "@/components/admin/sales-agent/MeetingsList";
@@ -75,6 +76,7 @@ export default function SalesAgent() {
           </TabsTrigger>
           <TabsTrigger value="meetings"><Calendar className="h-4 w-4 mr-1.5" /> Meetings</TabsTrigger>
           <TabsTrigger value="sequences"><Send className="h-4 w-4 mr-1.5" /> Sequences</TabsTrigger>
+          <TabsTrigger value="learning"><Sparkles className="h-4 w-4 mr-1.5" /> Learning</TabsTrigger>
           <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 mr-1.5" /> Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="pipeline" className="mt-6"><PipelineTab /></TabsContent>
@@ -83,6 +85,7 @@ export default function SalesAgent() {
         <TabsContent value="inbox" className="mt-6"><InboxTab /></TabsContent>
         <TabsContent value="meetings" className="mt-6"><MeetingsList /></TabsContent>
         <TabsContent value="sequences" className="mt-6"><SequencesTab /></TabsContent>
+        <TabsContent value="learning" className="mt-6"><LearningTab /></TabsContent>
         <TabsContent value="settings" className="mt-6"><SettingsTab /></TabsContent>
       </Tabs>
     </div>
