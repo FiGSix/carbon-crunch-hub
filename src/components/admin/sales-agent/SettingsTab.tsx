@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { BlocklistManager } from "./BlocklistManager";
 import { ExternalLink, RefreshCw } from "lucide-react";
+import { DiscoveryPresetsCard } from "./DiscoveryPresetsCard";
 
 export function SettingsTab() {
   const { toast } = useToast();
@@ -40,6 +41,7 @@ export function SettingsTab() {
         autopilot_outreach: form.autopilot_outreach,
         autopilot_replies: form.autopilot_replies,
         reply_confidence_threshold: form.reply_confidence_threshold,
+        autopilot_reply_min_confidence: form.autopilot_reply_min_confidence,
         daily_send_cap: form.daily_send_cap,
         quiet_hours_start: form.quiet_hours_start,
         quiet_hours_end: form.quiet_hours_end,
@@ -97,9 +99,17 @@ export function SettingsTab() {
             <div><Label>Auto-send AI replies</Label><p className="text-xs text-muted-foreground">When confidence ≥ threshold, AI drafts are sent automatically.</p></div>
             <Switch checked={!!form.autopilot_replies} onCheckedChange={(v) => setForm((f: any) => ({ ...f, autopilot_replies: v }))} />
           </div>
-          <div>
-            <Label>Reply confidence threshold ({form.reply_confidence_threshold ?? 80}%)</Label>
-            <Input type="number" min={50} max={100} value={form.reply_confidence_threshold ?? 80} onChange={(e) => setForm((f: any) => ({ ...f, reply_confidence_threshold: parseInt(e.target.value) || 80 }))} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Reply confidence threshold ({form.reply_confidence_threshold ?? 80}%)</Label>
+              <Input type="number" min={50} max={100} value={form.reply_confidence_threshold ?? 80} onChange={(e) => setForm((f: any) => ({ ...f, reply_confidence_threshold: parseInt(e.target.value) || 80 }))} />
+              <p className="text-xs text-muted-foreground mt-1">Min confidence to draft a reply.</p>
+            </div>
+            <div>
+              <Label>Auto-send min confidence ({form.autopilot_reply_min_confidence ?? 90}%)</Label>
+              <Input type="number" min={50} max={100} value={form.autopilot_reply_min_confidence ?? 90} onChange={(e) => setForm((f: any) => ({ ...f, autopilot_reply_min_confidence: parseInt(e.target.value) || 90 }))} />
+              <p className="text-xs text-muted-foreground mt-1">Required to auto-send (when autopilot on).</p>
+            </div>
           </div>
           <div>
             <Label>Score threshold ({form.score_threshold})</Label>
@@ -188,6 +198,8 @@ export function SettingsTab() {
       <div className="md:col-span-2 flex justify-end">
         <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Saving…" : "Save settings"}</Button>
       </div>
+
+      <DiscoveryPresetsCard />
 
       <div className="md:col-span-2">
         <BlocklistManager />
