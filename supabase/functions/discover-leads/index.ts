@@ -255,75 +255,115 @@ serve(async (req) => {
       );
     }
 
-    // Step 3: Check for duplicates and insert new leads
-    const companyNames = extractedLeads.map(l => l.company_name.toLowerCase().trim());
-    
-    const { data: existingLeads } = await supabase
-      .from('agent_leads')
-      .select('company_name')
-      .in('company_name', extractedLeads.map(l => l.company_name));
+    // Step 3: Stage as discovery_candidates (Phase 2 — Approval Queue + Autopilot)
+    const normalize = (s: string) => s.toLowerCase().trim();
+    const extractDomain = (email?: string | null, website?: string | null) => {
+      if (email && email.includes('@')) return email.split('@')[1].toLowerCase();
+      if (website) return website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '').toLowerCase();
+      return null;
+    };
+    const scoreLead = (l: ExtractedLead): number => {
+      let s = 0;
+      if (l.email) s += 35;
+      if (l.website) s += 20;
+      if (l.phone) s += 15;
+      if (l.contact_name) s += 15;
+      if (l.notes && l.notes.length > 40) s += 15;
+      return Math.min(100, s);
+    };
 
-    const existingNames = new Set(
-      (existingLeads || []).map(l => l.company_name.toLowerCase().trim())
+    const { data: run } = await supabase
+      .from('discovery_runs')
+      .insert({
+        source: 'discover-leads', query, region: location, status: 'completed',
+        started_at: new Date().toISOString(), completed_at: new Date().toISOString(),
+        created_by: user.id, leads_found: extractedLeads.length,
+      })
+      .select('id').single();
+    const runId: string | null = run?.id ?? null;
+
+    const [{ data: existingLeads }, { data: blocklist }, { data: settings }] = await Promise.all([
+      supabase.from('agent_leads').select('company_name, email, website'),
+      (supabase as any).from('discovery_blocklist').select('company_name_normalized, domain'),
+      (supabase as any).from('sales_agent_settings').select('*').eq('id', true).maybeSingle(),
+    ]);
+
+    const existingNames = new Set((existingLeads || []).map((l: any) => normalize(l.company_name)));
+    const existingDomains = new Set(
+      (existingLeads || []).map((l: any) => extractDomain(l.email, l.website)).filter(Boolean) as string[]
     );
+    const blockedNames = new Set((blocklist || []).map((b: any) => b.company_name_normalized).filter(Boolean));
+    const blockedDomains = new Set((blocklist || []).map((b: any) => b.domain).filter(Boolean));
 
-    const newLeads = extractedLeads.filter(
-      l => !existingNames.has(l.company_name.toLowerCase().trim())
-    );
+    let createdCount = 0, duplicateCount = 0, blockedCount = 0, autoPromotedCount = 0;
+    const createdCandidateIds: string[] = [];
 
-    console.log(`New leads to insert: ${newLeads.length} (${extractedLeads.length - newLeads.length} duplicates skipped)`);
+    for (const lead of extractedLeads) {
+      const nameKey = normalize(lead.company_name);
+      const domain = extractDomain(lead.email, lead.website);
 
-    if (newLeads.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          leads: [],
-          inserted: 0,
-          duplicates: extractedLeads.length,
-          message: 'All discovered leads already exist in your database'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (existingNames.has(nameKey) || (domain && existingDomains.has(domain))) {
+        duplicateCount++; continue;
+      }
+      const isBlocked = blockedNames.has(nameKey) || (domain && blockedDomains.has(domain));
+      const score = scoreLead(lead);
+
+      const { data: inserted, error: insErr } = await (supabase as any)
+        .from('discovery_candidates')
+        .insert({
+          run_id: runId,
+          company_name: lead.company_name,
+          contact_name: lead.contact_name ?? null,
+          email: lead.email ?? null,
+          phone: lead.phone ?? null,
+          website: lead.website ?? null,
+          location: lead.location ?? null,
+          score,
+          status: isBlocked ? 'blocked' : 'pending',
+          enrichment: { notes: lead.notes ?? null, source_query: query },
+        })
+        .select('id').single();
+
+      if (insErr) { console.error('candidate insert err', insErr); continue; }
+      if (isBlocked) { blockedCount++; continue; }
+      createdCount++;
+      createdCandidateIds.push(inserted.id);
     }
 
-    // Insert new leads
-    const { data: insertedLeads, error: insertError } = await supabase
-      .from('agent_leads')
-      .insert(newLeads.map(lead => ({
-        company_name: lead.company_name,
-        contact_name: lead.contact_name || null,
-        email: lead.email || null,
-        phone: lead.phone || null,
-        website: lead.website || null,
-        location: lead.location || null,
-        notes: lead.notes || null,
-        source: 'AI Discovery',
-        status: 'new',
-        created_by: user.id
-      })))
-      .select();
+    if (settings?.autopilot_discovery && createdCandidateIds.length > 0) {
+      const threshold = settings.score_threshold ?? 60;
+      const { data: qualifying } = await (supabase as any)
+        .from('discovery_candidates')
+        .select('id')
+        .in('id', createdCandidateIds)
+        .gte('score', threshold)
+        .eq('status', 'pending');
 
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Failed to save leads: ${insertError.message}` 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      for (const cand of qualifying || []) {
+        const { error: rpcErr } = await (supabase as any).rpc('promote_discovery_candidate', { _candidate_id: cand.id });
+        if (rpcErr) console.error('autopromote err', cand.id, rpcErr);
+        else autoPromotedCount++;
+      }
     }
+    const pendingCount = createdCount - autoPromotedCount;
 
-    console.log(`Successfully inserted ${insertedLeads?.length || 0} leads`);
+    if (runId) {
+      await (supabase as any).from('discovery_runs')
+        .update({ leads_approved: autoPromotedCount })
+        .eq('id', runId);
+    }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
-        leads: insertedLeads || [],
-        inserted: insertedLeads?.length || 0,
-        duplicates: extractedLeads.length - newLeads.length,
+        run_id: runId,
+        candidates_created: createdCount,
+        auto_promoted: autoPromotedCount,
+        pending_review: pendingCount,
+        duplicates: duplicateCount,
+        blocked: blockedCount,
         errors: errors.length > 0 ? errors : undefined,
-        message: `Discovered and saved ${insertedLeads?.length || 0} new leads`
+        message: `Found ${extractedLeads.length}: ${autoPromotedCount} auto-promoted · ${pendingCount} pending review · ${duplicateCount} duplicates · ${blockedCount} blocked`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
