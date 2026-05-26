@@ -18,6 +18,7 @@ import { MeetingsList } from "@/components/admin/sales-agent/MeetingsList";
 
 export default function SalesAgent() {
   const [tab, setTab] = useState("pipeline");
+  const navigate = useNavigate();
 
   const { data: pendingCount } = useQuery({
     queryKey: ["sales-agent-pending-count"],
