@@ -1,19 +1,19 @@
-// Sales Agent — outreach sequence dispatcher.
-// Runs on cron (every 15 min). For each active enrollment whose next_send_at
-// has passed, renders the step body with personalization and sends via Resend.
-// Stops the sequence when the lead replies / is converted / bounces.
+// Sales Agent — outreach sequence dispatcher (Phase 3: via Microsoft Outlook).
+// Runs on cron. For each due active enrollment renders the step body, injects
+// the MS Bookings link, and sends via the Outlook connector gateway.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const OUTLOOK_API_KEY = Deno.env.get("MICROSOFT_OUTLOOK_API_KEY");
+const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev/microsoft_outlook";
 
 interface Step {
   day_offset: number;
@@ -23,21 +23,53 @@ interface Step {
   cta_url?: string;
 }
 
-function renderTemplate(tpl: string, lead: any): string {
+function renderTemplate(tpl: string, lead: any, settings: any): string {
   const first = (lead.contact_name || "there").split(" ")[0];
   return tpl
     .replaceAll("{{company_name}}", lead.company_name || "your company")
     .replaceAll("{{first_name}}", first)
     .replaceAll("{{contact_name}}", lead.contact_name || "there")
-    .replaceAll("{{location}}", lead.location || "your region");
+    .replaceAll("{{location}}", lead.location || "your region")
+    .replaceAll("{{bookings_url}}", settings?.bookings_url || "")
+    .replaceAll("{{bookings_cta_label}}", settings?.bookings_cta_label || "Book a meeting");
 }
 
-function bodyToHtml(body: string, cta?: { label?: string; url?: string }): string {
+function bodyToHtml(body: string, cta?: { label?: string; url?: string }, bookings?: { url?: string; label?: string }): string {
   const paragraphs = body.split("\n\n").map((p) => `<p style="margin:0 0 14px 0;line-height:1.6;color:#1a1a1a;">${p.replace(/\n/g, "<br/>")}</p>`).join("");
-  const button = cta?.url && cta?.label
+  const primary = cta?.url && cta?.label
     ? `<p style="margin:24px 0;"><a href="${cta.url}" style="background:#1A1A1A;color:#FFBF00;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">${cta.label}</a></p>`
     : "";
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;">${paragraphs}${button}</body></html>`;
+  const bookingsBtn = bookings?.url
+    ? `<p style="margin:20px 0;"><a href="${bookings.url}" style="background:#FFBF00;color:#1A1A1A;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">${bookings.label ?? "Pick a 30-min slot"}</a></p>`
+    : "";
+  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;">${paragraphs}${primary}${bookingsBtn}</body></html>`;
+}
+
+async function sendViaOutlook(to: string, subject: string, html: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  if (!LOVABLE_API_KEY) return { ok: false, error: "LOVABLE_API_KEY missing" };
+  if (!OUTLOOK_API_KEY) return { ok: false, error: "MICROSOFT_OUTLOOK_API_KEY missing" };
+  const res = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": OUTLOOK_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message: {
+        subject,
+        body: { contentType: "HTML", content: html },
+        toRecipients: [{ emailAddress: { address: to } }],
+      },
+      saveToSentItems: true,
+    }),
+  });
+  if (!res.ok && res.status !== 202) {
+    const text = await res.text();
+    return { ok: false, error: `Outlook sendMail [${res.status}]: ${text}` };
+  }
+  // /me/sendMail returns 202 with no body; no message id available without a follow-up
+  return { ok: true };
 }
 
 serve(async (req) => {
@@ -47,7 +79,7 @@ serve(async (req) => {
   const runStart = new Date().toISOString();
   const { data: runRow } = await supabase.from("sales_agent_runs").insert({ job_name: "send", status: "running", started_at: runStart }).select().single();
   const runId = runRow?.id;
-  const stats = { processed: 0, sent: 0, failed: 0, skipped: 0, completed: 0, halted: 0 };
+  const stats: any = { processed: 0, sent: 0, failed: 0, skipped: 0, completed: 0, halted: 0 };
 
   try {
     const { data: settings } = await supabase.from("sales_agent_settings").select("*").eq("id", true).maybeSingle();
@@ -56,7 +88,6 @@ serve(async (req) => {
     const quietEnd = settings?.quiet_hours_end ?? 8;
     const blockedDomains: string[] = settings?.blocked_domains ?? [];
 
-    // Quiet hours check (UTC)
     const hour = new Date().getUTCHours();
     const inQuiet = quietStart < quietEnd ? (hour >= quietStart && hour < quietEnd) : (hour >= quietStart || hour < quietEnd);
     if (inQuiet) {
@@ -64,7 +95,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, skipped: "quiet_hours" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Daily cap (sent today)
     const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
     const { count: sentToday } = await supabase
       .from("lead_outreach_history").select("*", { count: "exact", head: true })
@@ -75,7 +105,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, skipped: "daily_cap" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Pick due enrollments (batch of remaining cap, max 10 per run)
     const batchSize = Math.min(remaining, 10);
     const { data: due } = await supabase
       .from("outreach_enrollments")
@@ -90,7 +119,6 @@ serve(async (req) => {
       const seq: any = (enr as any).outreach_sequences;
       const steps: Step[] = seq?.steps ?? [];
 
-      // Halt conditions
       if (!seq?.is_active || !lead?.email || ["qualified", "converted", "rejected"].includes(lead?.status)) {
         await supabase.from("outreach_enrollments").update({ status: "stopped", paused_reason: "lead status changed or sequence inactive", completed_at: new Date().toISOString() }).eq("id", enr.id);
         stats.halted++;
@@ -104,7 +132,6 @@ serve(async (req) => {
         continue;
       }
 
-      // Suppression check
       const { data: suppressed } = await supabase.from("client_email_suppressions").select("id").eq("email", lead.email.toLowerCase()).maybeSingle();
       if (suppressed) {
         await supabase.from("outreach_enrollments").update({ status: "stopped", paused_reason: "email suppressed", completed_at: new Date().toISOString() }).eq("id", enr.id);
@@ -120,27 +147,26 @@ serve(async (req) => {
       }
 
       try {
-        const subject = renderTemplate(step.subject, lead);
-        const bodyText = renderTemplate(step.body_template, lead);
-        const html = bodyToHtml(bodyText, { label: step.cta_label, url: step.cta_url });
+        const subject = renderTemplate(step.subject, lead, settings);
+        const bodyText = renderTemplate(step.body_template, lead, settings);
+        const html = bodyToHtml(
+          bodyText,
+          step.cta_url ? { label: step.cta_label, url: step.cta_url } : undefined,
+          settings?.bookings_url ? { url: settings.bookings_url, label: settings.bookings_cta_label } : undefined,
+        );
 
-        const send = await resend.emails.send({
-          from: "Shaun Slabber <shaun@crunchcarbon.com>",
-          to: [lead.email],
-          subject,
-          html,
-        });
+        const send = await sendViaOutlook(lead.email, subject, html);
+        if (!send.ok) throw new Error(send.error || "send failed");
 
         await supabase.from("lead_outreach_history").insert({
           lead_id: lead.id,
           template_type: `sequence:${seq.name}:step${enr.current_step + 1}`,
           subject,
           body_preview: bodyText.substring(0, 200),
-          resend_message_id: send.data?.id ?? null,
+          resend_message_id: null,
           status: "sent",
         });
 
-        // Update lead counters
         const { data: cur } = await supabase.from("agent_leads").select("outreach_count").eq("id", lead.id).single();
         await supabase.from("agent_leads").update({
           outreach_count: (cur?.outreach_count ?? 0) + 1,
@@ -148,7 +174,6 @@ serve(async (req) => {
           status: lead.status === "new" ? "contacted" : lead.status,
         }).eq("id", lead.id);
 
-        // Advance enrollment
         const nextStep = enr.current_step + 1;
         const next = steps[nextStep];
         const updates: any = { current_step: nextStep };
