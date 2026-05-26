@@ -30,9 +30,25 @@ serve(async (req) => {
     const { data: msg, error } = await supabase.from("inbound_messages").select("*").eq("id", inbound_message_id).single();
     if (error || !msg) throw new Error("inbound message not found");
 
-    const { data: settings } = await supabase.from("sales_agent_settings").select("bookings_url,bookings_cta_label,mailbox_address").eq("id", true).maybeSingle();
+    const { data: settings } = await supabase.from("sales_agent_settings").select("bookings_url,bookings_cta_label,mailbox_address,ai_style_notes").eq("id", true).maybeSingle();
 
-    const sys = `You are Shaun Slabber from Crunch Carbon, a friendly South African EPC partnerships lead. Draft a short, warm reply to the prospect's email. Keep it 80-140 words, plain text with paragraph breaks. End by suggesting they pick a 30-minute slot using the booking link {{bookings_url}}. Do NOT invent calendar times or pricing. Sign off "Shaun".`;
+    // Pull recent winning replies (sent replies whose lead later became qualified/converted) as few-shot examples.
+    const { data: winners } = await supabase
+      .from("outreach_replies")
+      .select("sent_body, lead_id, agent_leads!inner(status)")
+      .eq("status", "sent")
+      .in("agent_leads.status", ["qualified", "converted", "invited"])
+      .not("sent_body", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(3);
+    const examples = (winners ?? [])
+      .map((w: any, i: number) => `Example ${i + 1} (worked well):\n${(w.sent_body ?? "").substring(0, 600)}`)
+      .join("\n\n---\n\n");
+
+    const styleNotes = settings?.ai_style_notes ? `\n\nStyle rules learned from past admin edits:\n${settings.ai_style_notes}` : "";
+    const examplesBlock = examples ? `\n\n${examples}` : "";
+
+    const sys = `You are Shaun Slabber from Crunch Carbon, a friendly South African EPC partnerships lead. Draft a short, warm reply to the prospect's email. Keep it 80-140 words, plain text with paragraph breaks. End by suggesting they pick a 30-minute slot using the booking link {{bookings_url}}. Do NOT invent calendar times or pricing. Sign off "Shaun".${styleNotes}${examplesBlock}`;
     const user = `Prospect's reply:
 Subject: ${msg.subject}
 From: ${msg.from_email}
