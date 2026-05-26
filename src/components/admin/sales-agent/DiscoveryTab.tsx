@@ -10,7 +10,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
-export function DiscoveryTab() {
+export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void } = {}) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [query, setQuery] = useState("solar EPC installers");
@@ -28,28 +28,18 @@ export function DiscoveryTab() {
 
   const discover = useMutation({
     mutationFn: async () => {
-      // 1) create a run row
-      const { data: run, error: runErr } = await (supabase as any).from("discovery_runs").insert({
-        source: "web_search", query, region: location, status: "running", started_at: new Date().toISOString(),
-      }).select().single();
-      if (runErr) throw runErr;
-
-      // 2) call existing discover-leads
       const { data, error } = await supabase.functions.invoke("discover-leads", { body: { query, location, limit } });
-      if (error) {
-        await (supabase as any).from("discovery_runs").update({ status: "failed", error: error.message, completed_at: new Date().toISOString() }).eq("id", run.id);
-        throw error;
-      }
-
-      await (supabase as any).from("discovery_runs").update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        leads_found: (data?.inserted ?? 0) + (data?.duplicates ?? 0),
-        leads_approved: data?.inserted ?? 0,
-      }).eq("id", run.id);
+      if (error) throw error;
       return data;
     },
-    onSuccess: (d) => { toast({ title: "Discovery complete", description: d?.message ?? "Done" }); qc.invalidateQueries({ queryKey: ["sales-agent-discovery-runs"] }); qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] }); qc.invalidateQueries({ queryKey: ["sales-agent-funnel"] }); },
+    onSuccess: (d) => {
+      toast({ title: "Discovery complete", description: d?.message ?? "Done" });
+      qc.invalidateQueries({ queryKey: ["sales-agent-discovery-runs"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-candidates"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-pending-count"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-pipeline"] });
+      qc.invalidateQueries({ queryKey: ["sales-agent-funnel"] });
+    },
     onError: (e: any) => toast({ title: "Discovery failed", description: e.message, variant: "destructive" }),
   });
 
@@ -64,7 +54,7 @@ export function DiscoveryTab() {
           <Button className="w-full" onClick={() => discover.mutate()} disabled={discover.isPending}>
             {discover.isPending ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Discovering…</> : <>Start discovery</>}
           </Button>
-          <p className="text-xs text-muted-foreground">Uses Firecrawl + AI to find EPCs and add net-new ones directly to the pipeline.</p>
+          <p className="text-xs text-muted-foreground">Uses Firecrawl + AI to stage candidates in the Approval Queue. Autopilot promotes any candidate scoring at or above the threshold.</p>
         </CardContent>
       </Card>
 
@@ -79,8 +69,9 @@ export function DiscoveryTab() {
                   <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs">found <strong>{r.leads_found}</strong> · new <strong>{r.leads_approved}</strong></span>
+                  <span className="text-xs">found <strong>{r.leads_found}</strong> · auto-promoted <strong>{r.leads_approved}</strong></span>
                   <Badge variant={r.status === "completed" ? "secondary" : r.status === "failed" ? "destructive" : "outline"}>{r.status}</Badge>
+                  {onReviewPending && <Button size="sm" variant="ghost" onClick={onReviewPending} className="h-7 text-xs">Review</Button>}
                 </div>
               </div>
             ))}
