@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar, Sparkles, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FunnelScoreboard } from "@/components/admin/sales-agent/FunnelScoreboard";
 import { PipelineTab } from "@/components/admin/sales-agent/PipelineTab";
