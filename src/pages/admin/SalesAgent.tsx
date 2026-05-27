@@ -53,7 +53,7 @@ export default function SalesAgent() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 -ml-2"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/dashboard')}
               aria-label="Go back"
             >
               <ArrowLeft className="h-5 w-5" />
