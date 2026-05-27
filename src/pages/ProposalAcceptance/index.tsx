@@ -224,12 +224,27 @@ export default function ProposalAcceptance() {
   };
 
   const validateTypedName = (): boolean => {
-    const clientName = getClientName().toLowerCase().trim();
-    const typed = typedName.toLowerCase().trim();
-    
-    // Simple fuzzy match - check if all words in client name are in typed name
-    const clientWords = clientName.split(/\s+/);
-    return clientWords.every(word => typed.includes(word));
+    // Normalize: lowercase, strip diacritics, replace punctuation with spaces,
+    // collapse whitespace. This makes the check tolerant of initials ("R."),
+    // titles ("Dr."), hyphens, and accents — so e.g. "R. Blake" matches
+    // "Robert Blake", and "Róbert" matches "Robert".
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const expected = normalize(getClientName());
+    const typed = normalize(typedName);
+
+    if (!expected) return typed.length >= 2;
+    return expected
+      .split(" ")
+      .filter((w) => w.length > 0)
+      .every((word) => typed.includes(word));
   };
 
   const canSubmit = hasScrolledToBottom && hasAgreed && (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
