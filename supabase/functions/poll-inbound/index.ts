@@ -196,9 +196,7 @@ serve(async (req) => {
 
         const summary = buildSummary({ ...res, source: sourceLabel });
         try {
-          await supabase.functions.invoke("sales-agent-send", {
-            body: { to: fromEmail, subject: summary.subject, html: summary.html, text: summary.text },
-          });
+          await sendReply({ to: fromEmail, subject: summary.subject, html: summary.html, text: summary.text, lovableKey: LOVABLE_API_KEY, outlookKey: OUTLOOK_API_KEY });
         } catch (e) { console.error("summary reply failed", e); }
 
         await supabase.from("inbound_messages").update({
