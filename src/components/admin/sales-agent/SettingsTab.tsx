@@ -147,8 +147,8 @@ export function SettingsTab() {
         <CardHeader><CardTitle className="text-base">Meetings (MS Bookings)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
-            Booking rules (Tue & Thu, 08:30–15:30, 30-min slots) are enforced inside Microsoft Bookings on Shaun's calendar — not in this app.
-            Leads receive this booking link in every outreach reply; Teams join links arrive automatically in the inbox.
+            Cora books these slots on Shaun's calendar. Booking rules (Tue & Thu, 08:30–15:30, 30-min slots) are enforced inside Microsoft Bookings — not in this app.
+            The booking link is included in every outreach reply; Teams join links arrive automatically in the inbox.
           </div>
           <div><Label>Bookings link</Label>
             <div className="flex gap-2">
