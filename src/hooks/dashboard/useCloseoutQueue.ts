@@ -32,14 +32,21 @@ export function useCloseoutQueue(limit = 10) {
     enabled,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data: buckets, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("proposal_engagement_buckets")
         .select(
           "proposal_id, title, client_id, agent_id, bucket, days_since_sent, estimated_client_revenue, archived_at"
         )
         .eq("bucket", "dead")
         .is("archived_at", null)
-        .gte("days_since_sent", 30)
+        .gte("days_since_sent", 30);
+
+      // Agents only see their own proposals; admins see all.
+      if (userRole === "agent" && user?.id) {
+        query = query.eq("agent_id", user.id);
+      }
+
+      const { data: buckets, error } = await query
         .order("days_since_sent", { ascending: false })
         .limit(limit);
 
