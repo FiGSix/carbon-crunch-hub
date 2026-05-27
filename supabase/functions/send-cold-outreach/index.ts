@@ -27,16 +27,8 @@ const emailHeader = `
   </div>
 `;
 
-const emailFooter = (name: string = "Shaun Slabber", includeEmail: boolean = true) => `
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
-    <p style="margin: 0; line-height: 1.8;">
-      Best regards,<br>
-      <strong style="color: ${BRAND.black};">${name}</strong><br>
-      <span style="color: #666;">CrunchCarbon</span>
-      ${includeEmail ? `<br><a href="mailto:shaun@crunchcarbon.com" style="color: ${BRAND.black}; font-weight: 500;">shaun@crunchcarbon.com</a>` : ''}
-    </p>
-  </div>
-`;
+// Cora Black signature block — single source of truth in _shared/coraSignature.ts
+const emailFooter = (_name?: string, _includeEmail?: boolean) => coraSignatureHtml();
 
 const ctaButton = (text: string, link: string = REGISTRATION_LINK) => `
   <a href="${link}" style="background-color: ${BRAND.black}; color: ${BRAND.yellow}; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 15px;">${text}</a>
