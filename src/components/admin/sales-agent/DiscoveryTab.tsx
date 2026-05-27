@@ -51,7 +51,7 @@ export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void
         <CardContent className="space-y-3">
           <div><Label className="text-xs">Search query</Label><Input value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div><Label className="text-xs">Region / location</Label><Input value={location} onChange={(e) => setLocation(e.target.value)} /></div>
-          <div><Label className="text-xs">Max leads</Label><Input type="number" min={1} max={25} value={limit} onChange={(e) => setLimit(parseInt(e.target.value) || 10)} /></div>
+          <div><Label className="text-xs">Max leads</Label><Input type="number" min={1} max={100} value={limit} onChange={(e) => setLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 10)))} /></div>
           <Button className="w-full" onClick={() => discover.mutate()} disabled={discover.isPending}>
             {discover.isPending ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Discovering…</> : <>Start discovery</>}
           </Button>
