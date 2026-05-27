@@ -60,7 +60,7 @@ export function useAgentWarmCards(limit = 12) {
       const { data: buckets, error } = await (supabase as any)
         .from("proposal_engagement_buckets")
         .select(
-          "proposal_id, title, client_id, agent_id, bucket, days_since_sent, days_since_engagement, engagement_count, estimated_client_revenue, invitation_viewed_at, last_email_event_type, automation_paused"
+          "proposal_id, title, client_id, client_reference_id, agent_id, bucket, days_since_sent, days_since_engagement, engagement_count, estimated_client_revenue, invitation_viewed_at, last_email_event_type, automation_paused"
         )
         .in("bucket", ["hot", "warm"])
         .order("days_since_sent", { ascending: true })
@@ -71,13 +71,18 @@ export function useAgentWarmCards(limit = 12) {
         throw error;
       }
 
-      const rows = (buckets ?? []) as Omit<
+      const rows = (buckets ?? []) as (Omit<
         WarmCard,
         "client_name" | "client_first_name" | "client_email" | "client_phone"
-      >[];
+      > & { client_reference_id: string | null })[];
+
+      // Resolve a single effective client id per proposal — prefer
+      // client_reference_id when set (newer linkage), fall back to client_id.
+      const effectiveClientId = (r: { client_id: string | null; client_reference_id: string | null }) =>
+        r.client_reference_id ?? r.client_id ?? null;
 
       const clientIds = Array.from(
-        new Set(rows.map((r) => r.client_id).filter(Boolean) as string[])
+        new Set(rows.map(effectiveClientId).filter(Boolean) as string[])
       );
 
       let clientsById = new Map<
@@ -96,13 +101,15 @@ export function useAgentWarmCards(limit = 12) {
       }
 
       const enriched: WarmCard[] = rows.map((r) => {
-        const c = r.client_id ? clientsById.get(r.client_id) : undefined;
+        const cid = effectiveClientId(r);
+        const c = cid ? clientsById.get(cid) : undefined;
         const fullName =
           c && (c.first_name || c.last_name)
             ? [c.first_name, c.last_name].filter(Boolean).join(" ")
             : c?.company_name ?? null;
         return {
           ...r,
+          client_id: cid,
           client_name: fullName,
           client_first_name: c?.first_name ?? null,
           client_email: c?.email ?? null,
