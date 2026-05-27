@@ -160,12 +160,11 @@ serve(async (req) => {
         if (!fromEmail || !allowlist.includes(fromEmail)) {
           await supabase.from("inbound_messages").update({ intent: 'lead_ingest_rejected', confidence: 100, processed_at: new Date().toISOString() }).eq("id", inserted.id);
           try {
-            await supabase.functions.invoke("sales-agent-send", {
-              body: {
-                to: fromEmail, subject: `Re: ${subject}`,
-                html: `<p>Sorry, your address isn't authorized to send lead lists to Cora. Ask an admin to add <code>${fromEmail}</code> to the Sales Agent settings allowlist.</p>`,
-                text: `Sorry, your address isn't authorized to send lead lists to Cora.`,
-              },
+            await sendReply({
+              to: fromEmail, subject: `Re: ${subject}`,
+              html: `<p>Sorry, your address isn't authorized to send lead lists to Cora. Ask an admin to add <code>${fromEmail}</code> to the Sales Agent settings allowlist.</p>`,
+              text: `Sorry, your address isn't authorized to send lead lists to Cora.`,
+              lovableKey: LOVABLE_API_KEY, outlookKey: OUTLOOK_API_KEY,
             });
           } catch (e) { console.error("reject reply failed", e); }
           continue;
