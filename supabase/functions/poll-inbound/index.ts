@@ -56,11 +56,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } });
 
-  const { data: settings } = await supabase.from("sales_agent_settings").select("last_inbound_poll_at, mailbox_address").eq("id", true).maybeSingle();
+  const { data: settings } = await supabase.from("sales_agent_settings").select("last_inbound_poll_at, mailbox_address, lead_ingest_allowlist").eq("id", true).maybeSingle();
   const sinceRaw = settings?.last_inbound_poll_at ?? new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   // Microsoft Graph requires DateTimeOffset format: yyyy-MM-ddTHH:mm:ssZ (no fractional seconds, with Z)
   const since = new Date(sinceRaw).toISOString().replace(/\.\d{3}Z$/, "Z");
-  const stats: any = { fetched: 0, inserted: 0, meetings: 0, classified: 0 };
+  const stats: any = { fetched: 0, inserted: 0, meetings: 0, classified: 0, lead_ingests: 0, leads_imported: 0 };
+
+  const allowlist: string[] = (settings?.lead_ingest_allowlist ?? []).map((e: string) => e.toLowerCase());
 
   try {
     const url = `${OUTLOOK_GATEWAY}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime asc&$filter=receivedDateTime gt ${since}&$select=id,conversationId,from,subject,bodyPreview,body,receivedDateTime,internetMessageHeaders`;
