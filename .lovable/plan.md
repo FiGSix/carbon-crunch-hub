@@ -1,52 +1,41 @@
-## What you're seeing
+## Two bugs, one symptom
 
-The `\n\n` in Cora's email isn't a typo in the copy — it's literal **backslash-n-backslash-n** characters showing up because the email body was stored with **escaped** newlines (the 4-character string `\n\n`) instead of real newline characters.
+You're seeing the right proposal on the admin dashboard's "Proposals worth a personal nudge" (hot/warm) widget, but two separate things are wrong:
 
-The HTML renderer in `supabase/functions/sales-agent-send/index.ts` does:
+### Bug 1 — The proposal really is missing from the Proposals page
 
-```ts
-body.split("\n\n").map(p => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
-```
+The Proposals page fetches everything in a single `select(...)` against `proposals` with no explicit `.limit()` / `.range()`. Supabase silently caps that at **1000 rows** by default. Counted live:
 
-That works when the body contains **real** newlines. The active sequence definition (`outreach_sequences.steps`) is stored correctly with real newlines — that path renders fine.
+- Active (non-deleted) proposals in the DB: **1206**
+- Position of "Catholic Church of Queenstown" when ordered newest-first: **#1147**
 
-But the per-variant overrides stored in `outreach_template_variants.body_template` were saved with the escape sequences typed out literally (probably pasted as a JSON-ish string). I verified directly: `position(E'\n' in body_template) = 0` (no real newlines) while `position('\n' in body_template) = 19` (literal backslash-n at char 19). When the bandit picks one of those variants, the splitter doesn't match, so the whole paragraph becomes one block with visible `\n\n` text in it.
+So ~206 of the oldest active proposals are cut off before the client-side search box ever sees them — searching by title returns nothing because the row was never loaded. This affects every hot/warm proposal older than the 1000th newest, not just this one. The dashboard widget queries a different view (`proposal_engagement_buckets`) directly, so it still surfaces them, which is why the cards link to records the list can't find.
 
-There are 3 active variants in this state — the 3 step templates Cora sends from.
+### Bug 2 — "Unknown client" label on the warm card
 
-## Fix (two parts, both small)
+The proposal has `client_id = NULL` but `client_reference_id = 09b45048-…` → "Father Thulani". The warm-cards data source (`proposal_engagement_buckets` view + `useAgentWarmCards`) only looks up clients via `proposals.client_id`. When that's null, the card renders "Unknown client" even though there's a perfectly valid client on `client_reference_id`. This is the same dual-key inconsistency we hit earlier with the signing-name fix.
 
-**1. Defensive normalization in the sender (one-line code change)**
+Removing the duplicate proposal earlier wouldn't have fixed either of these — they're general issues.
 
-In `supabase/functions/sales-agent-send/index.ts`, normalize literal escape sequences to real newlines at the top of `bodyToHtml` before splitting, so any future variant entered with escaped characters still renders correctly:
+## Fix
 
-```ts
-function bodyToHtml(body: string, cta?, bookings?) {
-  const normalized = body.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n");
-  const paragraphs = normalized.split("\n\n").map(...);
-  ...
-}
-```
+**Part 1 — Proposals list (frontend only)**
 
-This also covers `\r\n` from Windows-style paste. Pure edge-function change; redeploy `sales-agent-send` after.
+In `src/hooks/proposals/utils/queryBuilders.ts`, append `.range(0, 4999)` to `buildBaseProposalsQuery`. That lifts the silent 1000 cap to 5000 (Postgres/PostgREST hard cap is higher than what we'll need for the foreseeable future). No server changes, no schema changes. Search will then find every active proposal, including this one. I'll add a TODO comment that proper pagination is the long-term answer once the list grows past a few thousand visible rows — but the current UI already client-side filters and renders, so a flat 5000 ceiling is safe today.
 
-**2. Clean the existing variant rows (data migration)**
+**Part 2 — Warm cards client name (view + hook)**
 
-Run a one-time `UPDATE` on `public.outreach_template_variants` replacing the literal `\n` (and `\r\n`) sequences with actual newlines for any row currently affected:
+Update the `proposal_engagement_buckets` view to also expose `client_reference_id`, then update `useAgentWarmCards` to:
+1. Select both `client_id` and `client_reference_id` from the view.
+2. Build the client-lookup `IN` list from `client_reference_id ?? client_id` per row.
+3. Resolve the card's name from whichever key matched.
 
-```sql
-UPDATE public.outreach_template_variants
-SET body_template = replace(replace(body_template, '\r\n', E'\n'), '\n', E'\n')
-WHERE body_template LIKE '%\n%' AND position(E'\n' in body_template) = 0;
-```
-
-After this, the bandit's chosen variant renders identically to the base sequence.
-
-**Optional hardening (not strictly needed now):** add the same normalization to whatever admin UI saves variant `body_template` (`VariantEditorDialog.tsx`) so future paste-ins are normalized before insert. I'll skip this unless you want it — it doesn't affect the current bug once the two steps above land.
+That makes "Unknown client" become "Father Thulani" (and fixes the same label for any other proposal that lives on `client_reference_id`).
 
 ## What gets shipped
 
-- `supabase/functions/sales-agent-send/index.ts`: 1-line normalization in `bodyToHtml`, then redeploy.
-- Data migration: 1 UPDATE on `outreach_template_variants`.
+- `src/hooks/proposals/utils/queryBuilders.ts`: add `.range(0, 4999)` + TODO comment.
+- DB migration: `CREATE OR REPLACE VIEW public.proposal_engagement_buckets` adding `client_reference_id` to the select.
+- `src/hooks/dashboard/useAgentWarmCards.ts`: select the new column, prefer `client_reference_id` when present, fall back to `client_id`.
 
-No schema changes, no new tables, no UI changes. Once approved I'll run both.
+No RLS changes, no table changes. Approve and I'll implement.

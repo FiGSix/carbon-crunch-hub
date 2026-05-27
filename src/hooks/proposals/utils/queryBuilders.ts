@@ -82,5 +82,12 @@ export function buildBaseProposalsQuery(
     query = query.order('created_at', { ascending: false });
   }
 
+  // Lift Supabase's default 1000-row cap so older active proposals are not
+  // silently dropped from the client-side search. The list is rendered with
+  // virtualization + client-side filtering, so 5000 is safe today.
+  // TODO: replace with proper server-side pagination once active proposals
+  // routinely exceed a few thousand rows.
+  query = query.range(0, 4999);
+
   return query;
 }
