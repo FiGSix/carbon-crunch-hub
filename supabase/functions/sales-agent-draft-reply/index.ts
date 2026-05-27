@@ -19,7 +19,7 @@ function wrapHtml(body: string, bookingsUrl?: string, ctaLabel?: string): string
   const btn = bookingsUrl
     ? `<p style="margin:20px 0;"><a href="${bookingsUrl}" style="background:#FFBF00;color:#1A1A1A;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">${ctaLabel ?? "Pick a 30-min slot"}</a></p>`
     : "";
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;">${paragraphs}${btn}</body></html>`;
+  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;">${paragraphs}${btn}${coraSignatureHtml()}</body></html>`;
 }
 
 serve(async (req) => {
