@@ -123,10 +123,10 @@ export function SettingsTab() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Send controls (Outlook mailbox)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Send controls (Cora Black · Outlook mailbox)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div><Label>Mailbox address</Label><Input value={form.mailbox_address ?? ""} onChange={(e) => setForm((f: any) => ({ ...f, mailbox_address: e.target.value }))} />
-            <p className="text-xs text-muted-foreground mt-1">Outbound and inbound flow through this Microsoft Outlook account.</p>
+            <p className="text-xs text-muted-foreground mt-1">The Sales Agent persona (Cora Black, Partner Co-ordinator) sends from this address. The actual From address is set by whichever mailbox is connected via the Microsoft Outlook connector.</p>
           </div>
           <div><Label>Daily send cap</Label><Input type="number" min={1} max={1000} value={form.daily_send_cap ?? 50} onChange={(e) => setForm((f: any) => ({ ...f, daily_send_cap: parseInt(e.target.value) || 0 }))} /></div>
           <div className="grid grid-cols-2 gap-3">
