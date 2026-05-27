@@ -3513,6 +3513,7 @@ export type Database = {
           default_sequence_id: string | null
           id: boolean
           last_inbound_poll_at: string | null
+          lead_ingest_allowlist: string[]
           mailbox_address: string | null
           meeting_timezone: string | null
           notify_daily_digest: boolean
@@ -3544,6 +3545,7 @@ export type Database = {
           default_sequence_id?: string | null
           id?: boolean
           last_inbound_poll_at?: string | null
+          lead_ingest_allowlist?: string[]
           mailbox_address?: string | null
           meeting_timezone?: string | null
           notify_daily_digest?: boolean
@@ -3575,6 +3577,7 @@ export type Database = {
           default_sequence_id?: string | null
           id?: boolean
           last_inbound_poll_at?: string | null
+          lead_ingest_allowlist?: string[]
           mailbox_address?: string | null
           meeting_timezone?: string | null
           notify_daily_digest?: boolean
