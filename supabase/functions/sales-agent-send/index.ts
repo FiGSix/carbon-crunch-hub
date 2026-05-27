@@ -36,7 +36,10 @@ function renderTemplate(tpl: string, lead: any, settings: any): string {
 }
 
 function bodyToHtml(body: string, cta?: { label?: string; url?: string }, bookings?: { url?: string; label?: string }): string {
-  const paragraphs = body.split("\n\n").map((p) => `<p style="margin:0 0 14px 0;line-height:1.6;color:#1a1a1a;">${p.replace(/\n/g, "<br/>")}</p>`).join("");
+  // Normalize literal escape sequences (e.g. "\\n", "\\r\\n") to real newlines so
+  // variant bodies saved with escaped characters still render as paragraphs.
+  const normalized = body.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n");
+  const paragraphs = normalized.split("\n\n").map((p) => `<p style="margin:0 0 14px 0;line-height:1.6;color:#1a1a1a;">${p.replace(/\n/g, "<br/>")}</p>`).join("");
   const primary = cta?.url && cta?.label
     ? `<p style="margin:24px 0;"><a href="${cta.url}" style="background:#1A1A1A;color:#FFBF00;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">${cta.label}</a></p>`
     : "";
