@@ -147,6 +147,30 @@ export function SettingsTab() {
       </Card>
 
       <Card className="md:col-span-2">
+        <CardHeader><CardTitle className="text-base">Email Cora a lead list</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+            <p>Email <b>{form.mailbox_address || "Cora's mailbox"}</b> with subject starting <code>Leads:</code> and either:</p>
+            <ul className="list-disc pl-5">
+              <li>a CSV/Excel attachment with columns <code>company_name, contact_name, email, phone, website, location, notes</code>, or</li>
+              <li>one EPC per line in the body: <code>Company, Contact, email, phone</code>.</li>
+            </ul>
+            <p>Cora polls the inbox every 5 minutes, dedupes, ingests new leads, and emails you back a summary. Max 500 rows per email.</p>
+          </div>
+          <div>
+            <Label>Authorized sender emails (comma-separated)</Label>
+            <Input
+              value={Array.isArray(form.lead_ingest_allowlist) ? form.lead_ingest_allowlist.join(", ") : (form.lead_ingest_allowlist ?? "")}
+              onChange={(e) => setForm((f: any) => ({ ...f, lead_ingest_allowlist: e.target.value }))}
+              placeholder="shaun@nuvoconsulting.com, ops@example.com"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Only emails from these addresses can ingest leads. Anyone else gets an auto-reply rejection.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+
+      <Card className="md:col-span-2">
         <CardHeader><CardTitle className="text-base">Meetings (MS Bookings)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
