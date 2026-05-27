@@ -1,36 +1,20 @@
-# Permanently delete all proposals for Laurent Pieton
+# Why Shaun is seeing proposals that aren't his
 
-## Scope confirmed (from DB)
+Shaun is an **agent** (not admin). The "Proposals worth a personal nudge" widget reads from the `proposal_engagement_buckets` view, which inherits RLS from `proposals`. The `proposals_select_*` policies intentionally allow a user to see **any proposal owned by another agent in the same company** (`company_members` join). Shaun shares a company with other agents, so their hot/warm proposals leak into his dashboard.
 
-Client: **Laurent Pieton** (Metrowatt, `laurent@metrowatt.co.za`)
-Client ID: `9fbce96e-e5dc-44e8-a9c1-30feaa8a066d`
+The "Unknown client" label is a side-effect: the same RLS leak does **not** exist on `clients`, so the follow-up client lookup returns nothing and the card falls back to "Unknown client". That's the visible tell that these proposals don't belong to him.
 
-Proposals owned by this client:
+# Fix
 
-| Total | Drafts | Approved | Delivered | Signed |
-|---|---|---|---|---|
-| **517** | 517 | 0 | 0 | 0 |
+Keep the company-wide RLS as-is (other parts of the app rely on it for collaboration), and tighten the **hook** so the nudge widget is strictly personal.
 
-All 517 are status `draft`, none signed, none delivered. Safe to hard-delete with no cession-agreement / audit-trail concerns.
+### `src/hooks/dashboard/useAgentWarmCards.ts`
+- When `userRole === "agent"`, add `.eq("agent_id", user.id)` to the `proposal_engagement_buckets` query.
+- When `userRole === "admin"`, keep current behaviour (admins see all).
+- No other changes; client enrichment + sorting stay the same.
 
-## What I'll do
+### Verification
+- Log in as Shaun → widget shows only proposals where `agent_id = shaun.id` (or empty state if he has none).
+- Log in as an admin → widget still shows all hot/warm proposals across the org.
 
-Run a single hard delete via the DB write tool:
-
-```sql
-DELETE FROM public.proposals
-WHERE client_reference_id = '9fbce96e-e5dc-44e8-a9c1-30feaa8a066d'
-   OR client_id            = '9fbce96e-e5dc-44e8-a9c1-30feaa8a066d';
-```
-
-Existing FK cascades on the `proposals` table will clean up dependent rows automatically (proposal versions, agreements, engagement, notifications, etc.). No code changes needed.
-
-The **client record** for Laurent Pieton (and his Metrowatt company link) is **NOT** touched — only his proposals.
-
-## Verification after run
-
-I'll re-query and confirm `0` rows remain for that client.
-
-## Confirmation needed
-
-This is irreversible. Please confirm you want me to delete all **517** draft proposals for Laurent Pieton. Reply "yes, delete" and I'll proceed.
+No DB / RLS / migration changes. Single-file edit.
