@@ -67,7 +67,7 @@ export function DiscoveryPresetsCard() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">Daily cron iterates each active preset, then auto-promotes candidates above your score threshold.</p>
+        <p className="text-xs text-muted-foreground">Daily cron iterates each active preset (up to 100 leads each), then auto-promotes candidates above your score threshold. Heads up: Firecrawl's free tier is ~500 search credits/month — 4 presets × 100/day will exhaust it in a few days.</p>
         <div className="space-y-2">
           {(presets ?? []).map((p) => (
             <div key={p.id} className="flex items-center gap-2 border rounded-md p-2">
