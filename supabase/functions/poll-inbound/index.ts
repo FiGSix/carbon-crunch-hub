@@ -154,6 +154,61 @@ serve(async (req) => {
         continue;
       }
 
+      // Lead ingest: subject "Leads: ..." from an allowlisted sender
+      if (LEAD_SUBJECT_PREFIX.test(subject)) {
+        stats.lead_ingests++;
+        if (!fromEmail || !allowlist.includes(fromEmail)) {
+          await supabase.from("inbound_messages").update({ intent: 'lead_ingest_rejected', confidence: 100, processed_at: new Date().toISOString() }).eq("id", inserted.id);
+          try {
+            await supabase.functions.invoke("sales-agent-send", {
+              body: {
+                to: fromEmail, subject: `Re: ${subject}`,
+                html: `<p>Sorry, your address isn't authorized to send lead lists to Cora. Ask an admin to add <code>${fromEmail}</code> to the Sales Agent settings allowlist.</p>`,
+                text: `Sorry, your address isn't authorized to send lead lists to Cora.`,
+              },
+            });
+          } catch (e) { console.error("reject reply failed", e); }
+          continue;
+        }
+
+        let rows: ParsedLeadRow[] = [];
+        let sourceLabel: "attachment" | "body" | "none" = "none";
+        if (m.hasAttachments) {
+          const atts = await fetchAttachments(m.id, LOVABLE_API_KEY, OUTLOOK_API_KEY);
+          for (const a of atts) {
+            const parsed = parseAttachment(a.name, a.contentBytes);
+            if (parsed.length) { rows = parsed; sourceLabel = "attachment"; break; }
+          }
+        }
+        if (!rows.length) {
+          const parsed = parseBody(text);
+          if (parsed.length) { rows = parsed; sourceLabel = "body"; }
+        }
+
+        // Resolve sender's user_id (best-effort) via profiles.email
+        let createdBy: string | null = null;
+        try {
+          const { data: prof } = await supabase.from("profiles").select("id").eq("email", fromEmail).maybeSingle();
+          createdBy = prof?.id ?? null;
+        } catch { /* profiles may not have email column */ }
+
+        const res = await ingestLeads(supabase, rows, { senderEmail: fromEmail, createdBy });
+        stats.leads_imported += res.imported;
+
+        const summary = buildSummary({ ...res, source: sourceLabel });
+        try {
+          await supabase.functions.invoke("sales-agent-send", {
+            body: { to: fromEmail, subject: summary.subject, html: summary.html, text: summary.text },
+          });
+        } catch (e) { console.error("summary reply failed", e); }
+
+        await supabase.from("inbound_messages").update({
+          intent: 'lead_ingest', confidence: 100, processed_at: new Date().toISOString(),
+          parsed_payload: { imported: res.imported, duplicates: res.duplicates, errors: res.errors, source: sourceLabel },
+        }).eq("id", inserted.id);
+        continue;
+      }
+
       // Trigger AI classification for normal replies tied to an enrollment
       if (enrollmentId) {
         try {
