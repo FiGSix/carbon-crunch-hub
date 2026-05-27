@@ -204,7 +204,6 @@ serve(async (req) => {
 
         await supabase.from("inbound_messages").update({
           intent: 'lead_ingest', confidence: 100, processed_at: new Date().toISOString(),
-          parsed_payload: { imported: res.imported, duplicates: res.duplicates, errors: res.errors, source: sourceLabel },
         }).eq("id", inserted.id);
         continue;
       }
