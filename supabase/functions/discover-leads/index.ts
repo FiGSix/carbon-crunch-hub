@@ -281,7 +281,7 @@ serve(async (req) => {
       .insert({
         source: 'discover-leads', query, region: location, status: 'completed',
         started_at: new Date().toISOString(), completed_at: new Date().toISOString(),
-        created_by: user.id, leads_found: extractedLeads.length,
+        created_by: userId, leads_found: extractedLeads.length,
       })
       .select('id').single();
     const runId: string | null = run?.id ?? null;
