@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { DiscoveryPresetsCard } from "./DiscoveryPresetsCard";
 
 export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void } = {}) {
   const { toast } = useToast();
