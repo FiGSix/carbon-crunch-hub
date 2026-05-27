@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarmCards";
+import { toWaMeDigits } from "@/utils/phone/toWaMeDigits";
 
 /**
  * Agent warm cards — flagship of the v1 Agent Engine.
@@ -83,9 +84,8 @@ function WarmCardItem({ card }: { card: WarmCard }) {
     `Hi ${firstName}, just checking in on your Crunch Carbon proposal — happy to walk you through anything before you sign.`
   );
   const subject = encodeURIComponent(`Quick check-in on your proposal: ${card.title}`);
-  const whatsappHref = card.client_phone
-    ? `https://wa.me/${card.client_phone.replace(/\D/g, "")}?text=${msg}`
-    : null;
+  const waDigits = toWaMeDigits(card.client_phone);
+  const whatsappHref = waDigits ? `https://wa.me/${waDigits}?text=${msg}` : null;
   const telHref = card.client_phone ? `tel:${card.client_phone}` : null;
   const mailHref = card.client_email
     ? `mailto:${card.client_email}?subject=${subject}`

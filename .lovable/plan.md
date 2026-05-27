@@ -1,41 +1,48 @@
-## Two bugs, one symptom
+## Problem
 
-You're seeing the right proposal on the admin dashboard's "Proposals worth a personal nudge" (hot/warm) widget, but two separate things are wrong:
+The WhatsApp "Click to chat" links from the dashboard warm cards open WhatsApp but show:
+> "This link couldn't be opened. Check the link and try again."
 
-### Bug 1 — The proposal really is missing from the Proposals page
+## Root cause
 
-The Proposals page fetches everything in a single `select(...)` against `proposals` with no explicit `.limit()` / `.range()`. Supabase silently caps that at **1000 rows** by default. Counted live:
+In `src/components/dashboard/sections/AgentWarmCards.tsx` the link is built as:
 
-- Active (non-deleted) proposals in the DB: **1206**
-- Position of "Catholic Church of Queenstown" when ordered newest-first: **#1147**
+```ts
+`https://wa.me/${card.client_phone.replace(/\D/g, "")}?text=${msg}`
+```
 
-So ~206 of the oldest active proposals are cut off before the client-side search box ever sees them — searching by title returns nothing because the row was never loaded. This affects every hot/warm proposal older than the 1000th newest, not just this one. The dashboard widget queries a different view (`proposal_engagement_buckets`) directly, so it still surfaces them, which is why the cards link to records the list can't find.
+`wa.me` requires a phone number in full international format (digits only, including the country code, no `+`, no leading `0`). South African numbers stored as `082 123 4567` or `0821234567` strip down to `0821234567`, which `wa.me` rejects — producing the exact error the user saw. Numbers stored as `+27 82 123 4567` work because they strip to `27821234567`.
 
-### Bug 2 — "Unknown client" label on the warm card
-
-The proposal has `client_id = NULL` but `client_reference_id = 09b45048-…` → "Father Thulani". The warm-cards data source (`proposal_engagement_buckets` view + `useAgentWarmCards`) only looks up clients via `proposals.client_id`. When that's null, the card renders "Unknown client" even though there's a perfectly valid client on `client_reference_id`. This is the same dual-key inconsistency we hit earlier with the signing-name fix.
-
-Removing the duplicate proposal earlier wouldn't have fixed either of these — they're general issues.
+So the bug is: we don't normalise the phone to E.164 digits before handing it to `wa.me`, and we don't guard against numbers that obviously can't be dialled internationally.
 
 ## Fix
 
-**Part 1 — Proposals list (frontend only)**
+Frontend-only, no business logic change.
 
-In `src/hooks/proposals/utils/queryBuilders.ts`, append `.range(0, 4999)` to `buildBaseProposalsQuery`. That lifts the silent 1000 cap to 5000 (Postgres/PostgREST hard cap is higher than what we'll need for the foreseeable future). No server changes, no schema changes. Search will then find every active proposal, including this one. I'll add a TODO comment that proper pagination is the long-term answer once the list grows past a few thousand visible rows — but the current UI already client-side filters and renders, so a flat 5000 ceiling is safe today.
+1. Add a small helper `src/utils/phone/toWaMeDigits.ts`:
+   - Strip everything except digits and a leading `+`.
+   - If the input starts with `+`, return the digits after `+`.
+   - If it starts with `00`, drop the `00` and return the rest.
+   - If it starts with a single `0` and we have a default country, drop the `0` and prepend the country code (default `27` for South Africa, since this is a ZA-based product — easy to swap later via a constant).
+   - If it already looks like an international number (10–15 digits, doesn't start with `0`), return as-is.
+   - If we can't confidently produce a valid international number, return `null`.
 
-**Part 2 — Warm cards client name (view + hook)**
+2. In `AgentWarmCards.tsx`:
+   - Use the helper to compute `waDigits`.
+   - Only render the WhatsApp button when `waDigits` is non-null.
+   - Build the link as `https://wa.me/${waDigits}?text=${msg}`.
+   - Leave `tel:` and `mailto:` untouched (those tolerate local formats).
 
-Update the `proposal_engagement_buckets` view to also expose `client_reference_id`, then update `useAgentWarmCards` to:
-1. Select both `client_id` and `client_reference_id` from the view.
-2. Build the client-lookup `IN` list from `client_reference_id ?? client_id` per row.
-3. Resolve the card's name from whichever key matched.
+3. No DB changes, no other call sites touched in this pass. (A follow-up could normalise stored phone numbers, but that's out of scope here.)
 
-That makes "Unknown client" become "Father Thulani" (and fixes the same label for any other proposal that lives on `client_reference_id`).
+## Technical details
 
-## What gets shipped
+- New file: `src/utils/phone/toWaMeDigits.ts` (pure function, unit-testable).
+- Edited file: `src/components/dashboard/sections/AgentWarmCards.tsx` — replace the inline `.replace(/\D/g, "")` with the helper and gate the button render on a valid result.
+- Default country code constant lives in the helper file for now; can be lifted to config later.
 
-- `src/hooks/proposals/utils/queryBuilders.ts`: add `.range(0, 4999)` + TODO comment.
-- DB migration: `CREATE OR REPLACE VIEW public.proposal_engagement_buckets` adding `client_reference_id` to the select.
-- `src/hooks/dashboard/useAgentWarmCards.ts`: select the new column, prefer `client_reference_id` when present, fall back to `client_id`.
+## Out of scope
 
-No RLS changes, no table changes. Approve and I'll implement.
+- Backfilling/normalising existing `clients.phone` values.
+- Changing how phone numbers are captured on input forms.
+- Any change to `tel:` / `mailto:` behaviour or to the message copy.
