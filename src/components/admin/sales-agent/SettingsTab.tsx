@@ -58,6 +58,9 @@ export function SettingsTab() {
         notify_stuck_hours: form.notify_stuck_hours,
         notify_min_interval_hours: form.notify_min_interval_hours,
         notify_daily_digest: form.notify_daily_digest,
+        lead_ingest_allowlist: typeof form.lead_ingest_allowlist === "string"
+          ? form.lead_ingest_allowlist.split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+          : (form.lead_ingest_allowlist ?? []).map((s: string) => s.toLowerCase()),
         blocked_domains: typeof form.blocked_domains === "string" ? form.blocked_domains.split(",").map((s: string) => s.trim()).filter(Boolean) : form.blocked_domains,
         target_regions: typeof form.target_regions === "string" ? form.target_regions.split(",").map((s: string) => s.trim()).filter(Boolean) : form.target_regions,
       };
@@ -142,6 +145,30 @@ export function SettingsTab() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="md:col-span-2">
+        <CardHeader><CardTitle className="text-base">Email Cora a lead list</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+            <p>Email <b>{form.mailbox_address || "Cora's mailbox"}</b> with subject starting <code>Leads:</code> and either:</p>
+            <ul className="list-disc pl-5">
+              <li>a CSV/Excel attachment with columns <code>company_name, contact_name, email, phone, website, location, notes</code>, or</li>
+              <li>one EPC per line in the body: <code>Company, Contact, email, phone</code>.</li>
+            </ul>
+            <p>Cora polls the inbox every 5 minutes, dedupes, ingests new leads, and emails you back a summary. Max 500 rows per email.</p>
+          </div>
+          <div>
+            <Label>Authorized sender emails (comma-separated)</Label>
+            <Input
+              value={Array.isArray(form.lead_ingest_allowlist) ? form.lead_ingest_allowlist.join(", ") : (form.lead_ingest_allowlist ?? "")}
+              onChange={(e) => setForm((f: any) => ({ ...f, lead_ingest_allowlist: e.target.value }))}
+              placeholder="shaun@nuvoconsulting.com, ops@example.com"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Only emails from these addresses can ingest leads. Anyone else gets an auto-reply rejection.</p>
+          </div>
+        </CardContent>
+      </Card>
+
 
       <Card className="md:col-span-2">
         <CardHeader><CardTitle className="text-base">Meetings (MS Bookings)</CardTitle></CardHeader>

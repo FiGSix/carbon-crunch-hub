@@ -3,6 +3,7 @@
 // triggers classification + meeting parsing.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { LEAD_SUBJECT_PREFIX, fetchAttachments, parseAttachment, parseBody, ingestLeads, buildSummary, sendReply, type ParsedLeadRow } from "../_shared/lead-ingest.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,14 +56,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } });
 
-  const { data: settings } = await supabase.from("sales_agent_settings").select("last_inbound_poll_at, mailbox_address").eq("id", true).maybeSingle();
+  const { data: settings } = await supabase.from("sales_agent_settings").select("last_inbound_poll_at, mailbox_address, lead_ingest_allowlist").eq("id", true).maybeSingle();
   const sinceRaw = settings?.last_inbound_poll_at ?? new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   // Microsoft Graph requires DateTimeOffset format: yyyy-MM-ddTHH:mm:ssZ (no fractional seconds, with Z)
   const since = new Date(sinceRaw).toISOString().replace(/\.\d{3}Z$/, "Z");
-  const stats: any = { fetched: 0, inserted: 0, meetings: 0, classified: 0 };
+  const stats: any = { fetched: 0, inserted: 0, meetings: 0, classified: 0, lead_ingests: 0, leads_imported: 0 };
+
+  const allowlist: string[] = (settings?.lead_ingest_allowlist ?? []).map((e: string) => e.toLowerCase());
 
   try {
-    const url = `${OUTLOOK_GATEWAY}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime asc&$filter=receivedDateTime gt ${since}&$select=id,conversationId,from,subject,bodyPreview,body,receivedDateTime,internetMessageHeaders`;
+    const url = `${OUTLOOK_GATEWAY}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime asc&$filter=receivedDateTime gt ${since}&$select=id,conversationId,from,subject,bodyPreview,body,receivedDateTime,internetMessageHeaders,hasAttachments`;
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -148,6 +151,57 @@ serve(async (req) => {
           stats.meetings++;
         }
         await supabase.from("inbound_messages").update({ intent: 'meeting_booked', confidence: 95, processed_at: new Date().toISOString() }).eq("id", inserted.id);
+        continue;
+      }
+
+      // Lead ingest: subject "Leads: ..." from an allowlisted sender
+      if (LEAD_SUBJECT_PREFIX.test(subject)) {
+        stats.lead_ingests++;
+        if (!fromEmail || !allowlist.includes(fromEmail)) {
+          await supabase.from("inbound_messages").update({ intent: 'lead_ingest_rejected', confidence: 100, processed_at: new Date().toISOString() }).eq("id", inserted.id);
+          try {
+            await sendReply({
+              to: fromEmail, subject: `Re: ${subject}`,
+              html: `<p>Sorry, your address isn't authorized to send lead lists to Cora. Ask an admin to add <code>${fromEmail}</code> to the Sales Agent settings allowlist.</p>`,
+              text: `Sorry, your address isn't authorized to send lead lists to Cora.`,
+              lovableKey: LOVABLE_API_KEY, outlookKey: OUTLOOK_API_KEY,
+            });
+          } catch (e) { console.error("reject reply failed", e); }
+          continue;
+        }
+
+        let rows: ParsedLeadRow[] = [];
+        let sourceLabel: "attachment" | "body" | "none" = "none";
+        if (m.hasAttachments) {
+          const atts = await fetchAttachments(m.id, LOVABLE_API_KEY, OUTLOOK_API_KEY);
+          for (const a of atts) {
+            const parsed = parseAttachment(a.name, a.contentBytes);
+            if (parsed.length) { rows = parsed; sourceLabel = "attachment"; break; }
+          }
+        }
+        if (!rows.length) {
+          const parsed = parseBody(text);
+          if (parsed.length) { rows = parsed; sourceLabel = "body"; }
+        }
+
+        // Resolve sender's user_id (best-effort) via profiles.email
+        let createdBy: string | null = null;
+        try {
+          const { data: prof } = await supabase.from("profiles").select("id").eq("email", fromEmail).maybeSingle();
+          createdBy = prof?.id ?? null;
+        } catch { /* profiles may not have email column */ }
+
+        const res = await ingestLeads(supabase, rows, { senderEmail: fromEmail, createdBy });
+        stats.leads_imported += res.imported;
+
+        const summary = buildSummary({ ...res, source: sourceLabel });
+        try {
+          await sendReply({ to: fromEmail, subject: summary.subject, html: summary.html, text: summary.text, lovableKey: LOVABLE_API_KEY, outlookKey: OUTLOOK_API_KEY });
+        } catch (e) { console.error("summary reply failed", e); }
+
+        await supabase.from("inbound_messages").update({
+          intent: 'lead_ingest', confidence: 100, processed_at: new Date().toISOString(),
+        }).eq("id", inserted.id);
         continue;
       }
 
