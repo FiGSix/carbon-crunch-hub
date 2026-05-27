@@ -42,10 +42,10 @@ export function InboxTab() {
   });
 
   const [draftBody, setDraftBody] = useState("");
-  // sync local state when draft changes
-  if (draft && draft.id && draftBody === "" && draft.status === "draft") {
-    setDraftBody(draft.draft_body ?? "");
-  }
+  // Reset and sync local draft body whenever the selected message (and thus its draft) changes.
+  useEffect(() => {
+    setDraftBody(draft?.status === "draft" ? (draft.draft_body ?? "") : "");
+  }, [draft?.id, draft?.status, draft?.draft_body]);
 
   const poll = useMutation({
     mutationFn: async () => { await supabase.functions.invoke("poll-inbound", { body: {} }); },
