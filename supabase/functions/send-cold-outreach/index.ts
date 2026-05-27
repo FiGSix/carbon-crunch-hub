@@ -156,12 +156,7 @@ const emailTemplates = {
     Want to learn more first? ${secondaryCta('Let\'s chat', BOOKING_LINK)}
   </p>
   
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
-    <p style="margin: 0; line-height: 1.8;">
-      <strong style="color: ${BRAND.black};">Shaun Slabber</strong><br>
-      <span style="color: #666;">CrunchCarbon</span>
-    </p>
-  </div>
+  ${emailFooter()}
 </body>
 </html>
 `,
