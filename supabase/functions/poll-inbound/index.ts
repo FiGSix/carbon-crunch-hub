@@ -3,7 +3,7 @@
 // triggers classification + meeting parsing.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { LEAD_SUBJECT_PREFIX, fetchAttachments, parseAttachment, parseBody, ingestLeads, buildSummary, type ParsedLeadRow } from "../_shared/lead-ingest.ts";
+import { LEAD_SUBJECT_PREFIX, fetchAttachments, parseAttachment, parseBody, ingestLeads, buildSummary, sendReply, type ParsedLeadRow } from "../_shared/lead-ingest.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
