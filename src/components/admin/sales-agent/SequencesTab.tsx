@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Pencil, Plus, Pause, Play, Archive } from "lucide-react";
 import { VariantEditorDialog } from "./VariantEditorDialog";
 import { toast } from "sonner";
@@ -11,6 +15,8 @@ import { toast } from "sonner";
 export function SequencesTab() {
   const qc = useQueryClient();
   const [editor, setEditor] = useState<{ open: boolean; sequenceId: string; stepIndex: number; variant?: any }>({ open: false, sequenceId: "", stepIndex: 0 });
+  const [newSeqOpen, setNewSeqOpen] = useState(false);
+  const [newSeq, setNewSeq] = useState({ name: "", description: "", dayOffsets: "0, 3, 7" });
 
   const { data: sequences } = useQuery({
     queryKey: ["sales-agent-sequences"],
@@ -39,8 +45,59 @@ export function SequencesTab() {
     },
   });
 
+  const createSequence = useMutation({
+    mutationFn: async () => {
+      const name = newSeq.name.trim();
+      if (!name) throw new Error("Name is required");
+      const steps = newSeq.dayOffsets
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !isNaN(n) && n >= 0)
+        .map((day_offset) => ({ day_offset }));
+      const { error } = await (supabase as any).from("outreach_sequences").insert({
+        name,
+        description: newSeq.description.trim() || null,
+        is_active: false,
+        steps: steps.length ? steps : [{ day_offset: 0 }],
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Sequence created");
+      setNewSeqOpen(false);
+      setNewSeq({ name: "", description: "", dayOffsets: "0, 3, 7" });
+      qc.invalidateQueries({ queryKey: ["sales-agent-sequences"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to create sequence"),
+  });
+
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Dialog open={newSeqOpen} onOpenChange={setNewSeqOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm"><Plus className="h-3.5 w-3.5 mr-1" /> New sequence</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>New outreach sequence</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Name</Label><Input value={newSeq.name} onChange={(e) => setNewSeq((s) => ({ ...s, name: e.target.value }))} placeholder="e.g. EPC partner intro · v2" /></div>
+              <div><Label>Description</Label><Textarea rows={2} value={newSeq.description} onChange={(e) => setNewSeq((s) => ({ ...s, description: e.target.value }))} /></div>
+              <div>
+                <Label>Step day offsets (comma-separated)</Label>
+                <Input value={newSeq.dayOffsets} onChange={(e) => setNewSeq((s) => ({ ...s, dayOffsets: e.target.value }))} placeholder="0, 3, 7" />
+                <p className="text-xs text-muted-foreground mt-1">Days after enrollment for each step. Add variants per step after creating.</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setNewSeqOpen(false)}>Cancel</Button>
+              <Button onClick={() => createSequence.mutate()} disabled={createSequence.isPending || !newSeq.name.trim()}>
+                {createSequence.isPending ? "Creating…" : "Create sequence"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
       {(sequences ?? []).map((s) => {
         const steps = Array.isArray(s.steps) ? s.steps : [];
         return (

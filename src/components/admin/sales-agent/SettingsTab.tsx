@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { BlocklistManager } from "./BlocklistManager";
 import { ExternalLink, RefreshCw } from "lucide-react";
-import { DiscoveryPresetsCard } from "./DiscoveryPresetsCard";
+
 
 export function SettingsTab() {
   const { toast } = useToast();
@@ -199,7 +199,7 @@ export function SettingsTab() {
         <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Saving…" : "Save settings"}</Button>
       </div>
 
-      <DiscoveryPresetsCard />
+
 
       <div className="md:col-span-2">
         <BlocklistManager />
