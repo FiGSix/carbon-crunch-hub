@@ -65,7 +65,7 @@ serve(async (req) => {
   const allowlist: string[] = (settings?.lead_ingest_allowlist ?? []).map((e: string) => e.toLowerCase());
 
   try {
-    const url = `${OUTLOOK_GATEWAY}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime asc&$filter=receivedDateTime gt ${since}&$select=id,conversationId,from,subject,bodyPreview,body,receivedDateTime,internetMessageHeaders`;
+    const url = `${OUTLOOK_GATEWAY}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime asc&$filter=receivedDateTime gt ${since}&$select=id,conversationId,from,subject,bodyPreview,body,receivedDateTime,internetMessageHeaders,hasAttachments`;
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
