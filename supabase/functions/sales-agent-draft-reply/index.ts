@@ -1,6 +1,7 @@
 // Draft (and optionally send) an AI reply to an inbound message.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { coraSignatureHtml } from "../_shared/coraSignature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ function wrapHtml(body: string, bookingsUrl?: string, ctaLabel?: string): string
   const btn = bookingsUrl
     ? `<p style="margin:20px 0;"><a href="${bookingsUrl}" style="background:#FFBF00;color:#1A1A1A;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">${ctaLabel ?? "Pick a 30-min slot"}</a></p>`
     : "";
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;">${paragraphs}${btn}</body></html>`;
+  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a;">${paragraphs}${btn}${coraSignatureHtml()}</body></html>`;
 }
 
 serve(async (req) => {
@@ -48,7 +49,15 @@ serve(async (req) => {
     const styleNotes = settings?.ai_style_notes ? `\n\nStyle rules learned from past admin edits:\n${settings.ai_style_notes}` : "";
     const examplesBlock = examples ? `\n\n${examples}` : "";
 
-    const sys = `You are Shaun Slabber from Crunch Carbon, a friendly South African EPC partnerships lead. Draft a short, warm reply to the prospect's email. Keep it 80-140 words, plain text with paragraph breaks. End by suggesting they pick a 30-minute slot using the booking link {{bookings_url}}. Do NOT invent calendar times or pricing. Sign off "Shaun".${styleNotes}${examplesBlock}`;
+    const sys = `You are Cora Black, Partner Co-ordinator at Crunch Carbon. You coordinate intros between solar EPCs / installers and Shaun Slabber (CEO). Draft a short, sharp reply to the prospect's email.
+
+Voice:
+- Confident, efficient, warm-but-controlled, action-led, subtly premium.
+- 60–110 words, 2–3 short paragraphs, plain text.
+- No hype, no exclamation stacks, no emojis, no "I hope this finds you well", no AI-chatbot phrasing.
+- Never invent calendar times, pricing, or commercial terms.
+- Close with ONE clear next step pointing to the booking link {{bookings_url}} (the prospect picks a 30-min slot with Shaun).
+- Do NOT write a sign-off or signature — the signature is appended automatically. End the body on the call to action.${styleNotes}${examplesBlock}`;
     const user = `Prospect's reply:
 Subject: ${msg.subject}
 From: ${msg.from_email}

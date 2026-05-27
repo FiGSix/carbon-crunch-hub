@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { coraSignatureHtml, CORA_FROM } from "../_shared/coraSignature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,16 +27,8 @@ const emailHeader = `
   </div>
 `;
 
-const emailFooter = (name: string = "Shaun Slabber", includeEmail: boolean = true) => `
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
-    <p style="margin: 0; line-height: 1.8;">
-      Best regards,<br>
-      <strong style="color: ${BRAND.black};">${name}</strong><br>
-      <span style="color: #666;">CrunchCarbon</span>
-      ${includeEmail ? `<br><a href="mailto:shaun@crunchcarbon.com" style="color: ${BRAND.black}; font-weight: 500;">shaun@crunchcarbon.com</a>` : ''}
-    </p>
-  </div>
-`;
+// Cora Black signature block — single source of truth in _shared/coraSignature.ts
+const emailFooter = (_name?: string, _includeEmail?: boolean) => coraSignatureHtml();
 
 const ctaButton = (text: string, link: string = REGISTRATION_LINK) => `
   <a href="${link}" style="background-color: ${BRAND.black}; color: ${BRAND.yellow}; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 15px;">${text}</a>
@@ -132,7 +125,7 @@ const emailTemplates = {
     Have questions? ${secondaryCta('Schedule a quick call', BOOKING_LINK)}
   </p>
   
-  ${emailFooter("Shaun Slabber", false)}
+  ${emailFooter()}
 </body>
 </html>
 `,
@@ -163,12 +156,7 @@ const emailTemplates = {
     Want to learn more first? ${secondaryCta('Let\'s chat', BOOKING_LINK)}
   </p>
   
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #eee;">
-    <p style="margin: 0; line-height: 1.8;">
-      <strong style="color: ${BRAND.black};">Shaun Slabber</strong><br>
-      <span style="color: #666;">CrunchCarbon</span>
-    </p>
-  </div>
+  ${emailFooter()}
 </body>
 </html>
 `,
@@ -347,7 +335,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Send email via Resend
         const emailResponse = await resend.emails.send({
-          from: "Shaun Slabber <shaun@crunchcarbon.com>",
+          from: CORA_FROM,
           to: [lead.email],
           subject: subject,
           html: htmlBody,

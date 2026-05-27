@@ -3,6 +3,7 @@
 // the MS Bookings link, and sends via the Outlook connector gateway.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { coraSignatureHtml } from "../_shared/coraSignature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ function bodyToHtml(body: string, cta?: { label?: string; url?: string }, bookin
   const bookingsBtn = bookings?.url
     ? `<p style="margin:20px 0;"><a href="${bookings.url}" style="background:#FFBF00;color:#1A1A1A;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">${bookings.label ?? "Pick a 30-min slot"}</a></p>`
     : "";
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;">${paragraphs}${primary}${bookingsBtn}</body></html>`;
+  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;">${paragraphs}${primary}${bookingsBtn}${coraSignatureHtml()}</body></html>`;
 }
 
 async function sendViaOutlook(to: string, subject: string, html: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {

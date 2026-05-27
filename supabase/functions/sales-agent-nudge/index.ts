@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { Resend } from "npm:resend@2.0.0";
+import { coraSignatureHtml, CORA_FROM } from "../_shared/coraSignature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,11 +58,12 @@ serve(async (req) => {
         <p>You're a few steps away from being Audit Ready on CrunchCarbon — once complete, you can start submitting solar projects for carbon-credit revenue.</p>
         <p><a href="https://crunchcarbon.com/onboarding" style="background:#1A1A1A;color:#FFBF00;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">Finish onboarding</a></p>
         <p style="color:#666;font-size:13px;">This is an automated reminder. Reply STOP to opt out.</p>
+        ${coraSignatureHtml()}
       </body></html>`;
 
       try {
         await resend.emails.send({
-          from: "Shaun Slabber <shaun@crunchcarbon.com>",
+          from: CORA_FROM,
           to: [a.email],
           subject,
           html,
