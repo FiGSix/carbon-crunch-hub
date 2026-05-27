@@ -61,7 +61,6 @@ export default function SalesAgent() {
             <Bot className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">Sales Agent</h1>
             <Badge variant="secondary">Admin Only</Badge>
-            <Badge variant="outline" className="text-xs">Phase 3 · Conversations + Meetings</Badge>
           </div>
           <p className="text-muted-foreground text-sm">
             Find, invite, onboard and meet with EPC partners — end-to-end, automated.
