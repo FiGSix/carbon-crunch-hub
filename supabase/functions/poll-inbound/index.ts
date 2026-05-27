@@ -223,8 +223,11 @@ serve(async (req) => {
       }
     }
 
-    await supabase.from("sales_agent_settings").update({ last_inbound_poll_at: maxReceived }).eq("id", true);
-    return new Response(JSON.stringify({ ok: true, stats, since, until: maxReceived }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Bump cursor 1ms past the latest message so the next poll's `gt` filter
+    // (which we send with second-only precision) never re-fetches the same one.
+    const nextCursor = new Date(new Date(maxReceived).getTime() + 1).toISOString();
+    await supabase.from("sales_agent_settings").update({ last_inbound_poll_at: nextCursor }).eq("id", true);
+    return new Response(JSON.stringify({ ok: true, stats, since, until: nextCursor }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("poll-inbound error", e);
     return new Response(JSON.stringify({ ok: false, error: String(e), stats }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
