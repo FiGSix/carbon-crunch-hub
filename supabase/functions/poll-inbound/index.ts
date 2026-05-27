@@ -121,6 +121,13 @@ serve(async (req) => {
       if (insErr) { console.error("inbound upsert", insErr); continue; }
       stats.inserted++;
 
+      // Idempotency: if this message was already processed in a prior poll,
+      // skip booking parsing, lead ingest, and classify so we don't re-send
+      // summaries or re-import leads.
+      if (inserted.processed_at || inserted.intent) {
+        continue;
+      }
+
       // MS Bookings confirmation parsing
       if (isBookingConfirmation(subject, fromEmail)) {
         const joinUrl = extractTeamsJoinUrl(text + " " + (html ?? ""));
