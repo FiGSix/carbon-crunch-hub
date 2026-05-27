@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Pencil, Plus, Pause, Play, Archive } from "lucide-react";
 import { VariantEditorDialog } from "./VariantEditorDialog";
 import { toast } from "sonner";
@@ -11,6 +15,8 @@ import { toast } from "sonner";
 export function SequencesTab() {
   const qc = useQueryClient();
   const [editor, setEditor] = useState<{ open: boolean; sequenceId: string; stepIndex: number; variant?: any }>({ open: false, sequenceId: "", stepIndex: 0 });
+  const [newSeqOpen, setNewSeqOpen] = useState(false);
+  const [newSeq, setNewSeq] = useState({ name: "", description: "", dayOffsets: "0, 3, 7" });
 
   const { data: sequences } = useQuery({
     queryKey: ["sales-agent-sequences"],
