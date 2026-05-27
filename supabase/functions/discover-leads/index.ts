@@ -101,7 +101,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         query: searchQuery,
-        limit: Math.min(limit * 2, 20), // Get more results to account for filtering
+        limit: Math.min(Math.max(limit, 1) * 2, 100), // Get more results to account for filtering (Firecrawl max 100)
         scrapeOptions: {
           formats: ['markdown']
         }
