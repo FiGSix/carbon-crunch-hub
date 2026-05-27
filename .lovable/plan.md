@@ -1,48 +1,36 @@
-# Sales Agent page — review and cleanup
+# Permanently delete all proposals for Laurent Pieton
 
-I audited `src/pages/admin/SalesAgent.tsx` and all 9 sub-components. The page is broadly functional — no fully dead tabs — but there are 1 stale label, 3 reliability bugs, 1 misplaced section, 1 missing action, and a few "nice to have" gaps. Below is what I found and what I propose to change.
+## Scope confirmed (from DB)
 
-## Findings (per tab)
+Client: **Laurent Pieton** (Metrowatt, `laurent@metrowatt.co.za`)
+Client ID: `9fbce96e-e5dc-44e8-a9c1-30feaa8a066d`
 
-| Tab / component | Status | Issue | Action |
-|---|---|---|---|
-| Header badge `"Phase 3 · Conversations + Meetings"` | Stale | Build-phase label, never removed | Remove |
-| FunnelScoreboard | ✅ Working | — | Keep |
-| PipelineTab | ⚠️ Bug | "Mark replied" sets `agent_leads.status='qualified'` but the funnel view doesn't derive stage from `status` alone, so the row often doesn't visibly advance. Leads with no email show no CTA. | Fix mutation to advance funnel; add empty-state helper text for no-email leads |
-| DiscoveryTab | ⚠️ Minor | Limit slider capped at 25, edge function `discover-leads` accepts 100. Default query hard-coded. | Raise cap to 100 |
-| DiscoveryPresetsCard | ⚠️ Misplaced | Lives inside SettingsTab; it's a discovery workflow, not a setting. Admin has to leave Discovery to manage automated runs. | Move into DiscoveryTab |
-| ApprovalQueueTab | ✅ Working | Shares fragile `sales_agent_settings.eq("id", true)` pattern with 2 other tabs (see below) | Fix shared bug |
-| InboxTab | ⚠️ Bug | Draft sync uses a bare `if` in render body instead of `useEffect` — fragile React anti-pattern | Wrap in `useEffect` |
-| MeetingsList | ✅ Working but read-only | No way to mark a meeting held/cancelled | Add status actions (optional, P3) |
-| SequencesTab | ⚠️ Gap | No "Create sequence" button anywhere in the UI — sequences can only be added via direct DB insert. Variant status controls duplicated with LearningTab (acceptable). | Add Create-Sequence dialog |
-| LearningTab | ✅ Working | — | Keep |
-| SettingsTab | ⚠️ Bug | Reads settings with `.eq("id", true)` — same pattern in PipelineTab + ApprovalQueueTab. If the PK isn't literally `true`, returns null and silently falls back to defaults. | Fix all 3 call sites to use the real settings-singleton lookup |
+Proposals owned by this client:
 
-**Cross-tab redundancies**
+| Total | Drafts | Approved | Delivered | Signed |
+|---|---|---|---|---|
+| **517** | 517 | 0 | 0 | 0 |
 
-- Variant status controls exist in both Sequences and Learning — same mutation key, so it's coordinated; **keep as-is** (different mental models for each tab).
-- The Pipeline tab's `N to review` badge jumps to the Approval tab on click — intentional, slightly confusing but useful; **keep**.
-- `sales_agent_settings` is fetched in 3 tabs independently — React Query dedupes; only the `eq("id", true)` lookup needs fixing.
+All 517 are status `draft`, none signed, none delivered. Safe to hard-delete with no cession-agreement / audit-trail concerns.
 
-**Edge functions** — all are wired except `sales-agent-send`, which appears to be called internally from `sales-agent-draft-reply`'s auto-send path. Will confirm during the fix, no UI changes needed.
+## What I'll do
 
-## Proposed changes (this pass)
+Run a single hard delete via the DB write tool:
 
-Scoped, no new features beyond closing the gaps above.
+```sql
+DELETE FROM public.proposals
+WHERE client_reference_id = '9fbce96e-e5dc-44e8-a9c1-30feaa8a066d'
+   OR client_id            = '9fbce96e-e5dc-44e8-a9c1-30feaa8a066d';
+```
 
-1. **`src/pages/admin/SalesAgent.tsx`** — remove the stale `"Phase 3 · Conversations + Meetings"` badge.
-2. **Settings singleton lookup** — inspect the `sales_agent_settings` table to confirm the actual PK/singleton row, then fix the lookup in `SettingsTab.tsx`, `PipelineTab.tsx`, and `ApprovalQueueTab.tsx` (likely `.maybeSingle()` with no filter, or `.eq('id', <known-uuid/int>)`).
-3. **`InboxTab.tsx`** — replace the bare `if (draft && draft.id && draftBody === "")` block with a `useEffect` keyed on `draft?.id` so draft body initialization is deterministic.
-4. **`PipelineTab.tsx` → `markReplied`** — update the mutation so the funnel view actually advances the lead (set the column the view derives stage from, not just `status`); add a small "No email on file" hint where the Enroll CTA is hidden.
-5. **`DiscoveryTab.tsx`** — raise the `limit` cap from 25 → 100 to match the edge function.
-6. **Move `DiscoveryPresetsCard`** out of `SettingsTab.tsx` and render it inside `DiscoveryTab.tsx` (under the manual-run form). Imports adjusted accordingly.
-7. **`SequencesTab.tsx`** — add a "New sequence" button + small dialog (name, channel, description) that inserts into `outreach_sequences`. Refresh list on success.
-8. **Confirm `sales-agent-send`** is invoked from `sales-agent-draft-reply` (read-only check, no edit if confirmed).
+Existing FK cascades on the `proposals` table will clean up dependent rows automatically (proposal versions, agreements, engagement, notifications, etc.). No code changes needed.
 
-## Out of scope (flagged but not touched this pass)
+The **client record** for Laurent Pieton (and his Metrowatt company link) is **NOT** touched — only his proposals.
 
-- Generating typed Supabase definitions for `sales_agent_*` / `discovery_*` / `outreach_*` tables (would remove all the `(supabase as any)` casts) — separate, larger refactor.
-- Adding meeting status actions (mark held/cancelled) in `MeetingsList`.
-- Adding a "Test notification" button to SettingsTab.
+## Verification after run
 
-Let me know if you'd like the optional items pulled into this pass, or if I should ship just the bugfixes + misplacement first.
+I'll re-query and confirm `0` rows remain for that client.
+
+## Confirmation needed
+
+This is irreversible. Please confirm you want me to delete all **517** draft proposals for Laurent Pieton. Reply "yes, delete" and I'll proceed.
