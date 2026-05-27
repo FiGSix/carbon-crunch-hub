@@ -125,7 +125,7 @@ const emailTemplates = {
     Have questions? ${secondaryCta('Schedule a quick call', BOOKING_LINK)}
   </p>
   
-  ${emailFooter("Shaun Slabber", false)}
+  ${emailFooter()}
 </body>
 </html>
 `,
