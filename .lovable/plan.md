@@ -1,61 +1,27 @@
-## Goal
 
-Let Shaun (or any authorized admin) email Cora's mailbox a list of EPCs — either as a CSV/Excel attachment or as a simple table/list in the body — and have those EPCs land in `agent_leads` automatically, ready for Cora's outreach sequences. No new inbox or third-party inbound service; we reuse the existing Outlook polling that already runs every 5 minutes.
+## Root cause
 
-## How it works
+Two compounding bugs in `supabase/functions/poll-inbound/index.ts`:
 
-```text
-Shaun's inbox  ──email──►  Cora's Outlook mailbox
-                                   │  (polled every 5 min)
-                                   ▼
-                         poll-inbound edge function
-                                   │
-                  ┌────────────────┼────────────────┐
-                  ▼                ▼                ▼
-            booking parse   reply classify   NEW: lead ingest
-                                                    │
-                                                    ▼
-                                           agent_leads table
-                                       (+ candidate_notes log)
-```
+1. **No "already processed" guard.** After the `inbound_messages` upsert (keyed on `graph_message_id`), the lead-ingest, MS Bookings, and classify branches all run again with no check on `processed_at` / `intent`. So every poll that re-sees the message will re-import leads, re-create meetings, and re-send Cora's summary reply to Shaun.
 
-The trigger is the email subject. If the subject starts with `Leads:` (case-insensitive), the message is treated as a lead-ingest email instead of a reply. Everything else keeps working as it does today.
+2. **Timestamp precision mismatch causes re-fetching.** We persist `last_inbound_poll_at` to whatever Graph returns and then strip fractional seconds when building the `$filter` (`...replace(/\.\d{3}Z$/, "Z")`). Graph stores `receivedDateTime` with millisecond precision (e.g. `14:06:54.123Z`), so the next call sends `gt 14:06:54Z` and the same message comes back. Confirmed in the DB: the "Leads:" message at `14:06:54` is the current `last_inbound_poll_at`, and the lead-ingest branch has no idempotency.
 
-## What we'll build
+Net effect: Shaun's one `Leads:` email is re-ingested every 5 minutes and Cora emails him a fresh summary each time.
 
-1. **Allowlist of senders** — only emails from admins with `sales_agent_admin` role (or addresses listed in `sales_agent_settings.lead_ingest_allowlist`, a new text[] column) can ingest leads. Anything else is logged and ignored.
+## Fix
 
-2. **Parser** — extend `poll-inbound` to:
-   - Detect `Leads:` subject prefix.
-   - Fetch the message's attachments via the Outlook connector (`/me/messages/{id}/attachments`).
-   - Parse `.csv`, `.xlsx`, `.xls` attachments using the same column logic as the existing bulk lead upload (`src/utils/excel/leadParser.ts` headers: company_name, contact_name, email, phone, website, location, source, notes).
-   - If no attachment, parse the email body as either a markdown/plain table or a one-per-line list (`Company, contact, email, phone` style).
-   - Dedupe by normalized email (and by company_name when email is missing) against existing `agent_leads`.
+Edit only `supabase/functions/poll-inbound/index.ts`:
 
-3. **Insert** — bulk insert new rows into `agent_leads` with `source = 'Email ingest'`, `created_by = <sender's user_id>` when resolvable.
+1. **Idempotency guard.** Right after the `inbound_messages` upsert, if `inserted.processed_at` is non-null (or `inserted.intent` is already set), `continue` — skip booking parsing, lead ingest, and classify. New messages have `processed_at = null` so they flow through normally; re-seen messages are silently skipped.
 
-4. **Reply confirmation** — Cora auto-replies to Shaun with a summary: `Imported X, skipped Y duplicates, Z errors (see attached log).` Uses the existing `sales-agent-send` function.
+2. **Bump the poll cursor past the latest message.** When computing the next `last_inbound_poll_at`, use `new Date(maxReceived).getTime() + 1` (ISO-formatted, no fractional seconds) instead of `maxReceived` itself. Combined with Graph's `gt` filter, this guarantees we never re-fetch the same message even when millisecond precision is dropped.
 
-5. **Audit trail** — write one `candidate_notes` row per imported lead (`kind = 'system_event'`, `body = 'Imported via email from shaun@…'`) and one `inbound_messages` row with `intent = 'lead_ingest'`.
+3. **Belt and braces:** keep stripping fractional seconds in the `$filter` (Graph requires it), but the +1 ms bump ensures the cursor still advances past the truncated boundary.
 
-6. **Settings UI** — small section in `SettingsTab.tsx` showing Cora's mailbox address, a copy button, the allowlist of sender emails (editable), and a short "how to" snippet:
-   > Email `<cora's address>` with subject starting `Leads:` and a CSV/Excel attachment using the standard lead template.
-
-## Technical notes
-
-- **Files touched**
-  - `supabase/functions/poll-inbound/index.ts` — branch on `Leads:` subject, call new helper.
-  - `supabase/functions/_shared/lead-ingest.ts` (new) — attachment fetch, CSV/XLSX parsing (use `sheetjs` via `npm:xlsx@0.18.5`), body-list fallback, dedupe + insert.
-  - `supabase/functions/poll-inbound/` — extend Graph `$select` to include `hasAttachments`, then fetch attachments only when needed.
-  - `src/components/admin/sales-agent/SettingsTab.tsx` — new "Email Cora a lead list" card.
-- **Database** — one migration:
-  - `ALTER TABLE sales_agent_settings ADD COLUMN lead_ingest_allowlist text[] NOT NULL DEFAULT '{}'`.
-  - No new tables; reuses `agent_leads`, `inbound_messages`, `candidate_notes`.
-- **Security** — sender allowlist is enforced server-side in the edge function. Non-allowlisted senders get an auto-reply: "You're not authorized to send leads to Cora." Body parsing has a hard cap (500 rows per email) to avoid abuse.
-- **No new infra** — Microsoft Outlook connector and the existing pg_cron job that calls `poll-inbound` cover delivery and polling. No Mailgun/SendGrid inbound parse, no new domain DNS, no new edge function deploys beyond `poll-inbound`.
+No DB migration, no UI change, no change to `_shared/lead-ingest.ts`. Existing already-processed rows (the `Leads:` one) will be left alone going forward because the guard fires on re-poll.
 
 ## Out of scope
 
-- Real-time webhooks (we keep the 5-minute poll).
-- Sending leads to specific sequences from the email — all imports land in `status = 'new'` and follow the default sequence rules already in the Sales Agent.
-- A separate "cora@" inbox — we use the already-connected Outlook mailbox.
+- Re-architecting MS Bookings parsing (it has the same idempotency hole but isn't what the user is hitting).
+- Backfilling `processed_at` on the legacy `Lead` / `Outreach list` rows — those have `intent = null` and are harmless; the guard will treat them as "not processed yet" but the subject regex won't match lead-ingest and they have no enrollment, so nothing happens.
