@@ -212,3 +212,18 @@ ${res.errorDetails.length ? `<p>First errors:</p><ul>${errLines}</ul>` : ""}
   const text = `Hi,\n\nI processed your lead list (source: ${res.source}).\n- ${res.imported} new leads imported\n- ${res.duplicates} duplicates skipped\n- ${res.errors} errors\n\n— Cora`;
   return { subject, html, text };
 }
+
+export async function sendReply(opts: { to: string; subject: string; html: string; text: string; lovableKey: string; outlookKey: string }) {
+  const res = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.lovableKey}`, "X-Connection-Api-Key": opts.outlookKey },
+    body: JSON.stringify({
+      message: {
+        subject: opts.subject,
+        body: { contentType: "HTML", content: opts.html },
+        toRecipients: [{ emailAddress: { address: opts.to } }],
+      },
+    }),
+  });
+  if (!res.ok) console.error("sendReply failed", res.status, await res.text());
+}
