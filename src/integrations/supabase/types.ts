@@ -3918,6 +3918,7 @@ export type Database = {
           automation_paused: boolean | null
           bucket: string | null
           client_id: string | null
+          client_reference_id: string | null
           company_id: string | null
           days_since_engagement: number | null
           days_since_sent: number | null
@@ -3939,6 +3940,7 @@ export type Database = {
           automation_paused?: boolean | null
           bucket?: never
           client_id?: string | null
+          client_reference_id?: string | null
           company_id?: string | null
           days_since_engagement?: never
           days_since_sent?: never
@@ -3960,6 +3962,7 @@ export type Database = {
           automation_paused?: boolean | null
           bucket?: never
           client_id?: string | null
+          client_reference_id?: string | null
           company_id?: string | null
           days_since_engagement?: never
           days_since_sent?: never
@@ -4003,6 +4006,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_sales_agent_funnel"
             referencedColumns: ["agent_user_id"]
+          },
+          {
+            foreignKeyName: "proposals_client_reference_id_fkey"
+            columns: ["client_reference_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "proposals_company_id_fkey"
