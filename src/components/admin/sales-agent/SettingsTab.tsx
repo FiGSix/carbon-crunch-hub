@@ -199,7 +199,7 @@ export function SettingsTab() {
         <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Saving…" : "Save settings"}</Button>
       </div>
 
-      <DiscoveryPresetsCard />
+
 
       <div className="md:col-span-2">
         <BlocklistManager />
