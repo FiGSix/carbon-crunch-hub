@@ -38,6 +38,19 @@ serve(async (req) => {
       userAgent 
     }: AcceptProposalRequest = await req.json();
 
+    // Sanitize IP for Postgres `inet` columns — empty string is invalid (22P02).
+    const sanitizeIp = (v: unknown): string | null => {
+      if (typeof v !== 'string') return null;
+      const t = v.trim();
+      return t.length > 0 ? t : null;
+    };
+    const headerIp =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('cf-connecting-ip') ||
+      req.headers.get('x-real-ip') ||
+      null;
+    const safeIp = sanitizeIp(headerIp) ?? sanitizeIp(ipAddress);
+
     // Enhanced logging for debugging
     console.log('📥 Request payload:', {
       hasToken: !!token,
