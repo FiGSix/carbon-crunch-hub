@@ -67,7 +67,7 @@ export function DiscoveryPresetsCard() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">Daily cron iterates each active preset, then auto-promotes candidates above your score threshold.</p>
+        <p className="text-xs text-muted-foreground">Daily cron iterates each active preset (up to 100 leads each), then auto-promotes candidates above your score threshold. Heads up: Firecrawl's free tier is ~500 search credits/month — 4 presets × 100/day will exhaust it in a few days.</p>
         <div className="space-y-2">
           {(presets ?? []).map((p) => (
             <div key={p.id} className="flex items-center gap-2 border rounded-md p-2">
@@ -83,7 +83,7 @@ export function DiscoveryPresetsCard() {
         <div className="grid grid-cols-12 gap-2 pt-2 border-t">
           <Input className="col-span-5" placeholder="Query (e.g. EPC solar installer)" value={draft.query} onChange={(e) => setDraft({ ...draft, query: e.target.value })} />
           <Input className="col-span-5" placeholder="Location (e.g. Gauteng, South Africa)" value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
-          <Input className="col-span-1" type="number" min={1} max={50} value={draft.limit_count} onChange={(e) => setDraft({ ...draft, limit_count: parseInt(e.target.value) || 10 })} />
+          <Input className="col-span-1" type="number" min={1} max={100} value={draft.limit_count} onChange={(e) => setDraft({ ...draft, limit_count: Math.min(100, Math.max(1, parseInt(e.target.value) || 10)) })} />
           <Button className="col-span-1" size="icon" onClick={() => add.mutate()} disabled={add.isPending}><Plus className="h-4 w-4" /></Button>
         </div>
       </CardContent>
