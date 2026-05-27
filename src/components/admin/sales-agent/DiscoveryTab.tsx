@@ -80,6 +80,10 @@ export function DiscoveryTab({ onReviewPending }: { onReviewPending?: () => void
           </div>
         </CardContent>
       </Card>
+
+      <div className="md:col-span-3">
+        <DiscoveryPresetsCard />
+      </div>
     </div>
   );
 }
