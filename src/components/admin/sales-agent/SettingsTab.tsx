@@ -58,6 +58,9 @@ export function SettingsTab() {
         notify_stuck_hours: form.notify_stuck_hours,
         notify_min_interval_hours: form.notify_min_interval_hours,
         notify_daily_digest: form.notify_daily_digest,
+        lead_ingest_allowlist: typeof form.lead_ingest_allowlist === "string"
+          ? form.lead_ingest_allowlist.split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+          : (form.lead_ingest_allowlist ?? []).map((s: string) => s.toLowerCase()),
         blocked_domains: typeof form.blocked_domains === "string" ? form.blocked_domains.split(",").map((s: string) => s.trim()).filter(Boolean) : form.blocked_domains,
         target_regions: typeof form.target_regions === "string" ? form.target_regions.split(",").map((s: string) => s.trim()).filter(Boolean) : form.target_regions,
       };
