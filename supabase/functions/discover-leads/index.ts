@@ -64,16 +64,18 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Verify user from token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Allow internal cron invocations (service role bearer) to skip user JWT check.
+    const token = authHeader.replace('Bearer ', '').trim();
+    const isInternal = token === SUPABASE_SERVICE_ROLE_KEY;
+    if (!isInternal) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid or expired token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const { query, location, limit } = await req.json() as DiscoverRequest;
@@ -85,7 +87,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Starting lead discovery: query="${query}", location="${location}", limit=${limit}`);
+    console.log(`Starting lead discovery: query="${query}", location="${location}", limit=${limit}, internal=${isInternal}`);
 
     // Step 1: Search the web using Firecrawl
     const searchQuery = location ? `${query} ${location}` : query;
