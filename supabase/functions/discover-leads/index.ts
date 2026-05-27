@@ -67,6 +67,7 @@ serve(async (req) => {
     // Allow internal cron invocations (service role bearer) to skip user JWT check.
     const token = authHeader.replace('Bearer ', '').trim();
     const isInternal = token === SUPABASE_SERVICE_ROLE_KEY;
+    let userId: string | null = null;
     if (!isInternal) {
       const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       if (userError || !user) {
@@ -76,6 +77,7 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      userId = user.id;
     }
 
     const { query, location, limit } = await req.json() as DiscoverRequest;
