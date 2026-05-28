@@ -59,6 +59,17 @@ export function CommandCentreView({ onJump }: Props) {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Tile label="Incomplete" value={signals?.incomplete ?? 0} tone="warn" onClick={() => onJump("pipeline")} hint="Inbox — Cora researching" />
+        <Tile label="Complete & ready" value={signals?.completeReady ?? 0} tone="ok" onClick={() => onJump("pipeline")} hint="≥80 completeness" />
+        <Tile label="Outreach active" value={signals?.outreachActive ?? 0} tone="neutral" onClick={() => onJump("pipeline")} hint="Emailing / following up" />
+        <Tile label="Awaiting reply" value={signals?.awaitingReply ?? 0} tone="neutral" onClick={() => onJump("conversations")} hint="Replied — needs response" />
+        <Tile label="Opportunities" value={signals?.opportunities ?? 0} tone="ok" onClick={() => onJump("pipeline")} hint="Meetings / proposals / signups" />
+        <Tile label="Blocked" value={signals?.blocked ?? 0} tone="bad" onClick={() => onJump("pipeline")} hint="Existing agent/client/duplicate" />
+        <Tile label="Needs human review" value={signals?.needsReview ?? 0} tone="warn" onClick={() => onJump("pipeline")} hint="Cora flagged for admin" />
+        <Tile label="Today's send" value={`${signals?.emailsSentToday ?? 0}/${signals?.dailyCap ?? 0}`} tone="neutral" onClick={() => onJump("decisions")} hint="Outlook only" />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Today's send</CardTitle></CardHeader>
@@ -69,55 +80,46 @@ export function CommandCentreView({ onJump }: Props) {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Pipeline pulse</CardTitle></CardHeader>
-          <CardContent className="space-y-1.5 text-sm">
-            <Row icon={Flame} label="Hot leads" value={signals?.hotLeads ?? 0} onClick={() => onJump("pipeline")} />
-            <Row icon={AlertTriangle} label="Stuck leads" value={signals?.stuckLeads ?? 0} onClick={() => onJump("pipeline")} />
-            <Row icon={Activity} label="Needs approval" value={signals?.needsApproval ?? 0} onClick={() => onJump("pipeline")} />
-          </CardContent>
-        </Card>
-        <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Conversations & meetings</CardTitle></CardHeader>
           <CardContent className="space-y-1.5 text-sm">
-            <Row icon={Mail} label="Replies needing review" value={signals?.needsReview ?? 0} onClick={() => onJump("conversations")} />
+            <Row icon={Mail} label="Replies needing response" value={signals?.awaitingReply ?? 0} onClick={() => onJump("conversations")} />
             <Row icon={Mail} label="Positive replies today" value={signals?.positiveRepliesToday ?? 0} onClick={() => onJump("conversations")} />
             <Row icon={Calendar} label="Meetings booked today" value={signals?.meetingsBookedToday ?? 0} onClick={() => onJump("meetings")} />
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Safety signals today</CardTitle></CardHeader>
           <CardContent className="space-y-1.5 text-sm">
             <Row icon={ShieldAlert} label="Failed sends / bounces" value={signals?.failedSendsToday ?? 0} onClick={() => onJump("decisions")} />
-            <Row icon={Users} label="Duplicate / existing relationship matches" value={signals?.duplicatesToday ?? 0} onClick={() => onJump("decisions")} />
+            <Row icon={Users} label="Duplicate / relationship matches" value={signals?.duplicatesToday ?? 0} onClick={() => onJump("decisions")} />
             <Row icon={ShieldAlert} label="Do-not-contact events" value={signals?.doNotContactToday ?? 0} onClick={() => onJump("decisions")} />
           </CardContent>
         </Card>
-
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Cora's latest actions</CardTitle></CardHeader>
-          <CardContent>
-            {(latest?.length ?? 0) === 0 && <p className="text-sm text-muted-foreground">No actions logged yet.</p>}
-            <ul className="divide-y">
-              {(latest ?? []).map((row: any) => (
-                <li key={row.id} className="py-2 flex items-start gap-3 text-sm">
-                  <Badge variant="outline" className="shrink-0 mt-0.5">{row.action}</Badge>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate">{row.reason || "—"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(row.created_at), { addSuffix: true })}
-                      {row.sending_mailbox ? ` • ${row.sending_mailbox}` : ""}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <Button variant="link" size="sm" className="px-0 mt-1" onClick={() => onJump("decisions")}>Open full decision log →</Button>
-          </CardContent>
-        </Card>
       </div>
+
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Cora's latest actions</CardTitle></CardHeader>
+        <CardContent>
+          {(latest?.length ?? 0) === 0 && <p className="text-sm text-muted-foreground">No actions logged yet.</p>}
+          <ul className="divide-y">
+            {(latest ?? []).map((row: any) => (
+              <li key={row.id} className="py-2 flex items-start gap-3 text-sm">
+                <Badge variant="outline" className="shrink-0 mt-0.5">{row.action}</Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate">{row.reason || "—"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(row.created_at), { addSuffix: true })}
+                    {row.sending_mailbox ? ` • ${row.sending_mailbox}` : ""}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Button variant="link" size="sm" className="px-0 mt-1" onClick={() => onJump("decisions")}>Open full decision log →</Button>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
