@@ -3700,27 +3700,36 @@ export type Database = {
           created_at: string
           id: string
           last_run_at: string | null
+          last_yield_count: number
           limit_count: number
           location: string
           query: string
+          source: string
+          stale: boolean
         }
         Insert: {
           active?: boolean
           created_at?: string
           id?: string
           last_run_at?: string | null
+          last_yield_count?: number
           limit_count?: number
           location: string
           query: string
+          source?: string
+          stale?: boolean
         }
         Update: {
           active?: boolean
           created_at?: string
           id?: string
           last_run_at?: string | null
+          last_yield_count?: number
           limit_count?: number
           location?: string
           query?: string
+          source?: string
+          stale?: boolean
         }
         Relationships: []
       }
@@ -3758,17 +3767,23 @@ export type Database = {
         Row: {
           ai_style_notes: string | null
           autopilot_discovery: boolean
+          autopilot_enrichment: boolean
           autopilot_outreach: boolean
+          autopilot_preset_expand: boolean
           autopilot_replies: boolean
           autopilot_reply_min_confidence: number
           autopilot_status: string | null
           blocked_domains: string[]
           bookings_cta_label: string | null
           bookings_url: string | null
+          completeness_threshold: number
           daily_send_cap: number
           default_sequence_id: string | null
           emergency_stop: boolean | null
+          enrichment_daily_cap: number
+          expected_conversion: number
           fit_score_threshold: number | null
+          goal_topup_enabled: boolean
           id: boolean
           last_inbound_poll_at: string | null
           lead_ingest_allowlist: string[]
@@ -3776,6 +3791,7 @@ export type Database = {
           max_auto_approvals_per_day: number | null
           max_auto_enrollments_per_day: number | null
           max_auto_replies_per_day: number | null
+          max_topup_runs_per_day: number
           meeting_timezone: string | null
           notify_daily_digest: boolean
           notify_email: string | null
@@ -3793,6 +3809,7 @@ export type Database = {
           reply_confidence_threshold: number
           research_confidence_threshold: number | null
           score_threshold: number
+          target_agents: number
           target_regions: string[]
           updated_at: string
           updated_by: string | null
@@ -3800,17 +3817,23 @@ export type Database = {
         Insert: {
           ai_style_notes?: string | null
           autopilot_discovery?: boolean
+          autopilot_enrichment?: boolean
           autopilot_outreach?: boolean
+          autopilot_preset_expand?: boolean
           autopilot_replies?: boolean
           autopilot_reply_min_confidence?: number
           autopilot_status?: string | null
           blocked_domains?: string[]
           bookings_cta_label?: string | null
           bookings_url?: string | null
+          completeness_threshold?: number
           daily_send_cap?: number
           default_sequence_id?: string | null
           emergency_stop?: boolean | null
+          enrichment_daily_cap?: number
+          expected_conversion?: number
           fit_score_threshold?: number | null
+          goal_topup_enabled?: boolean
           id?: boolean
           last_inbound_poll_at?: string | null
           lead_ingest_allowlist?: string[]
@@ -3818,6 +3841,7 @@ export type Database = {
           max_auto_approvals_per_day?: number | null
           max_auto_enrollments_per_day?: number | null
           max_auto_replies_per_day?: number | null
+          max_topup_runs_per_day?: number
           meeting_timezone?: string | null
           notify_daily_digest?: boolean
           notify_email?: string | null
@@ -3835,6 +3859,7 @@ export type Database = {
           reply_confidence_threshold?: number
           research_confidence_threshold?: number | null
           score_threshold?: number
+          target_agents?: number
           target_regions?: string[]
           updated_at?: string
           updated_by?: string | null
@@ -3842,17 +3867,23 @@ export type Database = {
         Update: {
           ai_style_notes?: string | null
           autopilot_discovery?: boolean
+          autopilot_enrichment?: boolean
           autopilot_outreach?: boolean
+          autopilot_preset_expand?: boolean
           autopilot_replies?: boolean
           autopilot_reply_min_confidence?: number
           autopilot_status?: string | null
           blocked_domains?: string[]
           bookings_cta_label?: string | null
           bookings_url?: string | null
+          completeness_threshold?: number
           daily_send_cap?: number
           default_sequence_id?: string | null
           emergency_stop?: boolean | null
+          enrichment_daily_cap?: number
+          expected_conversion?: number
           fit_score_threshold?: number | null
+          goal_topup_enabled?: boolean
           id?: boolean
           last_inbound_poll_at?: string | null
           lead_ingest_allowlist?: string[]
@@ -3860,6 +3891,7 @@ export type Database = {
           max_auto_approvals_per_day?: number | null
           max_auto_enrollments_per_day?: number | null
           max_auto_replies_per_day?: number | null
+          max_topup_runs_per_day?: number
           meeting_timezone?: string | null
           notify_daily_digest?: boolean
           notify_email?: string | null
@@ -3877,6 +3909,7 @@ export type Database = {
           reply_confidence_threshold?: number
           research_confidence_threshold?: number | null
           score_threshold?: number
+          target_agents?: number
           target_regions?: string[]
           updated_at?: string
           updated_by?: string | null
