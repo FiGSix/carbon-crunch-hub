@@ -19,14 +19,15 @@ type Section = "command" | "pipeline" | "conversations" | "meetings" | "decision
 const NAV: { id: Section; label: string; icon: typeof Gauge; badgeKey?: "needsReview" | "needsApproval" }[] = [
   { id: "command", label: "Command Centre", icon: Gauge },
   { id: "pipeline", label: "CRM Pipeline", icon: KanbanSquare, badgeKey: "needsApproval" },
-  { id: "conversations", label: "Conversations", icon: MessagesSquare, badgeKey: "needsReview" },
+const NAV: { id: Section; label: string; icon: typeof Gauge; badgeKey?: "needsReview" | "incomplete" | "awaitingReply" }[] = [
+  { id: "command", label: "Command Centre", icon: Gauge },
+  { id: "pipeline", label: "CRM", icon: KanbanSquare, badgeKey: "incomplete" },
+  { id: "conversations", label: "Conversations", icon: MessagesSquare, badgeKey: "awaitingReply" },
   { id: "meetings", label: "Meetings", icon: Calendar },
-  { id: "decisions", label: "Cora Decision Log", icon: ScrollText },
-  { id: "controls", label: "Cora Controls", icon: Sliders },
+  { id: "decisions", label: "Decision Log", icon: ScrollText },
+  { id: "controls", label: "Controls", icon: Sliders },
 ];
 
-export default function SalesAgent() {
-  const navigate = useNavigate();
   const [section, setSection] = useState<Section>("command");
   const { signals } = useCoraSignals();
 

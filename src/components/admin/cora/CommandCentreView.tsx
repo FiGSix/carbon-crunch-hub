@@ -142,3 +142,20 @@ function Row({ icon: Icon, label, value, onClick }: { icon: any; label: string; 
     </button>
   );
 }
+
+function Tile({ label, value, hint, tone, onClick }: { label: string; value: number | string; hint?: string; tone: "ok" | "bad" | "warn" | "neutral"; onClick: () => void }) {
+  const tones = {
+    ok: "border-emerald-500/40 hover:border-emerald-500",
+    bad: "border-red-500/40 hover:border-red-500",
+    warn: "border-amber-500/40 hover:border-amber-500",
+    neutral: "border-border hover:border-primary",
+  } as const;
+  return (
+    <button onClick={onClick} className={`text-left rounded-lg border-2 p-3 transition-colors ${tones[tone]}`}>
+      <div className="text-xs uppercase text-muted-foreground tracking-wide">{label}</div>
+      <div className="text-2xl font-bold mt-0.5">{value}</div>
+      {hint && <div className="text-[11px] text-muted-foreground mt-0.5">{hint}</div>}
+    </button>
+  );
+}
+

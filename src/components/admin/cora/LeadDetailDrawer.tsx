@@ -70,8 +70,15 @@ export function LeadDetailDrawer({ leadId, onClose }: Props) {
             <SheetHeader>
               <SheetTitle>{lead.company_name || "Unnamed company"}</SheetTitle>
               <div className="flex flex-wrap gap-1.5">
-                {lead.pipeline_stage && <Badge variant="outline">{lead.pipeline_stage}</Badge>}
-                {lead.existing_relationship_status && lead.existing_relationship_status !== "safe_new_lead" && <Badge variant="destructive">{lead.existing_relationship_status.replaceAll("_", " ")}</Badge>}
+                {lead.research_status && <Badge variant="outline">{lead.research_status}</Badge>}
+                {lead.outreach_status && <Badge variant="secondary">{lead.outreach_status}</Badge>}
+                {lead.sales_status && <Badge variant="default">{lead.sales_status}</Badge>}
+                {typeof lead.completeness_score === "number" && (
+                  <Badge variant={lead.completeness_score >= 80 ? "default" : lead.completeness_score >= 60 ? "secondary" : "destructive"}>
+                    Completeness {lead.completeness_score}/100
+                  </Badge>
+                )}
+                {lead.existing_relationship_status && lead.existing_relationship_status !== "safe_new_lead" && <Badge variant="destructive">{lead.existing_relationship_status.replace(/_/g, " ")}</Badge>}
                 {lead.contact_permission_status && <Badge variant={lead.contact_permission_status === "allowed" ? "default" : "destructive"}>{lead.contact_permission_status}</Badge>}
               </div>
             </SheetHeader>
@@ -79,7 +86,7 @@ export function LeadDetailDrawer({ leadId, onClose }: Props) {
             <Tabs defaultValue="overview" className="mt-4">
               <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="research">Cora research</TabsTrigger>
+                <TabsTrigger value="research">Research</TabsTrigger>
                 <TabsTrigger value="relationship">Relationship</TabsTrigger>
                 <TabsTrigger value="conversation">Conversation</TabsTrigger>
                 <TabsTrigger value="decisions">Decisions</TabsTrigger>
@@ -89,14 +96,23 @@ export function LeadDetailDrawer({ leadId, onClose }: Props) {
                 <Field label="Contact" value={lead.contact_name} />
                 <Field label="Email" value={lead.email} />
                 <Field label="Website" value={lead.website} link />
-                <Field label="Location" value={lead.location} />
-                <Field label="Segment" value={lead.lead_segment} />
-                <Field label="Estimated portfolio" value={lead.estimated_portfolio_size_mwp ? `${lead.estimated_portfolio_size_mwp} MWp` : null} />
+                <Field label="Location" value={lead.location || lead.location_country} />
+                <Field label="Segment" value={lead.segment || lead.lead_segment} />
                 <div className="grid grid-cols-3 gap-2 pt-2">
+                  <ScoreCard label="Completeness" value={lead.completeness_score} />
                   <ScoreCard label="Fit" value={lead.fit_score} />
-                  <ScoreCard label="Personalisation" value={lead.personalisation_score} />
                   <ScoreCard label="Research conf." value={lead.research_confidence} />
                 </div>
+                {(lead.completeness_missing ?? []).length > 0 && (
+                  <Card className="border-amber-500/50"><CardContent className="p-3">
+                    <div className="text-xs uppercase text-amber-700 dark:text-amber-400">Missing for outreach</div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {(lead.completeness_missing ?? []).map((m: string) => (
+                        <Badge key={m} variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400">{m.replace(/_/g, " ")}</Badge>
+                      ))}
+                    </div>
+                  </CardContent></Card>
+                )}
                 {lead.next_best_action && (
                   <Card><CardContent className="p-3">
                     <div className="text-xs uppercase text-muted-foreground">Next best action</div>
@@ -111,6 +127,7 @@ export function LeadDetailDrawer({ leadId, onClose }: Props) {
                   </CardContent></Card>
                 )}
               </TabsContent>
+
 
               <TabsContent value="research" className="space-y-3 mt-4">
                 {lead.cora_summary ? <Block title="Cora summary" body={lead.cora_summary} /> : <Empty text="No Cora research yet." />}
