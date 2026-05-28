@@ -1,18 +1,19 @@
 // Sales Agent — onboarding nudge cron.
 // Once a day, finds invited agents whose onboarding is stalled (< Audit Ready)
-// and sends a contextual reminder email.
+// and sends a contextual reminder email AS CORA via the Outlook gateway
+// (cora@crunchcarbon.com). Never send Cora-branded mail through Resend.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@2.0.0";
-import { coraSignatureHtml, CORA_FROM } from "../_shared/coraSignature.ts";
+import { coraSignatureHtml } from "../_shared/coraSignature.ts";
+import { sendViaOutlook } from "../_shared/outlookSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
 
 // Don't nudge more than once every N days per agent
 const NUDGE_COOLDOWN_DAYS = 3;
@@ -62,17 +63,14 @@ serve(async (req) => {
       </body></html>`;
 
       try {
-        await resend.emails.send({
-          from: CORA_FROM,
-          to: [a.email],
-          subject,
-          html,
-        });
+        const sendResult = await sendViaOutlook({ to: a.email, subject, html });
+        if (!sendResult.ok) throw new Error(sendResult.error || "Outlook send failed");
         stats.sent++;
       } catch (e) {
         console.error("nudge send failed", a.email, e);
         stats.failed++;
       }
+
       await new Promise((r) => setTimeout(r, 400));
     }
 

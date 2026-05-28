@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { coraSignatureHtml } from "../_shared/coraSignature.ts";
+import { sendViaOutlook } from "../_shared/outlookSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,9 +13,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const OUTLOOK_API_KEY = Deno.env.get("MICROSOFT_OUTLOOK_API_KEY");
-const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev/microsoft_outlook";
+
 
 interface Step {
   day_offset: number;
@@ -49,32 +48,8 @@ function bodyToHtml(body: string, cta?: { label?: string; url?: string }, bookin
   return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;">${paragraphs}${primary}${bookingsBtn}${coraSignatureHtml()}</body></html>`;
 }
 
-async function sendViaOutlook(to: string, subject: string, html: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  if (!LOVABLE_API_KEY) return { ok: false, error: "LOVABLE_API_KEY missing" };
-  if (!OUTLOOK_API_KEY) return { ok: false, error: "MICROSOFT_OUTLOOK_API_KEY missing" };
-  const res = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": OUTLOOK_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message: {
-        subject,
-        body: { contentType: "HTML", content: html },
-        toRecipients: [{ emailAddress: { address: to } }],
-      },
-      saveToSentItems: true,
-    }),
-  });
-  if (!res.ok && res.status !== 202) {
-    const text = await res.text();
-    return { ok: false, error: `Outlook sendMail [${res.status}]: ${text}` };
-  }
-  // /me/sendMail returns 202 with no body; no message id available without a follow-up
-  return { ok: true };
-}
+// sendViaOutlook is imported from _shared/outlookSend.ts.
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -198,7 +173,7 @@ serve(async (req) => {
           settings?.bookings_url ? { url: settings.bookings_url, label: settings.bookings_cta_label } : undefined,
         );
 
-        const send = await sendViaOutlook(lead.email, subject, html);
+        const send = await sendViaOutlook({ to: lead.email, subject, html });
         if (!send.ok) throw new Error(send.error || "send failed");
 
         await supabase.from("lead_outreach_history").insert({

@@ -1,15 +1,19 @@
+// Cold-outreach sender for the Cora Black persona.
+// MUST send via the Outlook gateway (cora@crunchcarbon.com) — Resend is
+// reserved for platform identity ("The Crunch Carbon Team"). See
+// _shared/outlookSend.ts and _shared/coraSignature.ts.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { coraSignatureHtml, CORA_FROM } from "../_shared/coraSignature.ts";
+import { coraSignatureHtml } from "../_shared/coraSignature.ts";
+import { sendViaOutlook } from "../_shared/outlookSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
 
 const BOOKING_LINK = "https://outlook.office.com/bookwithme/user/9d260efd86dd40d586655ba9b9a3b4c1@crunchcarbon.com/meetingtype/NFYHu93970W7f_fhSJejcg2?anonymous&ismsaljsauthenabled&ep=mlink";
 const REGISTRATION_LINK = "https://crunchcarbon.com/register?role=agent";
@@ -333,15 +337,13 @@ const handler = async (req: Request): Promise<Response> => {
         const htmlBody = template.getBody(lead, aiPersonalization);
         const bodyPreview = htmlBody.replace(/<[^>]*>/g, '').substring(0, 200);
 
-        // Send email via Resend
-        const emailResponse = await resend.emails.send({
-          from: CORA_FROM,
-          to: [lead.email],
-          subject: subject,
-          html: htmlBody,
-        });
+        // Send email via Outlook gateway as Cora (cora@crunchcarbon.com).
+        const sendResult = await sendViaOutlook({ to: lead.email, subject, html: htmlBody });
+        if (!sendResult.ok) {
+          throw new Error(sendResult.error || "Outlook send failed");
+        }
+        console.log(`Email sent to ${lead.email} via Outlook (Cora)`);
 
-        console.log(`Email sent to ${lead.email}:`, emailResponse);
 
         // Record outreach in history
         const { error: historyError } = await supabase
@@ -352,7 +354,7 @@ const handler = async (req: Request): Promise<Response> => {
             subject: subject,
             body_preview: bodyPreview,
             sent_by: user.id,
-            resend_message_id: emailResponse.data?.id || null,
+            resend_message_id: null,
             status: 'sent',
           });
 
@@ -398,7 +400,7 @@ const handler = async (req: Request): Promise<Response> => {
         results.push({ 
           leadId: lead.id, 
           success: true, 
-          messageId: emailResponse.data?.id 
+          messageId: undefined 
         });
 
         // Rate limiting: wait 500ms between emails
