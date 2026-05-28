@@ -32,6 +32,28 @@ export function CommandCentreView({ onJump }: Props) {
     },
   });
 
+  const { data: goal } = useQuery({
+    queryKey: ["cora-goal"],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const [onboardedRes, pipelineRes, enrichRunRes, topupRunRes, expandRunRes] = await Promise.all([
+        (supabase as any).from("discovery_candidates").select("id", { count: "exact", head: true }).eq("sales_status", "Signed Up"),
+        (supabase as any).from("discovery_candidates").select("id", { count: "exact", head: true })
+          .or("research_status.eq.Complete,outreach_status.not.is.null").is("sales_status", null),
+        (supabase as any).from("sales_agent_runs").select("status, started_at, completed_at").eq("job_name", "enrich").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+        (supabase as any).from("sales_agent_runs").select("started_at").eq("job_name", "discovery_topup").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+        (supabase as any).from("sales_agent_runs").select("started_at").eq("job_name", "preset_expand").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      return {
+        onboarded: onboardedRes.count ?? 0,
+        pipeline: pipelineRes.count ?? 0,
+        lastEnrich: enrichRunRes.data,
+        lastTopup: topupRunRes.data?.started_at,
+        lastExpand: expandRunRes.data?.started_at,
+      };
+    },
+  });
+
   const refreshMailbox = async () => {
     const { error } = await (supabase as any).functions.invoke("cora-mailbox-health");
     if (error) toast({ title: "Mailbox check failed", description: error.message, variant: "destructive" });
