@@ -1152,6 +1152,8 @@ export type Database = {
         Row: {
           best_angle: string | null
           company_name: string
+          completeness_missing: string[] | null
+          completeness_score: number | null
           contact_name: string | null
           contact_permission_reason: string | null
           contact_permission_status: string | null
@@ -1168,16 +1170,20 @@ export type Database = {
           escalation_required: boolean | null
           estimated_portfolio_size_mwp: number | null
           existing_relationship_status: string | null
+          fit_reason: string | null
           fit_score: number | null
           id: string
           last_cora_decision_at: string | null
           last_meaningful_event_at: string | null
           lead_segment: string | null
           location: string | null
+          location_country: string | null
+          location_region: string | null
           matched_existing_record_id: string | null
           matched_existing_record_type: string | null
           next_action_owner: string | null
           next_best_action: string | null
+          outreach_status: string | null
           personalisation_score: number | null
           phone: string | null
           pipeline_stage: string | null
@@ -1186,16 +1192,21 @@ export type Database = {
           recommended_cta: string | null
           research_confidence: number | null
           research_evidence: Json | null
+          research_status: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           run_id: string
+          sales_status: string | null
           score: number
+          segment: string | null
           status: string
           website: string | null
         }
         Insert: {
           best_angle?: string | null
           company_name: string
+          completeness_missing?: string[] | null
+          completeness_score?: number | null
           contact_name?: string | null
           contact_permission_reason?: string | null
           contact_permission_status?: string | null
@@ -1212,16 +1223,20 @@ export type Database = {
           escalation_required?: boolean | null
           estimated_portfolio_size_mwp?: number | null
           existing_relationship_status?: string | null
+          fit_reason?: string | null
           fit_score?: number | null
           id?: string
           last_cora_decision_at?: string | null
           last_meaningful_event_at?: string | null
           lead_segment?: string | null
           location?: string | null
+          location_country?: string | null
+          location_region?: string | null
           matched_existing_record_id?: string | null
           matched_existing_record_type?: string | null
           next_action_owner?: string | null
           next_best_action?: string | null
+          outreach_status?: string | null
           personalisation_score?: number | null
           phone?: string | null
           pipeline_stage?: string | null
@@ -1230,16 +1245,21 @@ export type Database = {
           recommended_cta?: string | null
           research_confidence?: number | null
           research_evidence?: Json | null
+          research_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           run_id: string
+          sales_status?: string | null
           score?: number
+          segment?: string | null
           status?: string
           website?: string | null
         }
         Update: {
           best_angle?: string | null
           company_name?: string
+          completeness_missing?: string[] | null
+          completeness_score?: number | null
           contact_name?: string | null
           contact_permission_reason?: string | null
           contact_permission_status?: string | null
@@ -1256,16 +1276,20 @@ export type Database = {
           escalation_required?: boolean | null
           estimated_portfolio_size_mwp?: number | null
           existing_relationship_status?: string | null
+          fit_reason?: string | null
           fit_score?: number | null
           id?: string
           last_cora_decision_at?: string | null
           last_meaningful_event_at?: string | null
           lead_segment?: string | null
           location?: string | null
+          location_country?: string | null
+          location_region?: string | null
           matched_existing_record_id?: string | null
           matched_existing_record_type?: string | null
           next_action_owner?: string | null
           next_best_action?: string | null
+          outreach_status?: string | null
           personalisation_score?: number | null
           phone?: string | null
           pipeline_stage?: string | null
@@ -1274,10 +1298,13 @@ export type Database = {
           recommended_cta?: string | null
           research_confidence?: number | null
           research_evidence?: Json | null
+          research_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           run_id?: string
+          sales_status?: string | null
           score?: number
+          segment?: string | null
           status?: string
           website?: string | null
         }

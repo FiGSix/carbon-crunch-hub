@@ -12,7 +12,12 @@ export interface GateInput {
   phone?: string | null;
   fit_score?: number | null;
   personalisation_score?: number | null;
+  fit_score?: number | null;
+  personalisation_score?: number | null;
   research_confidence?: number | null;
+  completeness_score?: number | null;
+  segment?: string | null;
+  location_country?: string | null;
   candidate_id?: string | null;
   precomputedRelationship?: RelationshipCheckResult | null;
 }
@@ -25,7 +30,6 @@ export interface GateResult {
   remainingToday?: number;
 }
 
-function looksSouthAfrican(loc?: string | null): boolean {
   if (!loc) return true; // don't block when unknown
   const l = loc.toLowerCase();
   return (
@@ -53,8 +57,24 @@ export async function evaluateAutoSend(
     return { allowed: false, blocker: "no_email", reason: "No valid email address." };
   }
 
-  if (!looksSouthAfrican(input.location)) {
-    return { allowed: false, blocker: "not_south_african", reason: "Company location does not look South African." };
+  if (!input.website || input.website.trim() === "") {
+    return { allowed: false, blocker: "no_website", reason: "No company website on file." };
+  }
+
+  const isSACountry = (input.location_country ?? "").toUpperCase() === "ZA"
+    || (input.location_country ?? "").toLowerCase().includes("south africa");
+  if (!isSACountry && !looksSouthAfrican(input.location)) {
+    return { allowed: false, blocker: "not_south_african", reason: "Company location is not confirmed South African." };
+  }
+
+  const seg = (input.segment ?? "").toLowerCase();
+  if (!seg || seg === "unknown") {
+    return { allowed: false, blocker: "segment_unknown", reason: "Segment is not set (residential / commercial / agri / mixed)." };
+  }
+
+  const completenessMin = settings.completeness_threshold ?? 80;
+  if ((input.completeness_score ?? 0) < completenessMin) {
+    return { allowed: false, blocker: "completeness_low", reason: `Lead completeness ${input.completeness_score ?? 0} < ${completenessMin}.` };
   }
 
   const fitMin = settings.fit_score_threshold ?? 3;
@@ -69,6 +89,7 @@ export async function evaluateAutoSend(
   if ((input.research_confidence ?? 0) < confMin) {
     return { allowed: false, blocker: "research_confidence_low", reason: `Research confidence ${input.research_confidence ?? 0} < ${confMin}.` };
   }
+
 
   const relationship = input.precomputedRelationship ??
     await checkRelationship(supabase, {
