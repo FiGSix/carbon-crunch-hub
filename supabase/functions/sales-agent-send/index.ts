@@ -5,6 +5,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { coraSignatureHtml } from "../_shared/coraSignature.ts";
 import { sendViaOutlook } from "../_shared/outlookSend.ts";
+import { assertCoraCanAct, logCoraDecision, CORA_MAILBOX } from "../_shared/coraGuard.ts";
+import { checkRelationship } from "../_shared/relationshipCheck.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +63,17 @@ serve(async (req) => {
   const stats: any = { processed: 0, sent: 0, failed: 0, skipped: 0, completed: 0, halted: 0 };
 
   try {
-    const { data: settings } = await supabase.from("sales_agent_settings").select("*").eq("id", true).maybeSingle();
+    // Hard gate: mailbox verified, autopilot not paused, no emergency stop.
+    const coraGate = await assertCoraCanAct(supabase);
+    if (!coraGate.allowed) {
+      await supabase.from("sales_agent_runs").update({
+        status: "completed", completed_at: new Date().toISOString(),
+        stats: { ...stats, skipped: coraGate.blocker ?? "blocked" },
+      }).eq("id", runId);
+      await logCoraDecision(supabase, { action: "send_cron_skipped", reason: coraGate.reason ?? "blocked" });
+      return new Response(JSON.stringify({ ok: true, skipped: coraGate.blocker }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const settings = coraGate.settings;
     if (settings && settings.autopilot_outreach === false) {
       await supabase.from("sales_agent_runs").update({ status: "completed", completed_at: new Date().toISOString(), stats: { ...stats, skipped: "autopilot_off" } }).eq("id", runId);
       return new Response(JSON.stringify({ ok: true, skipped: "autopilot_off" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
