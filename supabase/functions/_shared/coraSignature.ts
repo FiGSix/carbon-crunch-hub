@@ -2,6 +2,12 @@
 // One source of truth — imported by every outbound sender so the sign-off,
 // name, role and Crunch Carbon logo stay identical across cold outreach,
 // sequence sends, AI replies and onboarding nudges.
+//
+// IMPORTANT: Cora-branded email MUST be sent from cora@crunchcarbon.com via
+// the Outlook gateway (see _shared/outlookSend.ts). NEVER pair this
+// signature with the Resend SDK — Resend is reserved for platform identity
+// ("The Crunch Carbon Team", noreply@/proposals@).
+
 
 const LOGO_URL = "https://crunchcarbon.com/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png";
 const BRAND_BLACK = "#1A1A1A";
@@ -30,4 +36,8 @@ export function coraSignatureText(): string {
   return `\n\nKind regards,\nCora Black\nPartner Co-ordinator · Crunch Carbon\ncora@crunchcarbon.com`;
 }
 
-export const CORA_FROM = "Cora Black <cora@crunchcarbon.com>";
+// NOTE: CORA_FROM has been removed. The Outlook gateway sends from the
+// connected mailbox (cora@crunchcarbon.com) automatically, so no explicit
+// `from` field is needed. Re-introducing this constant would re-open the
+// Resend-as-Cora regression — don't.
+
