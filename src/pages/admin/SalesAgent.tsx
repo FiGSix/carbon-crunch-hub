@@ -1,104 +1,102 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Bot, Activity, Compass, Send, Settings as SettingsIcon, ClipboardCheck, Inbox, Calendar, Sparkles, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { FunnelScoreboard } from "@/components/admin/sales-agent/FunnelScoreboard";
-import { PipelineTab } from "@/components/admin/sales-agent/PipelineTab";
-import { DiscoveryTab } from "@/components/admin/sales-agent/DiscoveryTab";
-import { ApprovalQueueTab } from "@/components/admin/sales-agent/ApprovalQueueTab";
-import { SequencesTab } from "@/components/admin/sales-agent/SequencesTab";
-import { LearningTab } from "@/components/admin/sales-agent/LearningTab";
-import { SettingsTab } from "@/components/admin/sales-agent/SettingsTab";
-import { InboxTab } from "@/components/admin/sales-agent/InboxTab";
-import { MeetingsList } from "@/components/admin/sales-agent/MeetingsList";
+import {
+  Bot, ArrowLeft, Gauge, KanbanSquare, MessagesSquare, Calendar, Sliders, ScrollText,
+} from "lucide-react";
+import { CommandCentreView } from "@/components/admin/cora/CommandCentreView";
+import { PipelineView } from "@/components/admin/cora/PipelineView";
+import { ConversationsView } from "@/components/admin/cora/ConversationsView";
+import { MeetingsView } from "@/components/admin/cora/MeetingsView";
+import { CoraControlsView } from "@/components/admin/cora/CoraControlsView";
+import { DecisionLogView } from "@/components/admin/cora/DecisionLogView";
+import { useCoraSignals } from "@/hooks/cora/useCoraSignals";
+import { cn } from "@/lib/utils";
+
+type Section = "command" | "pipeline" | "conversations" | "meetings" | "decisions" | "controls";
+
+const NAV: { id: Section; label: string; icon: typeof Gauge; badgeKey?: "needsReview" | "needsApproval" }[] = [
+  { id: "command", label: "Command Centre", icon: Gauge },
+  { id: "pipeline", label: "CRM Pipeline", icon: KanbanSquare, badgeKey: "needsApproval" },
+  { id: "conversations", label: "Conversations", icon: MessagesSquare, badgeKey: "needsReview" },
+  { id: "meetings", label: "Meetings", icon: Calendar },
+  { id: "decisions", label: "Cora Decision Log", icon: ScrollText },
+  { id: "controls", label: "Cora Controls", icon: Sliders },
+];
 
 export default function SalesAgent() {
-  const [tab, setTab] = useState("pipeline");
   const navigate = useNavigate();
-
-  const { data: pendingCount } = useQuery({
-    queryKey: ["sales-agent-pending-count"],
-    queryFn: async () => {
-      const { count } = await (supabase as any)
-        .from("discovery_candidates")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      return count ?? 0;
-    },
-    refetchInterval: 20_000,
-  });
-
-  const { data: inboxCount } = useQuery({
-    queryKey: ["sales-agent-inbox-count"],
-    queryFn: async () => {
-      const { count } = await (supabase as any)
-        .from("inbound_messages")
-        .select("id", { count: "exact", head: true })
-        .is("processed_at", null);
-      return count ?? 0;
-    },
-    refetchInterval: 30_000,
-  });
+  const [section, setSection] = useState<Section>("command");
+  const { signals } = useCoraSignals();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 -ml-2"
-              onClick={() => navigate('/dashboard')}
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Bot className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">Sales Agent</h1>
-            <Badge variant="secondary">Admin Only</Badge>
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card sticky top-0 z-30">
+        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/dashboard")} aria-label="Back">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Bot className="h-6 w-6 text-primary" />
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold leading-tight">Cora Command Centre</h1>
+            <p className="text-xs text-muted-foreground">Autonomous Sales Agent for Crunch Carbon — cora@crunchcarbon.com</p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Find, invite, onboard and meet with EPC partners — end-to-end, automated.
-          </p>
+          <MailboxBadge outcome={signals?.mailbox?.outcome} />
+          <AutopilotBadge status={signals?.settings?.autopilot_status} paused={signals?.settings?.pause_all_sending} stopped={signals?.settings?.emergency_stop} />
         </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-4 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
+        <nav className="space-y-1">
+          {NAV.map((n) => {
+            const active = section === n.id;
+            const badge = n.badgeKey ? signals?.[n.badgeKey] ?? 0 : 0;
+            return (
+              <button
+                key={n.id}
+                onClick={() => setSection(n.id)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground",
+                )}
+              >
+                <n.icon className="h-4 w-4" />
+                <span className="flex-1 text-left">{n.label}</span>
+                {badge > 0 && (
+                  <Badge variant={active ? "secondary" : "outline"} className="h-5">{badge}</Badge>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <main className="min-w-0">
+          {section === "command" && <CommandCentreView onJump={setSection} />}
+          {section === "pipeline" && <PipelineView />}
+          {section === "conversations" && <ConversationsView />}
+          {section === "meetings" && <MeetingsView />}
+          {section === "decisions" && <DecisionLogView />}
+          {section === "controls" && <CoraControlsView />}
+        </main>
       </div>
-
-      <FunnelScoreboard />
-
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="pipeline">
-            <Activity className="h-4 w-4 mr-1.5" /> Pipeline
-            {pendingCount ? <Badge variant="outline" className="ml-2 h-5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setTab("approval"); }}>{pendingCount} to review</Badge> : null}
-          </TabsTrigger>
-          <TabsTrigger value="discovery"><Compass className="h-4 w-4 mr-1.5" /> Discovery</TabsTrigger>
-          <TabsTrigger value="approval">
-            <ClipboardCheck className="h-4 w-4 mr-1.5" /> Approval Queue
-            {pendingCount ? <Badge variant="secondary" className="ml-2 h-5">{pendingCount}</Badge> : null}
-          </TabsTrigger>
-          <TabsTrigger value="inbox">
-            <Inbox className="h-4 w-4 mr-1.5" /> Inbox
-            {inboxCount ? <Badge variant="secondary" className="ml-2 h-5">{inboxCount}</Badge> : null}
-          </TabsTrigger>
-          <TabsTrigger value="meetings"><Calendar className="h-4 w-4 mr-1.5" /> Meetings</TabsTrigger>
-          <TabsTrigger value="sequences"><Send className="h-4 w-4 mr-1.5" /> Sequences</TabsTrigger>
-          <TabsTrigger value="learning"><Sparkles className="h-4 w-4 mr-1.5" /> Learning</TabsTrigger>
-          <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 mr-1.5" /> Settings</TabsTrigger>
-        </TabsList>
-        <TabsContent value="pipeline" className="mt-6"><PipelineTab /></TabsContent>
-        <TabsContent value="discovery" className="mt-6"><DiscoveryTab onReviewPending={() => setTab("approval")} /></TabsContent>
-        <TabsContent value="approval" className="mt-6"><ApprovalQueueTab /></TabsContent>
-        <TabsContent value="inbox" className="mt-6"><InboxTab /></TabsContent>
-        <TabsContent value="meetings" className="mt-6"><MeetingsList /></TabsContent>
-        <TabsContent value="sequences" className="mt-6"><SequencesTab /></TabsContent>
-        <TabsContent value="learning" className="mt-6"><LearningTab /></TabsContent>
-        <TabsContent value="settings" className="mt-6"><SettingsTab /></TabsContent>
-      </Tabs>
     </div>
   );
+}
+
+function MailboxBadge({ outcome }: { outcome?: string }) {
+  const ok = outcome === "verified";
+  return (
+    <Badge variant={ok ? "default" : "destructive"} className="gap-1.5">
+      <span className={cn("h-2 w-2 rounded-full", ok ? "bg-emerald-400" : "bg-red-400")} />
+      Outlook {ok ? "connected" : outcome ?? "unknown"}
+    </Badge>
+  );
+}
+
+function AutopilotBadge({ status, paused, stopped }: { status?: string; paused?: boolean; stopped?: boolean }) {
+  if (stopped) return <Badge variant="destructive">Emergency stop</Badge>;
+  if (paused) return <Badge variant="destructive">Paused</Badge>;
+  const tone = status === "full" ? "default" : status === "assisted" ? "secondary" : "outline";
+  return <Badge variant={tone as any}>Autopilot: {status ?? "assisted"}</Badge>;
 }
