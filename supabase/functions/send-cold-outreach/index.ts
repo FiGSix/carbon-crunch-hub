@@ -6,6 +6,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { coraSignatureHtml } from "../_shared/coraSignature.ts";
 import { sendViaOutlook } from "../_shared/outlookSend.ts";
+import { assertCoraCanAct, logCoraDecision, CORA_MAILBOX } from "../_shared/coraGuard.ts";
+import { checkRelationship } from "../_shared/relationshipCheck.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -308,13 +310,38 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    const results: { leadId: string; success: boolean; error?: string; messageId?: string }[] = [];
+    const results: { leadId: string; success: boolean; error?: string; messageId?: string; blocker?: string }[] = [];
+
+    // Global Cora gate: mailbox verified, not paused, not emergency-stopped.
+    const gate = await assertCoraCanAct(supabase);
+    if (!gate.allowed) {
+      return new Response(JSON.stringify({
+        error: gate.reason || "Cora is paused",
+        blocker: gate.blocker,
+      }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     for (const lead of leads) {
       try {
         // Check if lead has email
         if (!lead.email) {
           results.push({ leadId: lead.id, success: false, error: "No email address" });
+          continue;
+        }
+
+        // Relationship / existing-agent / DNC guard
+        const rel = await checkRelationship(supabase, {
+          email: lead.email, company_name: lead.company_name, website: lead.website,
+        });
+        if (rel.status !== "safe_new_lead") {
+          await logCoraDecision(supabase, {
+            lead_id: lead.id,
+            action: "skip_cold_outreach_relationship",
+            reason: rel.reason,
+            relationship_check_result: rel as any,
+            sending_mailbox: CORA_MAILBOX,
+          });
+          results.push({ leadId: lead.id, success: false, error: rel.reason, blocker: `relationship_${rel.status}` });
           continue;
         }
 
@@ -356,7 +383,15 @@ const handler = async (req: Request): Promise<Response> => {
             sent_by: user.id,
             resend_message_id: null,
             status: 'sent',
+            sending_mailbox: CORA_MAILBOX,
           });
+
+        await logCoraDecision(supabase, {
+          lead_id: lead.id,
+          action: 'cold_outreach_sent',
+          reason: `Template ${templateType}`,
+          sending_mailbox: CORA_MAILBOX,
+        });
 
         if (historyError) {
           console.error("Error recording outreach history:", historyError);

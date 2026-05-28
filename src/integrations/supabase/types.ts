@@ -907,6 +907,138 @@ export type Database = {
         }
         Relationships: []
       }
+      cora_decision_log: {
+        Row: {
+          action: string
+          admin_override: boolean | null
+          candidate_id: string | null
+          confidence: number | null
+          created_at: string
+          data_used: Json | null
+          duplicate_check_result: Json | null
+          id: string
+          lead_id: string | null
+          outlook_message_id: string | null
+          outlook_thread_id: string | null
+          prompt_version: string | null
+          reason: string | null
+          relationship_check_result: Json | null
+          sending_mailbox: string | null
+          status_after: string | null
+          status_before: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_override?: boolean | null
+          candidate_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          data_used?: Json | null
+          duplicate_check_result?: Json | null
+          id?: string
+          lead_id?: string | null
+          outlook_message_id?: string | null
+          outlook_thread_id?: string | null
+          prompt_version?: string | null
+          reason?: string | null
+          relationship_check_result?: Json | null
+          sending_mailbox?: string | null
+          status_after?: string | null
+          status_before?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_override?: boolean | null
+          candidate_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          data_used?: Json | null
+          duplicate_check_result?: Json | null
+          id?: string
+          lead_id?: string | null
+          outlook_message_id?: string | null
+          outlook_thread_id?: string | null
+          prompt_version?: string | null
+          reason?: string | null
+          relationship_check_result?: Json | null
+          sending_mailbox?: string | null
+          status_after?: string | null
+          status_before?: string | null
+          variant_id?: string | null
+        }
+        Relationships: []
+      }
+      cora_mailbox_status: {
+        Row: {
+          checked_at: string
+          error: string | null
+          id: boolean
+          latency_ms: number | null
+          mailbox_address: string
+          outcome: string
+        }
+        Insert: {
+          checked_at?: string
+          error?: string | null
+          id?: boolean
+          latency_ms?: number | null
+          mailbox_address?: string
+          outcome?: string
+        }
+        Update: {
+          checked_at?: string
+          error?: string | null
+          id?: boolean
+          latency_ms?: number | null
+          mailbox_address?: string
+          outcome?: string
+        }
+        Relationships: []
+      }
+      cora_recommended_actions: {
+        Row: {
+          action_type: string
+          candidate_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          lead_id: string | null
+          priority: number | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          title: string
+        }
+        Insert: {
+          action_type: string
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          lead_id?: string | null
+          priority?: number | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          title: string
+        }
+        Update: {
+          action_type?: string
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          lead_id?: string | null
+          priority?: number | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       data_access_config: {
         Row: {
           api_key_encrypted: string | null
@@ -1018,16 +1150,42 @@ export type Database = {
       }
       discovery_candidates: {
         Row: {
+          best_angle: string | null
           company_name: string
           contact_name: string | null
+          contact_permission_reason: string | null
+          contact_permission_status: string | null
+          cora_summary: string | null
           created_at: string
           created_lead_id: string | null
           dedup_match_id: string | null
+          do_not_contact_reason: string | null
+          duplicate_check_status: string | null
+          duplicate_match_type: string | null
           email: string | null
           enrichment: Json
+          escalation_reason: string | null
+          escalation_required: boolean | null
+          estimated_portfolio_size_mwp: number | null
+          existing_relationship_status: string | null
+          fit_score: number | null
           id: string
+          last_cora_decision_at: string | null
+          last_meaningful_event_at: string | null
+          lead_segment: string | null
           location: string | null
+          matched_existing_record_id: string | null
+          matched_existing_record_type: string | null
+          next_action_owner: string | null
+          next_best_action: string | null
+          personalisation_score: number | null
           phone: string | null
+          pipeline_stage: string | null
+          priority_score: number | null
+          prompt_version: string | null
+          recommended_cta: string | null
+          research_confidence: number | null
+          research_evidence: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
           run_id: string
@@ -1036,16 +1194,42 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          best_angle?: string | null
           company_name: string
           contact_name?: string | null
+          contact_permission_reason?: string | null
+          contact_permission_status?: string | null
+          cora_summary?: string | null
           created_at?: string
           created_lead_id?: string | null
           dedup_match_id?: string | null
+          do_not_contact_reason?: string | null
+          duplicate_check_status?: string | null
+          duplicate_match_type?: string | null
           email?: string | null
           enrichment?: Json
+          escalation_reason?: string | null
+          escalation_required?: boolean | null
+          estimated_portfolio_size_mwp?: number | null
+          existing_relationship_status?: string | null
+          fit_score?: number | null
           id?: string
+          last_cora_decision_at?: string | null
+          last_meaningful_event_at?: string | null
+          lead_segment?: string | null
           location?: string | null
+          matched_existing_record_id?: string | null
+          matched_existing_record_type?: string | null
+          next_action_owner?: string | null
+          next_best_action?: string | null
+          personalisation_score?: number | null
           phone?: string | null
+          pipeline_stage?: string | null
+          priority_score?: number | null
+          prompt_version?: string | null
+          recommended_cta?: string | null
+          research_confidence?: number | null
+          research_evidence?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           run_id: string
@@ -1054,16 +1238,42 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          best_angle?: string | null
           company_name?: string
           contact_name?: string | null
+          contact_permission_reason?: string | null
+          contact_permission_status?: string | null
+          cora_summary?: string | null
           created_at?: string
           created_lead_id?: string | null
           dedup_match_id?: string | null
+          do_not_contact_reason?: string | null
+          duplicate_check_status?: string | null
+          duplicate_match_type?: string | null
           email?: string | null
           enrichment?: Json
+          escalation_reason?: string | null
+          escalation_required?: boolean | null
+          estimated_portfolio_size_mwp?: number | null
+          existing_relationship_status?: string | null
+          fit_score?: number | null
           id?: string
+          last_cora_decision_at?: string | null
+          last_meaningful_event_at?: string | null
+          lead_segment?: string | null
           location?: string | null
+          matched_existing_record_id?: string | null
+          matched_existing_record_type?: string | null
+          next_action_owner?: string | null
+          next_best_action?: string | null
+          personalisation_score?: number | null
           phone?: string | null
+          pipeline_stage?: string | null
+          priority_score?: number | null
+          prompt_version?: string | null
+          recommended_cta?: string | null
+          research_confidence?: number | null
+          research_evidence?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           run_id?: string
@@ -1371,7 +1581,10 @@ export type Database = {
           id: string
           lead_id: string
           opened_at: string | null
+          outlook_message_id: string | null
+          outlook_thread_id: string | null
           resend_message_id: string | null
+          sending_mailbox: string | null
           sent_at: string
           sent_by: string | null
           status: string
@@ -1386,7 +1599,10 @@ export type Database = {
           id?: string
           lead_id: string
           opened_at?: string | null
+          outlook_message_id?: string | null
+          outlook_thread_id?: string | null
           resend_message_id?: string | null
+          sending_mailbox?: string | null
           sent_at?: string
           sent_by?: string | null
           status?: string
@@ -1401,7 +1617,10 @@ export type Database = {
           id?: string
           lead_id?: string
           opened_at?: string | null
+          outlook_message_id?: string | null
+          outlook_thread_id?: string | null
           resend_message_id?: string | null
+          sending_mailbox?: string | null
           sent_at?: string
           sent_by?: string | null
           status?: string
@@ -2241,7 +2460,10 @@ export type Database = {
           id: string
           inbound_message_id: string | null
           lead_id: string | null
+          outlook_message_id: string | null
+          outlook_thread_id: string | null
           reviewed_by: string | null
+          sending_mailbox: string | null
           sent_at: string | null
           sent_body: string | null
           status: string
@@ -2259,7 +2481,10 @@ export type Database = {
           id?: string
           inbound_message_id?: string | null
           lead_id?: string | null
+          outlook_message_id?: string | null
+          outlook_thread_id?: string | null
           reviewed_by?: string | null
+          sending_mailbox?: string | null
           sent_at?: string | null
           sent_body?: string | null
           status?: string
@@ -2277,7 +2502,10 @@ export type Database = {
           id?: string
           inbound_message_id?: string | null
           lead_id?: string | null
+          outlook_message_id?: string | null
+          outlook_thread_id?: string | null
           reviewed_by?: string | null
+          sending_mailbox?: string | null
           sent_at?: string | null
           sent_body?: string | null
           status?: string
@@ -3506,15 +3734,21 @@ export type Database = {
           autopilot_outreach: boolean
           autopilot_replies: boolean
           autopilot_reply_min_confidence: number
+          autopilot_status: string | null
           blocked_domains: string[]
           bookings_cta_label: string | null
           bookings_url: string | null
           daily_send_cap: number
           default_sequence_id: string | null
+          emergency_stop: boolean | null
+          fit_score_threshold: number | null
           id: boolean
           last_inbound_poll_at: string | null
           lead_ingest_allowlist: string[]
           mailbox_address: string | null
+          max_auto_approvals_per_day: number | null
+          max_auto_enrollments_per_day: number | null
+          max_auto_replies_per_day: number | null
           meeting_timezone: string | null
           notify_daily_digest: boolean
           notify_email: string | null
@@ -3524,9 +3758,13 @@ export type Database = {
           notify_pending_threshold: number
           notify_quiet_hours: Json | null
           notify_stuck_hours: number
+          pause_all_sending: boolean | null
+          personalisation_score_threshold: number | null
+          prompt_version: string | null
           quiet_hours_end: number
           quiet_hours_start: number
           reply_confidence_threshold: number
+          research_confidence_threshold: number | null
           score_threshold: number
           target_regions: string[]
           updated_at: string
@@ -3538,15 +3776,21 @@ export type Database = {
           autopilot_outreach?: boolean
           autopilot_replies?: boolean
           autopilot_reply_min_confidence?: number
+          autopilot_status?: string | null
           blocked_domains?: string[]
           bookings_cta_label?: string | null
           bookings_url?: string | null
           daily_send_cap?: number
           default_sequence_id?: string | null
+          emergency_stop?: boolean | null
+          fit_score_threshold?: number | null
           id?: boolean
           last_inbound_poll_at?: string | null
           lead_ingest_allowlist?: string[]
           mailbox_address?: string | null
+          max_auto_approvals_per_day?: number | null
+          max_auto_enrollments_per_day?: number | null
+          max_auto_replies_per_day?: number | null
           meeting_timezone?: string | null
           notify_daily_digest?: boolean
           notify_email?: string | null
@@ -3556,9 +3800,13 @@ export type Database = {
           notify_pending_threshold?: number
           notify_quiet_hours?: Json | null
           notify_stuck_hours?: number
+          pause_all_sending?: boolean | null
+          personalisation_score_threshold?: number | null
+          prompt_version?: string | null
           quiet_hours_end?: number
           quiet_hours_start?: number
           reply_confidence_threshold?: number
+          research_confidence_threshold?: number | null
           score_threshold?: number
           target_regions?: string[]
           updated_at?: string
@@ -3570,15 +3818,21 @@ export type Database = {
           autopilot_outreach?: boolean
           autopilot_replies?: boolean
           autopilot_reply_min_confidence?: number
+          autopilot_status?: string | null
           blocked_domains?: string[]
           bookings_cta_label?: string | null
           bookings_url?: string | null
           daily_send_cap?: number
           default_sequence_id?: string | null
+          emergency_stop?: boolean | null
+          fit_score_threshold?: number | null
           id?: boolean
           last_inbound_poll_at?: string | null
           lead_ingest_allowlist?: string[]
           mailbox_address?: string | null
+          max_auto_approvals_per_day?: number | null
+          max_auto_enrollments_per_day?: number | null
+          max_auto_replies_per_day?: number | null
           meeting_timezone?: string | null
           notify_daily_digest?: boolean
           notify_email?: string | null
@@ -3588,9 +3842,13 @@ export type Database = {
           notify_pending_threshold?: number
           notify_quiet_hours?: Json | null
           notify_stuck_hours?: number
+          pause_all_sending?: boolean | null
+          personalisation_score_threshold?: number | null
+          prompt_version?: string | null
           quiet_hours_end?: number
           quiet_hours_start?: number
           reply_confidence_threshold?: number
+          research_confidence_threshold?: number | null
           score_threshold?: number
           target_regions?: string[]
           updated_at?: string

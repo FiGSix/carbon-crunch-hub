@@ -1,0 +1,142 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useCoraSignals } from "@/hooks/cora/useCoraSignals";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+import {
+  Activity, Flame, AlertTriangle, Calendar, Mail, Users, ShieldAlert, RefreshCw, Bot,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Props {
+  onJump: (section: "pipeline" | "conversations" | "meetings" | "controls" | "decisions") => void;
+}
+
+export function CommandCentreView({ onJump }: Props) {
+  const { signals } = useCoraSignals();
+  const { toast } = useToast();
+
+  const { data: latest } = useQuery({
+    queryKey: ["cora-latest-actions"],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("cora_decision_log")
+        .select("id, action, reason, created_at, candidate_id, lead_id, sending_mailbox")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      return data ?? [];
+    },
+  });
+
+  const refreshMailbox = async () => {
+    const { error } = await (supabase as any).functions.invoke("cora-mailbox-health");
+    if (error) toast({ title: "Mailbox check failed", description: error.message, variant: "destructive" });
+    else toast({ title: "Mailbox checked", description: "Status refreshed." });
+  };
+
+  const sentPct = signals ? Math.min(100, (signals.emailsSentToday / Math.max(1, signals.dailyCap)) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4" /> Cora health</CardTitle>
+            <Button size="sm" variant="outline" onClick={refreshMailbox}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Re-check</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat label="Mailbox" value={signals?.mailbox?.outcome === "verified" ? "Connected" : signals?.mailbox?.outcome ?? "Unknown"}
+            tone={signals?.mailbox?.outcome === "verified" ? "ok" : "bad"} sub={signals?.mailbox?.checked_at ? `Checked ${formatDistanceToNow(new Date(signals.mailbox.checked_at), { addSuffix: true })}` : undefined} />
+          <Stat label="Autopilot" value={signals?.settings?.emergency_stop ? "STOPPED" : signals?.settings?.pause_all_sending ? "PAUSED" : (signals?.settings?.autopilot_status ?? "assisted")}
+            tone={signals?.settings?.emergency_stop || signals?.settings?.pause_all_sending ? "bad" : "ok"} />
+          <Stat label="Prompt version" value={signals?.settings?.prompt_version ?? "v1"} tone="neutral" />
+          <Stat label="Sending from" value="cora@crunchcarbon.com" tone="neutral" />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Today's send</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{signals?.emailsSentToday ?? 0} <span className="text-base text-muted-foreground font-normal">/ {signals?.dailyCap ?? 0}</span></div>
+            <Progress value={sentPct} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-2">Emails sent today vs daily cap.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Pipeline pulse</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5 text-sm">
+            <Row icon={Flame} label="Hot leads" value={signals?.hotLeads ?? 0} onClick={() => onJump("pipeline")} />
+            <Row icon={AlertTriangle} label="Stuck leads" value={signals?.stuckLeads ?? 0} onClick={() => onJump("pipeline")} />
+            <Row icon={Activity} label="Needs approval" value={signals?.needsApproval ?? 0} onClick={() => onJump("pipeline")} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Conversations & meetings</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5 text-sm">
+            <Row icon={Mail} label="Replies needing review" value={signals?.needsReview ?? 0} onClick={() => onJump("conversations")} />
+            <Row icon={Mail} label="Positive replies today" value={signals?.positiveRepliesToday ?? 0} onClick={() => onJump("conversations")} />
+            <Row icon={Calendar} label="Meetings booked today" value={signals?.meetingsBookedToday ?? 0} onClick={() => onJump("meetings")} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Safety signals today</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5 text-sm">
+            <Row icon={ShieldAlert} label="Failed sends / bounces" value={signals?.failedSendsToday ?? 0} onClick={() => onJump("decisions")} />
+            <Row icon={Users} label="Duplicate / existing relationship matches" value={signals?.duplicatesToday ?? 0} onClick={() => onJump("decisions")} />
+            <Row icon={ShieldAlert} label="Do-not-contact events" value={signals?.doNotContactToday ?? 0} onClick={() => onJump("decisions")} />
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Cora's latest actions</CardTitle></CardHeader>
+          <CardContent>
+            {(latest?.length ?? 0) === 0 && <p className="text-sm text-muted-foreground">No actions logged yet.</p>}
+            <ul className="divide-y">
+              {(latest ?? []).map((row: any) => (
+                <li key={row.id} className="py-2 flex items-start gap-3 text-sm">
+                  <Badge variant="outline" className="shrink-0 mt-0.5">{row.action}</Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{row.reason || "—"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(row.created_at), { addSuffix: true })}
+                      {row.sending_mailbox ? ` • ${row.sending_mailbox}` : ""}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <Button variant="link" size="sm" className="px-0 mt-1" onClick={() => onJump("decisions")}>Open full decision log →</Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone: "ok" | "bad" | "neutral" }) {
+  const cls = tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-red-600" : "text-foreground";
+  return (
+    <div>
+      <div className="text-xs uppercase text-muted-foreground tracking-wide">{label}</div>
+      <div className={`text-base font-semibold ${cls}`}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+function Row({ icon: Icon, label, value, onClick }: { icon: any; label: string; value: number; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="w-full flex items-center justify-between gap-3 px-2 py-1.5 -mx-2 rounded hover:bg-muted text-left">
+      <span className="flex items-center gap-2"><Icon className="h-4 w-4 text-muted-foreground" /> {label}</span>
+      <Badge variant={value > 0 ? "default" : "outline"}>{value}</Badge>
+    </button>
+  );
+}

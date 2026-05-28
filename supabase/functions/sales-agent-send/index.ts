@@ -5,6 +5,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { coraSignatureHtml } from "../_shared/coraSignature.ts";
 import { sendViaOutlook } from "../_shared/outlookSend.ts";
+import { assertCoraCanAct, logCoraDecision, CORA_MAILBOX } from "../_shared/coraGuard.ts";
+import { checkRelationship } from "../_shared/relationshipCheck.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +63,17 @@ serve(async (req) => {
   const stats: any = { processed: 0, sent: 0, failed: 0, skipped: 0, completed: 0, halted: 0 };
 
   try {
-    const { data: settings } = await supabase.from("sales_agent_settings").select("*").eq("id", true).maybeSingle();
+    // Hard gate: mailbox verified, autopilot not paused, no emergency stop.
+    const coraGate = await assertCoraCanAct(supabase);
+    if (!coraGate.allowed) {
+      await supabase.from("sales_agent_runs").update({
+        status: "completed", completed_at: new Date().toISOString(),
+        stats: { ...stats, skipped: coraGate.blocker ?? "blocked" },
+      }).eq("id", runId);
+      await logCoraDecision(supabase, { action: "send_cron_skipped", reason: coraGate.reason ?? "blocked" });
+      return new Response(JSON.stringify({ ok: true, skipped: coraGate.blocker }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const settings = coraGate.settings;
     if (settings && settings.autopilot_outreach === false) {
       await supabase.from("sales_agent_runs").update({ status: "completed", completed_at: new Date().toISOString(), stats: { ...stats, skipped: "autopilot_off" } }).eq("id", runId);
       return new Response(JSON.stringify({ ok: true, skipped: "autopilot_off" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -173,6 +185,27 @@ serve(async (req) => {
           settings?.bookings_url ? { url: settings.bookings_url, label: settings.bookings_cta_label } : undefined,
         );
 
+        // Per-lead relationship guard (in case lead status changed since enrollment).
+        const rel = await checkRelationship(supabase, {
+          email: lead.email, company_name: lead.company_name, website: lead.website,
+        });
+        if (rel.status !== "safe_new_lead") {
+          await supabase.from("outreach_enrollments").update({
+            status: "stopped",
+            paused_reason: `relationship: ${rel.status} — ${rel.reason}`,
+            completed_at: new Date().toISOString(),
+          }).eq("id", enr.id);
+          await logCoraDecision(supabase, {
+            lead_id: lead.id,
+            action: "sequence_stopped_relationship",
+            reason: rel.reason,
+            relationship_check_result: rel as any,
+            sending_mailbox: CORA_MAILBOX,
+          });
+          stats.halted++;
+          continue;
+        }
+
         const send = await sendViaOutlook({ to: lead.email, subject, html });
         if (!send.ok) throw new Error(send.error || "send failed");
 
@@ -184,6 +217,16 @@ serve(async (req) => {
           resend_message_id: null,
           status: "sent",
           variant_id: chosen?.id ?? null,
+          sending_mailbox: CORA_MAILBOX,
+        });
+
+        await logCoraDecision(supabase, {
+          lead_id: lead.id,
+          action: "sequence_step_sent",
+          reason: `${seq.name} step ${enr.current_step + 1}`,
+          variant_id: chosen?.id ?? null,
+          sending_mailbox: CORA_MAILBOX,
+          prompt_version: settings?.prompt_version ?? null,
         });
 
         const { data: cur } = await supabase.from("agent_leads").select("outreach_count").eq("id", lead.id).single();
