@@ -1,15 +1,19 @@
+// Cold-outreach sender for the Cora Black persona.
+// MUST send via the Outlook gateway (cora@crunchcarbon.com) — Resend is
+// reserved for platform identity ("The Crunch Carbon Team"). See
+// _shared/outlookSend.ts and _shared/coraSignature.ts.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { coraSignatureHtml, CORA_FROM } from "../_shared/coraSignature.ts";
+import { coraSignatureHtml } from "../_shared/coraSignature.ts";
+import { sendViaOutlook } from "../_shared/outlookSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
 
 const BOOKING_LINK = "https://outlook.office.com/bookwithme/user/9d260efd86dd40d586655ba9b9a3b4c1@crunchcarbon.com/meetingtype/NFYHu93970W7f_fhSJejcg2?anonymous&ismsaljsauthenabled&ep=mlink";
 const REGISTRATION_LINK = "https://crunchcarbon.com/register?role=agent";
