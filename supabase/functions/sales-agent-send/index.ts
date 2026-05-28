@@ -185,6 +185,27 @@ serve(async (req) => {
           settings?.bookings_url ? { url: settings.bookings_url, label: settings.bookings_cta_label } : undefined,
         );
 
+        // Per-lead relationship guard (in case lead status changed since enrollment).
+        const rel = await checkRelationship(supabase, {
+          email: lead.email, company_name: lead.company_name, website: lead.website,
+        });
+        if (rel.status !== "safe_new_lead") {
+          await supabase.from("outreach_enrollments").update({
+            status: "stopped",
+            paused_reason: `relationship: ${rel.status} — ${rel.reason}`,
+            completed_at: new Date().toISOString(),
+          }).eq("id", enr.id);
+          await logCoraDecision(supabase, {
+            lead_id: lead.id,
+            action: "sequence_stopped_relationship",
+            reason: rel.reason,
+            relationship_check_result: rel as any,
+            sending_mailbox: CORA_MAILBOX,
+          });
+          stats.halted++;
+          continue;
+        }
+
         const send = await sendViaOutlook({ to: lead.email, subject, html });
         if (!send.ok) throw new Error(send.error || "send failed");
 
@@ -196,6 +217,16 @@ serve(async (req) => {
           resend_message_id: null,
           status: "sent",
           variant_id: chosen?.id ?? null,
+          sending_mailbox: CORA_MAILBOX,
+        });
+
+        await logCoraDecision(supabase, {
+          lead_id: lead.id,
+          action: "sequence_step_sent",
+          reason: `${seq.name} step ${enr.current_step + 1}`,
+          variant_id: chosen?.id ?? null,
+          sending_mailbox: CORA_MAILBOX,
+          prompt_version: settings?.prompt_version ?? null,
         });
 
         const { data: cur } = await supabase.from("agent_leads").select("outreach_count").eq("id", lead.id).single();
