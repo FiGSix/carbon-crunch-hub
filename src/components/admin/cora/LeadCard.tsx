@@ -76,7 +76,7 @@ export function LeadCard({ row, onOpen }: { row: LeadCardRow; onOpen: (id: strin
           <div className="flex flex-wrap gap-1">
             <Badge variant="secondary" className="h-5">{status}</Badge>
             {row.fit_score != null && <Badge variant="outline" className="h-5">Fit {row.fit_score}</Badge>}
-            {blocked && <Badge variant="destructive" className="h-5">{rel!.replaceAll("_", " ")}</Badge>}
+            {blocked && <Badge variant="destructive" className="h-5">{rel!.replace(/_/g, " ")}</Badge>}
             {(row.completeness_missing ?? []).map((m) => (
               <Badge key={m} variant="outline" className="h-5 text-[10px] border-amber-500 text-amber-700 dark:text-amber-400">
                 {MISSING_LABEL[m] ?? m}
