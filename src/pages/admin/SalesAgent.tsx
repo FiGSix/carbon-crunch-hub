@@ -30,7 +30,6 @@ export default function SalesAgent() {
   const [section, setSection] = useState<Section>("command");
   const { signals } = useCoraSignals();
 
-  const { signals } = useCoraSignals();
 
   return (
     <div className="min-h-screen bg-background">
