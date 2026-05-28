@@ -16,9 +16,6 @@ import { cn } from "@/lib/utils";
 
 type Section = "command" | "pipeline" | "conversations" | "meetings" | "decisions" | "controls";
 
-const NAV: { id: Section; label: string; icon: typeof Gauge; badgeKey?: "needsReview" | "needsApproval" }[] = [
-  { id: "command", label: "Command Centre", icon: Gauge },
-  { id: "pipeline", label: "CRM Pipeline", icon: KanbanSquare, badgeKey: "needsApproval" },
 const NAV: { id: Section; label: string; icon: typeof Gauge; badgeKey?: "needsReview" | "incomplete" | "awaitingReply" }[] = [
   { id: "command", label: "Command Centre", icon: Gauge },
   { id: "pipeline", label: "CRM", icon: KanbanSquare, badgeKey: "incomplete" },
@@ -28,7 +25,11 @@ const NAV: { id: Section; label: string; icon: typeof Gauge; badgeKey?: "needsRe
   { id: "controls", label: "Controls", icon: Sliders },
 ];
 
+export default function SalesAgent() {
+  const navigate = useNavigate();
   const [section, setSection] = useState<Section>("command");
+  const { signals } = useCoraSignals();
+
   const { signals } = useCoraSignals();
 
   return (
