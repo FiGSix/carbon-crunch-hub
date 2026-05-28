@@ -81,6 +81,52 @@ export function CommandCentreView({ onJump }: Props) {
         </CardContent>
       </Card>
 
+      {(() => {
+        const target = signals?.settings?.target_agents ?? 250;
+        const onboarded = goal?.onboarded ?? 0;
+        const pipeline = goal?.pipeline ?? 0;
+        const expectedConv = Number(signals?.settings?.expected_conversion ?? 0.1);
+        const projected = onboarded + Math.round(pipeline * expectedConv);
+        const onTrack = projected >= target;
+        const pct = Math.min(100, (onboarded / Math.max(1, target)) * 100);
+        const enrichStatus = goal?.lastEnrich?.status === "running"
+          ? "Running"
+          : signals?.settings?.autopilot_enrichment === false || signals?.settings?.emergency_stop
+            ? "Paused" : "Idle";
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2"><Activity className="h-4 w-4" /> Goal — 250 onboarded agents</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{onboarded} <span className="text-base text-muted-foreground font-normal">/ {target} onboarded</span></div>
+                  <div className="text-xs text-muted-foreground">+ {pipeline} in pipeline · projected reach {projected}</div>
+                </div>
+                <Badge variant={onTrack ? "default" : "outline"} className={onTrack ? "" : "border-amber-500 text-amber-600"}>{onTrack ? "On track" : "Behind"}</Badge>
+              </div>
+              <Progress value={pct} />
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div>
+                  <div className="text-muted-foreground uppercase tracking-wide">Enrichment</div>
+                  <div className="font-semibold">{enrichStatus}</div>
+                  {goal?.lastEnrich?.started_at && <div className="text-muted-foreground">{formatDistanceToNow(new Date(goal.lastEnrich.started_at), { addSuffix: true })}</div>}
+                </div>
+                <div>
+                  <div className="text-muted-foreground uppercase tracking-wide">Last top-up</div>
+                  <div className="font-semibold">{goal?.lastTopup ? formatDistanceToNow(new Date(goal.lastTopup), { addSuffix: true }) : "Never"}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground uppercase tracking-wide">Preset expand</div>
+                  <div className="font-semibold">{goal?.lastExpand ? formatDistanceToNow(new Date(goal.lastExpand), { addSuffix: true }) : "Never"}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Tile label="Incomplete" value={signals?.incomplete ?? 0} tone="warn" onClick={() => onJump("pipeline")} hint="Inbox — Cora researching" />
         <Tile label="Complete & ready" value={signals?.completeReady ?? 0} tone="ok" onClick={() => onJump("pipeline")} hint="≥80 completeness" />
