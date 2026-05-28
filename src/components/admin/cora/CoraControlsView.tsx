@@ -105,6 +105,31 @@ function AutopilotPanel() {
             <Switch checked={!!settings?.emergency_stop} onCheckedChange={(v) => update({ emergency_stop: v })} />
             <Label className="text-sm flex items-center gap-1 text-destructive"><AlertOctagon className="h-4 w-4" /> Emergency stop</Label>
           </div>
+          <div className="border-t pt-3 mt-3 space-y-3">
+            <div className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Goal pursuit</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Target onboarded agents</Label>
+                <Input type="number" defaultValue={settings?.target_agents ?? 250} onBlur={(e) => update({ target_agents: Number(e.target.value) })} />
+              </div>
+              <div>
+                <Label className="text-xs">Enrichment daily cap</Label>
+                <Input type="number" defaultValue={settings?.enrichment_daily_cap ?? 500} onBlur={(e) => update({ enrichment_daily_cap: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={settings?.autopilot_enrichment !== false} onCheckedChange={(v) => update({ autopilot_enrichment: v })} />
+              <Label className="text-sm">Continuous enrichment worker</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={settings?.goal_topup_enabled !== false} onCheckedChange={(v) => update({ goal_topup_enabled: v })} />
+              <Label className="text-sm">Goal-driven discovery top-up</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={settings?.autopilot_preset_expand !== false} onCheckedChange={(v) => update({ autopilot_preset_expand: v })} />
+              <Label className="text-sm">Auto-expand discovery presets</Label>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
