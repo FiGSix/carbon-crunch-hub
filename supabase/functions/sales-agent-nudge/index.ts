@@ -75,6 +75,11 @@ serve(async (req) => {
       try {
         const sendResult = await sendViaOutlook({ to: a.email, subject, html });
         if (!sendResult.ok) throw new Error(sendResult.error || "Outlook send failed");
+        await logCoraDecision(supabase, {
+          action: "nudge_sent",
+          reason: `Onboarding nudge to ${a.email}`,
+          sending_mailbox: CORA_MAILBOX,
+        });
         stats.sent++;
       } catch (e) {
         console.error("nudge send failed", a.email, e);
