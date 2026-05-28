@@ -337,15 +337,13 @@ const handler = async (req: Request): Promise<Response> => {
         const htmlBody = template.getBody(lead, aiPersonalization);
         const bodyPreview = htmlBody.replace(/<[^>]*>/g, '').substring(0, 200);
 
-        // Send email via Resend
-        const emailResponse = await resend.emails.send({
-          from: CORA_FROM,
-          to: [lead.email],
-          subject: subject,
-          html: htmlBody,
-        });
+        // Send email via Outlook gateway as Cora (cora@crunchcarbon.com).
+        const sendResult = await sendViaOutlook({ to: lead.email, subject, html: htmlBody });
+        if (!sendResult.ok) {
+          throw new Error(sendResult.error || "Outlook send failed");
+        }
+        console.log(`Email sent to ${lead.email} via Outlook (Cora)`);
 
-        console.log(`Email sent to ${lead.email}:`, emailResponse);
 
         // Record outreach in history
         const { error: historyError } = await supabase
@@ -356,7 +354,7 @@ const handler = async (req: Request): Promise<Response> => {
             subject: subject,
             body_preview: bodyPreview,
             sent_by: user.id,
-            resend_message_id: emailResponse.data?.id || null,
+            resend_message_id: null,
             status: 'sent',
           });
 
@@ -402,7 +400,7 @@ const handler = async (req: Request): Promise<Response> => {
         results.push({ 
           leadId: lead.id, 
           success: true, 
-          messageId: emailResponse.data?.id 
+          messageId: undefined 
         });
 
         // Rate limiting: wait 500ms between emails
