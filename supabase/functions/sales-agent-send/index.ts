@@ -173,7 +173,7 @@ serve(async (req) => {
           settings?.bookings_url ? { url: settings.bookings_url, label: settings.bookings_cta_label } : undefined,
         );
 
-        const send = await sendViaOutlook(lead.email, subject, html);
+        const send = await sendViaOutlook({ to: lead.email, subject, html });
         if (!send.ok) throw new Error(send.error || "send failed");
 
         await supabase.from("lead_outreach_history").insert({
