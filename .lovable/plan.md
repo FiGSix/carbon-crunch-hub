@@ -1,90 +1,85 @@
-# Simplify Cora CRM around Lead Completeness
 
-Goal: turn the Command Centre into a usable CRM where every lead is graded on a 0–100 completeness score, and outreach is only allowed once a lead is genuinely complete. Reuse existing tables (`discovery_candidates`, `cora_decision_log`, `cora_mailbox_status`, `sales_agent_settings`), Outlook sender, and gating modules — no new infra unless required.
+# Make Cora actually pursue 250 onboarded agents
 
-## 1. Database (one migration)
+Today Cora discovers leads once a day, never enriches them, and never adapts when discovery dries up. The new completeness gate will block almost all sending. This plan closes the three gaps you confirmed.
 
-Extend `discovery_candidates`:
-- `segment text` — `residential | commercial | agri | mixed | unknown`
-- `completeness_score int` (0–100, generated or trigger-maintained)
-- `completeness_missing text[]` — array of missing-field tags
-- `research_status text` — New, Researching, Incomplete, Complete, Needs Review, Duplicate, Existing Agent, Existing Client, Not Fit, Do Not Contact
-- `outreach_status text` — Ready, First Email Sent, Follow-Up Due, Follow-Up Sent, Replied, No Response, Paused
-- `sales_status text` — Interested, Meeting Requested, Meeting Booked, Proposal Requested, Agent Invitation Sent, Signed Up, First Proposal Sent
-- `location_country text`, `location_region text` (used by SA check)
-- `fit_reason text`, `research_evidence jsonb`
+## 1. Continuous enrichment worker
 
-Add a Postgres trigger `recalc_completeness()` that runs on insert/update and writes `completeness_score` + `completeness_missing` using the rubric:
-- company_name 15, contact_name 15, contact_email 20, website 15, SA location 15, segment (not unknown) 10, fit_score ≥1 = 10.
+New edge function `cora-enrich`:
+- Pick up to N leads where `research_status in ('New','Researching','Incomplete')` and `completeness_score < 80`, ordered by oldest update first.
+- For each lead, fill missing fields using Firecrawl (`map` + `scrape` on the company website) and Lovable AI (extract contact name/email, segment, SA location, fit reason) — only fields listed in `completeness_missing`.
+- Write back, recompute completeness via the trigger, set `research_status` to `Complete | Incomplete | Needs Review | Not Fit | Existing Agent/Client | Duplicate`, log to `cora_decision_log`.
+- If the batch returns 0 candidates → mark run as `idle` and exit (worker idles).
+- If candidates were processed → re-invoke itself (`supabase.functions.invoke('cora-enrich')`) to keep draining the inbox.
 
-Backfill once for existing rows.
+Trigger: cron every 5 minutes calls `cora-enrich`. If already running (lock row in `sales_agent_runs` with `job_name='enrich'` + `status='running'`), it no-ops. This gives the "continuous worker that loops until inbox empty, then idles" behaviour without long-running connections.
 
-## 2. Backend gates (reuse existing modules)
+Guardrails: respects `sales_agent_settings.autopilot_status`, `pause_all_sending` (research keeps running, sending stays paused), `emergency_stop`, and a new `enrichment_daily_cap` (default 500 leads/day) to cap Firecrawl + LLM spend.
 
-Update `supabase/functions/_shared/autoSendGate.ts` to require:
-- `completeness_score >= 80`
-- `contact_email` present
-- `website` present
-- SA location confirmed (`location_country = 'ZA'`)
-- `segment` set and not `unknown` (mixed allowed)
-- `fit_score >= 3`
-- duplicate + existing-relationship check passes (already implemented)
-- contact not blocked / unsubscribed / DNC
-- mailbox = Outlook `cora@crunchcarbon.com` (already enforced via `coraGuard`)
+## 2. Goal-driven discovery top-up
 
-Any failure → return blocker tag + reason, log via `logCoraDecision`, set `next_best_action` to one of: `research_email`, `research_website`, `confirm_location`, `set_segment`, `review_duplicate`, `review_existing_relationship`, `escalate`, `reject`.
+Extend `sales_agent_settings`:
+- `target_agents int default 250`
+- `goal_topup_enabled bool default true`
+- `max_topup_runs_per_day int default 4`
 
-Update `cora-discover` / research worker (whichever currently exists) so its objective is **lead completion**, not just discovery. After each pass it must:
-1. Attempt to fill each missing field.
-2. Recompute `completeness_score`.
-3. Set `research_status` = Complete | Incomplete | Needs Review | Duplicate | Existing Agent | Existing Client | Not Fit.
-4. Write evidence into `research_evidence` and a reason into `fit_reason`.
+Update `discovery-cron`:
+1. Run existing daily preset sweep as today.
+2. After sweep, compute:
+   - `onboarded = count(discovery_candidates where sales_status='Signed Up')`
+   - `in_pipeline = count where research_status in ('Complete') OR outreach_status is not null and not in terminal states`
+   - `gap = target_agents - onboarded - (in_pipeline * expected_conversion)` (expected_conversion stored on settings, default 0.1)
+3. If `gap > 0` and `goal_topup_enabled` and today's topup runs < cap → invoke `discover-leads` again for the highest-yield active presets, log a `topup` run.
 
-No changes to Outlook sender or `coraGuard`.
+A second cron entry runs `discovery-cron` mid-day (e.g. 12:00 UTC) so top-ups happen the same day, not 24h later.
 
-## 3. Frontend — collapse to 5 sections
+## 3. Auto-expanding presets
 
-Replace `PipelineView`'s 6 tabs with **exactly 5** views inside `src/components/admin/cora/PipelineView.tsx` (or a new `CrmView.tsx`):
+New edge function `cora-preset-expand` (cron daily at 03:00 UTC, before discovery sweep):
+- For each active preset, look at candidates created in the last 14 days. If `new_candidates < 3` → mark preset `stale=true`.
+- For every stale preset, call Lovable AI (`google/gemini-3-flash-preview`, tool-calling for structured output) with: goal segment (residential/commercial/agri solar installers in SA), existing preset queries, list of already-onboarded company names and regions. Ask it to propose 3 new `{query, location, limit_count}` variations that haven't been tried — different SA regions, adjacent segments, different search angles.
+- Insert new presets as `active=true, source='auto_expand'`, log to `cora_decision_log`.
+- Hard cap: never more than 20 active presets; oldest auto-expand presets get retired first.
 
-1. **Lead Inbox** — `research_status in (New, Researching, Incomplete, Needs Review)`
-2. **Complete Leads** — `completeness_score >= 80 AND outreach_status is null`
-3. **Outreach Active** — `outreach_status in (First Email Sent, Follow-Up Due, Follow-Up Sent, No Response, Paused)`
-4. **Conversations** — `outreach_status = Replied` (reuses existing Inbox component)
-5. **Opportunities** — `sales_status is not null`
+## 4. Schema additions (one migration)
 
-Sidebar in `SalesAgent.tsx` becomes: Command Centre · CRM · Conversations · Meetings · Decision Log · Controls. Remove the Board/Table/Action/Commercial/Relationships/Approval sub-tabs.
+```sql
+alter table sales_agent_settings
+  add column target_agents int default 250,
+  add column goal_topup_enabled bool default true,
+  add column max_topup_runs_per_day int default 4,
+  add column expected_conversion numeric default 0.1,
+  add column enrichment_daily_cap int default 500;
 
-## 4. Unified Lead Card
+alter table sales_agent_discovery_presets
+  add column stale bool default false,
+  add column source text default 'manual',  -- manual | auto_expand
+  add column last_yield_count int default 0;
+```
 
-New `LeadCard.tsx` used by every view. Shows exactly:
-- Company name · Contact name · Contact email · Website · Location · Segment
-- Status (research/outreach/sales as relevant) · Fit score badge · Completeness score ring (red <60, amber 60–79, green ≥80)
-- Next best action line
-- If incomplete: chips for each missing field (`No email`, `No website`, `Location?`, `Segment?`, `Possible duplicate`, `Existing agent`)
+Plus the cron schedule rows (inserted via the insert tool, not migration, since they contain the project URL + anon key).
 
-`LeadDetailDrawer` keeps deeper info: research notes/evidence, duplicate check, relationship check, suggested angle, email + reply history, meetings, decision log. Trim drawer to remove anything not in this spec.
+## 5. Frontend (small)
 
-## 5. Command Centre tiles
+Add a "Cora goal" card to `CommandCentreView`:
+- Onboarded / target (250)
+- Pipeline projected to hit goal: yes/no
+- Enrichment worker status: running / idle / paused
+- Last top-up run + last preset expansion
 
-Update `CommandCentreView.tsx` counters to: Incomplete · Complete & ready · Outreach active · Awaiting reply · Opportunities · Blocked (existing agent/client/duplicate/DNC) · Needs human review. Each tile jumps to the matching CRM filter.
+Add a toggle in `CoraControlsView` → Autopilot panel for `goal_topup_enabled` and a number input for `target_agents`, `enrichment_daily_cap`.
 
-## 6. Cleanup
+## 6. Files
 
-Remove now-unused stage constants and filter components in `PipelineView.tsx` (`STAGES`, `STAGE_LABEL`, `FilteredList`, `BoardView` kanban). Delete `ApprovalQueueTab` wiring from the new shell if approval is no longer a distinct view — surface "needs approval" inside Lead Inbox via the missing-fields chips instead. Per project rules, rewrite rather than patch the old multi-tab pipeline.
-
-## Files touched
-
-- `supabase/migrations/<new>.sql` — schema + trigger + backfill
-- `supabase/functions/_shared/autoSendGate.ts` — completeness/segment gates
-- `supabase/functions/cora-discover/index.ts` (or current research worker) — completion-focused loop
-- `src/components/admin/cora/PipelineView.tsx` → rewritten as 5-section CRM
-- `src/components/admin/cora/LeadCard.tsx` (new)
-- `src/components/admin/cora/LeadDetailDrawer.tsx` — trim to spec
-- `src/components/admin/cora/CommandCentreView.tsx` — new tiles
-- `src/pages/admin/SalesAgent.tsx` — sidebar labels
-- `src/hooks/cora/useCoraSignals.ts` — new counters
+- `supabase/migrations/<new>.sql`
+- `supabase/functions/cora-enrich/index.ts` (new)
+- `supabase/functions/cora-preset-expand/index.ts` (new)
+- `supabase/functions/discovery-cron/index.ts` (add top-up logic)
+- `src/components/admin/cora/CommandCentreView.tsx` (goal card)
+- `src/components/admin/cora/CoraControlsView.tsx` (new settings)
+- `src/hooks/cora/useCoraSignals.ts` (goal + worker status)
+- Cron schedule SQL inserted via insert tool
 
 ## Out of scope
-
-- Outlook connector, mailbox health, `coraGuard`, decision log schema — unchanged.
-- Meetings, Sequences, Learning tabs — removed from nav (functionality stays in DB).
+- Outlook connector, `autoSendGate`, completeness rubric — unchanged.
+- No changes to the CRM 5-section layout.
