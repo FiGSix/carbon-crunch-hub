@@ -1,6 +1,7 @@
-// Cora mailbox health check. Polls the Outlook connector gateway's
-// verify_credentials endpoint and stores the latest result. Cron-driven; also
-// callable on demand from the admin UI.
+// Cora mailbox health check. Performs a real read-only probe against the
+// Outlook Graph gateway (the generic verify_credentials endpoint returns a
+// spurious "Invalid version: me" 404 for Outlook). Stores the latest result.
+// Cron-driven; also callable on demand from the admin UI.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -8,6 +9,8 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev/microsoft_outlook";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -32,21 +35,26 @@ serve(async (req) => {
   } else {
     try {
       const t0 = Date.now();
-      const res = await fetch("https://connector-gateway.lovable.dev/api/v1/verify_credentials", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableKey}`,
-          "X-Connection-Api-Key": outlookKey,
+      // Lightweight read-only probe: fetch a single message id. This confirms
+      // the connection is authorized AND the mailbox is reachable.
+      const res = await fetch(
+        `${OUTLOOK_GATEWAY}/me/messages?$top=1&$select=id,receivedDateTime`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "X-Connection-Api-Key": outlookKey,
+          },
         },
-      });
+      );
       latency_ms = Date.now() - t0;
       if (res.ok) {
-        const j = await res.json();
-        outcome = j.outcome === "verified" || j.outcome === "skipped" ? "verified" : (j.outcome ?? "failed");
-        error = j.error ?? null;
+        outcome = "verified";
+        error = null;
       } else {
         outcome = "failed";
-        error = `verify_credentials [${res.status}]: ${(await res.text().catch(() => "")).slice(0, 200)}`;
+        const text = (await res.text().catch(() => "")).slice(0, 300);
+        error = `Outlook probe [${res.status}]: ${text}`;
       }
     } catch (e) {
       outcome = "failed";
