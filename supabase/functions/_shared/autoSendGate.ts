@@ -12,7 +12,12 @@ export interface GateInput {
   phone?: string | null;
   fit_score?: number | null;
   personalisation_score?: number | null;
+  fit_score?: number | null;
+  personalisation_score?: number | null;
   research_confidence?: number | null;
+  completeness_score?: number | null;
+  segment?: string | null;
+  location_country?: string | null;
   candidate_id?: string | null;
   precomputedRelationship?: RelationshipCheckResult | null;
 }
@@ -25,7 +30,6 @@ export interface GateResult {
   remainingToday?: number;
 }
 
-function looksSouthAfrican(loc?: string | null): boolean {
   if (!loc) return true; // don't block when unknown
   const l = loc.toLowerCase();
   return (
