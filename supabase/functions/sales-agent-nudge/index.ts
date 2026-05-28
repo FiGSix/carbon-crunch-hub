@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { coraSignatureHtml } from "../_shared/coraSignature.ts";
 import { sendViaOutlook } from "../_shared/outlookSend.ts";
+import { assertCoraCanAct, logCoraDecision, CORA_MAILBOX } from "../_shared/coraGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,15 @@ serve(async (req) => {
   const stats = { candidates: 0, sent: 0, skipped: 0, failed: 0 };
 
   try {
+    const gate = await assertCoraCanAct(supabase);
+    if (!gate.allowed) {
+      await supabase.from("sales_agent_runs").update({
+        status: "completed", completed_at: new Date().toISOString(),
+        stats: { ...stats, skipped: gate.blocker ?? "blocked" },
+      }).eq("id", runId);
+      await logCoraDecision(supabase, { action: "nudge_cron_skipped", reason: gate.reason ?? "blocked" });
+      return new Response(JSON.stringify({ ok: true, skipped: gate.blocker }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     // Agents who accepted invite but onboarding not audit_ready
     const { data: agents } = await supabase
       .from("profiles")
