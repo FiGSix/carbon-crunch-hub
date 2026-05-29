@@ -1,85 +1,48 @@
+# SSEG → Data Access auto-fill + Portal URL defaults
 
-# Make Cora actually pursue 250 onboarded agents
+## Goal
 
-Today Cora discovers leads once a day, never enriches them, and never adapts when discovery dries up. The new completeness gate will block almost all sending. This plan closes the three gaps you confirmed.
+In Project Onboarding, when `meter_type = SSEG`, automatically prepopulate the **Data Access Configuration** card's **Provider** with the **Inverter Brand** entered in the Inverter section, and prepopulate **Portal URL** from an admin-editable lookup of default portal URLs per inverter brand. Only fill blank fields — never overwrite values the user has already entered.
 
-## 1. Continuous enrichment worker
+## New DB table
 
-New edge function `cora-enrich`:
-- Pick up to N leads where `research_status in ('New','Researching','Incomplete')` and `completeness_score < 80`, ordered by oldest update first.
-- For each lead, fill missing fields using Firecrawl (`map` + `scrape` on the company website) and Lovable AI (extract contact name/email, segment, SA location, fit reason) — only fields listed in `completeness_missing`.
-- Write back, recompute completeness via the trigger, set `research_status` to `Complete | Incomplete | Needs Review | Not Fit | Existing Agent/Client | Duplicate`, log to `cora_decision_log`.
-- If the batch returns 0 candidates → mark run as `idle` and exit (worker idles).
-- If candidates were processed → re-invoke itself (`supabase.functions.invoke('cora-enrich')`) to keep draining the inbox.
+`public.inverter_portal_defaults`
+- `brand` (text, primary key — matches the option values in the Data Access Provider dropdown, e.g. `SunSynk`, `SolarEdge`, `Deye`, `Huawei`, …)
+- `portal_url` (text)
+- `notes` (text, nullable — for admins)
+- standard `created_at`, `updated_at`, `updated_by`
 
-Trigger: cron every 5 minutes calls `cora-enrich`. If already running (lock row in `sales_agent_runs` with `job_name='enrich'` + `status='running'`), it no-ops. This gives the "continuous worker that loops until inbox empty, then idles" behaviour without long-running connections.
+Access:
+- `GRANT SELECT` to `authenticated` (everyone in the platform can read defaults while filling onboarding).
+- `GRANT INSERT/UPDATE/DELETE` to `authenticated` but gated by RLS to admins only (via `has_role(auth.uid(),'admin')`).
+- `service_role` full.
 
-Guardrails: respects `sales_agent_settings.autopilot_status`, `pause_all_sending` (research keeps running, sending stays paused), `emergency_stop`, and a new `enrichment_daily_cap` (default 500 leads/day) to cap Firecrawl + LLM spend.
+Seed rows for the brands currently listed in the Provider dropdown that have a well-known portal (SunSynk → https://www.sunsynk.net, SolarEdge → https://monitoring.solaredge.com, Huawei → https://eu5.fusionsolar.huawei.com, Deye → https://www.solarmanpv.com, Growatt → https://server.growatt.com, GoodWe → https://www.semsportal.com, Fronius → https://www.solarweb.com, SMA → https://ennexos.sunnyportal.com, Enphase → https://enlighten.enphaseenergy.com, Victron → https://vrm.victronenergy.com, SungrowsenuS → https://www.isolarcloud.com, FoxESS → https://www.foxesscloud.com, GivEnergy → https://www.givenergy.cloud, Alpha ESS → https://www.alphaess.com). Brands without an obvious public portal get a row with `portal_url = NULL`.
 
-## 2. Goal-driven discovery top-up
+## Frontend changes — `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx`
 
-Extend `sales_agent_settings`:
-- `target_agents int default 250`
-- `goal_topup_enabled bool default true`
-- `max_topup_runs_per_day int default 4`
+1. In `fetchConfig`, additionally read from `onboarding_fields` for this project: `meter_type`, `inverter_brand`.
+2. Also fetch all rows from `inverter_portal_defaults` once (cached in component state) to build a `brand → portal_url` map.
+3. After both fetches resolve, run an **auto-fill effect** that:
+   - Triggers only when `meter_type === 'SSEG'` AND `inverter_brand` is present.
+   - If `config.provider` is empty → set `config.provider = inverter_brand` (when that brand exists as a Provider option; if not, set to `Other`).
+   - If `config.portal_url` is empty AND the lookup map has a URL for that brand → set `config.portal_url` to it.
+   - Never overwrites existing non-empty values.
+4. Also wire the **Provider Select**'s `onValueChange`: if the user manually changes provider and `portal_url` is empty, prepopulate from the lookup map.
+5. Show a small inline hint under Provider when the value was auto-filled from SSEG inverter brand ("Auto-filled from inverter brand — change if your monitoring portal is different.").
 
-Update `discovery-cron`:
-1. Run existing daily preset sweep as today.
-2. After sweep, compute:
-   - `onboarded = count(discovery_candidates where sales_status='Signed Up')`
-   - `in_pipeline = count where research_status in ('Complete') OR outreach_status is not null and not in terminal states`
-   - `gap = target_agents - onboarded - (in_pipeline * expected_conversion)` (expected_conversion stored on settings, default 0.1)
-3. If `gap > 0` and `goal_topup_enabled` and today's topup runs < cap → invoke `discover-leads` again for the highest-yield active presets, log a `topup` run.
+## Admin management of defaults
 
-A second cron entry runs `discovery-cron` mid-day (e.g. 12:00 UTC) so top-ups happen the same day, not 24h later.
-
-## 3. Auto-expanding presets
-
-New edge function `cora-preset-expand` (cron daily at 03:00 UTC, before discovery sweep):
-- For each active preset, look at candidates created in the last 14 days. If `new_candidates < 3` → mark preset `stale=true`.
-- For every stale preset, call Lovable AI (`google/gemini-3-flash-preview`, tool-calling for structured output) with: goal segment (residential/commercial/agri solar installers in SA), existing preset queries, list of already-onboarded company names and regions. Ask it to propose 3 new `{query, location, limit_count}` variations that haven't been tried — different SA regions, adjacent segments, different search angles.
-- Insert new presets as `active=true, source='auto_expand'`, log to `cora_decision_log`.
-- Hard cap: never more than 20 active presets; oldest auto-expand presets get retired first.
-
-## 4. Schema additions (one migration)
-
-```sql
-alter table sales_agent_settings
-  add column target_agents int default 250,
-  add column goal_topup_enabled bool default true,
-  add column max_topup_runs_per_day int default 4,
-  add column expected_conversion numeric default 0.1,
-  add column enrichment_daily_cap int default 500;
-
-alter table sales_agent_discovery_presets
-  add column stale bool default false,
-  add column source text default 'manual',  -- manual | auto_expand
-  add column last_yield_count int default 0;
-```
-
-Plus the cron schedule rows (inserted via the insert tool, not migration, since they contain the project URL + anon key).
-
-## 5. Frontend (small)
-
-Add a "Cora goal" card to `CommandCentreView`:
-- Onboarded / target (250)
-- Pipeline projected to hit goal: yes/no
-- Enrichment worker status: running / idle / paused
-- Last top-up run + last preset expansion
-
-Add a toggle in `CoraControlsView` → Autopilot panel for `goal_topup_enabled` and a number input for `target_agents`, `enrichment_daily_cap`.
-
-## 6. Files
-
-- `supabase/migrations/<new>.sql`
-- `supabase/functions/cora-enrich/index.ts` (new)
-- `supabase/functions/cora-preset-expand/index.ts` (new)
-- `supabase/functions/discovery-cron/index.ts` (add top-up logic)
-- `src/components/admin/cora/CommandCentreView.tsx` (goal card)
-- `src/components/admin/cora/CoraControlsView.tsx` (new settings)
-- `src/hooks/cora/useCoraSignals.ts` (goal + worker status)
-- Cron schedule SQL inserted via insert tool
+Add a lightweight admin editor at `src/components/admin/InverterPortalDefaultsTable.tsx` and mount it in the existing admin settings area (likely `src/pages/admin/...` — confirmed during build by reading the admin routes). Table view with inline edit of `portal_url` per brand, plus "Add brand" row. RLS already restricts writes to admins.
 
 ## Out of scope
-- Outlook connector, `autoSendGate`, completeness rubric — unchanged.
-- No changes to the CRM 5-section layout.
+
+- No changes to the Inverter section UI itself.
+- No change to how `onboarding_fields.inverter_brand` is written — we only read it.
+- No bulk migration of existing projects' Data Access rows; auto-fill happens the next time the tab is opened with empty fields.
+
+## Files touched
+
+- New migration: `inverter_portal_defaults` table + GRANTs + RLS + seed inserts.
+- `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx` — fetch onboarding fields + defaults, auto-fill effect, prepopulate-on-provider-change.
+- `src/components/admin/InverterPortalDefaultsTable.tsx` (new) + mount it in the admin settings page.
