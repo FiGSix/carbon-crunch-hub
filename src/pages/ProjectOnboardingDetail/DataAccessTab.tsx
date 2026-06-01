@@ -117,6 +117,29 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
         setIsSubmitted(onboardingData.data_access_verified === true);
         setSubmittedAt(onboardingData.data_access_verified_at || null);
       }
+
+      // Auto-fill from SSEG inverter brand when Data Access fields are still blank.
+      const { data: fieldsData } = await supabase
+        .from('onboarding_fields')
+        .select('meter_type, inverter_brand')
+        .eq('project_id', projectId)
+        .maybeSingle();
+
+      if (fieldsData?.meter_type === 'SSEG' && fieldsData.inverter_brand) {
+        const brand = fieldsData.inverter_brand;
+        const matched = PROVIDER_OPTIONS.includes(brand) ? brand : 'Other';
+        setConfig(prev => {
+          const next = { ...prev };
+          let touched = false;
+          if (!next.provider) { next.provider = matched; touched = true; }
+          if (!next.portal_url) {
+            const { data: defaultsRow } = { data: null } as any;
+            // portalDefaults may not be loaded yet; handled in separate effect below.
+          }
+          if (touched) setAutoFilledFromSseg(true);
+          return next;
+        });
+      }
     } catch (error) {
       console.error('Error fetching config:', error);
     }
