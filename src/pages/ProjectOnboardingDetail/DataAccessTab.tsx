@@ -419,6 +419,11 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
               </SelectContent>
             </Select>
             <FormError message={touched.provider ? errors.provider : undefined} />
+            {autoFilledFromSseg && config.provider && (
+              <p className="text-xs text-muted-foreground">
+                Auto-filled from the inverter brand (meter type is SSEG). Change it if your monitoring portal is different.
+              </p>
+            )}
           </div>
 
           {/* Site ID and Portal URL */}
