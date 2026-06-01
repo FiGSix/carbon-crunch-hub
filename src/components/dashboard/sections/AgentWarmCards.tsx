@@ -119,6 +119,11 @@ function WarmCardItem({ card }: { card: WarmCard }) {
             {card.client_name ?? "Unknown client"}
           </p>
           <p className="text-xs text-muted-foreground truncate">{card.title}</p>
+          {userRole === "admin" && card.agent_company_name && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Agent: <span className="font-medium text-foreground">{card.agent_company_name}</span>
+            </p>
+          )}
         </div>
         <Button asChild size="sm" variant="ghost" className="shrink-0">
           <Link to={`/proposals/${card.proposal_id}`}>
