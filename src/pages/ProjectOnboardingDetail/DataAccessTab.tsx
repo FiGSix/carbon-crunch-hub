@@ -129,15 +129,9 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
         const brand = fieldsData.inverter_brand;
         const matched = PROVIDER_OPTIONS.includes(brand) ? brand : 'Other';
         setConfig(prev => {
-          const next = { ...prev };
-          let touched = false;
-          if (!next.provider) { next.provider = matched; touched = true; }
-          if (!next.portal_url) {
-            const { data: defaultsRow } = { data: null } as any;
-            // portalDefaults may not be loaded yet; handled in separate effect below.
-          }
-          if (touched) setAutoFilledFromSseg(true);
-          return next;
+          if (prev.provider) return prev;
+          setAutoFilledFromSseg(true);
+          return { ...prev, provider: matched };
         });
       }
     } catch (error) {
