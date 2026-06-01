@@ -1,17 +1,17 @@
-# Show agent's company on Portfolio Review cards (admin only)
+# Show agent's company on Warm Cards (admin only)
 
-In the admin dashboard's "Portfolio review — multiple unsigned proposals, worth a personal touch" section, display which company the responsible agent belongs to.
+Mirror the Portfolio Review change on the "Proposals worth a personal nudge" section (`AgentWarmCards`). When the viewer is an admin, display the responsible agent's company under the client name.
 
 ## Changes
 
-**`src/hooks/dashboard/usePortfolioReviewClusters.ts`**
-- After fetching `portfolio_reminder_candidates`, collect distinct `agent_id`s and run a single follow-up `profiles` query: `select id, company_name where id in (...)`.
-- Attach `agent_company_name: string | null` to each returned cluster.
-- Extend the `PortfolioReviewCluster` interface with `agent_company_name`.
+**`src/hooks/dashboard/useAgentWarmCards.ts`**
+- Extend `WarmCard` interface with `agent_company_name: string | null`.
+- After fetching engagement buckets, when `userRole === "admin"`, collect distinct `agent_id`s and run a single `profiles` query: `select id, company_name where id in (...)`.
+- Build an `agentCompanyById` map and attach `agent_company_name` to each enriched card. For agents, leave as `null` (not shown).
 
-**`src/components/dashboard/sections/PortfolioReviewSection.tsx`**
-- Import `useAuth` (already imported) and read `userRole`.
-- In `ClusterRow`, when `userRole === 'admin'` and `cluster.agent_company_name` is present, render a small muted line under the client name: `Agent: <company_name>` (or a `Badge` next to the unsigned-count badge — pick badge style to match existing chips).
-- Agents continue to see exactly what they see today (no extra line).
+**`src/components/dashboard/sections/AgentWarmCards.tsx`**
+- Read `userRole` from `useAuth()` in `WarmCardItem` (or pass via prop from the parent).
+- When `userRole === "admin"` and `card.agent_company_name` is present, render a small muted line under the proposal title: `Agent: <company_name>` (same styling pattern as `PortfolioReviewSection`).
+- Agent-facing view is unchanged.
 
-No DB schema or migration changes; `profiles.company_name` already exists. No changes to the agent-facing surface.
+No DB schema or migration changes — `profiles.company_name` already exists. No business-logic changes; purely a display addition for admins.

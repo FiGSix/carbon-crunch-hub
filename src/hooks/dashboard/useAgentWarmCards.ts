@@ -29,6 +29,7 @@ export interface WarmCard {
   client_first_name: string | null;
   client_email: string | null;
   client_phone: string | null;
+  agent_company_name: string | null;
 }
 
 const BUCKET_PRIORITY: Record<EngagementBucket, number> = {
