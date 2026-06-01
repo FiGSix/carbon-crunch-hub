@@ -147,6 +147,17 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
     validateFieldOnBlur(field, config[field as keyof DataAccessConfig], config);
   };
 
+  // Prepopulate Portal URL from the brand defaults when a provider is set and URL is blank.
+  useEffect(() => {
+    if (!config.provider) return;
+    if (config.portal_url) return;
+    const url = portalDefaults[config.provider];
+    if (url) {
+      setConfig(prev => (prev.portal_url ? prev : { ...prev, portal_url: url }));
+    }
+  }, [config.provider, portalDefaults]);
+
+
   const handleSaveDraft = async () => {
     try {
       setIsSavingDraft(true);
