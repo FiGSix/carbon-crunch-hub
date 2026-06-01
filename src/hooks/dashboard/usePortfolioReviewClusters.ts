@@ -8,6 +8,7 @@ export interface PortfolioReviewCluster {
   client_name: string | null;
   client_id: string | null;
   agent_id: string | null;
+  agent_company_name: string | null;
   unsigned_count: number;
   combined_revenue: number;
   warm_count: number;
