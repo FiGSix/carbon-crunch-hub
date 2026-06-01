@@ -6,6 +6,7 @@ import { DataCorrectionManager } from "@/components/admin/DataCorrectionManager"
 import { ClientPopulationManager } from "@/components/admin/ClientPopulationManager";
 import { VintageDeadlineManager } from "@/components/admin/VintageDeadlineManager";
 import { GpsBackfillManager } from "@/components/admin/GpsBackfillManager";
+import { InverterPortalDefaultsManager } from "@/components/admin/InverterPortalDefaultsManager";
 import { useAuth } from "@/contexts/auth";
 
 const SystemSettings = () => {
@@ -36,6 +37,7 @@ const SystemSettings = () => {
         <RegionalSolarYieldManager />
         <CarbonPriceManager />
         <GpsBackfillManager />
+        <InverterPortalDefaultsManager />
       </div>
     </DashboardLayout>
   );

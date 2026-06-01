@@ -1549,6 +1549,33 @@ export type Database = {
         }
         Relationships: []
       }
+      inverter_portal_defaults: {
+        Row: {
+          brand: string
+          created_at: string
+          notes: string | null
+          portal_url: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          notes?: string | null
+          portal_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          notes?: string | null
+          portal_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       knowledge_hub_resources: {
         Row: {
           category: string

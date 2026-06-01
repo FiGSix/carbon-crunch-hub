@@ -32,18 +32,42 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
-  
-  const { 
-    errors, 
-    touched, 
-    validateFieldOnBlur, 
-    validateAll, 
-    hasErrors 
+  const [portalDefaults, setPortalDefaults] = useState<Record<string, string | null>>({});
+  const [autoFilledFromSseg, setAutoFilledFromSseg] = useState(false);
+
+  const {
+    errors,
+    touched,
+    validateFieldOnBlur,
+    validateAll,
+    hasErrors
   } = useDataAccessValidation();
+
+  // Known provider option values (must match the <SelectItem> values below).
+  const PROVIDER_OPTIONS = [
+    'ABB','Afore','Alpha ESS','Ario','Atess','BlueLog','Deye','Dyness','Enphase',
+    'FoxESS','Fronius','GivEnergy','GoodWe','Growatt','Huawei','Lux','Megarevo',
+    'Meteo Control','SigEnergy','Sineng','Sivula','SMA','Solis','SolarEdge',
+    'Sungrow','SunSynk','Vcomms','Victron','Other'
+  ];
 
   useEffect(() => {
     fetchConfig();
+    fetchPortalDefaults();
   }, [projectId]);
+
+  const fetchPortalDefaults = async () => {
+    const { data, error } = await supabase
+      .from('inverter_portal_defaults')
+      .select('brand, portal_url');
+    if (error) {
+      console.error('Failed to load inverter portal defaults:', error);
+      return;
+    }
+    const map: Record<string, string | null> = {};
+    (data || []).forEach((row: any) => { map[row.brand] = row.portal_url; });
+    setPortalDefaults(map);
+  };
 
   const fetchConfig = async () => {
     try {
@@ -93,6 +117,23 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
         setIsSubmitted(onboardingData.data_access_verified === true);
         setSubmittedAt(onboardingData.data_access_verified_at || null);
       }
+
+      // Auto-fill from SSEG inverter brand when Data Access fields are still blank.
+      const { data: fieldsData } = await supabase
+        .from('onboarding_fields')
+        .select('meter_type, inverter_brand')
+        .eq('project_id', projectId)
+        .maybeSingle();
+
+      if (fieldsData?.meter_type === 'SSEG' && fieldsData.inverter_brand) {
+        const brand = fieldsData.inverter_brand;
+        const matched = PROVIDER_OPTIONS.includes(brand) ? brand : 'Other';
+        setConfig(prev => {
+          if (prev.provider) return prev;
+          setAutoFilledFromSseg(true);
+          return { ...prev, provider: matched };
+        });
+      }
     } catch (error) {
       console.error('Error fetching config:', error);
     }
@@ -105,6 +146,17 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   const handleFieldBlur = (field: string) => {
     validateFieldOnBlur(field, config[field as keyof DataAccessConfig], config);
   };
+
+  // Prepopulate Portal URL from the brand defaults when a provider is set and URL is blank.
+  useEffect(() => {
+    if (!config.provider) return;
+    if (config.portal_url) return;
+    const url = portalDefaults[config.provider];
+    if (url) {
+      setConfig(prev => (prev.portal_url ? prev : { ...prev, portal_url: url }));
+    }
+  }, [config.provider, portalDefaults]);
+
 
   const handleSaveDraft = async () => {
     try {
@@ -328,6 +380,7 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
               onValueChange={(value) => {
                 handleFieldChange('provider', value);
                 validateFieldOnBlur('provider', value, config);
+                setAutoFilledFromSseg(false);
               }}
             >
               <SelectTrigger className={cn(touched.provider && errors.provider && "border-destructive")}>
@@ -366,6 +419,11 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
               </SelectContent>
             </Select>
             <FormError message={touched.provider ? errors.provider : undefined} />
+            {autoFilledFromSseg && config.provider && (
+              <p className="text-xs text-muted-foreground">
+                Auto-filled from the inverter brand (meter type is SSEG). Change it if your monitoring portal is different.
+              </p>
+            )}
           </div>
 
           {/* Site ID and Portal URL */}
