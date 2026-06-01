@@ -73,6 +73,7 @@ export function AgentWarmCards({ limit = 5 }: { limit?: number } = {}) {
 }
 
 function WarmCardItem({ card }: { card: WarmCard }) {
+  const { userRole } = useAuth();
   const isHot = card.bucket === "hot";
   const suggestion = getSuggestion(card);
   const revenue =
