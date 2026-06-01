@@ -8,6 +8,7 @@ export interface PortfolioReviewCluster {
   client_name: string | null;
   client_id: string | null;
   agent_id: string | null;
+  agent_company_name: string | null;
   unsigned_count: number;
   combined_revenue: number;
   warm_count: number;
@@ -45,7 +46,29 @@ export function usePortfolioReviewClusters(limit = 6) {
         logger.error("Failed to load portfolio review clusters", error);
         throw error;
       }
-      return (data ?? []) as PortfolioReviewCluster[];
+      const rows = (data ?? []) as PortfolioReviewCluster[];
+
+      const agentIds = Array.from(
+        new Set(rows.map((r) => r.agent_id).filter((id): id is string => !!id))
+      );
+      let companyMap: Record<string, string | null> = {};
+      if (agentIds.length > 0 && userRole === "admin") {
+        const { data: profiles, error: pErr } = await supabase
+          .from("profiles")
+          .select("id, company_name")
+          .in("id", agentIds);
+        if (pErr) {
+          logger.error("Failed to load agent companies", pErr);
+        } else {
+          companyMap = Object.fromEntries(
+            (profiles ?? []).map((p: any) => [p.id, p.company_name ?? null])
+          );
+        }
+      }
+      return rows.map((r) => ({
+        ...r,
+        agent_company_name: r.agent_id ? companyMap[r.agent_id] ?? null : null,
+      }));
     },
   });
 }

@@ -68,7 +68,7 @@ export function PortfolioReviewSection({ limit = 4 }: { limit?: number } = {}) {
 }
 
 function ClusterRow({ cluster }: { cluster: PortfolioReviewCluster }) {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const revenue =
     cluster.combined_revenue > 0
       ? `R ${Math.round(cluster.combined_revenue).toLocaleString()}`
@@ -112,6 +112,11 @@ function ClusterRow({ cluster }: { cluster: PortfolioReviewCluster }) {
           </Badge>
           <span className="text-xs text-muted-foreground">{revenue}</span>
         </div>
+        {userRole === "admin" && cluster.agent_company_name && (
+          <p className="text-xs text-muted-foreground mb-1">
+            Agent: <span className="font-medium text-foreground">{cluster.agent_company_name}</span>
+          </p>
+        )}
         <p className="text-xs text-muted-foreground leading-relaxed">{reason}</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
