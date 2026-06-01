@@ -380,6 +380,7 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
               onValueChange={(value) => {
                 handleFieldChange('provider', value);
                 validateFieldOnBlur('provider', value, config);
+                setAutoFilledFromSseg(false);
               }}
             >
               <SelectTrigger className={cn(touched.provider && errors.provider && "border-destructive")}>
