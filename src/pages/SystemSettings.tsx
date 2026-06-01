@@ -37,6 +37,7 @@ const SystemSettings = () => {
         <RegionalSolarYieldManager />
         <CarbonPriceManager />
         <GpsBackfillManager />
+        <InverterPortalDefaultsManager />
       </div>
     </DashboardLayout>
   );
