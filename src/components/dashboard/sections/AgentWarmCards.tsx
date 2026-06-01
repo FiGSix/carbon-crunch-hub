@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarmCards";
 import { toWaMeDigits } from "@/utils/phone/toWaMeDigits";
+import { useAuth } from "@/contexts/auth";
 
 /**
  * Agent warm cards — flagship of the v1 Agent Engine.
