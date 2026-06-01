@@ -32,18 +32,42 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
-  
-  const { 
-    errors, 
-    touched, 
-    validateFieldOnBlur, 
-    validateAll, 
-    hasErrors 
+  const [portalDefaults, setPortalDefaults] = useState<Record<string, string | null>>({});
+  const [autoFilledFromSseg, setAutoFilledFromSseg] = useState(false);
+
+  const {
+    errors,
+    touched,
+    validateFieldOnBlur,
+    validateAll,
+    hasErrors
   } = useDataAccessValidation();
+
+  // Known provider option values (must match the <SelectItem> values below).
+  const PROVIDER_OPTIONS = [
+    'ABB','Afore','Alpha ESS','Ario','Atess','BlueLog','Deye','Dyness','Enphase',
+    'FoxESS','Fronius','GivEnergy','GoodWe','Growatt','Huawei','Lux','Megarevo',
+    'Meteo Control','SigEnergy','Sineng','Sivula','SMA','Solis','SolarEdge',
+    'Sungrow','SunSynk','Vcomms','Victron','Other'
+  ];
 
   useEffect(() => {
     fetchConfig();
+    fetchPortalDefaults();
   }, [projectId]);
+
+  const fetchPortalDefaults = async () => {
+    const { data, error } = await supabase
+      .from('inverter_portal_defaults')
+      .select('brand, portal_url');
+    if (error) {
+      console.error('Failed to load inverter portal defaults:', error);
+      return;
+    }
+    const map: Record<string, string | null> = {};
+    (data || []).forEach((row: any) => { map[row.brand] = row.portal_url; });
+    setPortalDefaults(map);
+  };
 
   const fetchConfig = async () => {
     try {
