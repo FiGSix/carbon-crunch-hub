@@ -108,6 +108,27 @@ export function useAgentWarmCards(limit = 12) {
         );
       }
 
+      // Admin-only: look up agent company names for display
+      let agentCompanyById = new Map<string, string | null>();
+      if (userRole === "admin") {
+        const agentIds = Array.from(
+          new Set(rows.map((r) => r.agent_id).filter((id): id is string => !!id))
+        );
+        if (agentIds.length > 0) {
+          const { data: agentProfiles, error: pErr } = await supabase
+            .from("profiles")
+            .select("id, company_name")
+            .in("id", agentIds);
+          if (pErr) {
+            logger.error("Failed to load agent companies for warm cards", pErr);
+          } else {
+            agentCompanyById = new Map(
+              (agentProfiles ?? []).map((p: any) => [p.id, p.company_name ?? null])
+            );
+          }
+        }
+      }
+
       const enriched: WarmCard[] = rows.map((r) => {
         const cid = effectiveClientId(r);
         const c = cid ? clientsById.get(cid) : undefined;
@@ -122,6 +143,9 @@ export function useAgentWarmCards(limit = 12) {
           client_first_name: c?.first_name ?? null,
           client_email: c?.email ?? null,
           client_phone: c?.phone ?? null,
+          agent_company_name: r.agent_id
+            ? agentCompanyById.get(r.agent_id) ?? null
+            : null,
         };
       });
 
