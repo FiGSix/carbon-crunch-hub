@@ -19,8 +19,8 @@ import {
   Calculator,
   Code2,
   BookOpen,
-  ShieldOff,
-  Bot
+  ShieldOff
+
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
