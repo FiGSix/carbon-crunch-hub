@@ -95,11 +95,6 @@ verify_jwt = true
 [functions.send-weekly-roundup]
 verify_jwt = false
 
-[functions.discover-leads]
-verify_jwt = false
-
-[functions.send-cold-outreach]
-verify_jwt = true
 
 [functions.test-auth-verification]
 verify_jwt = true
