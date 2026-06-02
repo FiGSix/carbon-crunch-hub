@@ -1,117 +1,50 @@
 
-# Remove Sales Agent (Cora) — full teardown
+# Regression Test Plan — Post Sales-Agent Removal
 
-The `/admin/sales-agent` "Cora Command Centre" experiment is being retired. Everything tied to it — UI, hooks, edge functions, shared modules, scheduled jobs, and database tables — will be deleted. The unrelated Leads/Agents admin tab outreach (which currently piggybacks on the same Cora plumbing) will also be removed per your decision.
+Goal: verify no remaining feature was broken by the Cora/Sales-Agent teardown. Combine automated checks with a targeted manual/browser smoke test across the surviving surfaces.
 
-## 1. Frontend removals
+## 1. Static & build verification
+- Run TypeScript build (Vite) to catch any orphan imports from deleted modules (`cora`, `sales-agent`, `useCoraSignals`, outreach dialogs, deleted edge functions, dropped tables in `types.ts`).
+- Run ESLint on `src/`.
+- Re-grep codebase for: `cora`, `sales_agent`, `discovery_candidate`, `outreach_`, `send-cold-outreach`, `OutreachHistory`, `ResearchLeads`, `SendOutreach`, `lead_outreach_history`, `score_history`, `coraGuard`, `outlookSend` — expect zero hits outside migration files.
 
-Delete:
-- `src/pages/admin/SalesAgent.tsx`
-- `src/components/admin/cora/` (entire folder: CommandCentreView, ConversationsView, CoraControlsView, DecisionLogView, LeadCard, LeadDetailDrawer, MeetingsView, PipelineView)
-- `src/components/admin/sales-agent/` (entire folder: ApprovalQueueTab, BlocklistManager, CandidateNotesPanel, DiscoveryPresetsCard, DiscoveryTab, EditCandidateDialog, FunnelScoreboard, InboxTab, LearningTab, MeetingsList, PipelineTab, RejectReasonDialog, SequencesTab, SettingsTab, VariantEditorDialog)
-- `src/hooks/cora/` (useCoraSignals)
-- `src/components/admin/agents/SendOutreachDialog.tsx`
-- `src/components/admin/agents/OutreachHistoryDialog.tsx`
+## 2. Automated test suites
+- Run Vitest: `bunx vitest run` (covers `src/**/*.{test,spec}.{ts,tsx}` incl. ProposalTransformer, DashboardCalculator, ProfileService, validation schemas).
+- Run Supabase edge-function Deno tests for surviving functions (`supabase--test_edge_functions` with no filter).
+- Run `supabase--linter` to confirm DB is clean after the teardown migration (no orphan policies/views referencing dropped tables, RLS still enabled everywhere).
+- Run `security--run_security_scan` for a backend posture check.
 
-Edit:
-- `src/App.tsx` — remove the `SalesAgent` lazy import and the `/admin/sales-agent` route.
-- `src/components/layout/DashboardSidebar.tsx` — remove the "Sales Agent" / Cora nav entry pointing to `/admin/sales-agent`.
-- `src/components/admin/agents/LeadsAgentsTable.tsx` — remove the Send Outreach / Outreach History buttons and their imports/handlers. Other lead actions (add, edit, convert, details, bulk import) remain.
-- `src/components/admin/agents/LeadDetailsDialog.tsx` — remove the outreach-history panel; keep the rest of the dialog.
+## 3. Browser smoke test (preview, logged in as admin then agent then client)
+Use `browser--navigate_to_sandbox` + observe/act. For each route: load, check console for errors, check primary network calls return 200, exercise one core interaction.
 
-## 2. Edge function removals
+Admin surfaces
+- `/admin/dashboard` — metrics, vintage revenue breakdown, closeout queue, pending agent approvals, portfolio review clusters, learning metrics.
+- `/admin/agents` — Leads tab: add lead, edit lead, bulk import (open dialog only), convert lead. Confirm Research/Outreach/History buttons are gone.
+- `/admin/companies`, `/admin/users`, `/admin/legal-documents`, `/admin/knowledge-hub`, `/admin/system-settings`.
+- Proposal list, open one proposal, send invitation (use ProposalInvitationTester or live flow on a test proposal), approve/reject path.
 
-Delete these function folders (and call `delete_edge_functions` to remove the deployed copies):
+Agent surfaces
+- `/dashboard` — agent warm cards, vintage revenue, referral stats, "Proposals worth a personal nudge" table.
+- Create proposal flow end-to-end (calculator → proposal draft → save → preview → send invitation).
+- Client management: search, create client, view client details.
 
-- cora-enrich
-- cora-mailbox-health
-- cora-preset-expand
-- cora-relationship-check
-- discover-leads
-- discovery-cron
-- poll-inbound
-- sales-agent-bulk-action
-- sales-agent-classify-reply
-- sales-agent-draft-reply
-- sales-agent-notify
-- sales-agent-nudge
-- sales-agent-rescore
-- sales-agent-send
-- sales-agent-tune
-- send-cold-outreach
+Client surfaces
+- `/proposals/view/:token` via invitation link — verify load, approve flow, sign-in prompt.
+- Client dashboard, project agreement.
 
-Delete shared modules (no remaining callers after the above are gone):
-- `supabase/functions/_shared/coraGuard.ts`
-- `supabase/functions/_shared/coraSignature.ts`
-- `supabase/functions/_shared/outlookSend.ts`
-- `supabase/functions/_shared/autoSendGate.ts`
-- `supabase/functions/_shared/relationshipCheck.ts`
-- `supabase/functions/_shared/lead-ingest.ts`
+Auth
+- Sign in / sign out / inactivity logout / role redirect / register form / invitation token landing.
 
-Remove the matching `[functions.*]` entries from `supabase/config.toml` (if present).
+## 4. Cross-cutting checks
+- Realtime subscriptions (`agentSubscriptions`, `proposalSubscriptions`, `notificationSubscriptions`) connect without errors in console.
+- Cron jobs remaining (`SELECT * FROM cron.job`) — confirm only non-sales-agent jobs survive and no scheduled job references a deleted function.
+- Edge function logs: spot-check the most-used surviving functions for recent errors (`send-proposal-invitation`, any auth/profile functions).
+- Sidebar nav renders without the removed Sales Agent entry; no 404s on direct nav.
 
-## 3. Cron jobs
+## 5. Reporting
+Produce a single regression report listing, per area: ✅ pass / ⚠️ warning / ❌ fail, with reproduction notes and console/network excerpts for any failure. Stop and surface failures for triage before any further changes.
 
-Unschedule via a `cron.unschedule(...)` insert (not a migration, since it contains the project ref/anon key):
-
-- `poll-inbound-every-5-min`
-- `sales-agent-notify-every-15-min`
-- `discovery-daily`
-- `outreach-send-15min`
-- `nudge-daily`
-- `cora-enrich-every-5-min`
-- `discovery-midday`
-- `cora-preset-expand-daily`
-
-## 4. Database — migration
-
-Drop sales-agent-only objects (views first, then tables, then functions). All have FKs internal to this set, so a single migration with `CASCADE` is safe.
-
-Views:
-- `v_outreach_variant_stats`
-- `v_sales_agent_funnel`
-
-Tables:
-- `cora_decision_log`
-- `cora_mailbox_status`
-- `cora_recommended_actions`
-- `discovery_blocklist`
-- `discovery_candidates`
-- `discovery_runs`
-- `outreach_enrollments`
-- `outreach_replies`
-- `outreach_sequences`
-- `outreach_template_variants`
-- `sales_agent_discovery_presets`
-- `sales_agent_runs`
-- `sales_agent_settings`
-- `score_history`
-- `lead_outreach_history`
-
-Functions:
-- `compute_candidate_score`
-- `discovery_candidates_rescore_fn`
-- `promote_discovery_candidate`
-- `reject_discovery_candidate`
-- `rescore_pending_candidates`
-
-Kept (not sales-agent-specific):
-- `agent_leads` and `recalc_lead_completeness` / `trg_agent_leads_draft_proposal` — used by the Leads/Agents admin tab for manual lead capture and proposal drafting.
-- `is_team_lead`, `notify_team_lead_on_invite` — unrelated invite/team logic.
-- `client_email_suppressions` and all other unrelated tables.
-
-After the migration runs, the auto-regenerated `src/integrations/supabase/types.ts` will lose the dropped tables/functions — no manual edit needed.
-
-## 5. Verification
-
-After applying:
-- Build the app and confirm no TypeScript errors (sidebar, App.tsx, LeadsAgentsTable, LeadDetailsDialog).
-- Smoke-test the unrelated admin areas: Dashboard (Portfolio Review + Warm Cards still render with their admin "Agent: <company>" line), Leads/Agents tab (add/edit/convert/details/bulk import still work), Proposals, Onboarding, System Settings.
-- Check `supabase--linter` for any orphaned references.
-- Re-grep the codebase for `cora`, `sales-agent`, `discovery_candidate`, `outreach_`, `sales_agent_`, `lead_outreach_history`, `useCoraSignals`, `SendOutreachDialog`, `OutreachHistoryDialog` — should return zero hits outside `supabase/migrations/` history.
-
-## Notes / risks
-
-- `send-cold-outreach` is the only place agents currently send manual outreach to leads from the Leads tab. Per your answer, the Send Outreach button and history view are being removed entirely — agents will no longer be able to email leads from the admin Leads table until a replacement is built.
-- Historical `lead_outreach_history` records will be dropped along with the table. If you'd like to archive the data before deletion, say so and I'll add a CSV export step before the migration.
-- Existing `supabase/migrations/*.sql` files that originally created these objects are left untouched (migrations are append-only); a single new drop migration handles the teardown.
+## Technical notes
+- Tests run from `/dev-server`. Vitest config already present (`vitest.config.ts`).
+- Browser tool will need the user to be signed in for protected routes; if a login wall is hit, pause and ask the user to sign in in the preview.
+- No code changes are part of this task — any bug found will be filed back as a separate fix request.
