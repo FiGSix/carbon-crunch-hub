@@ -50,13 +50,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "agent_activities_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
         ]
       }
       agent_commissions: {
@@ -114,25 +107,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agent_commissions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "agent_commissions_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_commissions_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "agent_commissions_proposal_id_fkey"
@@ -268,13 +247,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agent_invitations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_leads_converted_invitation_id_fkey"
-            columns: ["converted_invitation_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["invitation_id"]
           },
         ]
       }
@@ -562,13 +534,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "client_invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
         ]
       }
       client_referrals: {
@@ -613,13 +578,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_referrals_referrer_id_fkey"
-            columns: ["referrer_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -763,25 +721,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "clients_last_modified_by_fkey"
-            columns: ["last_modified_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "clients_portfolio_override_set_by_fkey"
             columns: ["portfolio_override_set_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "clients_portfolio_override_set_by_fkey"
-            columns: ["portfolio_override_set_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -907,138 +851,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cora_decision_log: {
-        Row: {
-          action: string
-          admin_override: boolean | null
-          candidate_id: string | null
-          confidence: number | null
-          created_at: string
-          data_used: Json | null
-          duplicate_check_result: Json | null
-          id: string
-          lead_id: string | null
-          outlook_message_id: string | null
-          outlook_thread_id: string | null
-          prompt_version: string | null
-          reason: string | null
-          relationship_check_result: Json | null
-          sending_mailbox: string | null
-          status_after: string | null
-          status_before: string | null
-          variant_id: string | null
-        }
-        Insert: {
-          action: string
-          admin_override?: boolean | null
-          candidate_id?: string | null
-          confidence?: number | null
-          created_at?: string
-          data_used?: Json | null
-          duplicate_check_result?: Json | null
-          id?: string
-          lead_id?: string | null
-          outlook_message_id?: string | null
-          outlook_thread_id?: string | null
-          prompt_version?: string | null
-          reason?: string | null
-          relationship_check_result?: Json | null
-          sending_mailbox?: string | null
-          status_after?: string | null
-          status_before?: string | null
-          variant_id?: string | null
-        }
-        Update: {
-          action?: string
-          admin_override?: boolean | null
-          candidate_id?: string | null
-          confidence?: number | null
-          created_at?: string
-          data_used?: Json | null
-          duplicate_check_result?: Json | null
-          id?: string
-          lead_id?: string | null
-          outlook_message_id?: string | null
-          outlook_thread_id?: string | null
-          prompt_version?: string | null
-          reason?: string | null
-          relationship_check_result?: Json | null
-          sending_mailbox?: string | null
-          status_after?: string | null
-          status_before?: string | null
-          variant_id?: string | null
-        }
-        Relationships: []
-      }
-      cora_mailbox_status: {
-        Row: {
-          checked_at: string
-          error: string | null
-          id: boolean
-          latency_ms: number | null
-          mailbox_address: string
-          outcome: string
-        }
-        Insert: {
-          checked_at?: string
-          error?: string | null
-          id?: boolean
-          latency_ms?: number | null
-          mailbox_address?: string
-          outcome?: string
-        }
-        Update: {
-          checked_at?: string
-          error?: string | null
-          id?: boolean
-          latency_ms?: number | null
-          mailbox_address?: string
-          outcome?: string
-        }
-        Relationships: []
-      }
-      cora_recommended_actions: {
-        Row: {
-          action_type: string
-          candidate_id: string | null
-          created_at: string
-          description: string | null
-          id: string
-          lead_id: string | null
-          priority: number | null
-          resolved: boolean | null
-          resolved_at: string | null
-          resolved_by: string | null
-          title: string
-        }
-        Insert: {
-          action_type: string
-          candidate_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          lead_id?: string | null
-          priority?: number | null
-          resolved?: boolean | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          title: string
-        }
-        Update: {
-          action_type?: string
-          candidate_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          lead_id?: string | null
-          priority?: number | null
-          resolved?: boolean | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          title?: string
-        }
-        Relationships: []
-      }
       data_access_config: {
         Row: {
           api_key_encrypted: string | null
@@ -1106,13 +918,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "data_access_config_configured_by_fkey"
-            columns: ["configured_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "data_access_config_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: true
@@ -1120,251 +925,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      discovery_blocklist: {
-        Row: {
-          company_name_normalized: string | null
-          created_at: string
-          created_by: string | null
-          domain: string | null
-          id: string
-          reason: string | null
-        }
-        Insert: {
-          company_name_normalized?: string | null
-          created_at?: string
-          created_by?: string | null
-          domain?: string | null
-          id?: string
-          reason?: string | null
-        }
-        Update: {
-          company_name_normalized?: string | null
-          created_at?: string
-          created_by?: string | null
-          domain?: string | null
-          id?: string
-          reason?: string | null
-        }
-        Relationships: []
-      }
-      discovery_candidates: {
-        Row: {
-          best_angle: string | null
-          company_name: string
-          completeness_missing: string[] | null
-          completeness_score: number | null
-          contact_name: string | null
-          contact_permission_reason: string | null
-          contact_permission_status: string | null
-          cora_summary: string | null
-          created_at: string
-          created_lead_id: string | null
-          dedup_match_id: string | null
-          do_not_contact_reason: string | null
-          duplicate_check_status: string | null
-          duplicate_match_type: string | null
-          email: string | null
-          enrichment: Json
-          escalation_reason: string | null
-          escalation_required: boolean | null
-          estimated_portfolio_size_mwp: number | null
-          existing_relationship_status: string | null
-          fit_reason: string | null
-          fit_score: number | null
-          id: string
-          last_cora_decision_at: string | null
-          last_meaningful_event_at: string | null
-          lead_segment: string | null
-          location: string | null
-          location_country: string | null
-          location_region: string | null
-          matched_existing_record_id: string | null
-          matched_existing_record_type: string | null
-          next_action_owner: string | null
-          next_best_action: string | null
-          outreach_status: string | null
-          personalisation_score: number | null
-          phone: string | null
-          pipeline_stage: string | null
-          priority_score: number | null
-          prompt_version: string | null
-          recommended_cta: string | null
-          research_confidence: number | null
-          research_evidence: Json | null
-          research_status: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          run_id: string
-          sales_status: string | null
-          score: number
-          segment: string | null
-          status: string
-          website: string | null
-        }
-        Insert: {
-          best_angle?: string | null
-          company_name: string
-          completeness_missing?: string[] | null
-          completeness_score?: number | null
-          contact_name?: string | null
-          contact_permission_reason?: string | null
-          contact_permission_status?: string | null
-          cora_summary?: string | null
-          created_at?: string
-          created_lead_id?: string | null
-          dedup_match_id?: string | null
-          do_not_contact_reason?: string | null
-          duplicate_check_status?: string | null
-          duplicate_match_type?: string | null
-          email?: string | null
-          enrichment?: Json
-          escalation_reason?: string | null
-          escalation_required?: boolean | null
-          estimated_portfolio_size_mwp?: number | null
-          existing_relationship_status?: string | null
-          fit_reason?: string | null
-          fit_score?: number | null
-          id?: string
-          last_cora_decision_at?: string | null
-          last_meaningful_event_at?: string | null
-          lead_segment?: string | null
-          location?: string | null
-          location_country?: string | null
-          location_region?: string | null
-          matched_existing_record_id?: string | null
-          matched_existing_record_type?: string | null
-          next_action_owner?: string | null
-          next_best_action?: string | null
-          outreach_status?: string | null
-          personalisation_score?: number | null
-          phone?: string | null
-          pipeline_stage?: string | null
-          priority_score?: number | null
-          prompt_version?: string | null
-          recommended_cta?: string | null
-          research_confidence?: number | null
-          research_evidence?: Json | null
-          research_status?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          run_id: string
-          sales_status?: string | null
-          score?: number
-          segment?: string | null
-          status?: string
-          website?: string | null
-        }
-        Update: {
-          best_angle?: string | null
-          company_name?: string
-          completeness_missing?: string[] | null
-          completeness_score?: number | null
-          contact_name?: string | null
-          contact_permission_reason?: string | null
-          contact_permission_status?: string | null
-          cora_summary?: string | null
-          created_at?: string
-          created_lead_id?: string | null
-          dedup_match_id?: string | null
-          do_not_contact_reason?: string | null
-          duplicate_check_status?: string | null
-          duplicate_match_type?: string | null
-          email?: string | null
-          enrichment?: Json
-          escalation_reason?: string | null
-          escalation_required?: boolean | null
-          estimated_portfolio_size_mwp?: number | null
-          existing_relationship_status?: string | null
-          fit_reason?: string | null
-          fit_score?: number | null
-          id?: string
-          last_cora_decision_at?: string | null
-          last_meaningful_event_at?: string | null
-          lead_segment?: string | null
-          location?: string | null
-          location_country?: string | null
-          location_region?: string | null
-          matched_existing_record_id?: string | null
-          matched_existing_record_type?: string | null
-          next_action_owner?: string | null
-          next_best_action?: string | null
-          outreach_status?: string | null
-          personalisation_score?: number | null
-          phone?: string | null
-          pipeline_stage?: string | null
-          priority_score?: number | null
-          prompt_version?: string | null
-          recommended_cta?: string | null
-          research_confidence?: number | null
-          research_evidence?: Json | null
-          research_status?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          run_id?: string
-          sales_status?: string | null
-          score?: number
-          segment?: string | null
-          status?: string
-          website?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "discovery_candidates_run_id_fkey"
-            columns: ["run_id"]
-            isOneToOne: false
-            referencedRelation: "discovery_runs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      discovery_runs: {
-        Row: {
-          completed_at: string | null
-          cost_cents: number
-          created_at: string
-          created_by: string | null
-          error: string | null
-          id: string
-          leads_approved: number
-          leads_found: number
-          query: string | null
-          region: string | null
-          source: string
-          started_at: string | null
-          status: string
-        }
-        Insert: {
-          completed_at?: string | null
-          cost_cents?: number
-          created_at?: string
-          created_by?: string | null
-          error?: string | null
-          id?: string
-          leads_approved?: number
-          leads_found?: number
-          query?: string | null
-          region?: string | null
-          source: string
-          started_at?: string | null
-          status?: string
-        }
-        Update: {
-          completed_at?: string | null
-          cost_cents?: number
-          created_at?: string
-          created_by?: string | null
-          error?: string | null
-          id?: string
-          leads_approved?: number
-          leads_found?: number
-          query?: string | null
-          region?: string | null
-          source?: string
-          started_at?: string | null
-          status?: string
-        }
-        Relationships: []
       }
       email_cta_events: {
         Row: {
@@ -1627,92 +1187,6 @@ export type Database = {
         }
         Relationships: []
       }
-      lead_outreach_history: {
-        Row: {
-          body_preview: string | null
-          clicked_at: string | null
-          created_at: string
-          id: string
-          lead_id: string
-          opened_at: string | null
-          outlook_message_id: string | null
-          outlook_thread_id: string | null
-          resend_message_id: string | null
-          sending_mailbox: string | null
-          sent_at: string
-          sent_by: string | null
-          status: string
-          subject: string
-          template_type: string
-          variant_id: string | null
-        }
-        Insert: {
-          body_preview?: string | null
-          clicked_at?: string | null
-          created_at?: string
-          id?: string
-          lead_id: string
-          opened_at?: string | null
-          outlook_message_id?: string | null
-          outlook_thread_id?: string | null
-          resend_message_id?: string | null
-          sending_mailbox?: string | null
-          sent_at?: string
-          sent_by?: string | null
-          status?: string
-          subject: string
-          template_type: string
-          variant_id?: string | null
-        }
-        Update: {
-          body_preview?: string | null
-          clicked_at?: string | null
-          created_at?: string
-          id?: string
-          lead_id?: string
-          opened_at?: string | null
-          outlook_message_id?: string | null
-          outlook_thread_id?: string | null
-          resend_message_id?: string | null
-          sending_mailbox?: string | null
-          sent_at?: string
-          sent_by?: string | null
-          status?: string
-          subject?: string
-          template_type?: string
-          variant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_outreach_history_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "agent_leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_outreach_history_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["lead_id"]
-          },
-          {
-            foreignKeyName: "lead_outreach_history_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "outreach_template_variants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_outreach_history_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "v_outreach_variant_stats"
-            referencedColumns: ["variant_id"]
-          },
-        ]
-      }
       legal_document_acceptances: {
         Row: {
           accepted_at: string
@@ -1973,13 +1447,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "onboarding_activity_log_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "onboarding_activity_log_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -2031,25 +1498,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "onboarding_comments_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "onboarding_comments_edited_by_fkey"
             columns: ["edited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "onboarding_comments_edited_by_fkey"
-            columns: ["edited_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "onboarding_comments_parent_comment_id_fkey"
@@ -2145,25 +1598,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "onboarding_documents_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "onboarding_documents_validated_by_fkey"
             columns: ["validated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "onboarding_documents_validated_by_fkey"
-            columns: ["validated_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -2328,13 +1767,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "onboarding_fields_validated_by_fkey"
-            columns: ["validated_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
         ]
       }
       onboarding_tasks: {
@@ -2398,29 +1830,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "onboarding_tasks_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "onboarding_tasks_assigned_to_fkey"
             columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "onboarding_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
-            foreignKeyName: "onboarding_tasks_completed_by_fkey"
-            columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2429,252 +1840,14 @@ export type Database = {
             foreignKeyName: "onboarding_tasks_completed_by_fkey"
             columns: ["completed_by"]
             isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "onboarding_tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "project_onboarding"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      outreach_enrollments: {
-        Row: {
-          completed_at: string | null
-          current_step: number
-          enrolled_at: string
-          enrolled_by: string | null
-          id: string
-          lead_id: string
-          next_send_at: string | null
-          paused_reason: string | null
-          sequence_id: string
-          status: string
-        }
-        Insert: {
-          completed_at?: string | null
-          current_step?: number
-          enrolled_at?: string
-          enrolled_by?: string | null
-          id?: string
-          lead_id: string
-          next_send_at?: string | null
-          paused_reason?: string | null
-          sequence_id: string
-          status?: string
-        }
-        Update: {
-          completed_at?: string | null
-          current_step?: number
-          enrolled_at?: string
-          enrolled_by?: string | null
-          id?: string
-          lead_id?: string
-          next_send_at?: string | null
-          paused_reason?: string | null
-          sequence_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "outreach_enrollments_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "agent_leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "outreach_enrollments_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["lead_id"]
-          },
-          {
-            foreignKeyName: "outreach_enrollments_sequence_id_fkey"
-            columns: ["sequence_id"]
-            isOneToOne: false
-            referencedRelation: "outreach_sequences"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      outreach_replies: {
-        Row: {
-          authored_by: string
-          created_at: string
-          draft_body: string | null
-          edit_distance: number | null
-          edit_summary: string | null
-          enrollment_id: string | null
-          graph_message_id: string | null
-          id: string
-          inbound_message_id: string | null
-          lead_id: string | null
-          outlook_message_id: string | null
-          outlook_thread_id: string | null
-          reviewed_by: string | null
-          sending_mailbox: string | null
-          sent_at: string | null
-          sent_body: string | null
-          status: string
-          updated_at: string
-          variant_id: string | null
-        }
-        Insert: {
-          authored_by?: string
-          created_at?: string
-          draft_body?: string | null
-          edit_distance?: number | null
-          edit_summary?: string | null
-          enrollment_id?: string | null
-          graph_message_id?: string | null
-          id?: string
-          inbound_message_id?: string | null
-          lead_id?: string | null
-          outlook_message_id?: string | null
-          outlook_thread_id?: string | null
-          reviewed_by?: string | null
-          sending_mailbox?: string | null
-          sent_at?: string | null
-          sent_body?: string | null
-          status?: string
-          updated_at?: string
-          variant_id?: string | null
-        }
-        Update: {
-          authored_by?: string
-          created_at?: string
-          draft_body?: string | null
-          edit_distance?: number | null
-          edit_summary?: string | null
-          enrollment_id?: string | null
-          graph_message_id?: string | null
-          id?: string
-          inbound_message_id?: string | null
-          lead_id?: string | null
-          outlook_message_id?: string | null
-          outlook_thread_id?: string | null
-          reviewed_by?: string | null
-          sending_mailbox?: string | null
-          sent_at?: string | null
-          sent_body?: string | null
-          status?: string
-          updated_at?: string
-          variant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "outreach_replies_inbound_message_id_fkey"
-            columns: ["inbound_message_id"]
-            isOneToOne: false
-            referencedRelation: "inbound_messages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "outreach_replies_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "outreach_template_variants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "outreach_replies_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "v_outreach_variant_stats"
-            referencedColumns: ["variant_id"]
-          },
-        ]
-      }
-      outreach_sequences: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          steps: Json
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          steps?: Json
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          steps?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      outreach_template_variants: {
-        Row: {
-          body_template: string
-          created_at: string
-          created_by: string | null
-          cta_label: string | null
-          cta_url: string | null
-          id: string
-          notes: string | null
-          sequence_id: string
-          status: string
-          step_index: number
-          subject: string
-          updated_at: string
-          weight: number
-        }
-        Insert: {
-          body_template: string
-          created_at?: string
-          created_by?: string | null
-          cta_label?: string | null
-          cta_url?: string | null
-          id?: string
-          notes?: string | null
-          sequence_id: string
-          status?: string
-          step_index: number
-          subject: string
-          updated_at?: string
-          weight?: number
-        }
-        Update: {
-          body_template?: string
-          created_at?: string
-          created_by?: string | null
-          cta_label?: string | null
-          cta_url?: string | null
-          id?: string
-          notes?: string | null
-          sequence_id?: string
-          status?: string
-          step_index?: number
-          subject?: string
-          updated_at?: string
-          weight?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "outreach_template_variants_sequence_id_fkey"
-            columns: ["sequence_id"]
-            isOneToOne: false
-            referencedRelation: "outreach_sequences"
             referencedColumns: ["id"]
           },
         ]
@@ -2851,13 +2024,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "partner_invitations_partner_id_fkey"
@@ -3103,13 +2269,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "profiles_status_changed_by_fkey"
-            columns: ["status_changed_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
         ]
       }
       project_onboarding: {
@@ -3191,29 +2350,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_onboarding_assigned_epc_id_fkey"
-            columns: ["assigned_epc_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "project_onboarding_audit_ready_marked_by_fkey"
             columns: ["audit_ready_marked_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_onboarding_audit_ready_marked_by_fkey"
-            columns: ["audit_ready_marked_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
-            foreignKeyName: "project_onboarding_last_modified_by_fkey"
-            columns: ["last_modified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3222,8 +2360,8 @@ export type Database = {
             foreignKeyName: "project_onboarding_last_modified_by_fkey"
             columns: ["last_modified_by"]
             isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "project_onboarding_proposal_id_fkey"
@@ -3609,25 +2747,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "proposals_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "proposals_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "proposals_client_reference_id_fkey"
@@ -3644,13 +2768,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "proposals_client_share_override_set_by_fkey"
-            columns: ["client_share_override_set_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "proposals_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -3665,25 +2782,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "proposals_last_modified_by_fkey"
-            columns: ["last_modified_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "proposals_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "agent_leads"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["lead_id"]
           },
           {
             foreignKeyName: "proposals_partner_id_fkey"
@@ -3718,258 +2821,6 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           yield_kwh_per_kwp?: number
-        }
-        Relationships: []
-      }
-      sales_agent_discovery_presets: {
-        Row: {
-          active: boolean
-          created_at: string
-          id: string
-          last_run_at: string | null
-          last_yield_count: number
-          limit_count: number
-          location: string
-          query: string
-          source: string
-          stale: boolean
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          last_run_at?: string | null
-          last_yield_count?: number
-          limit_count?: number
-          location: string
-          query: string
-          source?: string
-          stale?: boolean
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          last_run_at?: string | null
-          last_yield_count?: number
-          limit_count?: number
-          location?: string
-          query?: string
-          source?: string
-          stale?: boolean
-        }
-        Relationships: []
-      }
-      sales_agent_runs: {
-        Row: {
-          completed_at: string | null
-          error: string | null
-          id: string
-          job_name: string
-          started_at: string
-          stats: Json
-          status: string
-        }
-        Insert: {
-          completed_at?: string | null
-          error?: string | null
-          id?: string
-          job_name: string
-          started_at?: string
-          stats?: Json
-          status?: string
-        }
-        Update: {
-          completed_at?: string | null
-          error?: string | null
-          id?: string
-          job_name?: string
-          started_at?: string
-          stats?: Json
-          status?: string
-        }
-        Relationships: []
-      }
-      sales_agent_settings: {
-        Row: {
-          ai_style_notes: string | null
-          autopilot_discovery: boolean
-          autopilot_enrichment: boolean
-          autopilot_outreach: boolean
-          autopilot_preset_expand: boolean
-          autopilot_replies: boolean
-          autopilot_reply_min_confidence: number
-          autopilot_status: string | null
-          blocked_domains: string[]
-          bookings_cta_label: string | null
-          bookings_url: string | null
-          completeness_threshold: number
-          daily_send_cap: number
-          default_sequence_id: string | null
-          emergency_stop: boolean | null
-          enrichment_daily_cap: number
-          expected_conversion: number
-          fit_score_threshold: number | null
-          goal_topup_enabled: boolean
-          id: boolean
-          last_inbound_poll_at: string | null
-          lead_ingest_allowlist: string[]
-          mailbox_address: string | null
-          max_auto_approvals_per_day: number | null
-          max_auto_enrollments_per_day: number | null
-          max_auto_replies_per_day: number | null
-          max_topup_runs_per_day: number
-          meeting_timezone: string | null
-          notify_daily_digest: boolean
-          notify_email: string | null
-          notify_enabled: boolean
-          notify_inbox_threshold: number
-          notify_min_interval_hours: number
-          notify_pending_threshold: number
-          notify_quiet_hours: Json | null
-          notify_stuck_hours: number
-          pause_all_sending: boolean | null
-          personalisation_score_threshold: number | null
-          prompt_version: string | null
-          quiet_hours_end: number
-          quiet_hours_start: number
-          reply_confidence_threshold: number
-          research_confidence_threshold: number | null
-          score_threshold: number
-          target_agents: number
-          target_regions: string[]
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          ai_style_notes?: string | null
-          autopilot_discovery?: boolean
-          autopilot_enrichment?: boolean
-          autopilot_outreach?: boolean
-          autopilot_preset_expand?: boolean
-          autopilot_replies?: boolean
-          autopilot_reply_min_confidence?: number
-          autopilot_status?: string | null
-          blocked_domains?: string[]
-          bookings_cta_label?: string | null
-          bookings_url?: string | null
-          completeness_threshold?: number
-          daily_send_cap?: number
-          default_sequence_id?: string | null
-          emergency_stop?: boolean | null
-          enrichment_daily_cap?: number
-          expected_conversion?: number
-          fit_score_threshold?: number | null
-          goal_topup_enabled?: boolean
-          id?: boolean
-          last_inbound_poll_at?: string | null
-          lead_ingest_allowlist?: string[]
-          mailbox_address?: string | null
-          max_auto_approvals_per_day?: number | null
-          max_auto_enrollments_per_day?: number | null
-          max_auto_replies_per_day?: number | null
-          max_topup_runs_per_day?: number
-          meeting_timezone?: string | null
-          notify_daily_digest?: boolean
-          notify_email?: string | null
-          notify_enabled?: boolean
-          notify_inbox_threshold?: number
-          notify_min_interval_hours?: number
-          notify_pending_threshold?: number
-          notify_quiet_hours?: Json | null
-          notify_stuck_hours?: number
-          pause_all_sending?: boolean | null
-          personalisation_score_threshold?: number | null
-          prompt_version?: string | null
-          quiet_hours_end?: number
-          quiet_hours_start?: number
-          reply_confidence_threshold?: number
-          research_confidence_threshold?: number | null
-          score_threshold?: number
-          target_agents?: number
-          target_regions?: string[]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          ai_style_notes?: string | null
-          autopilot_discovery?: boolean
-          autopilot_enrichment?: boolean
-          autopilot_outreach?: boolean
-          autopilot_preset_expand?: boolean
-          autopilot_replies?: boolean
-          autopilot_reply_min_confidence?: number
-          autopilot_status?: string | null
-          blocked_domains?: string[]
-          bookings_cta_label?: string | null
-          bookings_url?: string | null
-          completeness_threshold?: number
-          daily_send_cap?: number
-          default_sequence_id?: string | null
-          emergency_stop?: boolean | null
-          enrichment_daily_cap?: number
-          expected_conversion?: number
-          fit_score_threshold?: number | null
-          goal_topup_enabled?: boolean
-          id?: boolean
-          last_inbound_poll_at?: string | null
-          lead_ingest_allowlist?: string[]
-          mailbox_address?: string | null
-          max_auto_approvals_per_day?: number | null
-          max_auto_enrollments_per_day?: number | null
-          max_auto_replies_per_day?: number | null
-          max_topup_runs_per_day?: number
-          meeting_timezone?: string | null
-          notify_daily_digest?: boolean
-          notify_email?: string | null
-          notify_enabled?: boolean
-          notify_inbox_threshold?: number
-          notify_min_interval_hours?: number
-          notify_pending_threshold?: number
-          notify_quiet_hours?: Json | null
-          notify_stuck_hours?: number
-          pause_all_sending?: boolean | null
-          personalisation_score_threshold?: number | null
-          prompt_version?: string | null
-          quiet_hours_end?: number
-          quiet_hours_start?: number
-          reply_confidence_threshold?: number
-          research_confidence_threshold?: number | null
-          score_threshold?: number
-          target_agents?: number
-          target_regions?: string[]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      score_history: {
-        Row: {
-          candidate_id: string
-          changed_by: string | null
-          created_at: string
-          id: string
-          new_score: number
-          old_score: number | null
-          reason: string
-        }
-        Insert: {
-          candidate_id: string
-          changed_by?: string | null
-          created_at?: string
-          id?: string
-          new_score: number
-          old_score?: number | null
-          reason: string
-        }
-        Update: {
-          candidate_id?: string
-          changed_by?: string | null
-          created_at?: string
-          id?: string
-          new_score?: number
-          old_score?: number | null
-          reason?: string
         }
         Relationships: []
       }
@@ -4099,13 +2950,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
         ]
       }
@@ -4335,25 +3179,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "proposals_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
-          },
-          {
             foreignKeyName: "proposals_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_agent_funnel"
-            referencedColumns: ["agent_user_id"]
           },
           {
             foreignKeyName: "proposals_client_reference_id_fkey"
@@ -4370,57 +3200,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      v_outreach_variant_stats: {
-        Row: {
-          bounced: number | null
-          click_rate: number | null
-          clicked: number | null
-          last_sent_at: string | null
-          open_rate: number | null
-          opened: number | null
-          positive_replies: number | null
-          positive_reply_rate: number | null
-          replied: number | null
-          reply_rate: number | null
-          sample_size_ok: boolean | null
-          sent: number | null
-          sequence_id: string | null
-          status: string | null
-          step_index: number | null
-          subject: string | null
-          variant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "outreach_template_variants_sequence_id_fkey"
-            columns: ["sequence_id"]
-            isOneToOne: false
-            referencedRelation: "outreach_sequences"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      v_sales_agent_funnel: {
-        Row: {
-          accepted_at: string | null
-          agent_user_id: string | null
-          company_name: string | null
-          converted_at: string | null
-          discovered_at: string | null
-          email: string | null
-          first_proposal_at: string | null
-          funnel_stage: string | null
-          invitation_id: string | null
-          invite_status: string | null
-          invited_at: string | null
-          last_outreach_at: string | null
-          lead_id: string | null
-          lead_status: string | null
-          outreach_count: number | null
-          proposal_count: number | null
-        }
-        Relationships: []
       }
     }
     Functions: {
@@ -4474,10 +3253,6 @@ export type Database = {
       classify_proposal_engagement: {
         Args: { _proposal_id: string }
         Returns: string
-      }
-      compute_candidate_score: {
-        Args: { _candidate_id: string }
-        Returns: number
       }
       create_agent_user: {
         Args: {
@@ -4878,10 +3653,6 @@ export type Database = {
         Args: { size_value: number; unit_type?: string }
         Returns: number
       }
-      promote_discovery_candidate: {
-        Args: { _candidate_id: string }
-        Returns: string
-      }
       recalculate_proposal_client_shares: {
         Args: never
         Returns: {
@@ -4890,18 +3661,6 @@ export type Database = {
           new_share: number
           old_share: number
           proposal_id: string
-        }[]
-      }
-      reject_discovery_candidate: {
-        Args: { _candidate_id: string; _reason: string }
-        Returns: undefined
-      }
-      rescore_pending_candidates: {
-        Args: never
-        Returns: {
-          candidate_id: string
-          new_score: number
-          old_score: number
         }[]
       }
       search_clients: {
