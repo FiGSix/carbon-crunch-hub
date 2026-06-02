@@ -131,12 +131,6 @@ export function DashboardSidebar() {
       roles: ["client"]
     },
     {
-      name: "Sales Agent",
-      href: "/admin/sales-agent",
-      icon: Bot,
-      roles: ["admin"]
-    },
-    {
       name: "Agent Management",
       href: "/admin/agents",
       icon: UserCog,
