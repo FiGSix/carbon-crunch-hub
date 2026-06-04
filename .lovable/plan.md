@@ -1,50 +1,52 @@
+## Goal
 
-# Regression Test Plan — Post Sales-Agent Removal
+Below each percentage in the "Revenue Distribution" cards (Client / Agent / Platform), show the actual rand value that party will earn over the life of the proposal, respecting the existing role-based visibility (admins see all three, agents see all three, clients see only their card).
 
-Goal: verify no remaining feature was broken by the Cora/Sales-Agent teardown. Combine automated checks with a targeted manual/browser smoke test across the surviving surfaces.
+## Where this lives
 
-## 1. Static & build verification
-- Run TypeScript build (Vite) to catch any orphan imports from deleted modules (`cora`, `sales-agent`, `useCoraSignals`, outreach dialogs, deleted edge functions, dropped tables in `types.ts`).
-- Run ESLint on `src/`.
-- Re-grep codebase for: `cora`, `sales_agent`, `discovery_candidate`, `outreach_`, `send-cold-outreach`, `OutreachHistory`, `ResearchLeads`, `SendOutreach`, `lead_outreach_history`, `score_history`, `coraGuard`, `outlookSend` — expect zero hits outside migration files.
+`src/components/proposals/summary/RevenueDistributionSection.tsx` renders the three cards. It currently knows only the share percentages — not the rand amounts. The rand totals are calculated one level up in `CarbonCreditSection.tsx` via the `useRevenueCalculations` hook (it produces `clientSpecificRevenue` keyed by year, and `CarbonCreditSection` sums them into `totalClientSpecificRevenue`).
 
-## 2. Automated test suites
-- Run Vitest: `bunx vitest run` (covers `src/**/*.{test,spec}.{ts,tsx}` incl. ProposalTransformer, DashboardCalculator, ProfileService, validation schemas).
-- Run Supabase edge-function Deno tests for surviving functions (`supabase--test_edge_functions` with no filter).
-- Run `supabase--linter` to confirm DB is clean after the teardown migration (no orphan policies/views referencing dropped tables, RLS still enabled everywhere).
-- Run `security--run_security_scan` for a backend posture check.
+## Approach
 
-## 3. Browser smoke test (preview, logged in as admin then agent then client)
-Use `browser--navigate_to_sandbox` + observe/act. For each route: load, check console for errors, check primary network calls return 200, exercise one core interaction.
+Compute the total revenue pool inside `RevenueDistributionSection` itself by reusing the same hooks the carbon section already uses (`usePortfolioData` + `useRevenueCalculations`). Both hooks are cached, so this adds no extra DB or compute cost — the second caller hits the in-memory cache populated by `CarbonCreditSection`.
 
-Admin surfaces
-- `/admin/dashboard` — metrics, vintage revenue breakdown, closeout queue, pending agent approvals, portfolio review clusters, learning metrics.
-- `/admin/agents` — Leads tab: add lead, edit lead, bulk import (open dialog only), convert lead. Confirm Research/Outreach/History buttons are gone.
-- `/admin/companies`, `/admin/users`, `/admin/legal-documents`, `/admin/knowledge-hub`, `/admin/system-settings`.
-- Proposal list, open one proposal, send invitation (use ProposalInvitationTester or live flow on a test proposal), approve/reject path.
+From the client total + the locked client share %, derive the full pool, then multiply by each party's share to get rand values:
 
-Agent surfaces
-- `/dashboard` — agent warm cards, vintage revenue, referral stats, "Proposals worth a personal nudge" table.
-- Create proposal flow end-to-end (calculator → proposal draft → save → preview → send invitation).
-- Client management: search, create client, view client details.
+```text
+clientRevenue   = sum(clientSpecificRevenue by year)        // already cached
+totalPool       = clientRevenue / (clientSharePercentage/100)
+agentRevenue    = totalPool * (agentCommissionPercentage/100)
+platformRevenue = totalPool * (crunchCarbonSharePercentage/100)
+```
 
-Client surfaces
-- `/proposals/view/:token` via invitation link — verify load, approve flow, sign-in prompt.
-- Client dashboard, project agreement.
+All three values use the same carbon-price curve and commission dates that drive the "Client Revenue by Year" table, so the numbers will be internally consistent.
 
-Auth
-- Sign in / sign out / inactivity logout / role redirect / register form / invitation token landing.
+## Visibility rules (unchanged)
 
-## 4. Cross-cutting checks
-- Realtime subscriptions (`agentSubscriptions`, `proposalSubscriptions`, `notificationSubscriptions`) connect without errors in console.
-- Cron jobs remaining (`SELECT * FROM cron.job`) — confirm only non-sales-agent jobs survive and no scheduled job references a deleted function.
-- Edge function logs: spot-check the most-used surviving functions for recent errors (`send-proposal-invitation`, any auth/profile functions).
-- Sidebar nav renders without the removed Sales Agent entry; no 404s on direct nav.
+- Admin → Client + Agent + Platform cards, each with rand value
+- Agent → Client + Agent + Platform cards, each with rand value
+- Client → Client card only, with rand value
 
-## 5. Reporting
-Produce a single regression report listing, per area: ✅ pass / ⚠️ warning / ❌ fail, with reproduction notes and console/network excerpts for any failure. Stop and surface failures for triage before any further changes.
+## Changes
 
-## Technical notes
-- Tests run from `/dev-server`. Vitest config already present (`vitest.config.ts`).
-- Browser tool will need the user to be signed in for protected routes; if a login wall is hit, pause and ask the user to sign in in the preview.
-- No code changes are part of this task — any bug found will be filed back as a separate fix request.
+1. `RevenueDistributionSection.tsx`
+   - Accept the same inputs needed for revenue calc (`commissionDate`, `phases`, `isMultiPhase`) via new optional props, with sensible fallbacks for callers that don't have them (e.g. legacy summary screens).
+   - Call `usePortfolioData` and `useRevenueCalculations` (same args used by sibling `CarbonCreditSection`) to get `totalClientSpecificRevenue`.
+   - Compute the three rand values from the percentages.
+   - Render each rand value as a secondary line under the existing percentage, formatted as `R {amount}` using `toLocaleString('en-ZA')` and rounded to the nearest rand.
+   - Keep the existing "Based on … portfolio" / "Rate locked at creation" / "Platform fee" footers.
+   - While `revenueLoading` is true, keep the existing skeleton state and only render rand values once loaded.
+
+2. Pass the extra props from the three call sites so the rand values render in every context:
+   - `src/components/proposals/SummaryStep.tsx` (admin/agent create flow)
+   - `src/components/client/submit-project/ClientSummaryStep.tsx` (client submit flow)
+   - `src/components/proposals/view/ProposalDetails.tsx` (saved proposal view, including token-based client view)
+
+All three already have `projectInfo.commissionDate`, `projectInfo.phases`, and `projectInfo.isMultiPhase` in scope.
+
+## Out of scope
+
+- No DB schema changes.
+- No changes to how percentages are calculated, locked, or stored.
+- No changes to the carbon-credit table or yearly breakdown above.
+- No backend / edge-function changes.
