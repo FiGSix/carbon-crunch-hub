@@ -61,6 +61,9 @@ export function SummaryStep({
             selectedClientId={selectedClientId}
             proposalId={proposalId}
             isClient={false}
+            commissionDate={projectInfo.commissionDate}
+            phases={projectInfo.phases}
+            isMultiPhase={projectInfo.isMultiPhase}
           />
         </div>
       </CardContent>

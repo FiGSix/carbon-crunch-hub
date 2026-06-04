@@ -82,6 +82,9 @@ export function ClientSummaryStep({
           <RevenueDistributionSection
             systemSize={projectInfo.size}
             isClient={true}
+            commissionDate={projectInfo.commissionDate}
+            phases={projectInfo.phases}
+            isMultiPhase={projectInfo.isMultiPhase}
           />
         </div>
       </CardContent>
