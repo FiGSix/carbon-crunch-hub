@@ -129,6 +129,9 @@ export function ProposalDetails({
                 proposalData={proposalData}
                 isClient={isClient}
                 token={token}
+                commissionDate={projectInfo.commissionDate}
+                phases={projectInfo.phases}
+                isMultiPhase={projectInfo.isMultiPhase}
               />
             </>
           )}
