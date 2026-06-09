@@ -1,52 +1,32 @@
-## Goal
+## Root cause
 
-Below each percentage in the "Revenue Distribution" cards (Client / Agent / Platform), show the actual rand value that party will earn over the life of the proposal, respecting the existing role-based visibility (admins see all three, agents see all three, clients see only their card).
+`src/services/proposals/unifiedProposalService.ts` (line 155) auto-approves any new proposal for a client whose `clients.cession_signed_at` is set:
 
-## Where this lives
-
-`src/components/proposals/summary/RevenueDistributionSection.tsx` renders the three cards. It currently knows only the share percentages — not the rand amounts. The rand totals are calculated one level up in `CarbonCreditSection.tsx` via the `useRevenueCalculations` hook (it produces `clientSpecificRevenue` keyed by year, and `CarbonCreditSection` sums them into `totalClientSpecificRevenue`).
-
-## Approach
-
-Compute the total revenue pool inside `RevenueDistributionSection` itself by reusing the same hooks the carbon section already uses (`usePortfolioData` + `useRevenueCalculations`). Both hooks are cached, so this adds no extra DB or compute cost — the second caller hits the in-memory cache populated by `CarbonCreditSection`.
-
-From the client total + the locked client share %, derive the full pool, then multiply by each party's share to get rand values:
-
-```text
-clientRevenue   = sum(clientSpecificRevenue by year)        // already cached
-totalPool       = clientRevenue / (clientSharePercentage/100)
-agentRevenue    = totalPool * (agentCommissionPercentage/100)
-platformRevenue = totalPool * (crunchCarbonSharePercentage/100)
+```ts
+const hasExistingAgreement = !!clientRecord?.cession_signed_at;
+// ...
+status: hasExistingAgreement ? 'approved' : 'draft',
+signed_at: hasExistingAgreement ? new Date().toISOString() : null,
 ```
 
-All three values use the same carbon-price curve and commission dates that drive the "Client Revenue by Year" table, so the numbers will be internally consistent.
+Juan Mallinson's client row (`b8122310-…`) still has `cession_signed_at = 2026-06-09 08:18:30` and `first_agreement_id = bb2b3119-…` from his earlier signed proposal "Rhino Energy (Pty) Ltd - TEST". When that original proposal was deleted, the `delete_proposal` RPC removed/soft-deleted the proposal but never cleared these fields on `clients`. So every new proposal for Juan is created already-signed.
 
-## Visibility rules (unchanged)
+Same pattern affects any client whose original agreement-bearing proposal is later deleted.
 
-- Admin → Client + Agent + Platform cards, each with rand value
-- Agent → Client + Agent + Platform cards, each with rand value
-- Client → Client card only, with rand value
+## Plan
 
-## Changes
+1. **DB migration — clear cession on delete**
+   Update the `delete_proposal` SQL function so that, when the proposal being deleted is the one referenced by `clients.first_agreement_id`, it also sets `clients.first_agreement_id = NULL` and `clients.cession_signed_at = NULL` for that client (and any additional clients linked via `proposal_clients`).
 
-1. `RevenueDistributionSection.tsx`
-   - Accept the same inputs needed for revenue calc (`commissionDate`, `phases`, `isMultiPhase`) via new optional props, with sensible fallbacks for callers that don't have them (e.g. legacy summary screens).
-   - Call `usePortfolioData` and `useRevenueCalculations` (same args used by sibling `CarbonCreditSection`) to get `totalClientSpecificRevenue`.
-   - Compute the three rand values from the percentages.
-   - Render each rand value as a secondary line under the existing percentage, formatted as `R {amount}` using `toLocaleString('en-ZA')` and rounded to the nearest rand.
-   - Keep the existing "Based on … portfolio" / "Rate locked at creation" / "Platform fee" footers.
-   - While `revenueLoading` is true, keep the existing skeleton state and only render rand values once loaded.
+2. **DB migration — backfill orphaned cessions**
+   One-time UPDATE: for every `clients` row whose `first_agreement_id` points to a proposal that no longer exists (or is soft-deleted), null out `first_agreement_id` and `cession_signed_at`. This fixes Juan and any other affected client.
 
-2. Pass the extra props from the three call sites so the rand values render in every context:
-   - `src/components/proposals/SummaryStep.tsx` (admin/agent create flow)
-   - `src/components/client/submit-project/ClientSummaryStep.tsx` (client submit flow)
-   - `src/components/proposals/view/ProposalDetails.tsx` (saved proposal view, including token-based client view)
+3. **Harden the creation check** (`unifiedProposalService.ts` ~line 145-162)
+   Replace the simple `cession_signed_at` check with a query that also confirms the referenced `first_agreement_id` proposal still exists and is not soft-deleted before treating the client as "returning". Defence-in-depth so a future delete path that forgets to clean up cannot resurrect this bug.
 
-All three already have `projectInfo.commissionDate`, `projectInfo.phases`, and `projectInfo.isMultiPhase` in scope.
+4. **Verification**
+   - Re-query Juan's client row → both fields should be null.
+   - Create a new test proposal for Juan → should be `status='draft'`, `signed_at=null`.
+   - Create a new proposal for a client who genuinely has a valid prior signed agreement → should still auto-approve (regression check).
 
-## Out of scope
-
-- No DB schema changes.
-- No changes to how percentages are calculated, locked, or stored.
-- No changes to the carbon-credit table or yearly breakdown above.
-- No backend / edge-function changes.
+No UI changes. No changes to the auto-approval business rule itself — only to when it applies.
