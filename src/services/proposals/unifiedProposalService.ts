@@ -145,19 +145,38 @@ export async function createProposal(
     // Step 2: Handle client
     const clientId = selectedClientId || await findOrCreateClient(clientInfo, agentId);
     
-    // Step 2.5: Check if client has existing cession agreement (master agreement check)
+    // Step 2.5: Check if client has existing cession agreement (master agreement check).
+    // Defence-in-depth: only treat as returning if the referenced anchor proposal still
+    // exists and is not soft-deleted. Prevents auto-signing when the original agreement
+    // proposal has been deleted but the client row was not cleaned up.
     const { data: clientRecord } = await supabase
       .from('clients')
-      .select('cession_signed_at')
+      .select('cession_signed_at, first_agreement_id')
       .eq('id', clientId)
       .single();
 
-    const hasExistingAgreement = !!clientRecord?.cession_signed_at;
-    
+    let hasExistingAgreement = false;
+    if (clientRecord?.cession_signed_at && clientRecord?.first_agreement_id) {
+      const { data: anchorProposal } = await supabase
+        .from('proposals')
+        .select('id')
+        .eq('id', clientRecord.first_agreement_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+      hasExistingAgreement = !!anchorProposal;
+
+      if (!hasExistingAgreement) {
+        proposalLogger.warn("Client cession_signed_at present but anchor proposal missing/deleted; treating as new client", {
+          clientId,
+          firstAgreementId: clientRecord.first_agreement_id
+        });
+      }
+    }
+
     if (hasExistingAgreement) {
       proposalLogger.info("Auto-approving proposal for returning client", {
         clientId,
-        cessionSignedAt: clientRecord.cession_signed_at
+        cessionSignedAt: clientRecord!.cession_signed_at
       });
     }
     
