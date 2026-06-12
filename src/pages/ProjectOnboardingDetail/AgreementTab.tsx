@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SignedAgreementDownloadButton } from "@/components/proposals/view/SignedAgreementDownloadButton";
+import { AttachSignedAgreementDialog } from "@/components/onboarding/AttachSignedAgreementDialog";
 import { useProjectAgreement } from "@/hooks/useProjectAgreement";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileSignature, Calendar, User, Monitor, MapPin, Shield, FileText } from "lucide-react";
@@ -49,9 +50,16 @@ export function AgreementTab({ proposalId, proposalTitle }: AgreementTabProps) {
           <div className="text-center py-12">
             <FileSignature className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Agreement Signed Yet</h3>
-            <p className="text-sm text-muted-foreground">
-              This proposal has not been signed. Once signed, the agreement details will appear here.
+            <p className="text-sm text-muted-foreground mb-6">
+              This proposal has not been signed digitally. If you have an offline-signed PDF,
+              an admin can attach it here.
             </p>
+            <div className="flex justify-center">
+              <AttachSignedAgreementDialog
+                proposalId={proposalId}
+                proposalTitle={proposalTitle}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
