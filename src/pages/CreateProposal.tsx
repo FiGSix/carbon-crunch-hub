@@ -10,10 +10,23 @@ import { SummaryStep } from "@/components/proposals/SummaryStep";
 import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
 import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
+import { useAuth } from "@/contexts/auth";
+import { AccessNotEnabled } from "@/components/common/AccessNotEnabled";
 
 const CreateProposal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
+
+  // Super Partners must have can_create_proposals explicitly enabled by admin
+  if (profile?.role === 'super_partner' && !profile?.can_create_proposals) {
+    return (
+      <DashboardLayout>
+        <AccessNotEnabled />
+      </DashboardLayout>
+    );
+  }
+
   const [step, setStep] = useState<FormStep>("eligibility");
   
   // Form state

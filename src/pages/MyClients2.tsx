@@ -5,9 +5,23 @@ import { useClients } from '@/hooks/clients';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
+import { AccessNotEnabled } from '@/components/common/AccessNotEnabled';
 
 export default function MyClients2() {
-  const { userRole } = useAuth();
+  const { userRole, profile } = useAuth();
+
+  if (profile?.role === 'super_partner' && !profile?.can_create_proposals) {
+    return (
+      <DashboardLayout>
+        <AccessNotEnabled
+          title="Access not enabled"
+          description="Direct client management is not enabled on your account. Please contact your administrator to request access."
+        />
+      </DashboardLayout>
+    );
+  }
+
+
   const { 
     clients, 
     isLoading, 
