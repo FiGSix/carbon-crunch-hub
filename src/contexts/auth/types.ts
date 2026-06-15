@@ -16,4 +16,4 @@ export interface UserProfile {
   intro_video_viewed_at: string | null;
 }
 
-export type UserRole = 'client' | 'agent' | 'admin';
+export type UserRole = 'client' | 'agent' | 'admin' | 'super_partner';
