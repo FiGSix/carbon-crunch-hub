@@ -1,49 +1,52 @@
-## Diagnosis
+# Super Partners: Proposal Creation + Agent Upgrade Path
 
-`create-super-partner` fails because `admin.auth.admin.createUser()` triggers `public.handle_new_user()`, which inserts into `public.profiles` with `role = 'super_partner'`. The `profiles.role` check constraint is stale and only allows `client | agent | admin`, so Postgres rejects the insert. Supabase Auth surfaces this as an opaque `AuthRetryableFetchError: {}`.
+Builds on top of the in-flight `profiles_role_check` + `create-super-partner` error-handling fix. No existing behaviour changes; all new capabilities are opt-in via a per-profile flag.
 
-Auth log confirms:
+## 1. Schema migration (single file)
 
-```text
-new row for relation "profiles" violates check constraint "profiles_role_check"
-```
+- `ALTER TABLE profiles ADD COLUMN can_create_proposals boolean NOT NULL DEFAULT false`
+- Rewrite `get_super_partner_rate(p_super_partner_id uuid)` — sum `system_size_kwp` from non-deleted signed proposals where either:
+  - `agent_id` belongs to a profile with `super_partner_id = p_super_partner_id`, OR
+  - `agent_id = p_super_partner_id` (SP's own proposals)
+- Create `upgrade_agent_to_super_partner(p_agent_id uuid)` SECURITY DEFINER (admin-only via `is_current_user_admin()`) — updates role/status/flag, nulls `super_partner_id`, swaps role rows in `user_roles`, preserves `agent_commissions` history.
 
-## Drift check (other tables)
+## 2. Signing-trigger update
 
-I ran the broader scan you asked for. Only one table has a stale hardcoded role list:
+Locate the existing trigger that writes `agent_commissions` / `super_partner_commissions` on signature:
 
-```text
-profiles.profiles_role_check  -> CHECK (role IN ('client','agent','admin'))   STALE
-```
+- Treat `role = 'super_partner' AND can_create_proposals = true` identically to `role = 'agent'` for `agent_commissions` insertion (rate from existing helper on SP's own cumulative MWp — 4%/7%).
+- Keep existing null-check on `profiles.super_partner_id` for `super_partner_commissions` insert. SPs always have `super_partner_id = NULL`, so no SP-commission row will be written on their own proposals — confirm in code, no special case added.
+- `proposals.super_partner_id` snapshot stays `NULL` for SP-authored proposals.
 
-The other role-bearing constraints are unrelated vocabularies and do NOT need changes:
+## 3. Frontend: profile loading (CRITICAL — two files)
 
-```text
-company_members.company_members_role_check               -> ('team_lead','member')
-client_company_members.client_company_members_role_check -> ('account_admin','member')
-user_role_audit.user_role_audit_action_check             -> ('added','removed')
-user_roles.role                                          -> uses app_role enum directly (super_partner already in enum)
-```
+Verified `src/hooks/auth/useProfileLoader.ts` does its own explicit-column select + mapping (lines 80–112), independent of `profileOperations.ts` (`select('*')`). Both must include the new column or the sidebar gate and page early-return will see `undefined` and silently block flagged SPs:
 
-So one migration fixes everything.
+- `src/contexts/auth/types.ts` — add `can_create_proposals?: boolean` to `UserProfile`.
+- `src/hooks/auth/useProfileLoader.ts` — add `can_create_proposals` to the explicit `select(...)` list AND to the constructed profile object mapping.
+- `src/lib/supabase/profile/profileOperations.ts` — `select('*')` already covers reads; verify the update path passes the column through if it ever needs to be edited from the client (admin path uses RPC/admin UI, not client update — no change required there beyond type).
 
-## Plan
+## 4. Frontend: nav + routing + pages
 
-1. **Migration — fix the stale constraint**
-   - Drop `public.profiles_role_check`.
-   - Recreate it as `CHECK (role IN ('client','agent','admin','super_partner'))`.
-   - No data backfill needed (no profile rows currently violate the new constraint).
+- `src/components/layout/DashboardSidebar.tsx` — gate "Create Proposal" and "My Clients" SP entries on `profile.role === 'super_partner' && profile.can_create_proposals === true`. Agents/admins unchanged.
+- Route guard (`src/App.tsx` or wrapper) — add `'super_partner'` to `allowedRoles` for `/create-proposal` and `/my-clients`.
+- `src/pages/CreateProposal.tsx` and `src/pages/MyClients.tsx` — early-return a shared "Access not enabled — contact your administrator" empty state when `profile.role === 'super_partner' && !profile.can_create_proposals`. Agent/admin paths untouched.
 
-2. **Edge function — small robustness pass on `create-super-partner`**
-   - Keep existing admin auth, duplicate-email lookup, and idempotent profile/user_roles upserts.
-   - Improve `errMsg` so `AuthRetryableFetchError: {}` surfaces `name` + `status` instead of an empty object, making future regressions debuggable from the UI toast.
-   - No changes to the SMTP / invite-link flow in this pass.
+## 5. Admin UI
 
-3. **Verify**
-   - Try creating a super partner from Admin → Super Partner Management.
-   - Confirm no new `profiles_role_check` or `AuthRetryableFetchError` entries in Auth / edge logs.
-   - Confirm rows exist in `auth.users`, `public.profiles` (role = `super_partner`), and `public.user_roles` (role = `super_partner`).
+- `AdminSuperPartnerManagement` detail drawer — Switch labelled "Allow direct proposal creation" bound to `can_create_proposals`; persists via existing update path (admin RLS already allows profile updates).
+- `AdminAgentManagement` active-agents row actions — "Upgrade to Super Partner" behind a confirmation dialog with the exact warning copy from the spec; calls `supabase.rpc('upgrade_agent_to_super_partner', { p_agent_id })`; on success invalidates agent + SP queries so the row migrates tabs.
 
-## Expected result
+## 6. Verification
 
-"Create failed: {}" stops appearing, and the super partner is created in one click.
+1. Upgrade an agent previously linked to an SP → `super_partner_id` null, role flipped, `user_roles` swapped, proposals/commissions intact, removed from former SP's linked-agents list.
+2. SP with flag creates + signs a proposal → exactly one `agent_commissions` row at correct tier, zero `super_partner_commissions` rows, `proposals.super_partner_id = null`, and the proposal's MWp counts in `get_super_partner_rate()` for that SP.
+3. SP without flag visits `/create-proposal` / `/my-clients` → "Access not enabled" renders (not blank, not 403).
+4. `get_super_partner_rate()` combines SP's own MWp + linked agents' MWp into the correct tier (3% / 5%).
+5. Reload an SP profile in-app → confirm `profile.can_create_proposals` is present (not `undefined`) in React DevTools / console.
+
+## Technical notes
+
+- New SPs created via `create-super-partner` edge function get `false` by default (column default applies — no edge-function code change).
+- `get_super_partner_rate` uses `UNION ALL` or `OR` join clause; existing rate thresholds unchanged.
+- No data backfill required.
