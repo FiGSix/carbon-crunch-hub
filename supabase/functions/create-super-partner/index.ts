@@ -81,6 +81,7 @@ serve(async (req) => {
       phone: body.phone || null,
       role: "super_partner",
       super_partner_status: "active",
+      agent_status: "active",
       join_date: new Date().toISOString().slice(0, 10),
     }, { onConflict: "id" });
 
