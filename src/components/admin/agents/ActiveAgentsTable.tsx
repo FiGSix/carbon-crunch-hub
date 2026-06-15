@@ -158,6 +158,38 @@ export function ActiveAgentsTable() {
     }
   });
 
+  const upgradeToSPMutation = useMutation({
+    mutationFn: async (agentId: string) => {
+      const { error } = await supabase.rpc('upgrade_agent_to_super_partner', { p_agent_id: agentId });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await invalidateAgentManagement();
+      toast({
+        title: 'Agent upgraded',
+        description: 'The agent is now a Super Partner. Existing proposals and commissions are preserved.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Upgrade failed',
+        description: error instanceof Error ? error.message : 'Failed to upgrade agent',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleUpgradeToSP = (agent: AgentData) => {
+    const confirmed = window.confirm(
+      `Upgrade ${agent.agent_name || agent.agent_email} to Super Partner?\n\n` +
+      "This will convert the agent's account to a Super Partner. " +
+      'Their existing proposals and commissions are preserved. ' +
+      'This action cannot be automatically reversed.'
+    );
+    if (confirmed) upgradeToSPMutation.mutate(agent.agent_id);
+  };
+
+
   const totalPages = Math.ceil((totalCount || 0) / pageSize);
 
   const handlePageChange = (page: number) => {
