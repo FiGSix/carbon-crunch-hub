@@ -21,6 +21,7 @@ interface SuperPartner {
   company_name: string | null;
   phone: string | null;
   super_partner_status: string | null;
+  can_create_proposals: boolean | null;
   created_at: string;
 }
 
@@ -60,7 +61,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -139,6 +140,15 @@ export default function AdminSuperPartnerManagement() {
     const { error } = await supabase.from("profiles").update({ super_partner_status: status }).eq("id", id);
     if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
     else { toast({ title: `Status: ${status}` }); loadAll(); }
+  };
+
+  const toggleCanCreateProposals = async (id: string, value: boolean) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ can_create_proposals: value })
+      .eq("id", id);
+    if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    else { toast({ title: value ? "Direct proposal creation enabled" : "Direct proposal creation disabled" }); loadAll(); }
   };
 
   const reviewRequest = async (req: LinkRequest, approve: boolean) => {
