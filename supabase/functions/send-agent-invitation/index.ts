@@ -60,10 +60,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("User role check:", { userId: user.id, role: profileData?.role, error: profileError });
 
-    if (profileError || !profileData || profileData.role !== 'admin') {
-      console.error("Admin check failed:", { profileError, profileData });
+    const callerRole = profileData?.role;
+    if (profileError || !profileData || (callerRole !== 'admin' && callerRole !== 'super_partner')) {
+      console.error("Role check failed:", { profileError, profileData });
       return new Response(
-        JSON.stringify({ error: "Admin privileges required" }),
+        JSON.stringify({ error: "Admin or super partner privileges required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
