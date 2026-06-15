@@ -1,24 +1,27 @@
-Root issue found: recent Supabase Edge HTTP logs show every `create-super-partner` POST returning `401`. The function currently checks for an Authorization header, but then calls `userClient.auth.getUser()` without explicitly passing the JWT. Other working admin functions in this project extract the bearer token and verify it with `auth.getUser(token)`, usually via a service-role client.
+Fix the failing `create-super-partner` invite.
+
+What the logs show:
+- The function authenticates the admin and reaches `admin.auth.admin.inviteUserByEmail(...)`.
+- That call throws `AuthRetryableFetchError: {}` with `status: 500, code: undefined`, originating in `gotrue-js` loaded via `https://esm.sh/@supabase/supabase-js@2.38.4`. This is a runtime/transport failure inside the Supabase JS auth-admin call.
+- The UI toast shows `{}` because we serialize the empty auth error.
 
 Plan:
 
-1. Update `supabase/functions/create-super-partner/index.ts`
-   - Extract the JWT from `Authorization: Bearer ...`.
-   - Verify it with the service-role Supabase client using `admin.auth.getUser(token)`, matching the project’s working edge-function pattern.
-   - Return clearer 401 errors for missing/invalid/expired sessions.
-   - Check admin permission directly against `profiles`/`user_roles` using the verified `user.id`, instead of relying on an RPC tied to request context.
-   - Keep service-role-only operations server-side.
+1. Switch the Supabase JS import in `supabase/functions/create-super-partner/index.ts` from `https://esm.sh/@supabase/supabase-js@2.38.4` to the stable `npm:@supabase/supabase-js@2` specifier (the same pattern used by working functions in this project).
 
-2. Harden the create flow without changing behavior
-   - Validate email format and normalize/trim email before invite.
-   - Check required service configuration and return a clear 500 if missing.
-   - Log auth/profile/invite/upsert failures server-side so future failures show useful Edge Function logs.
-   - Check and return errors from `profiles.upsert()` and `user_roles.upsert()` instead of ignoring them.
+2. Replace `inviteUserByEmail` with a more reliable two-step flow that works around the gotrue-js transport issue and is also idempotent for re-invites:
+   - First check if a user with that email already exists via `admin.auth.admin.listUsers` filtering by email.
+   - If not, create the user with `admin.auth.admin.createUser({ email, email_confirm: false, user_metadata: { role: "super_partner", ... } })`.
+   - Then call `admin.auth.admin.generateLink({ type: "invite", email })` to produce an invite link (Supabase will email it when SMTP is configured; the link is also returned for fallback).
+   - If the user already existed, skip create and just (re)generate the invite link.
 
-3. Improve the admin page error message
-   - In `src/pages/AdminSuperPartnerManagement.tsx`, surface the edge function response body when available, so the toast shows `Invalid authentication`, `Admin only`, `Invite failed`, etc. instead of only `Edge Function returned a non-2xx status code`.
+3. Always extract a clean error string from gotrue errors (`err.message || err.code || JSON.stringify(err)`) so the UI never shows `{}`.
 
-4. Deploy and validate
-   - Deploy `create-super-partner`.
-   - Re-check Edge Function logs/statuses.
-   - Test the function with a safe request path or authenticated preview session where possible, verifying the previous 401 is gone and any remaining failure is the actual invite/profile error.
+4. Keep the existing profiles + user_roles upsert logic, the admin auth check, and CORS exactly as they are.
+
+5. Deploy the function and re-test by attempting to create a super partner from the admin UI; verify the Edge Function logs no longer show `AuthRetryableFetchError` and the new row appears in `profiles` + `user_roles`.
+
+Technical notes:
+- No DB migration needed.
+- No frontend changes required beyond what is already in place (the toast already surfaces `error` from the function body).
+- Behavior change: invitation email delivery now depends on Supabase Auth SMTP being configured for the project; if SMTP is not configured, the user is still created and an invite link is generated server-side (logged) — we can extend later to send via Resend if needed.
