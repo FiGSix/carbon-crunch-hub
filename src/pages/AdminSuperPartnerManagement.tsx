@@ -271,6 +271,13 @@ export default function AdminSuperPartnerManagement() {
                 <Button size="sm" variant="outline" onClick={() => setStatus(sp.id, sp.super_partner_status === "suspended" ? "active" : "suspended")}>
                   {sp.super_partner_status === "suspended" ? "Reactivate" : "Suspend"}
                 </Button>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const { data, error } = await supabase.rpc("recalc_super_partner_rates", { p_super_partner_id: sp.id });
+                  if (error) toast({ title: "Recalc failed", description: error.message, variant: "destructive" });
+                  else { toast({ title: "Rates recalculated", description: `Updated ${data ?? 0} commission rows.` }); loadAll(); }
+                }}>
+                  Recalculate rates
+                </Button>
               </div>
 
               <div>
