@@ -12,7 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, session, isLoading: authLoading, isInitialized } = useAuth();
+  const { user, session, profile, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
   // Check if user was logged out due to inactivity
@@ -47,14 +47,19 @@ const Login = () => {
         // Check for returnTo in URL query params first
         const searchParams = new URLSearchParams(location.search);
         const returnTo = searchParams.get('returnTo');
-        
-        const from = returnTo || location.state?.from || '/dashboard';
-        
+
+        // Resolve role-based default landing
+        const roleDefault = (profile?.role === 'super_partner')
+          ? '/super-partner/dashboard'
+          : '/dashboard';
+
+        const from = returnTo || location.state?.from || roleDefault;
+
         // Avoid redirecting to login if that's where we came from
         if (from !== '/login') {
           navigate(from, { replace: true });
         } else {
-          navigate('/dashboard', { replace: true });
+          navigate(roleDefault, { replace: true });
         }
       }
     }

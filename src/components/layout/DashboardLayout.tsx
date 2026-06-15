@@ -20,7 +20,7 @@ import { componentLogger } from '@/lib/logger';
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  requiredRole?: 'client' | 'agent' | 'admin';
+  requiredRole?: 'client' | 'agent' | 'admin' | 'super_partner';
 }
 
 export function DashboardLayout({ 
@@ -39,6 +39,7 @@ export function DashboardLayout({
     if (userRole === 'client') title = isMobile ? 'CLIENT' : 'CLIENT DASHBOARD';
     else if (userRole === 'agent') title = isMobile ? 'AGENT' : 'AGENT DASHBOARD';
     else if (userRole === 'admin') title = isMobile ? 'ADMIN' : 'ADMIN DASHBOARD';
+    else if (userRole === 'super_partner') title = isMobile ? 'PARTNER' : 'SUPER PARTNER';
 
     const initials = profile?.first_name?.[0]?.toUpperCase() || userRole?.[0]?.toUpperCase() || '?';
 

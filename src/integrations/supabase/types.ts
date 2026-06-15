@@ -143,6 +143,7 @@ export type Database = {
           invited_by: string | null
           last_name: string | null
           status: string
+          super_partner_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -157,6 +158,7 @@ export type Database = {
           invited_by?: string | null
           last_name?: string | null
           status?: string
+          super_partner_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           invited_by?: string | null
           last_name?: string | null
           status?: string
+          super_partner_id?: string | null
         }
         Relationships: [
           {
@@ -178,6 +181,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_invitations_super_partner_id_fkey"
+            columns: ["super_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2201,6 +2211,9 @@ export type Database = {
           role: string
           status_changed_at: string | null
           status_changed_by: string | null
+          super_partner_commission_rate: number | null
+          super_partner_id: string | null
+          super_partner_status: string | null
           terms_accepted_at: string | null
           territory: string | null
           updated_at: string | null
@@ -2229,6 +2242,9 @@ export type Database = {
           role: string
           status_changed_at?: string | null
           status_changed_by?: string | null
+          super_partner_commission_rate?: number | null
+          super_partner_id?: string | null
+          super_partner_status?: string | null
           terms_accepted_at?: string | null
           territory?: string | null
           updated_at?: string | null
@@ -2257,6 +2273,9 @@ export type Database = {
           role?: string
           status_changed_at?: string | null
           status_changed_by?: string | null
+          super_partner_commission_rate?: number | null
+          super_partner_id?: string | null
+          super_partner_status?: string | null
           terms_accepted_at?: string | null
           territory?: string | null
           updated_at?: string | null
@@ -2265,6 +2284,13 @@ export type Database = {
           {
             foreignKeyName: "profiles_status_changed_by_fkey"
             columns: ["status_changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_super_partner_id_fkey"
+            columns: ["super_partner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2626,11 +2652,15 @@ export type Database = {
           pdf_generated_at: string | null
           pdf_url: string | null
           pdf_version: number | null
+          platform_fee_override: boolean | null
+          platform_fee_percentage: number | null
           project_info: Json
           review_later_until: string | null
           signed_at: string | null
           source: string
           status: string
+          super_partner_commission_percentage: number | null
+          super_partner_id: string | null
           system_size_kwp: number | null
           title: string
           unit_standard: string | null
@@ -2677,11 +2707,15 @@ export type Database = {
           pdf_generated_at?: string | null
           pdf_url?: string | null
           pdf_version?: number | null
+          platform_fee_override?: boolean | null
+          platform_fee_percentage?: number | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
           source?: string
           status?: string
+          super_partner_commission_percentage?: number | null
+          super_partner_id?: string | null
           system_size_kwp?: number | null
           title?: string
           unit_standard?: string | null
@@ -2728,11 +2762,15 @@ export type Database = {
           pdf_generated_at?: string | null
           pdf_url?: string | null
           pdf_version?: number | null
+          platform_fee_override?: boolean | null
+          platform_fee_percentage?: number | null
           project_info?: Json
           review_later_until?: string | null
           signed_at?: string | null
           source?: string
           status?: string
+          super_partner_commission_percentage?: number | null
+          super_partner_id?: string | null
           system_size_kwp?: number | null
           title?: string
           unit_standard?: string | null
@@ -2793,6 +2831,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_super_partner_id_fkey"
+            columns: ["super_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2859,6 +2904,145 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      super_partner_commissions: {
+        Row: {
+          agent_id: string
+          approved_at: string | null
+          approved_by: string | null
+          calculated_at: string
+          commission_amount: number
+          commission_rate: number
+          commission_status: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          proposal_id: string | null
+          super_partner_id: string
+        }
+        Insert: {
+          agent_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_at?: string
+          commission_amount?: number
+          commission_rate?: number
+          commission_status?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          proposal_id?: string | null
+          super_partner_id: string
+        }
+        Update: {
+          agent_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_at?: string
+          commission_amount?: number
+          commission_rate?: number
+          commission_status?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          proposal_id?: string | null
+          super_partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "super_partner_commissions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "super_partner_commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "super_partner_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "super_partner_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "super_partner_commissions_super_partner_id_fkey"
+            columns: ["super_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      super_partner_link_requests: {
+        Row: {
+          agent_id: string
+          id: string
+          notes: string | null
+          request_type: string
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          super_partner_id: string
+        }
+        Insert: {
+          agent_id: string
+          id?: string
+          notes?: string | null
+          request_type: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          super_partner_id: string
+        }
+        Update: {
+          agent_id?: string
+          id?: string
+          notes?: string | null
+          request_type?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          super_partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "super_partner_link_requests_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "super_partner_link_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "super_partner_link_requests_super_partner_id_fkey"
+            columns: ["super_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
@@ -3213,6 +3397,10 @@ export type Database = {
       }
       auth_user_id: { Args: never; Returns: string }
       auth_user_role: { Args: never; Returns: string }
+      backfill_super_partner_commissions: {
+        Args: { p_agent_id: string; p_super_partner_id: string }
+        Returns: number
+      }
       can_send_client_email: {
         Args: { p_cooldown_days?: number; p_email: string }
         Returns: boolean
@@ -3580,6 +3768,33 @@ export type Database = {
           title: string
         }[]
       }
+      get_super_partner_agents: {
+        Args: never
+        Returns: {
+          agent_email: string
+          agent_id: string
+          agent_name: string
+          agent_status: string
+          company_name: string
+          linked_at: string
+          mwp_contributed: number
+          proposal_count: number
+        }[]
+      }
+      get_super_partner_dashboard_stats: {
+        Args: never
+        Returns: {
+          aggregated_mwp: number
+          current_rate: number
+          paid_commission: number
+          pending_commission: number
+          total_agents: number
+        }[]
+      }
+      get_super_partner_rate: {
+        Args: { p_super_partner_id: string }
+        Returns: number
+      }
       get_user_client_company_client_ids: { Args: never; Returns: string[] }
       get_user_client_ids: { Args: never; Returns: string[] }
       get_user_company_id: { Args: { user_id_param: string }; Returns: string }
@@ -3632,6 +3847,7 @@ export type Database = {
         Args: { proposal_client_reference_id: string }
         Returns: boolean
       }
+      is_super_partner: { Args: { _user_id: string }; Returns: boolean }
       is_team_lead: {
         Args: { company_id_param: string; user_id_param: string }
         Returns: boolean
@@ -3652,6 +3868,10 @@ export type Database = {
       normalize_system_size_to_kwp: {
         Args: { size_value: number; unit_type?: string }
         Returns: number
+      }
+      recalc_proposal_platform_fee: {
+        Args: { p_proposal_id: string }
+        Returns: undefined
       }
       recalculate_proposal_client_shares: {
         Args: never
@@ -3792,7 +4012,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "agent" | "client"
+      app_role: "admin" | "agent" | "client" | "super_partner"
       client_suppression_reason:
         | "manual"
         | "bounce"
@@ -3932,7 +4152,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "agent", "client"],
+      app_role: ["admin", "agent", "client", "super_partner"],
       client_suppression_reason: [
         "manual",
         "bounce",

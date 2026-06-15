@@ -76,6 +76,10 @@ const SubmitProject = createOptimizedLazyComponent(() => import("./pages/SubmitP
 const KnowledgeHub = createOptimizedLazyComponent(() => import("./pages/KnowledgeHub"), "KnowledgeHub");
 const KnowledgeHubAdmin = createOptimizedLazyComponent(() => import("./pages/admin/KnowledgeHubAdmin"), "KnowledgeHubAdmin");
 const BlockedEmails = createOptimizedLazyComponent(() => import("./pages/admin/BlockedEmails"), "BlockedEmails");
+const AdminSuperPartnerManagement = createOptimizedLazyComponent(() => import("./pages/AdminSuperPartnerManagement"), "AdminSuperPartnerManagement");
+const SuperPartnerDashboard = createOptimizedLazyComponent(() => import("./pages/SuperPartnerDashboard"), "SuperPartnerDashboard");
+const SuperPartnerMyAgents = createOptimizedLazyComponent(() => import("./pages/SuperPartnerMyAgents"), "SuperPartnerMyAgents");
+const SuperPartnerCommission = createOptimizedLazyComponent(() => import("./pages/SuperPartnerCommission"), "SuperPartnerCommission");
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
 
@@ -557,7 +561,55 @@ function App() {
                       </PrivateRoute>
                     } 
                   />
-                
+                  <Route
+                    path="/admin/super-partners"
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Super Partner Management">
+                          <Suspense fallback={<PageLoader />}>
+                            <AdminSuperPartnerManagement />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/super-partner/dashboard"
+                    element={
+                      <PrivateRoute allowedRoles={['super_partner', 'admin']}>
+                        <PageErrorBoundary pageName="Super Partner Dashboard">
+                          <Suspense fallback={<PageLoader />}>
+                            <SuperPartnerDashboard />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/super-partner/my-agents"
+                    element={
+                      <PrivateRoute allowedRoles={['super_partner', 'admin']}>
+                        <PageErrorBoundary pageName="Super Partner Agents">
+                          <Suspense fallback={<PageLoader />}>
+                            <SuperPartnerMyAgents />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/super-partner/commission"
+                    element={
+                      <PrivateRoute allowedRoles={['super_partner', 'admin']}>
+                        <PageErrorBoundary pageName="Super Partner Commission">
+                          <Suspense fallback={<PageLoader />}>
+                            <SuperPartnerCommission />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+
                 {/* Catch all route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

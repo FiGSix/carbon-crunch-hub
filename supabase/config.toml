@@ -127,3 +127,7 @@ verify_jwt = false
 
 [functions.backfill-geocode]
 verify_jwt = false
+
+[functions.create-super-partner]
+verify_jwt = true
+

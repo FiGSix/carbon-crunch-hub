@@ -7,6 +7,7 @@ import { ClientPopulationManager } from "@/components/admin/ClientPopulationMana
 import { VintageDeadlineManager } from "@/components/admin/VintageDeadlineManager";
 import { GpsBackfillManager } from "@/components/admin/GpsBackfillManager";
 import { InverterPortalDefaultsManager } from "@/components/admin/InverterPortalDefaultsManager";
+import { SuperPartnerCommissionTiers } from "@/components/admin/SuperPartnerCommissionTiers";
 import { useAuth } from "@/contexts/auth";
 
 const SystemSettings = () => {
@@ -32,6 +33,7 @@ const SystemSettings = () => {
       />
       <div className="space-y-6">
         <VintageDeadlineManager />
+        <SuperPartnerCommissionTiers />
         <DataCorrectionManager />
         <ClientPopulationManager />
         <RegionalSolarYieldManager />

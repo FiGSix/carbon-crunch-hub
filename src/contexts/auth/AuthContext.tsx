@@ -11,6 +11,7 @@ interface AuthContextType {
   userRole: UserRole | undefined;
   isLoading: boolean;
   isAdmin: boolean;
+  isSuperPartner: boolean;
   isAuthenticated: boolean;
   isInitialized: boolean;
   authError: string | null;
@@ -210,6 +211,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     userRole,
     isLoading,
     isAdmin: userRole === 'admin',
+    isSuperPartner: userRole === 'super_partner',
     isAuthenticated,
     isInitialized,
     authError,
