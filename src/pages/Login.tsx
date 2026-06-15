@@ -12,7 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, session, isLoading: authLoading, isInitialized } = useAuth();
+  const { user, session, profile, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
   
   // Check if user was logged out due to inactivity
