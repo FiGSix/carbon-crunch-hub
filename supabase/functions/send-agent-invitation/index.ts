@@ -17,6 +17,7 @@ interface InvitationRequest {
   lastName?: string;
   companyName?: string;
   resend?: boolean;
+  super_partner_id?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -59,10 +60,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("User role check:", { userId: user.id, role: profileData?.role, error: profileError });
 
-    if (profileError || !profileData || profileData.role !== 'admin') {
-      console.error("Admin check failed:", { profileError, profileData });
+    const callerRole = profileData?.role;
+    if (profileError || !profileData || (callerRole !== 'admin' && callerRole !== 'super_partner')) {
+      console.error("Role check failed:", { profileError, profileData });
       return new Response(
-        JSON.stringify({ error: "Admin privileges required" }),
+        JSON.stringify({ error: "Admin or super partner privileges required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -77,7 +79,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Admin company:", adminCompany);
 
-    const { email, firstName, lastName, companyName, resend }: InvitationRequest = await req.json();
+    const { email, firstName, lastName, companyName, resend, super_partner_id: bodySuperPartnerId }: InvitationRequest = await req.json();
+    // Super partners can only invite for themselves; admins may pass any value
+    const effectiveSuperPartnerId = callerRole === 'super_partner'
+      ? user.id
+      : (bodySuperPartnerId ?? null);
 
     console.log("Processing invitation for:", email, "Resend:", resend);
 
@@ -299,6 +305,7 @@ const handler = async (req: Request): Promise<Response> => {
         invitation_token: invitationToken,
         expires_at: expiresAt.toISOString(),
         invited_by: user.id,
+        super_partner_id: effectiveSuperPartnerId,
       })
       .select()
       .single();

@@ -3781,6 +3781,25 @@ export type Database = {
           proposal_count: number
         }[]
       }
+      get_super_partner_commission_ledger: {
+        Args: never
+        Returns: {
+          agent_email: string
+          agent_name: string
+          calculated_at: string
+          client_name: string
+          commission_amount: number
+          commission_rate: number
+          commission_status: string
+          id: string
+          notes: string
+          paid_at: string
+          proposal_id: string
+          proposal_title: string
+          signed_at: string
+          system_size_kwp: number
+        }[]
+      }
       get_super_partner_dashboard_stats: {
         Args: never
         Returns: {
@@ -3873,6 +3892,10 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: undefined
       }
+      recalc_super_partner_rates: {
+        Args: { p_super_partner_id: string }
+        Returns: number
+      }
       recalculate_proposal_client_shares: {
         Args: never
         Returns: {
@@ -3882,6 +3905,10 @@ export type Database = {
           old_share: number
           proposal_id: string
         }[]
+      }
+      request_agent_link_by_email: {
+        Args: { p_email: string }
+        Returns: string
       }
       search_clients: {
         Args: { search_term: string }

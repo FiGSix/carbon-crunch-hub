@@ -54,27 +54,13 @@ export default function SuperPartnerMyAgents() {
 
   const submitLinkRequest = async () => {
     if (!user || !linkEmail.trim()) return;
-    // Look up the agent by email via profiles is RLS-blocked for SP; ask admin to do it.
-    // Instead: insert a request with a placeholder note containing the email.
-    const { data: agent, error: aerr } = await supabase
-      .from("profiles")
-      .select("id, role")
-      .eq("email", linkEmail.trim())
-      .maybeSingle();
-    if (aerr || !agent) {
-      toast({ title: "Agent not found", description: "We couldn't find that agent. Submitting an admin request anyway.", });
-      // Submit a request referencing a NULL-id placeholder is impossible; advise admin via notes only.
+    const { data, error } = await supabase.rpc("request_agent_link_by_email", { p_email: linkEmail.trim() });
+    if (error) {
+      toast({ title: "Request failed", description: error.message, variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("super_partner_link_requests").insert({
-      super_partner_id: user.id,
-      agent_id: agent.id,
-      request_type: "link",
-      status: "pending",
-      notes: `Requested via email lookup: ${linkEmail.trim()}`,
-    });
-    if (error) toast({ title: "Request failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Link request submitted" }); setLinkEmail(""); }
+    toast({ title: "Link request submitted", description: "An admin will review your request." });
+    setLinkEmail("");
   };
 
   const inviteAgent = async () => {

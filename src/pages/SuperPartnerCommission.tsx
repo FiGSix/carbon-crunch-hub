@@ -9,7 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 interface Row {
   id: string;
   proposal_id: string | null;
-  agent_id: string;
+  proposal_title: string | null;
+  client_name: string | null;
+  agent_name: string | null;
+  agent_email: string | null;
+  system_size_kwp: number | null;
+  signed_at: string | null;
   commission_rate: number;
   commission_amount: number;
   commission_status: string;
@@ -33,10 +38,7 @@ export default function SuperPartnerCommission() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("super_partner_commissions")
-        .select("*")
-        .order("calculated_at", { ascending: false });
+      const { data } = await supabase.rpc("get_super_partner_commission_ledger");
       setRows((data as Row[]) || []);
       setLoading(false);
     })();
@@ -56,23 +58,30 @@ export default function SuperPartnerCommission() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Signed</TableHead>
                   <TableHead>Proposal</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Agent</TableHead>
+                  <TableHead className="text-right">MWp</TableHead>
                   <TableHead className="text-right">Rate</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Notes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell>{new Date(r.calculated_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.proposal_id?.slice(0, 8) || "—"}</TableCell>
+                    <TableCell>{r.signed_at ? new Date(r.signed_at).toLocaleDateString() : "—"}</TableCell>
+                    <TableCell className="max-w-[220px] truncate">{r.proposal_title || r.proposal_id?.slice(0, 8) || "—"}</TableCell>
+                    <TableCell>{r.client_name || "—"}</TableCell>
+                    <TableCell>
+                      <div>{r.agent_name?.trim() || r.agent_email || "—"}</div>
+                      {r.agent_email && <div className="text-xs text-muted-foreground">{r.agent_email}</div>}
+                    </TableCell>
+                    <TableCell className="text-right">{((Number(r.system_size_kwp) || 0) / 1000).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{Number(r.commission_rate).toFixed(2)}%</TableCell>
                     <TableCell className="text-right">{fmtZar(Number(r.commission_amount))}</TableCell>
                     <TableCell><Badge variant={statusVariant(r.commission_status)}>{r.commission_status}</Badge></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.notes || ""}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
