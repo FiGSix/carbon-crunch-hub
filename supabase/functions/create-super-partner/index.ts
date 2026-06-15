@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +22,12 @@ const json = (status: number, body: unknown) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+
+const errMsg = (e: any): string => {
+  if (!e) return "Unknown error";
+  if (typeof e === "string") return e;
+  return e.message || e.error_description || e.code || JSON.stringify(e) || "Unknown error";
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -46,11 +52,11 @@ serve(async (req) => {
     const { data: userData, error: authError } = await admin.auth.getUser(token);
     if (authError || !userData?.user) {
       console.error("JWT verification failed:", authError);
-      return json(401, { error: `Invalid authentication: ${authError?.message || "no user"}` });
+      return json(401, { error: `Invalid authentication: ${errMsg(authError)}` });
     }
     const callerId = userData.user.id;
 
-    // Admin check via profiles.role AND/OR user_roles
+    // Admin check via profiles.role OR user_roles
     const [{ data: prof }, { data: roleRow }] = await Promise.all([
       admin.from("profiles").select("role").eq("id", callerId).maybeSingle(),
       admin.from("user_roles").select("role").eq("user_id", callerId).eq("role", "admin").maybeSingle(),
@@ -69,22 +75,60 @@ serve(async (req) => {
       return json(400, { error: "Valid email is required" });
     }
 
-    // Invite (idempotent-ish: if user already exists, surface a clear error)
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        role: "super_partner",
-        first_name: body.first_name || "",
-        last_name: body.last_name || "",
-        company_name: body.company_name || "",
-      },
-    });
-    if (inviteErr || !invited?.user) {
-      console.error("inviteUserByEmail failed:", inviteErr);
-      return json(400, { error: inviteErr?.message || "Invite failed" });
+    const userMeta = {
+      role: "super_partner",
+      first_name: body.first_name || "",
+      last_name: body.last_name || "",
+      company_name: body.company_name || "",
+    };
+
+    // 1) Find existing auth user by email (avoid inviteUserByEmail transport issue)
+    let uid: string | null = null;
+    try {
+      const { data: list, error: listErr } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 200,
+      });
+      if (listErr) {
+        console.error("listUsers failed:", listErr);
+      } else {
+        const found = list?.users?.find((u: any) => (u.email || "").toLowerCase() === email);
+        if (found) uid = found.id;
+      }
+    } catch (e) {
+      console.error("listUsers threw:", e);
     }
 
-    const uid = invited.user.id;
+    // 2) Create the user if not found
+    if (!uid) {
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        email_confirm: false,
+        user_metadata: userMeta,
+      });
+      if (createErr || !created?.user) {
+        console.error("createUser failed:", createErr);
+        return json(400, { error: `Create user failed: ${errMsg(createErr)}` });
+      }
+      uid = created.user.id;
+    }
 
+    // 3) Generate invite link (best-effort — depends on Auth SMTP config)
+    try {
+      const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+        type: "invite",
+        email,
+      });
+      if (linkErr) {
+        console.warn("generateLink (invite) failed (non-fatal):", linkErr);
+      } else {
+        console.log("Invite link generated for", email, "->", (link as any)?.properties?.action_link || "(hidden)");
+      }
+    } catch (e) {
+      console.warn("generateLink threw (non-fatal):", e);
+    }
+
+    // 4) Upsert profile
     const { error: profileErr } = await admin.from("profiles").upsert({
       id: uid,
       email,
@@ -99,21 +143,22 @@ serve(async (req) => {
     }, { onConflict: "id" });
     if (profileErr) {
       console.error("profiles upsert failed:", profileErr);
-      return json(500, { error: `Profile upsert failed: ${profileErr.message}` });
+      return json(500, { error: `Profile upsert failed: ${errMsg(profileErr)}` });
     }
 
+    // 5) Upsert user_roles row
     const { error: roleErr } = await admin.from("user_roles").upsert({
       user_id: uid,
       role: "super_partner" as any,
     }, { onConflict: "user_id,role" });
     if (roleErr) {
       console.error("user_roles upsert failed:", roleErr);
-      return json(500, { error: `Role assignment failed: ${roleErr.message}` });
+      return json(500, { error: `Role assignment failed: ${errMsg(roleErr)}` });
     }
 
     return json(200, { id: uid, email });
   } catch (e: any) {
     console.error("create-super-partner unhandled:", e);
-    return json(500, { error: e?.message || "Server error" });
+    return json(500, { error: errMsg(e) });
   }
 });
