@@ -53,10 +53,16 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Dashboard",
+      href: "/super-partner/dashboard",
+      icon: LayoutDashboard,
+      roles: ["super_partner"]
+    },
+    {
       name: "Profile",
       href: "/profile",
       icon: User,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
     },
     {
       name: "Team",
@@ -113,10 +119,22 @@ export function DashboardSidebar() {
       roles: ["admin", "agent"]
     },
     {
+      name: "My Agents",
+      href: "/super-partner/my-agents",
+      icon: Users,
+      roles: ["super_partner"]
+    },
+    {
+      name: "Commission",
+      href: "/super-partner/commission",
+      icon: FileText,
+      roles: ["super_partner"]
+    },
+    {
       name: "Notifications",
       href: "/notifications",
       icon: Bell,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
     },
     {
       name: "Team",
@@ -134,6 +152,12 @@ export function DashboardSidebar() {
       name: "Agent Management",
       href: "/admin/agents",
       icon: UserCog,
+      roles: ["admin"]
+    },
+    {
+      name: "Super Partners",
+      href: "/admin/super-partners",
+      icon: Shield,
       roles: ["admin"]
     },
     {
