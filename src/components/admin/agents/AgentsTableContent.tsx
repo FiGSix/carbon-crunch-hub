@@ -15,7 +15,7 @@ import { AgentStatusDropdown } from './AgentStatusDropdown';
 import { CommissionOverrideDialog } from './CommissionOverrideDialog';
 import { AgentDetailsDialog } from './AgentDetailsDialog';
 import { AgentData } from './types';
-import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle, Info, Mail, X, Copy } from 'lucide-react';
+import { MoreHorizontal, Eye, TrendingUp, Users, Award, CheckCircle, Info, Mail, X, Copy, Shield } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -74,6 +74,7 @@ const AgentRow = memo(function AgentRow({
   onSetCommission,
   onResendInvitation,
   onCancelInvitation,
+  onUpgradeToSP,
   isUpdating,
   isInvitationActionPending,
 }: {
@@ -85,6 +86,7 @@ const AgentRow = memo(function AgentRow({
   onSetCommission: (agent: AgentData) => void;
   onResendInvitation: (invitationId: string) => void;
   onCancelInvitation: (invitationId: string) => void;
+  onUpgradeToSP?: (agent: AgentData) => void;
   isUpdating: boolean;
   isInvitationActionPending: boolean;
 }) {
@@ -258,6 +260,18 @@ const AgentRow = memo(function AgentRow({
                   onStatusChange={(status) => onUpdateStatus(agent.agent_id, status)}
                   disabled={isUpdating}
                 />
+                {onUpgradeToSP && agent.agent_status !== 'pending_approval' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onUpgradeToSP(agent)}
+                      className="text-blue-600"
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Upgrade to Super Partner
+                    </DropdownMenuItem>
+                  </>
+                )}
               </>
             )}
           </DropdownMenuContent>
@@ -280,6 +294,7 @@ interface AgentsTableContentProps {
   onCancelInvitation: (invitationId: string) => void;
   isUpdating: boolean;
   isInvitationActionPending: boolean;
+  onUpgradeToSP?: (agent: AgentData) => void;
 }
 
 export function AgentsTableContent({
@@ -294,7 +309,8 @@ export function AgentsTableContent({
   onResendInvitation,
   onCancelInvitation,
   isUpdating,
-  isInvitationActionPending
+  isInvitationActionPending,
+  onUpgradeToSP,
 }: AgentsTableContentProps) {
   const [selectedAgent, setSelectedAgent] = useState<AgentData | null>(null);
   const [showCommissionDialog, setShowCommissionDialog] = useState(false);
@@ -370,6 +386,7 @@ export function AgentsTableContent({
                 onSetCommission={handleSetCommission}
                 onResendInvitation={onResendInvitation}
                 onCancelInvitation={onCancelInvitation}
+                onUpgradeToSP={onUpgradeToSP}
                 isUpdating={isUpdating}
                 isInvitationActionPending={isInvitationActionPending}
               />
