@@ -96,7 +96,21 @@ export default function AdminSuperPartnerManagement() {
   const createSuperPartner = async () => {
     if (!newSP.email.trim()) return;
     const { data, error } = await supabase.functions.invoke("create-super-partner", { body: newSP });
-    if (error) { toast({ title: "Create failed", description: error.message, variant: "destructive" }); return; }
+    // Surface the edge function's actual error body when present
+    const fnError = (data as any)?.error;
+    if (error || fnError) {
+      let description = fnError || error?.message || "Unknown error";
+      // FunctionsHttpError exposes a Response on `context`
+      const ctx: any = (error as any)?.context;
+      if (!fnError && ctx && typeof ctx.json === "function") {
+        try {
+          const body = await ctx.json();
+          if (body?.error) description = body.error;
+        } catch { /* ignore */ }
+      }
+      toast({ title: "Create failed", description, variant: "destructive" });
+      return;
+    }
     toast({ title: "Super partner created", description: newSP.email });
     setCreateOpen(false);
     setNewSP({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
