@@ -79,7 +79,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             intro_video_viewed,
             intro_video_viewed_at,
             super_partner_id,
-            super_partner_status
+            super_partner_status,
+            can_create_proposals
           `)
           .eq('id', userId)
           .single();
