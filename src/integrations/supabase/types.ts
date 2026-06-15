@@ -2191,6 +2191,7 @@ export type Database = {
           access_level: string | null
           agent_status: string | null
           avatar_url: string | null
+          can_create_proposals: boolean
           commission_override: number | null
           company_logo_url: string | null
           company_name: string | null
@@ -2222,6 +2223,7 @@ export type Database = {
           access_level?: string | null
           agent_status?: string | null
           avatar_url?: string | null
+          can_create_proposals?: boolean
           commission_override?: number | null
           company_logo_url?: string | null
           company_name?: string | null
@@ -2253,6 +2255,7 @@ export type Database = {
           access_level?: string | null
           agent_status?: string | null
           avatar_url?: string | null
+          can_create_proposals?: boolean
           commission_override?: number | null
           company_logo_url?: string | null
           company_name?: string | null
@@ -3987,6 +3990,10 @@ export type Database = {
           trigger_event?: string
         }
         Returns: boolean
+      }
+      upgrade_agent_to_super_partner: {
+        Args: { p_agent_id: string }
+        Returns: undefined
       }
       user_client_company_ids: {
         Args: { user_id_param: string }

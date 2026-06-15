@@ -16,6 +16,7 @@ export interface UserProfile {
   intro_video_viewed_at: string | null;
   super_partner_id?: string | null;
   super_partner_status?: string | null;
+  can_create_proposals?: boolean | null;
 }
 
 export type UserRole = 'client' | 'agent' | 'admin' | 'super_partner';
