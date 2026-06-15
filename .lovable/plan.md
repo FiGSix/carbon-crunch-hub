@@ -1,52 +1,40 @@
-# Super Partners: Proposal Creation + Agent Upgrade Path
+# Fix: SP "Create Proposal" hidden + collapse duplicate profile loaders
 
-Builds on top of the in-flight `profiles_role_check` + `create-super-partner` error-handling fix. No existing behaviour changes; all new capabilities are opt-in via a per-profile flag.
+## Root cause
 
-## 1. Schema migration (single file)
+DB confirms `shaun@nuvoconsulting.com` has `role='super_partner'`, `can_create_proposals=true`. The sidebar gate `p?.can_create_proposals === true` is correct. But the live `AuthProvider` (`src/contexts/auth/AuthContext.tsx`) loads the profile via an **inline function** (lines 60–123) whose explicit `select(...)` and `UserProfile` mapping both omit `can_create_proposals`. The earlier addendum updated the *unused* `useProfileLoader.ts` instead. Result: `profile.can_create_proposals` is always `undefined` on the client and the sidebar item is hidden for every SP.
 
-- `ALTER TABLE profiles ADD COLUMN can_create_proposals boolean NOT NULL DEFAULT false`
-- Rewrite `get_super_partner_rate(p_super_partner_id uuid)` — sum `system_size_kwp` from non-deleted signed proposals where either:
-  - `agent_id` belongs to a profile with `super_partner_id = p_super_partner_id`, OR
-  - `agent_id = p_super_partner_id` (SP's own proposals)
-- Create `upgrade_agent_to_super_partner(p_agent_id uuid)` SECURITY DEFINER (admin-only via `is_current_user_admin()`) — updates role/status/flag, nulls `super_partner_id`, swaps role rows in `user_roles`, preserves `agent_commissions` history.
+Confirmed by `rg`: `useProfileLoader`, `useOptimizedAuth`, and `useAuthInitializer` are each defined but have zero importers anywhere in `src/`. They are dead code.
 
-## 2. Signing-trigger update
+## Changes
 
-Locate the existing trigger that writes `agent_commissions` / `super_partner_commissions` on signature:
+### 1. Fix the live loader (`src/contexts/auth/AuthContext.tsx`)
 
-- Treat `role = 'super_partner' AND can_create_proposals = true` identically to `role = 'agent'` for `agent_commissions` insertion (rate from existing helper on SP's own cumulative MWp — 4%/7%).
-- Keep existing null-check on `profiles.super_partner_id` for `super_partner_commissions` insert. SPs always have `super_partner_id = NULL`, so no SP-commission row will be written on their own proposals — confirm in code, no special case added.
-- `proposals.super_partner_id` snapshot stays `NULL` for SP-authored proposals.
+- Add `can_create_proposals` to the explicit `select(...)` column list (next to `super_partner_id`, `super_partner_status`).
+- Add `can_create_proposals: (data as any).can_create_proposals ?? false` to the `UserProfile` object that is set into state and cached.
 
-## 3. Frontend: profile loading (CRITICAL — two files)
+### 2. Delete orphaned profile-loading code paths
 
-Verified `src/hooks/auth/useProfileLoader.ts` does its own explicit-column select + mapping (lines 80–112), independent of `profileOperations.ts` (`select('*')`). Both must include the new column or the sidebar gate and page early-return will see `undefined` and silently block flagged SPs:
+Confirmed unused by AuthProvider and by anything else in `src/`:
 
-- `src/contexts/auth/types.ts` — add `can_create_proposals?: boolean` to `UserProfile`.
-- `src/hooks/auth/useProfileLoader.ts` — add `can_create_proposals` to the explicit `select(...)` list AND to the constructed profile object mapping.
-- `src/lib/supabase/profile/profileOperations.ts` — `select('*')` already covers reads; verify the update path passes the column through if it ever needs to be edited from the client (admin path uses RPC/admin UI, not client update — no change required there beyond type).
+- `src/hooks/auth/useProfileLoader.ts` — delete.
+- `src/hooks/auth/useOptimizedAuth.ts` — delete (builds `UserProfile` with an even shorter column set; no consumers, so no delegation wrapper needed).
+- `src/hooks/auth/useAuthInitializer.ts` — delete (only existed to wire `useProfileLoader` into a never-mounted initializer).
 
-## 4. Frontend: nav + routing + pages
+After deletion, grep for stale references and remove any orphan imports surfaced. Do not touch `useAuthState`, `useAuthStateSync`, `useAuthReliability`, `useOptimizedAuthReliability`, or `src/hooks/auth/authCache.ts` in this PR — they are also orphaned but outside the "profile-loading" scope the user asked about; flag them in the closing message as a follow-up cleanup candidate.
 
-- `src/components/layout/DashboardSidebar.tsx` — gate "Create Proposal" and "My Clients" SP entries on `profile.role === 'super_partner' && profile.can_create_proposals === true`. Agents/admins unchanged.
-- Route guard (`src/App.tsx` or wrapper) — add `'super_partner'` to `allowedRoles` for `/create-proposal` and `/my-clients`.
-- `src/pages/CreateProposal.tsx` and `src/pages/MyClients.tsx` — early-return a shared "Access not enabled — contact your administrator" empty state when `profile.role === 'super_partner' && !profile.can_create_proposals`. Agent/admin paths untouched.
+### 3. No type / consumer changes
 
-## 5. Admin UI
+`UserProfile` already includes `can_create_proposals?: boolean | null`. Sidebar gate, route guards, page early-returns, and admin toggle are already correct from the prior PR. No consumer is reading from the deleted hooks, so no call sites need updating.
 
-- `AdminSuperPartnerManagement` detail drawer — Switch labelled "Allow direct proposal creation" bound to `can_create_proposals`; persists via existing update path (admin RLS already allows profile updates).
-- `AdminAgentManagement` active-agents row actions — "Upgrade to Super Partner" behind a confirmation dialog with the exact warning copy from the spec; calls `supabase.rpc('upgrade_agent_to_super_partner', { p_agent_id })`; on success invalidates agent + SP queries so the row migrates tabs.
+## Verification
 
-## 6. Verification
+1. Hard-reload as `shaun@nuvoconsulting.com` → "Create Proposal" and "My Clients" appear in the sidebar; route loads (no AccessNotEnabled).
+2. Suspended SP `shaun.slabber.africa@gmail.com` (flag `false`) → sidebar items hidden; visiting `/create-proposal` directly shows AccessNotEnabled (not blank, not 403).
+3. Admin toggles `can_create_proposals` off on the SP detail drawer → after the next reload (5s cache or sign out/in) the items disappear.
+4. `rg "useProfileLoader|useOptimizedAuth|useAuthInitializer" src/` returns no matches.
+5. Typecheck/build passes.
 
-1. Upgrade an agent previously linked to an SP → `super_partner_id` null, role flipped, `user_roles` swapped, proposals/commissions intact, removed from former SP's linked-agents list.
-2. SP with flag creates + signs a proposal → exactly one `agent_commissions` row at correct tier, zero `super_partner_commissions` rows, `proposals.super_partner_id = null`, and the proposal's MWp counts in `get_super_partner_rate()` for that SP.
-3. SP without flag visits `/create-proposal` / `/my-clients` → "Access not enabled" renders (not blank, not 403).
-4. `get_super_partner_rate()` combines SP's own MWp + linked agents' MWp into the correct tier (3% / 5%).
-5. Reload an SP profile in-app → confirm `profile.can_create_proposals` is present (not `undefined`) in React DevTools / console.
+## Outcome
 
-## Technical notes
-
-- New SPs created via `create-super-partner` edge function get `false` by default (column default applies — no edge-function code change).
-- `get_super_partner_rate` uses `UNION ALL` or `OR` join clause; existing rate thresholds unchanged.
-- No data backfill required.
+One profile-loading code path (`AuthContext.tsx`), one column list. Next column added to `profiles` only needs to be wired in that single place.
