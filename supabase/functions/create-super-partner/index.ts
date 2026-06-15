@@ -26,7 +26,19 @@ const json = (status: number, body: unknown) =>
 const errMsg = (e: any): string => {
   if (!e) return "Unknown error";
   if (typeof e === "string") return e;
-  return e.message || e.error_description || e.code || JSON.stringify(e) || "Unknown error";
+  const direct = e.message || e.error_description || e.msg || e.code;
+  if (direct) return direct;
+  // AuthRetryableFetchError and similar often serialize to "{}" via JSON.stringify
+  const parts: string[] = [];
+  if (e.name) parts.push(String(e.name));
+  if (e.status) parts.push(`status ${e.status}`);
+  if (e.code) parts.push(`code ${e.code}`);
+  if (parts.length) return parts.join(" — ");
+  try {
+    const s = JSON.stringify(e);
+    if (s && s !== "{}") return s;
+  } catch { /* ignore */ }
+  return e.toString?.() || "Unknown error";
 };
 
 serve(async (req) => {
