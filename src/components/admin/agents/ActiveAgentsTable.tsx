@@ -302,7 +302,8 @@ export function ActiveAgentsTable() {
         }
         onResendInvitation={() => {}}
         onCancelInvitation={() => {}}
-        isUpdating={updateAgentStatusMutation.isPending || updateCommissionMutation.isPending}
+        onUpgradeToSP={handleUpgradeToSP}
+        isUpdating={updateAgentStatusMutation.isPending || updateCommissionMutation.isPending || upgradeToSPMutation.isPending}
         isInvitationActionPending={false}
       />
 
