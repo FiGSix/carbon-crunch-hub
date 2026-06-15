@@ -79,7 +79,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Admin company:", adminCompany);
 
-    const { email, firstName, lastName, companyName, resend }: InvitationRequest = await req.json();
+    const { email, firstName, lastName, companyName, resend, super_partner_id: bodySuperPartnerId }: InvitationRequest = await req.json();
+    // Super partners can only invite for themselves; admins may pass any value
+    const effectiveSuperPartnerId = callerRole === 'super_partner'
+      ? user.id
+      : (bodySuperPartnerId ?? null);
 
     console.log("Processing invitation for:", email, "Resend:", resend);
 
