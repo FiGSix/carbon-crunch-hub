@@ -17,6 +17,7 @@ interface InvitationRequest {
   lastName?: string;
   companyName?: string;
   resend?: boolean;
+  super_partner_id?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
