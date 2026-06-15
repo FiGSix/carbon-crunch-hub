@@ -21,6 +21,7 @@ interface SuperPartner {
   company_name: string | null;
   phone: string | null;
   super_partner_status: string | null;
+  can_create_proposals: boolean | null;
   created_at: string;
 }
 
@@ -60,7 +61,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -139,6 +140,15 @@ export default function AdminSuperPartnerManagement() {
     const { error } = await supabase.from("profiles").update({ super_partner_status: status }).eq("id", id);
     if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
     else { toast({ title: `Status: ${status}` }); loadAll(); }
+  };
+
+  const toggleCanCreateProposals = async (id: string, value: boolean) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ can_create_proposals: value })
+      .eq("id", id);
+    if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    else { toast({ title: value ? "Direct proposal creation enabled" : "Direct proposal creation disabled" }); loadAll(); }
   };
 
   const reviewRequest = async (req: LinkRequest, approve: boolean) => {
@@ -293,6 +303,23 @@ export default function AdminSuperPartnerManagement() {
                   Recalculate rates
                 </Button>
               </div>
+
+              <div className="flex items-center gap-3 rounded-md border p-3">
+                <input
+                  id={`ccp-${sp.id}`}
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={!!sp.can_create_proposals}
+                  onChange={(e) => toggleCanCreateProposals(sp.id, e.target.checked)}
+                />
+                <Label htmlFor={`ccp-${sp.id}`} className="cursor-pointer">
+                  Allow direct proposal creation
+                </Label>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  When enabled, this Super Partner sees Create Proposal and My Clients in their nav.
+                </span>
+              </div>
+
 
               <div>
                 <Label className="mb-2 block">Add an existing agent</Label>

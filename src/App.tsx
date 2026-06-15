@@ -281,7 +281,7 @@ function App() {
                   <Route 
                     path="/create-proposal" 
                     element={
-                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                      <PrivateRoute allowedRoles={['agent', 'admin', 'super_partner']}>
                         <AgentApprovalGuard>
                           <PageErrorBoundary pageName="Create Proposal">
                             <Suspense fallback={<PageLoader />}>
@@ -319,7 +319,7 @@ function App() {
                   <Route 
                     path="/my-clients" 
                     element={
-                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                      <PrivateRoute allowedRoles={['agent', 'admin', 'super_partner']}>
                         <AgentApprovalGuard>
                           <PageErrorBoundary pageName="My Clients">
                             <Suspense fallback={<PageLoader />}>

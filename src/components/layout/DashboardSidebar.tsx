@@ -95,6 +95,13 @@ export function DashboardSidebar() {
       roles: ["admin", "agent"]
     },
     {
+      name: "Create Proposal",
+      href: "/create-proposal",
+      icon: FileText,
+      roles: ["super_partner"],
+      gate: (p: any) => p?.can_create_proposals === true,
+    },
+    {
       name: "Project Onboarding",
       href: "/onboarding",
       icon: ClipboardCheck,
@@ -117,6 +124,13 @@ export function DashboardSidebar() {
       href: "/my-clients",
       icon: Users,
       roles: ["admin", "agent"]
+    },
+    {
+      name: "My Clients",
+      href: "/my-clients",
+      icon: Users,
+      roles: ["super_partner"],
+      gate: (p: any) => p?.can_create_proposals === true,
     },
     {
       name: "My Agents",
@@ -222,9 +236,9 @@ export function DashboardSidebar() {
     }
   ];
 
-  // Filter nav items based on user role
-  const filteredNavItems = navItems.filter(item => 
-    profile?.role && item.roles.includes(profile.role)
+  // Filter nav items based on user role and optional per-item gate
+  const filteredNavItems = navItems.filter((item: any) =>
+    profile?.role && item.roles.includes(profile.role) && (!item.gate || item.gate(profile))
   );
 
   return (
