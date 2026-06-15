@@ -304,6 +304,23 @@ export default function AdminSuperPartnerManagement() {
                 </Button>
               </div>
 
+              <div className="flex items-center gap-3 rounded-md border p-3">
+                <input
+                  id={`ccp-${sp.id}`}
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={!!sp.can_create_proposals}
+                  onChange={(e) => toggleCanCreateProposals(sp.id, e.target.checked)}
+                />
+                <Label htmlFor={`ccp-${sp.id}`} className="cursor-pointer">
+                  Allow direct proposal creation
+                </Label>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  When enabled, this Super Partner sees Create Proposal and My Clients in their nav.
+                </span>
+              </div>
+
+
               <div>
                 <Label className="mb-2 block">Add an existing agent</Label>
                 <div className="flex gap-2">
