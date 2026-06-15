@@ -305,6 +305,7 @@ const handler = async (req: Request): Promise<Response> => {
         invitation_token: invitationToken,
         expires_at: expiresAt.toISOString(),
         invited_by: user.id,
+        super_partner_id: effectiveSuperPartnerId,
       })
       .select()
       .single();
