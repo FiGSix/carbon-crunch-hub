@@ -26,6 +26,10 @@ export function CompanyManagementDialog({
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [commissionOverride, setCommissionOverride] = useState<string>('');
+  const [companySignedKwp, setCompanySignedKwp] = useState<number>(0);
+  const [savingOverride, setSavingOverride] = useState(false);
+  const [overrideLoaded, setOverrideLoaded] = useState(false);
   
   const {
     companyDetails,
