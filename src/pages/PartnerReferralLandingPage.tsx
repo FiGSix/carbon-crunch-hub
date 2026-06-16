@@ -236,14 +236,14 @@ export default function PartnerReferralLandingPage() {
           <img
             src="/crunch-carbon-logo-new.png"
             alt="Crunch Carbon"
-            className="h-10 w-auto object-contain [filter:brightness(0)_invert(1)]"
+            className="h-12 w-auto object-contain [filter:brightness(0)_invert(1)]"
           />
           {partner.company_logo_url && (
             <img
               src={partner.company_logo_url}
               alt={partner.company_name ?? "Company logo"}
               loading="lazy"
-              className="h-10 w-auto object-contain [filter:brightness(0)_invert(1)]"
+              className="h-12 w-auto object-contain [filter:brightness(0)_invert(1)]"
             />
           )}
         </div>
