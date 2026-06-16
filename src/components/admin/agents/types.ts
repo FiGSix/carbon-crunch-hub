@@ -3,6 +3,9 @@ export interface AgentData {
   agent_name: string;
   agent_email: string;
   company_name: string | null;
+  company_id: string | null;
+  company_commission_override: number | null;
+  company_signed_kwp: number;
   agent_status: string;
   access_level: string;
   commission_override: number | null;
