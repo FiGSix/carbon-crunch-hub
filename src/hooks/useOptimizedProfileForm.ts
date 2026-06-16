@@ -123,6 +123,7 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     isSubmitting,
     handleInputChange,
     handleAvatarChange,
+    handleCompanyLogoChange,
     handleSubmit
   };
 }
