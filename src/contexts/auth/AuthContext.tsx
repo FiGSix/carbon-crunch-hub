@@ -78,7 +78,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
             created_at,
             intro_video_viewed,
             intro_video_viewed_at,
-            super_partner_id,
             super_partner_status,
             can_create_proposals
           `)
@@ -107,7 +106,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           created_at: data.created_at,
           intro_video_viewed: data.intro_video_viewed,
           intro_video_viewed_at: data.intro_video_viewed_at,
-          super_partner_id: (data as any).super_partner_id ?? null,
           super_partner_status: (data as any).super_partner_status ?? null,
           can_create_proposals: (data as any).can_create_proposals ?? false
         };

@@ -106,13 +106,18 @@ export async function submitClientProject(
 
     const title = `${clientInfo.companyName || clientInfo.name} - ${projectInfo.name}`;
 
-    // 7. Insert proposal
+    // 7. Resolve company anchor (auto-creates solo company if needed)
+    const { data: companyIdResolved } = await supabase
+      .rpc('ensure_agent_has_company', { p_agent_id: userId });
+
+    // 8. Insert proposal
     const proposalRow = {
       title,
       status: "draft" as const,
       client_id: userId,
       client_reference_id: clientRecord.id,
       agent_id: userId,
+      company_id: (companyIdResolved as string) || null,
       content: content as unknown as Json,
       eligibility_criteria: eligibility as unknown as Json,
       project_info: projectInfo as unknown as Json,
@@ -122,7 +127,7 @@ export async function submitClientProject(
       agent_commission_percentage: agentCommissionPercentage,
       agent_portfolio_kwp: 0,
       system_size_kwp: systemSizeKWp,
-    };
+    } as any;
 
     const { data: proposal, error: insertError } = await supabase
       .from("proposals")

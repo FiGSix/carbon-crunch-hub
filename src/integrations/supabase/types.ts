@@ -144,6 +144,7 @@ export type Database = {
           last_name: string | null
           status: string
           super_partner_id: string | null
+          target_company_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -159,6 +160,7 @@ export type Database = {
           last_name?: string | null
           status?: string
           super_partner_id?: string | null
+          target_company_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -174,6 +176,7 @@ export type Database = {
           last_name?: string | null
           status?: string
           super_partner_id?: string | null
+          target_company_id?: string | null
         }
         Relationships: [
           {
@@ -188,6 +191,13 @@ export type Database = {
             columns: ["super_partner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_invitations_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -746,6 +756,9 @@ export type Database = {
           created_by: string | null
           email_domain: string | null
           id: string
+          super_partner_id: string | null
+          super_partner_linked_at: string | null
+          super_partner_linked_by: string | null
           updated_at: string
         }
         Insert: {
@@ -754,6 +767,9 @@ export type Database = {
           created_by?: string | null
           email_domain?: string | null
           id?: string
+          super_partner_id?: string | null
+          super_partner_linked_at?: string | null
+          super_partner_linked_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -762,9 +778,27 @@ export type Database = {
           created_by?: string | null
           email_domain?: string | null
           id?: string
+          super_partner_id?: string | null
+          super_partner_linked_at?: string | null
+          super_partner_linked_by?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_super_partner_id_fkey"
+            columns: ["super_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_super_partner_linked_by_fkey"
+            columns: ["super_partner_linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_members: {
         Row: {
@@ -2213,7 +2247,6 @@ export type Database = {
           status_changed_at: string | null
           status_changed_by: string | null
           super_partner_commission_rate: number | null
-          super_partner_id: string | null
           super_partner_status: string | null
           terms_accepted_at: string | null
           territory: string | null
@@ -2245,7 +2278,6 @@ export type Database = {
           status_changed_at?: string | null
           status_changed_by?: string | null
           super_partner_commission_rate?: number | null
-          super_partner_id?: string | null
           super_partner_status?: string | null
           terms_accepted_at?: string | null
           territory?: string | null
@@ -2277,7 +2309,6 @@ export type Database = {
           status_changed_at?: string | null
           status_changed_by?: string | null
           super_partner_commission_rate?: number | null
-          super_partner_id?: string | null
           super_partner_status?: string | null
           terms_accepted_at?: string | null
           territory?: string | null
@@ -2287,13 +2318,6 @@ export type Database = {
           {
             foreignKeyName: "profiles_status_changed_by_fkey"
             columns: ["status_changed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_super_partner_id_fkey"
-            columns: ["super_partner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2991,7 +3015,7 @@ export type Database = {
       }
       super_partner_link_requests: {
         Row: {
-          agent_id: string
+          company_id: string
           id: string
           notes: string | null
           request_type: string
@@ -3002,7 +3026,7 @@ export type Database = {
           super_partner_id: string
         }
         Insert: {
-          agent_id: string
+          company_id: string
           id?: string
           notes?: string | null
           request_type: string
@@ -3013,7 +3037,7 @@ export type Database = {
           super_partner_id: string
         }
         Update: {
-          agent_id?: string
+          company_id?: string
           id?: string
           notes?: string | null
           request_type?: string
@@ -3025,10 +3049,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "super_partner_link_requests_agent_id_fkey"
-            columns: ["agent_id"]
+            foreignKeyName: "super_partner_link_requests_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -3401,7 +3425,7 @@ export type Database = {
       auth_user_id: { Args: never; Returns: string }
       auth_user_role: { Args: never; Returns: string }
       backfill_super_partner_commissions: {
-        Args: { p_agent_id: string; p_super_partner_id: string }
+        Args: { p_super_partner_id: string }
         Returns: number
       }
       can_send_client_email: {
@@ -3475,6 +3499,10 @@ export type Database = {
         Returns: boolean
       }
       email_domain_of: { Args: { email_addr: string }; Returns: string }
+      ensure_agent_has_company: {
+        Args: { p_agent_id: string }
+        Returns: string
+      }
       extract_corporate_domain: {
         Args: { email_param: string }
         Returns: string
@@ -3771,19 +3799,6 @@ export type Database = {
           title: string
         }[]
       }
-      get_super_partner_agents: {
-        Args: never
-        Returns: {
-          agent_email: string
-          agent_id: string
-          agent_name: string
-          agent_status: string
-          company_name: string
-          linked_at: string
-          mwp_contributed: number
-          proposal_count: number
-        }[]
-      }
       get_super_partner_commission_ledger: {
         Args: never
         Returns: {
@@ -3801,6 +3816,17 @@ export type Database = {
           proposal_title: string
           signed_at: string
           system_size_kwp: number
+        }[]
+      }
+      get_super_partner_companies: {
+        Args: { p_super_partner_id?: string }
+        Returns: {
+          active_member_count: number
+          company_id: string
+          company_name: string
+          members: Json
+          super_partner_linked_at: string
+          total_signed_mwp: number
         }[]
       }
       get_super_partner_dashboard_stats: {
@@ -3909,10 +3935,7 @@ export type Database = {
           proposal_id: string
         }[]
       }
-      request_agent_link_by_email: {
-        Args: { p_email: string }
-        Returns: string
-      }
+      request_company_link: { Args: { p_company_id: string }; Returns: string }
       search_clients: {
         Args: { search_term: string }
         Returns: {

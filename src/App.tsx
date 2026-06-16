@@ -78,7 +78,7 @@ const KnowledgeHubAdmin = createOptimizedLazyComponent(() => import("./pages/adm
 const BlockedEmails = createOptimizedLazyComponent(() => import("./pages/admin/BlockedEmails"), "BlockedEmails");
 const AdminSuperPartnerManagement = createOptimizedLazyComponent(() => import("./pages/AdminSuperPartnerManagement"), "AdminSuperPartnerManagement");
 const SuperPartnerDashboard = createOptimizedLazyComponent(() => import("./pages/SuperPartnerDashboard"), "SuperPartnerDashboard");
-const SuperPartnerMyAgents = createOptimizedLazyComponent(() => import("./pages/SuperPartnerMyAgents"), "SuperPartnerMyAgents");
+const SuperPartnerMyCompanies = createOptimizedLazyComponent(() => import("./pages/SuperPartnerMyCompanies"), "SuperPartnerMyCompanies");
 const SuperPartnerCommission = createOptimizedLazyComponent(() => import("./pages/SuperPartnerCommission"), "SuperPartnerCommission");
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -586,12 +586,12 @@ function App() {
                     }
                   />
                   <Route
-                    path="/super-partner/my-agents"
+                    path="/super-partner/my-companies"
                     element={
                       <PrivateRoute allowedRoles={['super_partner', 'admin']}>
-                        <PageErrorBoundary pageName="Super Partner Agents">
+                        <PageErrorBoundary pageName="Super Partner Companies">
                           <Suspense fallback={<PageLoader />}>
-                            <SuperPartnerMyAgents />
+                            <SuperPartnerMyCompanies />
                           </Suspense>
                         </PageErrorBoundary>
                       </PrivateRoute>
