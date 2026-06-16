@@ -163,7 +163,7 @@ export function DashboardSidebar() {
       roles: ["client"]
     },
     {
-      name: "Agent Management",
+      name: "Partner Management",
       href: "/admin/agents",
       icon: UserCog,
       roles: ["admin"]
