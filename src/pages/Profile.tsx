@@ -28,6 +28,7 @@ const Profile = () => {
             profile={profile}
             refreshUser={refreshUser}
             isAgent={isAgent}
+            isSuperPartner={isSuperPartner}
           />
 
           {/* Referral system - for agents and super partners */}
