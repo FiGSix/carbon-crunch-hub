@@ -11,6 +11,8 @@ const QRCodeCanvas = lazy(() => import("qrcode.react").then((m) => ({ default: m
 
 interface Props {
   linkType: "client" | "agent";
+  title?: string;
+  subtitle?: string;
 }
 
 interface LinkRow {
