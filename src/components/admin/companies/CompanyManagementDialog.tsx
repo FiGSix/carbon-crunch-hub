@@ -80,6 +80,53 @@ export function CompanyManagementDialog({
     setIsEditingName(false);
   };
 
+  // Load company commission override + company-signed MWp (agent companies only)
+  useEffect(() => {
+    let cancelled = false;
+    setOverrideLoaded(false);
+    if (!companyId || companyDetails?.companyType === 'client') {
+      setCommissionOverride('');
+      setCompanySignedKwp(0);
+      return;
+    }
+    (async () => {
+      const [{ data: co }, { data: props }] = await Promise.all([
+        (supabase as any).from('companies').select('commission_override').eq('id', companyId).maybeSingle(),
+        (supabase as any)
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('company_id', companyId)
+          .not('signed_at', 'is', null)
+          .is('deleted_at', null),
+      ]);
+      if (cancelled) return;
+      setCommissionOverride(co?.commission_override == null ? '' : String(co.commission_override));
+      setCompanySignedKwp((props ?? []).reduce((s: number, r: any) => s + Number(r.system_size_kwp ?? 0), 0));
+      setOverrideLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [companyId, companyDetails?.companyType]);
+
+  const saveCommissionOverride = async (value: number | null) => {
+    if (!companyId) return;
+    setSavingOverride(true);
+    const { error } = await (supabase as any)
+      .from('companies')
+      .update({ commission_override: value })
+      .eq('id', companyId);
+    setSavingOverride(false);
+    if (error) {
+      toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setCommissionOverride(value == null ? '' : String(value));
+    toast({
+      title: value == null
+        ? 'Override cleared — company will use MWp tier'
+        : 'Rate applied — affects all future proposals from this company',
+    });
+  };
+
   if (!companyId) return null;
 
   const companyType = companyDetails?.companyType || 'agent';
