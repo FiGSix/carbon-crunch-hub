@@ -3,12 +3,15 @@
 import { useAuth } from '@/contexts/auth';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { ClientReferralSection } from '@/components/profile/ClientReferralSection';
+import { ReferralLinkWidget } from '@/components/referral/ReferralLinkWidget';
+import { ReferralBioCard } from '@/components/referral/ReferralBioCard';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const Profile = () => {
   const { profile, userRole, refreshUser } = useAuth();
   const isAgent = userRole === 'agent';
   const isAdmin = userRole === 'admin';
+  const isSuperPartner = userRole === 'super_partner';
 
   return (
     <DashboardLayout>
@@ -26,6 +29,14 @@ const Profile = () => {
             refreshUser={refreshUser}
             isAgent={isAgent}
           />
+
+          {/* Referral system - for agents and super partners */}
+          {(isAgent || isSuperPartner) && (
+            <>
+              <ReferralLinkWidget linkType={isAgent ? 'client' : 'agent'} />
+              <ReferralBioCard />
+            </>
+          )}
 
           {/* Client Referral Section - Only for agents and admins */}
           {(isAgent || isAdmin) && (

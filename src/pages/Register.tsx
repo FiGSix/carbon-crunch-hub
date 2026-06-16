@@ -9,11 +9,19 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const invitationToken = searchParams.get('token');
   const initialRole = searchParams.get('role') === 'agent' ? 'agent' : 'client';
-  
-  // Scroll to top on page load
+  const referralToken = searchParams.get('ref');
+  const prefilledEmail = searchParams.get('email');
+
+  // Persist referral token for post-signup attribution
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+    if (referralToken) {
+      try {
+        localStorage.setItem('crunchcarbon_ref', JSON.stringify({ token: referralToken }));
+      } catch {
+        /* noop */
+      }
+    }
+  }, [referralToken]);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -37,6 +45,7 @@ const Register = () => {
             <RegisterForm 
               initialRole={initialRole as "client" | "agent"} 
               invitationToken={invitationToken || undefined}
+              prefilledEmail={prefilledEmail || undefined}
             />
             
             <div className="mt-8 pt-6 border-t border-border text-center">

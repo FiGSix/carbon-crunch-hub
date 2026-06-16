@@ -25,7 +25,7 @@ interface RegisterFormData {
   role: "client" | "agent";
 }
 
-export function useRegisterForm(initialRole: "client" | "agent", invitationToken?: string) {
+export function useRegisterForm(initialRole: "client" | "agent", invitationToken?: string, prefilledEmail?: string) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invitationLoading, setInvitationLoading] = useState(!!invitationToken);
@@ -35,7 +35,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
   const [formData, setFormData] = useState<RegisterFormData>({
     firstName: "",
     lastName: "",
-    email: "",
+    email: prefilledEmail ?? "",
     password: "",
     confirmPassword: "",
     companyName: "",
@@ -435,6 +435,28 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         }
       }
       
+      // Apply referral attribution if a referral token was stored
+      if (data?.user?.id) {
+        try {
+          const stored = localStorage.getItem('crunchcarbon_ref');
+          if (stored) {
+            const parsed = JSON.parse(stored) as { token?: string };
+            if (parsed?.token) {
+              await supabase.rpc('apply_referral_on_signup', {
+                p_token: parsed.token,
+                p_new_user_id: data.user.id,
+              });
+              authLogger.info('Applied referral attribution on signup', {
+                userId: data.user.id,
+              });
+            }
+            localStorage.removeItem('crunchcarbon_ref');
+          }
+        } catch (refErr) {
+          authLogger.error('Failed to apply referral attribution', { error: refErr });
+        }
+      }
+
       toast({
         title: "Registration successful!",
         description: `Your ${formData.role} account has been created. Please check your email to verify your account.`,

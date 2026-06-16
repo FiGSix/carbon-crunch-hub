@@ -10,9 +10,10 @@ import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 interface RegisterFormProps {
   initialRole: "client" | "agent";
   invitationToken?: string;
+  prefilledEmail?: string;
 }
 
-export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps) => {
+export const RegisterForm = ({ initialRole, invitationToken, prefilledEmail }: RegisterFormProps) => {
   const {
     formData,
     termsAccepted,
@@ -27,7 +28,7 @@ export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps
     handleSubmit,
     handleTermsAccept,
     invitedEmail
-  } = useRegisterForm(initialRole, invitationToken);
+  } = useRegisterForm(initialRole, invitationToken, prefilledEmail);
   
   return (
     <FormErrorBoundary formName="Registration Form">
