@@ -24,7 +24,7 @@ interface LinkRow {
   conversions: number;
 }
 
-export function ReferralLinkWidget({ linkType }: Props) {
+export function ReferralLinkWidget({ linkType, title, subtitle }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [link, setLink] = useState<LinkRow | null>(null);
