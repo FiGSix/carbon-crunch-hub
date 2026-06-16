@@ -385,6 +385,47 @@ export default function AdminSuperPartnerManagement() {
                 </span>
               </div>
 
+              {sp.can_create_proposals && (
+                <div className="space-y-1 rounded-md border p-3">
+                  <Label>Proposal commission override (%)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to use the standard tier rate (4% / 7% by company MWp).
+                    Set a number to fix this SP's agent commission at that exact rate.
+                  </p>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      placeholder="e.g. 5"
+                      value={commissionOverride ?? ''}
+                      onChange={(e) =>
+                        setCommissionOverride(e.target.value === '' ? null : Number(e.target.value))
+                      }
+                      className="w-32"
+                    />
+                    <Button size="sm" onClick={() => handleSaveCommissionOverride()} disabled={savingOverride}>
+                      Save
+                    </Button>
+                    {commissionOverride !== null && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCommissionOverride(null);
+                          handleSaveCommissionOverride(null);
+                        }}
+                        disabled={savingOverride}
+                      >
+                        Clear (use tier)
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+
               <div>
                 <Label className="mb-2 block">Add a company</Label>
                 <div className="flex gap-2">
