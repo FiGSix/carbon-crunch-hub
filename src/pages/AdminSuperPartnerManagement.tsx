@@ -22,6 +22,7 @@ interface SuperPartner {
   phone: string | null;
   super_partner_status: string | null;
   can_create_proposals: boolean | null;
+  commission_override: number | null;
   created_at: string;
 }
 
@@ -73,6 +74,8 @@ export default function AdminSuperPartnerManagement() {
   const [spCompanies, setSpCompanies] = useState<Record<string, SpCompanyRow[]>>({});
   const [linkCompanyId, setLinkCompanyId] = useState<string>("");
   const [expandedCompany, setExpandedCompany] = useState<Record<string, boolean>>({});
+  const [commissionOverride, setCommissionOverride] = useState<number | null>(null);
+  const [savingOverride, setSavingOverride] = useState(false);
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
@@ -80,7 +83,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, commission_override, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
