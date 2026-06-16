@@ -1,63 +1,103 @@
-# Plan — Partner Management redesign + SP commission override
+# Plan — Partner Management: company commission, data consistency, drawer redesign
 
-## Change 1 — Rebuild Admin Agent Management as "Partner Management"
+## 1. Database migration (single migration)
 
-### Files to create
-- `src/components/admin/agents/PartnerManagementHeader.tsx` — Title "Partner Management" + Users icon + "Admin Only" badge, subtitle, single right-aligned **Invite Partner** button (Mail icon) opening existing `AgentInvitationDialog`. Replaces `AgentsManagementHeader` usage on this page.
-- `src/components/admin/agents/PartnersTable.tsx` — Unified table with filter row, columns, pagination, realtime, and Manage button per row. Uses existing `get_agents_management_data` RPC (status_filter passed when a specific status is selected, else null) plus a client-side filter pass for company + invitation-status. Includes:
-  - Filter row: Search (max-w-xs, magnifier icon, placeholder "Search by name, email or company…"), Status `Select` (All Status / Lead / Invited / Pending / Active / Inactive / Suspended — each rendered with its badge swatch), Company `Select` (built from distinct `company_name` in current result set), Export CSV outline button (Download icon) → direct CSV of current filtered rows.
-  - Columns: Company · Contact (name bold, email muted) · Status badge (Lead blue / Invited amber / Pending amber+pulse / Active green / Inactive secondary / Suspended destructive / Expired red when invitation past `invitation_expires_at`) · Current Rate (override% + outline "(Override)" badge, else tier 4%/7% by company MWp, "N/A" for invitations) · MWp Signed (sum signed `system_size_kwp` ÷ 1000, 2dp + " MWp"; "—" for invitations) · Manage (`outline sm` button).
-  - Reuses `TablePagination` and `useAgentsRealtime`.
-  - No checkbox column, no bulk-actions toolbar, no per-row dropdown.
-- `src/components/admin/agents/AgentManageDrawer.tsx` — Right-side `Sheet` (~560px) with header (name bold, company muted, inline status badge) and two tabs:
-  - **Overview**: Personal Information (2-col: Full Name, Email, Company if set, Join Date) · Account Status (status badge only — no Access Level, no Onboarding) · Performance Metrics (3 muted cards: Total / Active blue / Signed green + Success Rate if total > 0) · Commission Information (2-col: Commission Rate with override badge or tier badge + Info tooltip "Under 15 MWp: 4% / 15 MWp+: 7% / Current portfolio: X MWp"; Total Earnings ZAR green) · Recent Activity (Last Active formatted or "Never logged in").
-  - **Manage**: Commission Override radio ("Use default" tier badge + tooltip / "Custom" numeric input 0–100 step 0.1 with % suffix), blue info panel, Save button → `UPDATE profiles SET commission_override`. Account Status — four buttons (Set Active / Set Inactive / Suspend / Mark Pending), current status disabled; if currently `pending_approval`, "Set Active" promoted to top as green **Approve Agent** and fires approval notification + `send-agent-approval-email` edge function. Upgrade to Super Partner — outline button with Shield icon, hidden when `pending_approval`, AlertDialog confirmation, calls `rpc('upgrade_agent_to_super_partner', { p_agent_id })`, closes drawer + invalidates caches.
-  - Invitation rows render a lighter variant: Overview shows Name / Email / Company / Invited By / Expires / Status badge; Manage tab exposes only Resend Invitation, Copy Invitation Link, Cancel Invitation (destructive + confirmation).
+**a) Add company override**
+```sql
+ALTER TABLE companies
+  ADD COLUMN IF NOT EXISTS commission_override numeric
+  CHECK (commission_override >= 0 AND commission_override <= 100);
+COMMENT ON COLUMN companies.commission_override IS '...';
+```
 
-### Files to modify
-- `src/pages/AdminAgentManagement.tsx` — Replace entire body with `<PartnerManagementHeader />` + `<PartnersTable />` inside `DashboardLayout` and a `QueryErrorBoundary`. Remove imports/usage of `AgentsManagementStats`, `Tabs`, and the five tab tables. Delete the tab-counts query.
-- `src/components/layout/DashboardSidebar.tsx` — Rename sidebar label "Agent Management" → "Partner Management". Keep the existing route path.
-- Any other `<Link>` / nav references to "Agent Management" — rename label only, route unchanged. (Grep before editing.)
+**b) Backfill `proposals.company_id`** for rows where it is NULL, using the agent's earliest active `company_members` row. Scoped to `agent_id IS NOT NULL AND deleted_at IS NULL`.
 
-### Files to delete
-- `src/components/admin/agents/AgentsManagementHeader.tsx`
-- `src/components/admin/agents/AgentsManagementStats.tsx`
-- `src/components/admin/agents/LeadsAgentsTable.tsx`
-- `src/components/admin/agents/InvitedAgentsTable.tsx`
-- `src/components/admin/agents/PendingAgentsTable.tsx`
-- `src/components/admin/agents/SuspendedAgentsTable.tsx`
-- `src/components/admin/agents/ActiveAgentsTable.tsx` (logic absorbed into `PartnersTable`)
-- `src/components/admin/agents/BulkActionsToolbar.tsx`
-- `src/components/admin/agents/AgentDetailsDialog.tsx`
-- `src/components/admin/agents/CommissionOverrideDialog.tsx`
-- `src/components/admin/agents/AgentStatusDropdown.tsx`
-- `src/components/admin/agents/AgentsTableFilters.tsx`, `AgentsTableContent.tsx` (if no longer imported anywhere — verify first)
-- Will also check `enhanced-filters/` and `export/` subfolders and only delete files no longer referenced after the rebuild.
+**c) Rewrite `get_agents_management_data` RPC**:
+- LEFT JOIN `company_members cm` (status = 'active') + `companies co`.
+- `company_name = COALESCE(co.company_name, p.company_name)`.
+- New columns: `company_id`, `company_commission_override`, `company_signed_kwp` (subquery: SUM of `system_size_kwp` where `company_id = co.id AND signed_at IS NOT NULL AND deleted_at IS NULL`).
+- Keep per-agent counters (`total_proposals`, `active_proposals`, `signed_proposals`) unchanged.
 
-### Preserved unchanged
-`AgentInvitationDialog`, `useAgentsRealtime`, `TablePagination`, `get_agents_management_data` RPC, all existing Supabase queries/mutations, route path.
+**d) Update trigger `handle_proposal_signing_commissions`**: agent rate = `companies.commission_override` if set, else MWp tier (4% under 15 MWp, 7% at/above). `profiles.commission_override` no longer consulted.
 
----
+## 2. Proposal creation (`unifiedProposalService.ts`)
 
-## Change 2 — Commission override field in Super Partner detail panel
+- After `ensure_agent_has_company`, query `companies.commission_override` for the resolved `companyId`.
+- Rate = company override (if not null) → `calculateAgentCommissionPercentage(totalCompanyPortfolio)`.
+- Drop the `profiles.commission_override` select/usage.
 
-`src/pages/AdminSuperPartnerManagement.tsx`:
+`src/services/calculations/carbon/pricing.ts` — simplify `getAgentCommissionPercentage` to `(companyKWp: number) => number` and update call sites. The local `calculateAgentCommissionPercentage` in `unifiedProposalService.ts` likewise loses its override parameter.
 
-1. Add `commission_override` to the `profiles` SELECT in `loadAll` and to the `SuperPartner` interface (`commission_override: number | null`).
-2. Add local state inside the component: `const [commissionOverride, setCommissionOverride] = useState<number | null>(null);` and a `useEffect` that syncs it from the currently selected SP whenever `selectedSP` changes.
-3. Inside the inline detail panel (the `selectedSP &&` Card), conditionally render — only when `sp.can_create_proposals === true` — a "Proposal commission override (%)" block with:
-   - Label + helper text ("Leave blank to use the standard tier rate (4% / 7% by company MWp). Set a number to fix this SP's agent commission at that exact rate.").
-   - Number input (0–100, step 0.1, w-32), Save button, and a ghost "Clear (use tier)" button when value is set.
-4. Add `handleSaveCommissionOverride(override?)` that updates `profiles.commission_override` for `sp.id` and toasts success/failure, then refreshes `loadAll()`.
+## 3. PartnersTable + realtime
 
-No changes to `calculateAgentCommissionPercentage` — it already honours `commission_override` before falling back to tier logic.
+- Terminology sweep across `PartnerManagementHeader.tsx`, `PartnersTable.tsx`, `AgentManageDrawer.tsx`, `AdminAgentManagement.tsx`: user-facing "Agent" → "Partner" (headings, buttons, toasts, empty states, aria-labels). DB/RPC/var names unchanged.
+- Extend `AgentData` with `company_id`, `company_commission_override`, `company_signed_kwp`.
+- Current Rate cell:
+  - `company_commission_override != null` → amber outline badge `"{x}% (Company rate)"`
+  - else → `"4% (Tier)"` or `"7% (Tier)"` from `company_signed_kwp`
+  - Remove individual-override branch.
+- MWp Signed cell reads `company_signed_kwp / 1000`.
+- Extend `useAgentsRealtime` to subscribe to `proposals` (INSERT, UPDATE on `signed_at`, DELETE) in addition to `profiles`; invalidate the same management query keys.
 
----
+## 4. Partner drawer — single-panel redesign
 
-## Technical notes
+Replace the two-tab layout in `AgentManageDrawer.tsx` with a single scrollable `Sheet` (`side="right"`, `w-full sm:max-w-[560px]`). Card style matches the table (`bg-muted/40`, muted uppercase section labels). Fresh data fetch on every open; subscribe to realtime on `profiles` and `proposals` filtered by `agent_id = partnerId` for the open drawer lifetime.
 
-- Status badge styling lives in a shared local helper inside `PartnersTable.tsx` so the Status `<Select>` options and table cells share one source of truth.
-- Company filter list rebuilds whenever the RPC result changes (`useMemo` over distinct non-null `company_name`).
-- CSV export writes the currently filtered rows directly via a `Blob` download — does not reuse `ExportDialog` (that dialog is column-pickable and heavier than required here).
-- Realtime + pagination behaviour mirrors current `ActiveAgentsTable`; status filter passed to RPC as the selected `agent_status`, with `is_invitation` filtering applied client-side post-RPC for the "Invited" option.
-- Drawer uses shadcn `Sheet` with `side="right"` and `className="w-full sm:max-w-[560px]"`.
+Header: name (bold), company (muted), status badge inline, close ×.
+
+**Section 1 — Partner Details (editable)**
+- Pencil button toggles edit mode. Inputs: First Name + Last Name (side by side), Phone. Email always read-only with helper "Email changes require account settings."
+- Save → `UPDATE profiles SET first_name, last_name, phone WHERE id = partnerId`, toast, exit edit mode, invalidate caches. Cancel discards.
+
+**Section 2 — Company (read-only)**
+- Company name, partner's `company_members.role`, member since (`company_members.created_at`).
+- "Manage company →" link to `/admin/companies/{company_id}` (only when set).
+
+**Section 3 — Performance (live)**
+- Fresh query: `proposals.select('id, system_size_kwp, signed_at, status').eq('agent_id', partnerId).is('deleted_at', null)`.
+- Three stat boxes: Total Proposals, Signed Proposals (green), MWp Signed (green, 2dp). Sign rate below if total > 0. Last Active at bottom.
+
+**Section 4 — Commission (read-only)**
+- Override set → `"X% — Company rate"` + amber badge + "Managed at company level".
+- Else → `"4% — MWp tier"` / `"7% — MWp tier"` + "Based on X MWp signed by company".
+- Total earnings = SUM `agent_commissions.commission_amount` for `agent_id = partnerId`.
+- "Adjust company rate →" link to company page. No editable inputs.
+
+**Section 5 — Account Status**
+- Status badge prominent. Buttons (disable current): Approve Partner (green, only when `pending_approval`, fires notification + `send-agent-approval-email`), Set Active, Set Inactive, Suspend. Each updates `profiles.agent_status` + toast + invalidate.
+
+**Section 6 — Upgrade to Super Partner**
+- Hidden when `pending_approval`. Outline button + Shield icon + description + AlertDialog confirmation. Calls `rpc('upgrade_agent_to_super_partner', { p_agent_id: partnerId })`, closes drawer, invalidates caches.
+
+**Invitation variant** (`is_invitation === true`): lighter panel — name/email/status, Invited By, Expires. Buttons: Resend Invitation, Copy Invitation Link (`/register?role=agent&token=…`), Cancel Invitation (destructive + AlertDialog).
+
+## 5. Company Management page — commission override block
+
+In the admin company detail surface at `/admin/companies/...` (file located during implementation):
+- Label "Partner commission rate override (%)" + helper text.
+- Number input (0–100, step 0.1), Save, Clear (only when value set).
+- Reads/writes `companies.commission_override`.
+- Below input: "Effective rate: X% (override)" or "Effective rate: 4% / 7% by MWp tier".
+- Save toast: "Rate applied — affects all future proposals from this company".
+
+## 6. Super Partner page cleanup
+
+`AdminSuperPartnerManagement.tsx`: remove the `commission_override` UI and remove `commission_override` from that page's `profiles` SELECT and interface. SP 3%/5% tier logic untouched.
+
+## Files touched
+
+- New migration (companies column + proposals backfill + RPC rewrite + trigger update)
+- `src/services/proposals/unifiedProposalService.ts`
+- `src/services/calculations/carbon/pricing.ts` (+ call sites)
+- `src/components/admin/agents/types.ts`
+- `src/components/admin/agents/PartnersTable.tsx`
+- `src/components/admin/agents/PartnerManagementHeader.tsx`
+- `src/components/admin/agents/AgentManageDrawer.tsx` (full redesign)
+- `src/components/admin/agents/realtime/useAgentsRealtime.ts`
+- `src/pages/AdminAgentManagement.tsx` (terminology)
+- Admin company management page (commission override block)
+- `src/pages/AdminSuperPartnerManagement.tsx` (remove per-SP override)
+
+## Preserved unchanged
+
+`AgentInvitationDialog`, `TablePagination`, `ensure_agent_has_company`, all existing `agent_commissions` / `super_partner_commissions` rows (snapshots), route paths.
