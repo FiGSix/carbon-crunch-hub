@@ -11,6 +11,7 @@ interface FormData {
   phone: string;
   companyName: string;
   avatarUrl: string;
+  companyLogoUrl: string;
 }
 
 export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
@@ -20,7 +21,8 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     email: '',
     phone: '',
     companyName: '',
-    avatarUrl: ''
+    avatarUrl: '',
+    companyLogoUrl: ''
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +49,8 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
           email: profile.email || '',
           phone: profile.phone || '',
           companyName: profile.company_name || '',
-          avatarUrl: profile.avatar_url || ''
+          avatarUrl: profile.avatar_url || '',
+          companyLogoUrl: (profile as any).company_logo_url || ''
         });
       }
     } catch (error) {
@@ -70,6 +73,10 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     setFormData(prev => ({ ...prev, avatarUrl: avatarUrl || '' }));
   };
 
+  const handleCompanyLogoChange = (logoUrl: string | null) => {
+    setFormData(prev => ({ ...prev, companyLogoUrl: logoUrl || '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) return { success: false };
@@ -82,7 +89,8 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
         email: formData.email,
         phone: formData.phone,
         company_name: formData.companyName,
-        avatar_url: formData.avatarUrl
+        avatar_url: formData.avatarUrl,
+        company_logo_url: formData.companyLogoUrl || null
       };
 
       const result = await UnifiedDataService.updateProfile(userId, updates);
@@ -115,6 +123,7 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     isSubmitting,
     handleInputChange,
     handleAvatarChange,
+    handleCompanyLogoChange,
     handleSubmit
   };
 }

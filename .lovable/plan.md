@@ -1,85 +1,69 @@
-# Second referral link for eligible Super Partners
+# Referral landing page refresh + company logo upload
 
-Super Partners (SPs) currently get one `agent`-type recruitment link. When `can_create_proposals = true`, they should additionally get a `client`-type link that behaves exactly like an agent's client referral link (instant signable proposal flow, attribution to the SP).
+## 1. Referral landing page visual refresh
 
-## 1. Database migration
+**File:** `src/pages/PartnerReferralLandingPage.tsx` (visual-only, no data/logic changes)
 
-Single migration with two parts:
+Apply the dark Crunch Carbon palette throughout:
+- Page background `#0a0a0a`, body text `text-zinc-100`, muted `text-zinc-400`
+- Cards/sections `bg-[#141414]` with `border border-[rgba(245,197,24,0.15)]`
+- Primary accent `#F5C518` (yellow) used for CTAs, step badges, counters, focus rings, icon tints, progress fill, success checkmark
 
-**a. Backfill existing eligible SPs**
-```sql
-INSERT INTO public.referral_links (owner_id, link_type)
-SELECT p.id, 'client'
-FROM public.profiles p
-WHERE p.role = 'super_partner'
-  AND p.can_create_proposals = true
-  AND p.deleted_at IS NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM public.referral_links rl
-    WHERE rl.owner_id = p.id AND rl.link_type = 'client'
-  );
-```
+**Top bar:** dark `bg-black border-b border-zinc-800`. Replace the "Crunch Carbon" wordmark with the **C logomark only**. Since `public/` contains only full lockups (`crunch-carbon-logo-new.png`, `company-logos/branding/crunch-logo-horizontal.png`), render an icon-only mark by clipping the lockup: a 36×36 square `overflow-hidden` wrapper showing only the leftmost C via `object-cover object-left` with a width large enough to align the C. (Alternative: upload a dedicated icon-only PNG via lovable-assets if the user provides one.)
 
-**b. Update `handle_new_user()` trigger**
-Re-create the function preserving all current logic. After the existing SP `agent` link insert, add a conditional `client` link insert when the new profile has `can_create_proposals = true`.
+**Hero:** full-width dark section with radial yellow glow overlay (`radial-gradient(ellipse at 50% -20%, rgba(245,197,24,0.15) 0%, transparent 70%)`). Headline `text-4xl md:text-6xl font-bold text-white` with one keyword wrapped in `text-[#F5C518]`. Floating proof cards `bg-zinc-900` with `border-l-4 border-[#F5C518]`. CTA `bg-[#F5C518] text-black hover:bg-[#FFD23F]` with the pulse keyframe below.
 
-## 2. Admin toggle — `AdminSuperPartnerManagement.tsx`
+**Partner attribution card:** dark surface, avatar gets `ring-2 ring-[#F5C518]`.
 
-In `toggleCanCreateProposals`, when flipping the flag **on**, also insert a `client` referral link for that SP:
-```ts
-await supabase.from("referral_links").insert({ owner_id: sp.id, link_type: "client" });
-```
-Rely on the existing unique index `(owner_id, link_type)` to make this idempotent (ignore duplicate-key errors). Toggling off does not delete the link.
+**Progress bar:** `bg-zinc-800` track, yellow `indicator` fill (override shadcn `Progress` via className).
 
-## 3. `ReferralLinkWidget.tsx` — optional labels
+**Form steps:**
+- Inputs/selects: `bg-zinc-900 border-zinc-700 text-white focus:border-[#F5C518] focus-visible:ring-[#F5C518]/40`
+- Native `<select>` styled to match dark
+- Step number badges: yellow circle, black text
 
-Add optional props so the same component can be mounted twice with distinct copy:
-```ts
-interface Props {
-  linkType: "client" | "agent";
-  title?: string;
-  subtitle?: string;
+**Results reveal (step 3):** background deepens to pure black; earnings counter large bold `text-[#F5C518]`; stat cards `bg-zinc-900` with yellow icon tints; amber disclaimer → `bg-amber-950 border-amber-800 text-amber-200`; eligibility box → `bg-zinc-900 border-zinc-700 text-zinc-400`.
+
+**CTA pulse (injected once via styled-jsx or a global block in the page):**
+```css
+@keyframes ctaPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(245,197,24,0.5); }
+  50%     { box-shadow: 0 0 0 16px rgba(245,197,24,0); }
 }
-```
-Use `title ?? "Your referral link"` for `CardTitle` and `subtitle ?? <existing default per linkType>` for `CardDescription`. No other behavior changes.
-
-## 4. `Profile.tsx` — mount two widgets for eligible SPs
-
-Replace the current single-widget block for SPs:
-
-```tsx
-{isAgent && (
-  <ReferralLinkWidget linkType="client" />
-)}
-
-{isSuperPartner && (
-  <>
-    <ReferralLinkWidget
-      linkType="agent"
-      title="Partner recruitment link"
-      subtitle="Share this link — partners who sign up are linked to your network pending admin approval."
-    />
-    {profile?.can_create_proposals && (
-      <ReferralLinkWidget
-        linkType="client"
-        title="Client referral link"
-        subtitle="Share this link — clients complete an assessment and receive a signable proposal instantly, attributed to you."
-      />
-    )}
-  </>
-)}
-
-{(isAgent || isSuperPartner) && <ReferralBioCard />}
+.cta-pulse { animation: ctaPulse 2s ease-out infinite; }
 ```
 
-## 5. Out of scope (unchanged)
+**Success state:** `bg-black/90` overlay, yellow stroke checkmark, confetti palette `["#F5C518","#ffffff","#B8860B"]`, success card `bg-zinc-900 border-zinc-700`, sign-up button solid yellow with black text.
 
-`/ref/:token` landing page, edge function, registration flow, attribution, click tracking, and DB schema for `referral_links` all already support `link_type='client'` regardless of owner role — no changes needed.
+Respect `prefersReducedMotion` (already detected) — skip pulse and confetti when true.
+
+## 2. Company logo upload on profile page
+
+Already in place:
+- `profiles.company_logo_url` column exists
+- Storage bucket `company-logos` exists
+- `CompanyLogoUpload` component exists and wraps the shared `ImageUpload` with that bucket
+- `useProfileForm` already exposes `formData.companyLogoUrl` and `handleCompanyLogoChange`
+
+What's missing: it's never rendered, and `ProfileForm` uses `useOptimizedProfileForm` which doesn't expose logo handlers, and only shows the company card for agents.
+
+Changes:
+
+**`src/hooks/useOptimizedProfileForm.ts`** — add `companyLogoUrl` to form state, load from `profile.company_logo_url`, save back as `company_logo_url`, and expose `handleCompanyLogoChange(url|null)`.
+
+**`src/components/profile/CompanyInformationCard.tsx`** — accept `companyLogoUrl`, `onLogoChange`, `userId` props; render `<CompanyLogoUpload currentLogoUrl={companyLogoUrl} onLogoUpdate={onLogoChange} disabled={isLoading} />` above the company-name field, with label "Company Logo" and helper text "PNG, JPG or SVG up to 5 MB. Shown on your referral page."
+
+**`src/components/profile/ProfileForm.tsx`** — show `CompanyInformationCard` for **both** agents and super partners (`isAgent || isSuperPartner`); pass the new logo props. Add `isSuperPartner` prop.
+
+**`src/pages/Profile.tsx`** — pass `isSuperPartner` into `ProfileForm`.
+
+No new bucket, no migration, no changes to landing-page data flow, edge function, referral attribution, or `ImageUpload`.
+
+## Out of scope
+Landing-page copy, calculator math, attribution logic, DB schema, edge functions, registration flow.
 
 ## Verification
-
-1. Migration runs; query `referral_links` and confirm every SP with `can_create_proposals = true` has both an `agent` and a `client` row.
-2. Sign in as an eligible SP → Profile page shows two referral widgets with distinct titles, each URL ending in a different token.
-3. Admin toggles `can_create_proposals` on for an SP that lacks a client link → row appears; toggling off leaves it intact.
-4. SP without the flag sees only the agent recruitment widget.
-5. Visiting the SP's client link triggers the existing assessment → signable-proposal flow with the SP as owner.
+- Visit `/ref/<token>` for an SP client link: dark theme renders, C mark shows in top bar, yellow CTA pulses, form fields are dark with yellow focus, results step shows yellow counter and dark stat cards, success overlay uses yellow confetti.
+- `prefers-reduced-motion: reduce` disables pulse/confetti.
+- As an agent on `/profile`: Company Information card shows logo uploader; upload writes to `company-logos` bucket and persists `company_logo_url`; reload shows logo; landing page renders that logo in the partner card.
+- Same flow works as a super partner.

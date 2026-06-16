@@ -11,9 +11,10 @@ interface ProfileFormProps {
   profile: any; // Keep for compatibility but not used
   refreshUser: () => Promise<void>; // Keep for compatibility but not used
   isAgent: boolean;
+  isSuperPartner?: boolean;
 }
 
-export function ProfileForm({ isAgent }: ProfileFormProps) {
+export function ProfileForm({ isAgent, isSuperPartner }: ProfileFormProps) {
   const { user, userRole } = useAuth();
   const {
     formData,
@@ -21,6 +22,7 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
     isSubmitting,
     handleInputChange,
     handleAvatarChange,
+    handleCompanyLogoChange,
     handleSubmit
   } = useOptimizedProfileForm(user?.id, userRole);
 
@@ -40,6 +42,8 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
     handleInputChange(name as keyof typeof formData, value);
   };
 
+  const showCompanyCard = isAgent || !!isSuperPartner;
+
   return (
     <FormErrorBoundary formName="Profile Form">
       <form onSubmit={onSubmit} className="space-y-6">
@@ -56,11 +60,13 @@ export function ProfileForm({ isAgent }: ProfileFormProps) {
         userId={user?.id}
       />
 
-      {/* Company Information - Show for Agents */}
-      {isAgent && (
+      {/* Company Information - Agents and Super Partners */}
+      {showCompanyCard && (
         <CompanyInformationCard
           companyName={formData.companyName}
+          companyLogoUrl={formData.companyLogoUrl}
           onInputChange={handleCompanyInputChange}
+          onLogoChange={handleCompanyLogoChange}
           isLoading={isLoading || isSubmitting}
         />
       )}
