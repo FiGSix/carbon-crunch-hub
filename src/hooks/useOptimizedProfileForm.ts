@@ -49,7 +49,8 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
           email: profile.email || '',
           phone: profile.phone || '',
           companyName: profile.company_name || '',
-          avatarUrl: profile.avatar_url || ''
+          avatarUrl: profile.avatar_url || '',
+          companyLogoUrl: (profile as any).company_logo_url || ''
         });
       }
     } catch (error) {
