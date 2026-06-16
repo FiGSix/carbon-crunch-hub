@@ -112,11 +112,12 @@ export function ReferralLinkWidget({ linkType, title, subtitle }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your referral link</CardTitle>
+        <CardTitle>{title ?? "Your referral link"}</CardTitle>
         <CardDescription>
-          {linkType === "client"
-            ? "Share this link — clients receive a signable proposal immediately and are assigned to you automatically."
-            : "Share this link — partners who sign up are linked to your network pending admin approval."}
+          {subtitle ??
+            (linkType === "client"
+              ? "Share this link — clients receive a signable proposal immediately and are assigned to you automatically."
+              : "Share this link — partners who sign up are linked to your network pending admin approval.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
