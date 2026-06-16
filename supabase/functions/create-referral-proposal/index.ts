@@ -241,7 +241,7 @@ serve(async (req: Request): Promise<Response> => {
         .maybeSingle();
 
       const origin = req.headers.get("origin") || "https://crunchcarbon.com";
-      const signingLink = `${origin}/view-proposal/${proposal.id}`;
+      const signingLink = `${origin}/proposals/${proposal.id}/accept?token=${invitationToken}`;
       const partnerName = [partnerProfile?.first_name, partnerProfile?.last_name].filter(Boolean).join(" ") || "Crunch Carbon";
 
       const html = `
