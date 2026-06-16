@@ -73,6 +73,10 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     setFormData(prev => ({ ...prev, avatarUrl: avatarUrl || '' }));
   };
 
+  const handleCompanyLogoChange = (logoUrl: string | null) => {
+    setFormData(prev => ({ ...prev, companyLogoUrl: logoUrl || '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) return { success: false };
@@ -85,7 +89,8 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
         email: formData.email,
         phone: formData.phone,
         company_name: formData.companyName,
-        avatar_url: formData.avatarUrl
+        avatar_url: formData.avatarUrl,
+        company_logo_url: formData.companyLogoUrl || null
       };
 
       const result = await UnifiedDataService.updateProfile(userId, updates);
