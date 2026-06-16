@@ -11,6 +11,7 @@ interface FormData {
   phone: string;
   companyName: string;
   avatarUrl: string;
+  companyLogoUrl: string;
 }
 
 export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
