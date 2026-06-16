@@ -22,6 +22,7 @@ interface SuperPartner {
   phone: string | null;
   super_partner_status: string | null;
   can_create_proposals: boolean | null;
+  commission_override: number | null;
   created_at: string;
 }
 
@@ -73,6 +74,8 @@ export default function AdminSuperPartnerManagement() {
   const [spCompanies, setSpCompanies] = useState<Record<string, SpCompanyRow[]>>({});
   const [linkCompanyId, setLinkCompanyId] = useState<string>("");
   const [expandedCompany, setExpandedCompany] = useState<Record<string, boolean>>({});
+  const [commissionOverride, setCommissionOverride] = useState<number | null>(null);
+  const [savingOverride, setSavingOverride] = useState(false);
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
@@ -80,7 +83,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, commission_override, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -109,6 +112,30 @@ export default function AdminSuperPartnerManagement() {
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  useEffect(() => {
+    if (!selectedSP) { setCommissionOverride(null); return; }
+    const sp = partners.find((p) => p.id === selectedSP);
+    setCommissionOverride(sp?.commission_override ?? null);
+  }, [selectedSP, partners]);
+
+  const handleSaveCommissionOverride = async (override?: number | null) => {
+    if (!selectedSP) return;
+    const value = override !== undefined ? override : commissionOverride;
+    setSavingOverride(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ commission_override: value })
+      .eq('id', selectedSP);
+    setSavingOverride(false);
+    if (error) {
+      toast({ title: 'Failed to save commission override', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: value === null ? 'Cleared — SP will use tier rate' : `Override set to ${value}%` });
+      loadAll();
+    }
+  };
+
 
   const loadSpCompanies = async (spId: string) => {
     const { data, error } = await (supabase as any).rpc("get_super_partner_companies", { p_super_partner_id: spId });
@@ -357,6 +384,47 @@ export default function AdminSuperPartnerManagement() {
                   When enabled, this Super Partner sees Create Proposal and My Clients in their nav.
                 </span>
               </div>
+
+              {sp.can_create_proposals && (
+                <div className="space-y-1 rounded-md border p-3">
+                  <Label>Proposal commission override (%)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to use the standard tier rate (4% / 7% by company MWp).
+                    Set a number to fix this SP's agent commission at that exact rate.
+                  </p>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      placeholder="e.g. 5"
+                      value={commissionOverride ?? ''}
+                      onChange={(e) =>
+                        setCommissionOverride(e.target.value === '' ? null : Number(e.target.value))
+                      }
+                      className="w-32"
+                    />
+                    <Button size="sm" onClick={() => handleSaveCommissionOverride()} disabled={savingOverride}>
+                      Save
+                    </Button>
+                    {commissionOverride !== null && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCommissionOverride(null);
+                          handleSaveCommissionOverride(null);
+                        }}
+                        disabled={savingOverride}
+                      >
+                        Clear (use tier)
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
 
               <div>
                 <Label className="mb-2 block">Add a company</Label>
