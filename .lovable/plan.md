@@ -1,43 +1,85 @@
-## Background
+# Second referral link for eligible Super Partners
 
-You flagged a real risk, and verification confirms a bug in the just-built referral flow — but the underlying signing infrastructure already supports the "no account needed" promise, so this is **Option A (token-based)** and only the referral edge function needs fixing.
+Super Partners (SPs) currently get one `agent`-type recruitment link. When `can_create_proposals = true`, they should additionally get a `client`-type link that behaves exactly like an agent's client referral link (instant signable proposal flow, attribution to the SP).
 
-## What's already correct (no changes needed)
+## 1. Database migration
 
-- Route `/proposals/:id/accept` in `App.tsx` is **not** behind `PrivateRoute`.
-- `ProposalAcceptance` page already supports two modes:
-  - `?token=...` → fetches via public RPC `get_proposal_by_token_direct` (no auth).
-  - no token → falls back to authenticated RLS access.
-- Edge function `accept-proposal` already accepts `{ token, typedName, signatureImage, ... }` and processes signing without a logged-in user. This is the same pattern used by `proposal-automation`, which emits links like `/proposals/:id?token=<invitation_token>`.
+Single migration with two parts:
 
-## The actual bug in `create-referral-proposal`
+**a. Backfill existing eligible SPs**
+```sql
+INSERT INTO public.referral_links (owner_id, link_type)
+SELECT p.id, 'client'
+FROM public.profiles p
+WHERE p.role = 'super_partner'
+  AND p.can_create_proposals = true
+  AND p.deleted_at IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM public.referral_links rl
+    WHERE rl.owner_id = p.id AND rl.link_type = 'client'
+  );
+```
 
-Two problems in `supabase/functions/create-referral-proposal/index.ts`:
+**b. Update `handle_new_user()` trigger**
+Re-create the function preserving all current logic. After the existing SP `agent` link insert, add a conditional `client` link insert when the new profile has `can_create_proposals = true`.
 
-1. **No `invitation_token` is generated** when inserting the referral proposal, so there is no token for the public signing flow to validate against.
-2. The email link points to `/view-proposal/${proposal.id}` — that route does not exist in `App.tsx`, and it has no `?token=` query param. Clicking the email today would 404 (or bounce to auth).
+## 2. Admin toggle — `AdminSuperPartnerManagement.tsx`
 
-## Fix
+In `toggleCanCreateProposals`, when flipping the flag **on**, also insert a `client` referral link for that SP:
+```ts
+await supabase.from("referral_links").insert({ owner_id: sp.id, link_type: "client" });
+```
+Rely on the existing unique index `(owner_id, link_type)` to make this idempotent (ignore duplicate-key errors). Toggling off does not delete the link.
 
-Edit `supabase/functions/create-referral-proposal/index.ts` only:
+## 3. `ReferralLinkWidget.tsx` — optional labels
 
-1. Before the `proposals` insert, generate:
-   - `const invitationToken = crypto.randomUUID();`
-   - `const invitationExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();` (30 days, matching existing convention).
-2. Include `invitation_token: invitationToken` and `invitation_expires_at: invitationExpiresAt` in the insert payload.
-3. Replace the email link with the correct, token-bearing acceptance URL:
-   - `const signingLink = ${origin}/proposals/${proposal.id}/accept?token=${invitationToken};`
-4. Keep the existing copy ("View & sign your proposal", "no account needed") — it will now be truthful.
+Add optional props so the same component can be mounted twice with distinct copy:
+```ts
+interface Props {
+  linkType: "client" | "agent";
+  title?: string;
+  subtitle?: string;
+}
+```
+Use `title ?? "Your referral link"` for `CardTitle` and `subtitle ?? <existing default per linkType>` for `CardDescription`. No other behavior changes.
 
-## Out of scope (intentionally not touched)
+## 4. `Profile.tsx` — mount two widgets for eligible SPs
 
-- No changes to `ProposalAcceptance`, `accept-proposal`, `App.tsx`, RLS, RPCs, or any other proposal flow.
-- No changes to the landing page, widget, or registration referral attribution.
-- Token rotation / regeneration is already handled elsewhere (`generate-proposal-pdf`) and does not need duplication here.
+Replace the current single-widget block for SPs:
 
-## Verification after build
+```tsx
+{isAgent && (
+  <ReferralLinkWidget linkType="client" />
+)}
 
-1. Submit the `/ref/:token` assessment as a fresh visitor (incognito).
-2. Confirm the email link opens `/proposals/:id/accept?token=...` directly with no login prompt.
-3. Sign with typed name; confirm `accept-proposal` succeeds and the post-sign onboarding modal appears.
-4. Confirm the partner's dashboard counters increment (signup + conversion).
+{isSuperPartner && (
+  <>
+    <ReferralLinkWidget
+      linkType="agent"
+      title="Partner recruitment link"
+      subtitle="Share this link — partners who sign up are linked to your network pending admin approval."
+    />
+    {profile?.can_create_proposals && (
+      <ReferralLinkWidget
+        linkType="client"
+        title="Client referral link"
+        subtitle="Share this link — clients complete an assessment and receive a signable proposal instantly, attributed to you."
+      />
+    )}
+  </>
+)}
+
+{(isAgent || isSuperPartner) && <ReferralBioCard />}
+```
+
+## 5. Out of scope (unchanged)
+
+`/ref/:token` landing page, edge function, registration flow, attribution, click tracking, and DB schema for `referral_links` all already support `link_type='client'` regardless of owner role — no changes needed.
+
+## Verification
+
+1. Migration runs; query `referral_links` and confirm every SP with `can_create_proposals = true` has both an `agent` and a `client` row.
+2. Sign in as an eligible SP → Profile page shows two referral widgets with distinct titles, each URL ending in a different token.
+3. Admin toggles `can_create_proposals` on for an SP that lacks a client link → row appears; toggling off leaves it intact.
+4. SP without the flag sees only the agent recruitment widget.
+5. Visiting the SP's client link triggers the existing assessment → signable-proposal flow with the SP as owner.
