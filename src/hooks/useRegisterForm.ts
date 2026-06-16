@@ -25,7 +25,7 @@ interface RegisterFormData {
   role: "client" | "agent";
 }
 
-export function useRegisterForm(initialRole: "client" | "agent", invitationToken?: string) {
+export function useRegisterForm(initialRole: "client" | "agent", invitationToken?: string, prefilledEmail?: string) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invitationLoading, setInvitationLoading] = useState(!!invitationToken);
@@ -35,7 +35,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
   const [formData, setFormData] = useState<RegisterFormData>({
     firstName: "",
     lastName: "",
-    email: "",
+    email: prefilledEmail ?? "",
     password: "",
     confirmPassword: "",
     companyName: "",

@@ -45,6 +45,7 @@ const Register = () => {
             <RegisterForm 
               initialRole={initialRole as "client" | "agent"} 
               invitationToken={invitationToken || undefined}
+              prefilledEmail={prefilledEmail || undefined}
             />
             
             <div className="mt-8 pt-6 border-t border-border text-center">
