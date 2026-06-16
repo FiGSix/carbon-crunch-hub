@@ -5,5 +5,5 @@ export function formatSystemSize(sizeKwp: number, preferredUnit: 'auto' | 'kWp' 
   if (preferredUnit === 'MWp' || (preferredUnit === 'auto' && sizeKwp >= 1000)) {
     return `${(sizeKwp / 1000).toFixed(3)} MWp`;
   }
-  return `${sizeKwp} kWp`;
+  return `${parseFloat(sizeKwp.toFixed(3))} kWp`;
 }

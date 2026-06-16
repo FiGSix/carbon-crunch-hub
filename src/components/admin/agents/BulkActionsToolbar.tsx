@@ -60,12 +60,31 @@ export function BulkActionsToolbar({
           updateData = { agent_status: 'pending_approval' };
           break;
         case 'delete':
-          // For delete, we'll handle it separately
-          const { error } = await supabase
-            .from('profiles')
-            .delete()
-            .in('id', agentIds);
-          if (error) throw error;
+          // Hard delete via delete-user edge function
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error('No active session');
+          
+          // Delete each agent permanently
+          const deleteResults = await Promise.allSettled(
+            agentIds.map(async (agentId) => {
+              const { data, error } = await supabase.functions.invoke('delete-user', {
+                body: { userId: agentId },
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`
+                }
+              });
+              
+              if (error) throw new Error(error.message);
+              if (!data?.success) throw new Error(data?.error || 'Delete failed');
+              return data;
+            })
+          );
+          
+          // Check for any failures
+          const failures = deleteResults.filter(r => r.status === 'rejected');
+          if (failures.length > 0) {
+            throw new Error(`Failed to delete ${failures.length} agent(s)`);
+          }
           return;
         default:
           throw new Error('Invalid bulk action');
@@ -143,7 +162,7 @@ export function BulkActionsToolbar({
       case 'pending': 
         return `This will mark ${count} agent(s) as Pending Approval, requiring admin review.`;
       case 'delete': 
-        return `This will permanently delete ${count} agent(s) and all their associated data. This action cannot be undone.`;
+        return `This will PERMANENTLY delete ${count} agent(s). Their login will be revoked and they will no longer have access. This action cannot be undone.`;
       default: 
         return '';
     }
@@ -237,7 +256,7 @@ export function BulkActionsToolbar({
                 onClick={confirmBulkAction}
                 className={bulkAction === 'delete' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
               >
-                {bulkAction === 'delete' ? 'Delete Permanently' : 'Confirm Action'}
+                {bulkAction === 'delete' ? 'Permanently Delete' : 'Confirm Action'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

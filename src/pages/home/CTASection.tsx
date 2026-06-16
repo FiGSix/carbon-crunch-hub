@@ -22,9 +22,9 @@ export const CTASection = () => {
           
           <div className="relative z-10 max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-crunch-black">
-              Ready to Earn From Your Clean Energy?
+              Start Earning From Your Solar System Today
             </h2>
-            <p className="text-xl text-crunch-black/80 mb-8">The average solar system owner earns an extra revenue annually through our platform. Calculate your potential in seconds.</p>
+            <p className="text-xl text-crunch-black/80 mb-8">Join 1,500+ South African homeowners already earning R600-R1,000+ per year. Free to join, no setup costs.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <motion.div whileHover={{
               scale: 1.02

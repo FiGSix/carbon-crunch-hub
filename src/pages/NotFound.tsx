@@ -1,5 +1,7 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import ghostImage from "@/assets/404-ghost.png";
 
 const NotFound = () => {
   const location = useLocation();
@@ -12,13 +14,53 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center px-6 py-12"
+      style={{ backgroundColor: '#FFCD03' }}
+    >
+      {/* Content container with generous spacing */}
+      <div className="flex flex-col items-center text-center max-w-2xl mx-auto space-y-6 md:space-y-8">
+        
+        {/* Headline */}
+        <h1 
+          className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight"
+          style={{ color: '#0B0B0B' }}
+        >
+          404 - Nothing to crunch here
+        </h1>
+
+        {/* Sub-headline */}
+        <p 
+          className="text-xl md:text-2xl lg:text-3xl font-medium"
+          style={{ color: '#0B0B0B', lineHeight: '1.6' }}
+        >
+          The credits you're looking for aren't here, sadly.
+        </p>
+
+        {/* CTA Section */}
+        <div className="flex flex-col items-center space-y-4 pt-4">
+          {/* Primary CTA */}
+          <Button
+            asChild
+            className="px-8 py-6 text-base font-bold rounded-xl transition-all hover:scale-105 hover:shadow-lg"
+            style={{ 
+              backgroundColor: '#0B0B0B',
+              color: '#FFCD03'
+            }}
+          >
+            <Link to="/">Back to Home</Link>
+          </Button>
+
+        </div>
+      </div>
+
+      {/* Ghost image - centered at bottom */}
+      <div className="mt-12 md:mt-16">
+        <img 
+          src={ghostImage} 
+          alt="Pixel art ghost illustration"
+          className="w-64 md:w-96 lg:w-[32rem] max-w-full h-auto object-contain"
+        />
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth";
+import { slideUp } from "@/lib/performance/motion-config";
 
 export function PreviewBanner() {
   const navigate = useNavigate();
@@ -14,9 +15,7 @@ export function PreviewBanner() {
   return (
     <motion.div 
       className="bg-gradient-to-r from-crunch-black to-crunch-black/90 text-white py-3 px-4 rounded-lg mb-8 mt-4 max-w-5xl mx-auto"
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      {...slideUp}
     >
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center">

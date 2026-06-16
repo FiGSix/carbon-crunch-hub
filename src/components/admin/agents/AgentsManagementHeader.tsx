@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Users, UserPlus, Download } from 'lucide-react';
+import { Users, UserPlus, Download, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AgentCreationDialog } from './AgentCreationDialog';
+import { AgentInvitationDialog } from './AgentInvitationDialog';
 import { ExportDialog } from './export/ExportDialog';
 
 interface AgentsManagementHeaderProps {
@@ -18,6 +19,7 @@ interface AgentsManagementHeaderProps {
 
 export function AgentsManagementHeader({ currentFilters }: AgentsManagementHeaderProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -38,6 +40,10 @@ export function AgentsManagementHeader({ currentFilters }: AgentsManagementHeade
           <Download className="h-4 w-4 mr-2" />
           Export Data
         </Button>
+        <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)}>
+          <Mail className="h-4 w-4 mr-2" />
+          Invite Agent
+        </Button>
         <Button size="sm" onClick={() => setShowCreateDialog(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Add Agent
@@ -47,6 +53,11 @@ export function AgentsManagementHeader({ currentFilters }: AgentsManagementHeade
       <AgentCreationDialog 
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+      
+      <AgentInvitationDialog
+        open={showInviteDialog}
+        onOpenChange={setShowInviteDialog}
       />
       
       <ExportDialog

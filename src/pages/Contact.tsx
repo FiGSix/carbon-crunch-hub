@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { 
+import { Helmet } from "react-helmet-async";
+import {
   Form,
   FormControl,
   FormField,
@@ -24,6 +25,7 @@ import * as z from "zod";
 import { motion } from "framer-motion";
 import { Check, MapPin, Phone, Mail, Building } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -49,17 +51,52 @@ const Contact = () => {
     }
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-    // In a real app, you would send this data to your server
-    setSubmitted(true);
-    toast.success("Your message has been sent!", {
-      description: "We'll get back to you as soon as possible."
-    });
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          name: values.name,
+          email: values.email,
+          subject: values.subject,
+          question: values.question,
+          phone: values.phoneNumber,
+          company: values.company,
+        }
+      });
+
+      if (error) {
+        console.error('Error submitting contact form:', error);
+        toast.error("Failed to send your message", {
+          description: "Please try again or email us directly at info@crunchcarbon.com"
+        });
+        return;
+      }
+
+      console.log('Contact form submitted successfully:', data);
+      setSubmitted(true);
+      form.reset();
+      toast.success("Your message has been sent!", {
+        description: "We'll get back to you as soon as possible."
+      });
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      toast.error("Failed to send your message", {
+        description: "Please try again or email us directly at info@crunchcarbon.com"
+      });
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Contact Crunch Carbon | Get In Touch</title>
+        <meta name="description" content="Contact Crunch Carbon about carbon credits, solar monetisation, or partnership opportunities. We're here to help." />
+        <link rel="canonical" href="https://crunchcarbon.com/contact" />
+        <meta property="og:title" content="Contact Crunch Carbon | Get In Touch" />
+        <meta property="og:description" content="Contact Crunch Carbon about carbon credits, solar monetisation, or partnership opportunities. We're here to help." />
+        <meta property="og:url" content="https://crunchcarbon.com/contact" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
       
       <main className="flex-1">

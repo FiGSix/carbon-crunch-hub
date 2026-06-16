@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { RegistrationForm } from './client-registration/RegistrationForm';
 import { LoginForm } from './client-login/LoginForm';
+import { RegistrationSuccessDialog } from './client-registration/RegistrationSuccessDialog';
 import { useAuth } from "@/contexts/auth";
 import { logger } from "@/lib/logger";
 import { AuthTabSwitcher } from './auth/AuthTabSwitcher';
@@ -12,18 +13,21 @@ interface ClientAuthWrapperProps {
   clientEmail: string;
   onAuthComplete: () => void;
   requireAuth?: boolean;
+  context?: 'proposal' | 'calculator';
 }
 
 export function ClientAuthWrapper({ 
   proposalId, 
   clientEmail, 
   onAuthComplete,
-  requireAuth = true
+  requireAuth = true,
+  context = 'proposal'
 }: ClientAuthWrapperProps) {
   // Default to "register" tab for new users
   const [activeTab, setActiveTab] = useState<string>("register");
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   
   // Create a contextualized logger
   const authLogger = logger.withContext({
@@ -31,15 +35,20 @@ export function ClientAuthWrapper({
     feature: 'client-auth'
   });
   
-  // Effect to handle auth completion
+  // Phase 4: Effect to handle auth completion with delay for database sync
   useEffect(() => {
-    if (user) {
-      // User is authenticated, complete the auth process
+    if (user && requireAuth) {
       authLogger.info("User authenticated, completing auth flow", {
         userId: user.id,
         proposalId
       });
-      onAuthComplete();
+      
+      // Add a small delay to ensure database sync
+      const timer = setTimeout(() => {
+        onAuthComplete();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [user, requireAuth, onAuthComplete, proposalId, authLogger]);
   
@@ -64,6 +73,20 @@ export function ClientAuthWrapper({
     setError(errorMessage);
   };
 
+  // Handle registration success - show dialog instead of redirect
+  const handleRegistrationSuccess = () => {
+    authLogger.info("Registration successful, showing success dialog", {
+      proposalId,
+      email: clientEmail
+    });
+    setShowSuccessDialog(true);
+  };
+
+  // Handle success dialog close
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+  };
+
   // Components for each tab
   const registrationForm = (
     <RegistrationForm 
@@ -71,6 +94,7 @@ export function ClientAuthWrapper({
       clientEmail={clientEmail} 
       onComplete={handleAuthComplete}
       onError={handleAuthError}
+      onRegistrationSuccess={handleRegistrationSuccess}
     />
   );
   
@@ -82,16 +106,34 @@ export function ClientAuthWrapper({
     />
   );
 
+  const isCalculator = context === 'calculator';
+  
   return (
-    <div className="max-w-md mx-auto my-8">
-      <AuthErrorDisplay error={error} />
-      
-      <AuthTabSwitcher
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        registerContent={registrationForm}
-        loginContent={loginForm}
+    <>
+      <RegistrationSuccessDialog 
+        open={showSuccessDialog}
+        email={clientEmail}
+        onClose={handleSuccessDialogClose}
       />
-    </div>
+      
+      <div className="max-w-md mx-auto my-8">
+        {isCalculator && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              Once signed in, your results will be saved to your dashboard and you'll be able to access them anytime.
+            </p>
+          </div>
+        )}
+        
+        <AuthErrorDisplay error={error} />
+        
+        <AuthTabSwitcher
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          registerContent={registrationForm}
+          loginContent={loginForm}
+        />
+      </div>
+    </>
   );
 }

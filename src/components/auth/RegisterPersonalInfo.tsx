@@ -1,16 +1,13 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CompanyLogoUpload } from "@/components/profile/CompanyLogoUpload";
 
 interface RegisterPersonalInfoProps {
   firstName: string;
   lastName: string;
   companyName: string;
-  companyLogoUrl?: string;
   showCompanyField: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCompanyLogoChange?: (logoUrl: string | null) => void;
   disabled: boolean;
 }
 
@@ -18,10 +15,8 @@ export function RegisterPersonalInfo({
   firstName, 
   lastName, 
   companyName,
-  companyLogoUrl,
   showCompanyField, 
   onChange,
-  onCompanyLogoChange,
   disabled 
 }: RegisterPersonalInfoProps) {
   return (
@@ -55,32 +50,17 @@ export function RegisterPersonalInfo({
       </div>
       
       {showCompanyField && (
-        <>
-          <div>
-            <Label htmlFor="companyName">Company Name</Label>
-            <Input
-              id="companyName"
-              name="companyName"
-              value={companyName}
-              onChange={onChange}
-              className="retro-input mt-1"
-              disabled={disabled}
-            />
-          </div>
-          
-          {onCompanyLogoChange && (
-            <div>
-              <Label>Company Logo</Label>
-              <div className="mt-1">
-                <CompanyLogoUpload
-                  currentLogoUrl={companyLogoUrl}
-                  onLogoUpdate={onCompanyLogoChange}
-                  disabled={disabled}
-                />
-              </div>
-            </div>
-          )}
-        </>
+        <div>
+          <Label htmlFor="companyName">Company Name</Label>
+          <Input
+            id="companyName"
+            name="companyName"
+            value={companyName}
+            onChange={onChange}
+            className="retro-input mt-1"
+            disabled={disabled}
+          />
+        </div>
       )}
     </>
   );

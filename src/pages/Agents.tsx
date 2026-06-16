@@ -1,16 +1,38 @@
+import { useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Briefcase, CheckCircle2, DollarSign, Handshake, Rocket, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
+import { Helmet } from "react-helmet-async";
 
 const Agents = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Capture referral code from URL
+  useEffect(() => {
+    const referralCode = searchParams.get('ref');
+    if (referralCode) {
+      // Store in localStorage for later use during agent registration
+      localStorage.setItem('agent_referral_code', referralCode);
+      console.log('Agent referral code captured:', referralCode);
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Partner With Crunch Carbon | Agent Program</title>
+        <meta name="description" content="Join the Crunch Carbon agent program. Earn commissions by helping clients monetise their solar systems with verified carbon credits." />
+        <link rel="canonical" href="https://crunchcarbon.com/agents" />
+        <meta property="og:title" content="Partner With Crunch Carbon | Agent Program" />
+        <meta property="og:description" content="Join the Crunch Carbon agent program. Earn commissions by helping clients monetise their solar systems with verified carbon credits." />
+        <meta property="og:url" content="https://crunchcarbon.com/agents" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
 
       <main className="flex-1">
@@ -255,7 +277,7 @@ const Agents = () => {
                   Want to offer more. Earn more. And do more for the planet?
                 </h2>
                 <p className="text-xl text-crunch-black/80">
-                  Partner with Crunch Carbon today and start generating additional revenue while helping your clients maximize their renewable energy investments.
+                  Partner with Crunch Carbon today and start generating additional revenue while helping your clients maximise their renewable energy investments.
                 </p>
                 <div className="space-y-4">
                   {steps.map((step, index) => (

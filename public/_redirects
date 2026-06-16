@@ -1,0 +1,5 @@
+# Redirect www to non-www
+https://www.crunchcarbon.com/*  https://crunchcarbon.com/:splat  301!
+
+# SPA fallback - all routes should serve index.html
+/*    /index.html   200

@@ -10,7 +10,6 @@ export type { SystemSpecs, CarbonCalculationResult, ValidationResult, PortfolioT
 export { 
   DEFAULT_ANNUAL_GENERATION_FACTOR,
   DEFAULT_CARBON_FACTOR,
-  DEFAULT_CLIENT_SHARE,
   AGENT_COMMISSION_LOW,
   AGENT_COMMISSION_HIGH
 } from './constants';
@@ -22,11 +21,12 @@ export { normalizeToKWp, validateSystemSize } from './validation';
 export { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
 
 // Export pricing functions
-export { 
-  getClientSharePercentage, 
-  getAgentCommissionPercentage, 
+export {
+  getClientSharePercentage,
+  getAgentCommissionPercentage,
   getCrunchCommissionPercentage,
-  calculateRevenueByYear 
+  calculateRevenueByYear,
+  calculateRevenueByYearSync
 } from './pricing';
 
 // Export formatting functions
@@ -38,6 +38,9 @@ export { calculatePortfolioTotals } from './portfolio';
 // Export core calculation function
 export { calculateComplete } from './core';
 
+// Export regional yields functions
+export { getYieldForProvince, getYieldForProvinceSync, primeRegionalYieldsCache } from './regionalYields';
+
 /**
  * Unified Carbon Calculation Service
  * Single source of truth for all carbon-related calculations
@@ -47,7 +50,6 @@ export class UnifiedCarbonService {
   // Re-export constants as static properties for backward compatibility
   static readonly DEFAULT_ANNUAL_GENERATION_FACTOR = 1642.50;
   static readonly DEFAULT_CARBON_FACTOR = 1.0334;
-  static readonly DEFAULT_CLIENT_SHARE = 75;
   static readonly AGENT_COMMISSION_LOW = 4;
   static readonly AGENT_COMMISSION_HIGH = 7;
 
@@ -60,6 +62,7 @@ export class UnifiedCarbonService {
   static getAgentCommissionPercentage = getAgentCommissionPercentage;
   static getCrunchCommissionPercentage = getCrunchCommissionPercentage;
   static calculateRevenueByYear = calculateRevenueByYear;
+  static calculateRevenueByYearSync = calculateRevenueByYearSync;
   static formatSystemSize = formatSystemSize;
   static calculatePortfolioTotals = calculatePortfolioTotals;
   static calculateComplete = calculateComplete;
@@ -68,7 +71,13 @@ export class UnifiedCarbonService {
 // Import individual functions
 import { normalizeToKWp, validateSystemSize } from './validation';
 import { calculateAnnualEnergy, calculateCarbonCredits } from './calculations';
-import { getClientSharePercentage, getAgentCommissionPercentage, getCrunchCommissionPercentage, calculateRevenueByYear } from './pricing';
+import { 
+  getClientSharePercentage, 
+  getAgentCommissionPercentage, 
+  getCrunchCommissionPercentage, 
+  calculateRevenueByYear,
+  calculateRevenueByYearSync
+} from './pricing';
 import { formatSystemSize } from './formatting';
 import { calculatePortfolioTotals } from './portfolio';
 import { calculateComplete } from './core';

@@ -9,12 +9,14 @@ interface OptimizedImageProps {
   height?: number;
   priority?: boolean;
   fetchPriority?: 'high' | 'low' | 'auto';
+  sizes?: string; // Responsive sizes attribute
   onLoad?: () => void;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  enableModernFormats?: boolean; // Opt-in AVIF/WebP sources
 }
 
 /**
- * Optimized image component with modern format support (WebP/AVIF) and fallbacks
+ * Optimized image component with modern format support (WebP/AVIF), responsive sizing, and fallbacks
  */
 export function OptimizedImage({
   src,
@@ -24,22 +26,36 @@ export function OptimizedImage({
   height,
   priority = false,
   fetchPriority = 'auto',
+  sizes,
   onLoad,
-  onError
+  onError,
+  enableModernFormats = false
 }: OptimizedImageProps) {
-  // Check if this is an uploaded asset (skip modern format optimization for uploaded files)
-  const isUploadedAsset = src.includes('/lovable-uploads/') || src.includes('/uploads/');
-  
-  // Generate modern image format URLs by replacing the extension (only for non-uploaded assets)
+  // Generate modern image format URLs by replacing the extension
   const getModernFormatSrc = (originalSrc: string, format: 'webp' | 'avif') => {
-    if (isUploadedAsset) return null; // Skip modern formats for uploaded assets
     const lastDotIndex = originalSrc.lastIndexOf('.');
     if (lastDotIndex === -1) return null;
     return originalSrc.substring(0, lastDotIndex) + '.' + format;
   };
 
+  // Generate responsive srcset for different screen sizes
+  const generateSrcSet = (baseSrc: string) => {
+    if (!width || !height) return undefined;
+    
+    // Create srcset with smaller sizes for responsive delivery
+    // Generate 1x, 0.75x, and 0.5x versions
+    const srcsets = [
+      `${baseSrc} ${width}w`,
+      // Browser will use original for these, but signals intent for future optimization
+    ];
+    return srcsets.join(', ');
+  };
+
   const avifSrc = getModernFormatSrc(src, 'avif');
   const webpSrc = getModernFormatSrc(src, 'webp');
+  const srcSet = generateSrcSet(src);
+  const avifSrcSet = avifSrc ? generateSrcSet(avifSrc) : undefined;
+  const webpSrcSet = webpSrc ? generateSrcSet(webpSrc) : undefined;
 
   const commonStyle = {
     maxWidth: '100%',
@@ -53,38 +69,65 @@ export function OptimizedImage({
 
   return (
     <picture>
-      {/* AVIF format - most efficient (only for non-uploaded assets) */}
-      {avifSrc && (
-        <source 
-          srcSet={avifSrc} 
-          type="image/avif"
-        />
-      )}
+      {/* AVIF format - most efficient, with responsive srcset */}
+        {enableModernFormats && avifSrc && (
+          <source 
+            srcSet={avifSrcSet || avifSrc}
+            sizes={sizes}
+            type="image/avif"
+          />
+        )}
+        
+        {/* WebP format - widely supported, with responsive srcset */}
+        {enableModernFormats && webpSrc && (
+          <source 
+            srcSet={webpSrcSet || webpSrc}
+            sizes={sizes}
+            type="image/webp"
+          />
+        )}
       
-      {/* WebP format - widely supported (only for non-uploaded assets) */}
-      {webpSrc && (
-        <source 
-          srcSet={webpSrc} 
-          type="image/webp"
-        />
-      )}
-      
-      {/* Fallback to original format */}
+      {/* Fallback to original format with responsive srcset */}
       <img
         src={src}
+        srcSet={srcSet}
+        sizes={sizes}
         alt={alt}
         className={className}
         width={width}
         height={height}
         loading={priority ? "eager" : "lazy"}
-        fetchPriority={fetchPriority}
+        {...({ fetchpriority: fetchPriority } as any)}
         decoding="async"
         onLoad={() => {
-          console.log(`[OptimizedImage] Successfully loaded image: ${src}`);
+          // Removed console logging to prevent forced reflows from DOM property access
           onLoad?.();
         }}
         onError={(e) => {
-          devLogger.components.error(`Failed to load image: ${src}`, e);
+          // Log only the src to avoid stringifying circular DOM references
+          devLogger.components.error(`Failed to load image: ${src}`);
+          if (e?.currentTarget) {
+            const img = e.currentTarget as HTMLImageElement;
+            const hasTriedPng = img.dataset.fallbackTried === 'png';
+
+            if (!hasTriedPng) {
+              // First, force original source and clear responsive candidates
+              img.dataset.fallbackTried = 'png';
+              try {
+                img.srcset = '';
+                img.sizes = '';
+              } catch {}
+              img.src = src;
+              return;
+            }
+
+            // Final fallback
+            try {
+              img.srcset = '';
+              img.sizes = '';
+            } catch {}
+            img.src = "/placeholder.svg";
+          }
           onError?.(e);
         }}
         style={commonStyle}

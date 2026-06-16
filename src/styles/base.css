@@ -187,3 +187,50 @@ button, a, input, select, textarea {
   box-shadow: 0 0 0 2px hsl(var(--crunch-yellow)), 0 0 0 4px hsl(var(--crunch-yellow) / 0.2);
   outline-offset: 2px;
 }
+
+/* Performance: Prevent forced reflows with GPU acceleration */
+/* GPU-accelerate animated elements to prevent layout recalculations */
+[class*="motion-"],
+[data-radix-collection-item],
+[role="dialog"],
+[role="menu"],
+[role="listbox"] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize animations to use only transform and opacity */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    /* Enable hardware acceleration for transforms */
+    will-change: auto;
+  }
+  
+  /* Only hint will-change for actively animating elements */
+  [data-state="open"],
+  [data-state="closed"],
+  [aria-expanded="true"],
+  [aria-expanded="false"] {
+    will-change: transform, opacity;
+  }
+  
+  /* Remove will-change after animation completes */
+  *:not(:hover):not(:focus):not(:active) {
+    will-change: auto;
+  }
+}
+
+/* Containment for isolated components to prevent layout thrashing */
+.dashboard-card,
+.chart-container,
+.stats-card,
+[class*="Card"] {
+  contain: layout style paint;
+}
+
+/* Optimize image rendering */
+img, picture, video {
+  content-visibility: auto;
+  contain-intrinsic-size: 100% 100%;
+}

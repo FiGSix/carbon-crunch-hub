@@ -1,9 +1,7 @@
-/* CRITICAL: Optimized CSS Loading Order - Split for Performance */
-@import './styles/base.css';
+/* Main CSS entry - Critical styles inlined in HTML, this loads after initial paint */
 
 @tailwind base;
 @tailwind components; 
 @tailwind utilities;
 
-@import './styles/components.css';
-@import './styles/animations.css';
+/* Non-critical styles loaded via separate link tags for parallel loading */

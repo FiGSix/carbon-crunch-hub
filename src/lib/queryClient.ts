@@ -40,7 +40,7 @@ const queryConfig: DefaultOptions = {
     
     // Refetch configuration
     refetchOnWindowFocus: false, // Disabled to reduce unnecessary requests
-    refetchOnMount: true, // Always refetch on component mount
+    refetchOnMount: false, // Respect staleTime - use cached data when fresh
     refetchOnReconnect: true, // Refetch when network reconnects
   },
   

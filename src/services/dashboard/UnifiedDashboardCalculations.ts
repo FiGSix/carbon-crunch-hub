@@ -37,7 +37,9 @@ export class UnifiedDashboardCalculations {
       acc.totalProposals++;
       
       // Status-based counting
-      if (proposal.status === 'pending' || proposal.status === 'draft') {
+      // Removed 'pending' - now uses full unsigned status chain
+      const UNSIGNED_STATUSES = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'];
+      if (UNSIGNED_STATUSES.includes(proposal.status)) {
         acc.pendingProposals++;
       } else if (proposal.status === 'approved' || proposal.status === 'signed') {
         acc.approvedProposals++;

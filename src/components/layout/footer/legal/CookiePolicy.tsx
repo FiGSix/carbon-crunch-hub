@@ -2,7 +2,7 @@
 export function CookiePolicy() {
   return (
     <div className="text-sm space-y-4 mt-4">
-      <h3 className="font-bold text-lg mb-2">Cookie Policy</h3>
+      <h2 className="font-bold text-lg mb-2">Cookie Policy</h2>
       <p>This Cookie Policy explains how Crunch Carbon uses cookies and similar technologies to recognize you when you visit our website at crunchcarbon.com. It explains what these technologies are and why we use them, as well as your rights to control our use of them.</p>
       
       <div className="mt-4">
@@ -37,8 +37,8 @@ export function CookiePolicy() {
         </div>
         
         <div className="mt-2">
-          <h4 className="font-semibold text-base">Analytics and customization cookies</h4>
-          <p>These cookies collect information that is used either in aggregate form to help us understand how our Website is being used or how effective our marketing campaigns are, or to help us customize our Website for you in order to enhance your experience.</p>
+          <h4 className="font-semibold text-base">Analytics and customisation cookies</h4>
+          <p>These cookies collect information that is used either in aggregate form to help us understand how our Website is being used or how effective our marketing campaigns are, or to help us customise our Website for you in order to enhance your experience.</p>
         </div>
         
         <div className="mt-2">

@@ -5,42 +5,41 @@ import { ProposalDetails } from './ProposalDetails';
 import { ProposalDeleteDialog } from './ProposalDeleteDialog';
 import { SignInPrompt } from './SignInPrompt';
 import { ProjectInformation, ProposalData } from '@/types/proposals';
+import { useAuth } from '@/contexts/auth';
 
 interface ProposalContentProps {
   proposal: ProposalData;
   token: string | null;
   clientEmail: string | null;
-  canDelete: boolean;
-  isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
-  handleApprove: () => Promise<void>;
+  handleApprove: (typedName: string) => Promise<void>;
   handleReject: () => Promise<void>;
   handleDelete: () => Promise<void>;
-  handleReviewLater: () => Promise<void>;
   handleSignInClick: () => void;
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: (open: boolean) => void;
   showSignInPrompt: boolean;
+  onProposalUpdate?: () => void;
 }
 
 export function ProposalContent({
   proposal,
   token,
   clientEmail,
-  canDelete,
-  isReviewLater,
   canTakeAction,
   isClient,
   handleApprove,
   handleReject,
   handleDelete,
-  handleReviewLater,
   handleSignInClick,
   deleteDialogOpen,
   setDeleteDialogOpen,
-  showSignInPrompt
+  showSignInPrompt,
+  onProposalUpdate
 }: ProposalContentProps) {
+  const { userRole } = useAuth();
+  
   // Extract project info from the proposal content for the header
   const projectInfo = proposal.content?.projectInfo || {} as ProjectInformation;
 
@@ -51,12 +50,11 @@ export function ProposalContent({
         showInvitationBadge={!!token}
         projectSize={projectInfo.size}
         projectName={projectInfo.name}
-        canDelete={canDelete}
         isDeleted={!!proposal.deleted_at}
-        isReviewLater={isReviewLater}
-        onDeleteClick={() => setDeleteDialogOpen(true)}
-        onReviewLaterClick={handleReviewLater}
         proposalId={proposal.id}
+        proposal={proposal as any}
+        proposalData={proposal}
+        onProposalUpdate={onProposalUpdate}
       />
       
       <div className="space-y-8">
@@ -65,8 +63,8 @@ export function ProposalContent({
           token={token}
           onApprove={handleApprove}
           onReject={handleReject}
-          isReviewLater={isReviewLater}
           showActions={canTakeAction}
+          isClient={isClient}
         />
         
         {/* Sign In Prompt - Show when not logged in but token access is valid */}
@@ -75,13 +73,15 @@ export function ProposalContent({
         )}
       </div>
 
-      {/* Delete Dialog */}
-      <ProposalDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onDelete={handleDelete}
-        isClient={isClient}
-      />
+      {/* Delete Dialog - Only for agents and admins */}
+      {!isClient && (userRole === 'agent' || userRole === 'admin') && (
+        <ProposalDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDelete={handleDelete}
+          isClient={isClient}
+        />
+      )}
     </div>
   );
 }

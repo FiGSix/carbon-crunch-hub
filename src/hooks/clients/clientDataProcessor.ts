@@ -11,7 +11,7 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
     throw new Error('User not authenticated');
   }
 
-  // Build query similar to proposals
+  // Build query to fetch proposals and join with clients for portfolio override data
   let query = supabase
     .from('proposals')
     .select(`
@@ -20,7 +20,12 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
       client_id,
       client_reference_id,
       agent_id,
-      annual_energy
+      system_size_kwp,
+      clients:client_reference_id (
+        portfolio_client_share_override,
+        portfolio_override_set_at,
+        portfolio_override_set_by
+      )
     `);
 
   // Apply role-based filtering
@@ -28,8 +33,32 @@ export async function fetchClientsData(userRole: string, userId?: string): Promi
     devLogger.clients.log('Admin user - fetching all proposals');
     // Admin sees all proposals
   } else if (userRole === 'agent' && userId) {
-    devLogger.clients.log('Agent user - filtering by agent_id', { userId });
-    query = query.eq('agent_id', userId);
+    devLogger.clients.log('Agent user - fetching company proposals', { userId });
+    
+    // Get user's company members to show all team proposals
+    const { data: companyMembers } = await supabase
+      .from('company_members')
+      .select('company_id, user_id')
+      .eq('status', 'active');
+
+    // Find user's companies
+    const userCompanyIds = companyMembers
+      ?.filter(cm => cm.user_id === userId)
+      .map(cm => cm.company_id) || [];
+
+    if (userCompanyIds.length > 0) {
+      // Get all agent IDs from user's companies
+      const teamAgentIds = companyMembers
+        ?.filter(cm => userCompanyIds.includes(cm.company_id))
+        .map(cm => cm.user_id) || [];
+
+      // Include user's own ID even if not in a company
+      const allAgentIds = [...new Set([...teamAgentIds, userId])];
+      query = query.in('agent_id', allAgentIds);
+    } else {
+      // No company membership - show only own proposals
+      query = query.eq('agent_id', userId);
+    }
   } else {
     devLogger.clients.log('Other role or no user ID - returning empty data');
     return [];
@@ -88,19 +117,28 @@ function processProposalsIntoClients(proposalsData: any[]): ClientData[] {
     }
 
     const existingClient = clientMap.get(clientId);
-    const annualEnergy = proposal.annual_energy || 0;
+    const systemSizeKwp = proposal.system_size_kwp || 0;
+
+    // Extract portfolio override data from joined clients table
+    const portfolioOverride = proposal.clients?.portfolio_client_share_override || null;
+    const portfolioOverrideSetAt = proposal.clients?.portfolio_override_set_at || null;
+    const portfolioOverrideSetBy = proposal.clients?.portfolio_override_set_by || null;
 
     if (existingClient) {
       existingClient.project_count += 1;
-      existingClient.total_mwp += annualEnergy / 1000; // Convert kW to MW
+      existingClient.total_mwp += systemSizeKwp / 1000; // Convert kWp to MWp
     } else {
       clientMap.set(clientId, {
         client_id: clientId,
         client_name: clientName,
         client_email: clientEmail,
         company_name: companyName,
-        total_mwp: annualEnergy / 1000, // Convert kW to MW
-        project_count: 1
+        total_mwp: systemSizeKwp / 1000, // Convert kWp to MWp
+        project_count: 1,
+        is_active: false, // Default for legacy processor
+        portfolio_client_share_override: portfolioOverride,
+        portfolio_override_set_at: portfolioOverrideSetAt,
+        portfolio_override_set_by: portfolioOverrideSetBy,
       });
     }
   });

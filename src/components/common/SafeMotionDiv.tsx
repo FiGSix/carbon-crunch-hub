@@ -1,5 +1,13 @@
-import { useState, useEffect, useMemo, FC, ReactNode, CSSProperties, MouseEvent } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useMemo, FC, ReactNode, CSSProperties, MouseEvent, lazy, Suspense } from 'react';
+
+// Lazy load framer-motion to defer 50KB bundle until after initial render
+const motion = {
+  div: lazy(() => 
+    import('framer-motion').then(mod => ({
+      default: mod.motion.div
+    }))
+  )
+};
 
 interface SafeMotionDivProps {
   children: ReactNode;
@@ -111,7 +119,12 @@ export const SafeMotionDiv: FC<SafeMotionDivProps> = ({
   }
 
   try {
-    return <motion.div {...motionProps}>{children}</motion.div>;
+    const MotionDiv = motion.div;
+    return (
+      <Suspense fallback={<div {...divProps}>{children}</div>}>
+        <MotionDiv {...motionProps}>{children}</MotionDiv>
+      </Suspense>
+    );
   } catch (error) {
     console.warn('[SafeMotionDiv] Motion component failed, using fallback:', error);
     return <div {...divProps}>{fallback || children}</div>;

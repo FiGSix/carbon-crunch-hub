@@ -49,20 +49,76 @@ export class ProposalsDataService {
           annual_energy,
           carbon_credits,
           client_share_percentage,
+          client_share_override_enabled,
           agent_commission_percentage,
+          agent_portfolio_kwp,
           system_size_kwp,
           unit_standard,
           invitation_sent_at,
           invitation_viewed_at,
-          invitation_expires_at
+          invitation_expires_at,
+          last_email_event_type,
+          last_email_sent_at,
+          engagement_count,
+          last_engagement_at
         `)
         .is('deleted_at', null); // Exclude soft-deleted proposals
 
       // Apply role-based filtering - RLS will handle the actual security
       if (userRole === 'client') {
-        query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
+        // Get user's client company membership
+        const { data: membership } = await supabase
+          .from('client_company_members')
+          .select('client_company_id')
+          .eq('user_id', userId)
+          .eq('status', 'active');
+
+        const companyIds = membership?.map(m => m.client_company_id) || [];
+
+        if (companyIds.length > 0) {
+          // Get all client record IDs in user's company
+          const { data: companyClients } = await supabase
+            .from('clients')
+            .select('id')
+            .in('client_company_id', companyIds);
+
+          const companyClientIds = companyClients?.map(c => c.id) || [];
+
+          // Filter: direct match OR company client reference match
+          const filters = [`client_id.eq.${userId}`];
+          if (companyClientIds.length > 0) {
+            filters.push(`client_reference_id.in.(${companyClientIds.join(',')})`);
+          }
+          query = query.or(filters.join(','));
+        } else {
+          // No company -- fall back to direct match only
+          query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
+        }
       } else if (userRole === 'agent') {
-        query = query.eq('agent_id', userId);
+        // Get user's company members to show all team proposals
+        const { data: companyMembers } = await supabase
+          .from('company_members')
+          .select('company_id, user_id')
+          .eq('status', 'active');
+
+        // Find user's companies
+        const userCompanyIds = companyMembers
+          ?.filter(cm => cm.user_id === userId)
+          .map(cm => cm.company_id) || [];
+
+        if (userCompanyIds.length > 0) {
+          // Get all agent IDs from user's companies
+          const teamAgentIds = companyMembers
+            ?.filter(cm => userCompanyIds.includes(cm.company_id))
+            .map(cm => cm.user_id) || [];
+
+          // Include user's own ID even if not in a company
+          const allAgentIds = [...new Set([...teamAgentIds, userId])];
+          query = query.in('agent_id', allAgentIds);
+        } else {
+          // No company membership - show only own proposals
+          query = query.eq('agent_id', userId);
+        }
       }
       // Admin role gets all non-deleted proposals (no additional filter needed)
 

@@ -31,6 +31,14 @@ export interface RawProposalData {
   invitation_sent_at?: string | null;
   invitation_viewed_at?: string | null;
   invitation_expires_at?: string | null;
+  last_email_event_type?: string | null;
+  last_email_sent_at?: string | null;
+  engagement_count?: number | null;
+  last_engagement_at?: string | null;
+  onboarding_complete?: boolean | null;
+  submitted_for_review?: boolean | null;
+  admin_validated?: boolean | null;
+  audit_ready?: boolean | null;
 }
 
 export interface ProfileData {
@@ -65,4 +73,6 @@ export interface UseProposalsResult {
   error: string | null;
   handleFilterChange: (filterType: string, value: string) => void;
   fetchProposals: (forceRefresh?: boolean) => Promise<void>;
+  advancedFilters: import("@/components/proposals/filters/AdvancedProposalFilters").AdvancedFilters;
+  setAdvancedFilters: (filters: import("@/components/proposals/filters/AdvancedProposalFilters").AdvancedFilters) => void;
 }

@@ -9,9 +9,10 @@ import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 
 interface RegisterFormProps {
   initialRole: "client" | "agent";
+  invitationToken?: string;
 }
 
-export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
+export const RegisterForm = ({ initialRole, invitationToken }: RegisterFormProps) => {
   const {
     formData,
     termsAccepted,
@@ -23,15 +24,15 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
     setPrivacyDialogOpen,
     handleChange,
     handleRoleChange,
-    handleCompanyLogoChange,
     handleSubmit,
-    handleTermsAccept
-  } = useRegisterForm(initialRole);
+    handleTermsAccept,
+    invitedEmail
+  } = useRegisterForm(initialRole, invitationToken);
   
   return (
     <FormErrorBoundary formName="Registration Form">
       <form onSubmit={handleSubmit}>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <RegisterRoleSelect 
           role={formData.role} 
           onRoleChange={handleRoleChange} 
@@ -42,10 +43,8 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
           firstName={formData.firstName}
           lastName={formData.lastName}
           companyName={formData.companyName}
-          companyLogoUrl={formData.companyLogoUrl}
           showCompanyField={formData.role === "agent"}
           onChange={handleChange}
-          onCompanyLogoChange={formData.role === "agent" ? handleCompanyLogoChange : undefined}
           disabled={isLoading}
         />
         
@@ -55,6 +54,7 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
           confirmPassword={formData.confirmPassword}
           onChange={handleChange}
           disabled={isLoading}
+          emailReadOnly={invitedEmail !== null}
         />
         
         <RegisterTerms 
@@ -65,7 +65,7 @@ export const RegisterForm = ({ initialRole }: RegisterFormProps) => {
           setTermsDialogOpen={setTermsDialogOpen}
           privacyDialogOpen={privacyDialogOpen}
           setPrivacyDialogOpen={setPrivacyDialogOpen}
-          onTermsAccept={handleTermsAccept}
+          onTermsAccept={(docId, version) => handleTermsAccept(docId, version)}
           isLoading={isLoading}
         />
         

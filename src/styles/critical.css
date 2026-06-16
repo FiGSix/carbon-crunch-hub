@@ -1,0 +1,134 @@
+/* CRITICAL CSS - Inlined in index.html for instant render */
+/* Contains only above-the-fold styles for immediate paint */
+
+:root {
+  /* Core colors - essential for initial render */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 10%;
+  --primary: 45 100% 50%;
+  --primary-foreground: 0 0% 10%;
+  --crunch-yellow: 45 100% 50%;
+  --crunch-black: 0 0% 10%;
+  --border: 0 0% 90%;
+  --ring: 45 100% 50%;
+}
+
+.dark {
+  --background: 0 0% 10%;
+  --foreground: 0 0% 98%;
+  --crunch-black: 0 0% 98%;
+}
+
+/* Critical base styles */
+* {
+  border-color: hsl(var(--border));
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Critical typography for hero section */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.875rem;
+}
+
+@media (min-width: 768px) {
+  h1 {
+    font-size: 1.875rem;
+  }
+  h2 {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  h1 {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  h1 {
+    font-size: 3rem;
+  }
+}
+
+/* Critical text utilities for above-the-fold */
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.text-crunch-black {
+  color: hsl(var(--crunch-black));
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .md\:text-4xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+}
+
+/* Critical layout utilities */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Hide scrollbar flash on load */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Critical focus state */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--crunch-yellow)), 0 0 0 4px hsl(var(--crunch-yellow) / 0.2);
+}

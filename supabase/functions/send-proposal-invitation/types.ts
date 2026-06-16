@@ -6,6 +6,7 @@ export interface InvitationRequest {
   invitationToken: string;
   projectName: string;
   clientId?: string;
+  agentEmail?: string; // Agent email fetched server-side for CC
 }
 
 export interface EmailTemplateData {
@@ -14,4 +15,10 @@ export interface EmailTemplateData {
   invitationLink: string;
   tokenPreview: string;
   proposalId: string;
+  systemSize?: string;
+  carbonCredits?: number;
+  agentFirstName?: string;
+  agentLastName?: string;
+  agentCompanyName?: string;
+  agentEmail?: string;
 }

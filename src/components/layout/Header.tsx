@@ -1,5 +1,4 @@
-
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -12,18 +11,6 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  
-  // CSS Loading Diagnostic
-  useEffect(() => {
-    const indicator = document.createElement('div');
-    indicator.className = 'css-loaded-indicator';
-    document.body.appendChild(indicator);
-    console.log('[Header] CSS Loading diagnostic element added');
-    
-    return () => {
-      document.body.removeChild(indicator);
-    };
-  }, []);
   
   // Close mobile menu when switching to desktop
   useEffect(() => {
@@ -87,33 +74,35 @@ export function Header() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
-              <a 
-                href="/" 
+              <Link 
+                to="/" 
                 className="flex items-center touch-manipulation hover:opacity-90 transition-opacity duration-200"
               >
-                <img
-                  src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
-                  alt="CrunchCarbon Logo" 
+                <OptimizedImage
+                  src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png"
+                  alt="CrunchCarbon Logo"
                   className="h-10 md:h-12 drop-shadow-sm"
                   width={141}
                   height={48}
-                  style={{ maxWidth: '100%', height: 'auto' }}
+                  priority={true}
+                  fetchPriority="high"
+                  sizes="(max-width: 768px) 141px, 141px"
                 />
-              </a>
+              </Link>
             </SafeMotionDiv>
           </div>
           
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
             {navItems.map((item) => (
-              <a 
+              <Link 
                 key={item.href}
-                href={item.href} 
+                to={item.href} 
                 className="font-medium text-crunch-black relative group py-2 px-1 touch-manipulation hover:text-crunch-yellow transition-colors duration-200"
                 title={item.description}
               >
                 {item.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-crunch-yellow rounded-full transition-all duration-300 group-hover:w-full"></span>
-              </a>
+              </Link>
             ))}
           </nav>
           
@@ -166,9 +155,9 @@ export function Header() {
           <div className="p-6 pt-20">
             <nav className="flex flex-col gap-2">
               {navItems.map((item) => (
-                <a 
+                <Link 
                   key={item.href}
-                  href={item.href} 
+                  to={item.href} 
                   className="py-4 px-4 border-b border-crunch-black/5 font-medium text-crunch-black rounded-lg hover:bg-crunch-yellow/10 transition-colors touch-manipulation"
                   onClick={() => setMenuOpen(false)}
                   style={{ minHeight: '44px' }}
@@ -177,7 +166,7 @@ export function Header() {
                     <span className="text-base font-medium">{item.label}</span>
                     <span className="text-xs text-crunch-black/60 mt-1">{item.description}</span>
                   </div>
-                </a>
+                </Link>
               ))}
               
               <div className="flex flex-col gap-3 mt-6 pt-6 border-t border-crunch-black/5">
@@ -216,9 +205,14 @@ const navItems = [
     description: "Return to our homepage" 
   },
   { 
-    label: "How It Works", 
-    href: "/#how-it-works",
-    description: "Learn about our process" 
+    label: "For Homes", 
+    href: "/home-owners",
+    description: "Monetise your solar system" 
+  },
+  { 
+    label: "For Business", 
+    href: "/business",
+    description: "Commercial & industrial solar" 
   },
   { 
     label: "Calculator", 
@@ -226,9 +220,19 @@ const navItems = [
     description: "Calculate your potential earnings" 
   },
   { 
+    label: "Marketplace", 
+    href: "/marketplace",
+    description: "Buy, sell & trade carbon credits" 
+  },
+  { 
     label: "For Agents", 
     href: "/agents",
     description: "Information for energy consultants" 
+  },
+  { 
+    label: "Why Choose Us", 
+    href: "/why-choose-us",
+    description: "The right carbon partner" 
   },
   { 
     label: "About", 
@@ -239,5 +243,10 @@ const navItems = [
     label: "Contact", 
     href: "/contact",
     description: "Get in touch with us" 
+  },
+  { 
+    label: "Got Game?", 
+    href: "/game",
+    description: "Play our interactive game" 
   },
 ];

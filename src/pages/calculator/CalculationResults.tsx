@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { CalendarDays } from "lucide-react";
@@ -14,13 +14,16 @@ import {
 } from "@/components/ui/dialog";
 import { ResultCard } from "./ResultCard";
 import { CalculationResults as ICalculationResults, YearData, formatNumber } from "@/lib/calculations/carbon";
+import { CarbonCreditTable } from "@/components/proposals/summary/carbon/CarbonCreditTable";
+import { calculateRevenueByYear } from "@/services/calculations/carbon/pricing";
+import { logger } from "@/lib/logger";
 
 interface CalculationResultsProps {
   results: ICalculationResults;
   systemSize: number;
   commissioningDate: Date;
   onReset: () => void;
-  onSignUp: () => void;
+  hideActions?: boolean;
 }
 
 export const CalculationResults = ({ 
@@ -28,11 +31,52 @@ export const CalculationResults = ({
   systemSize,
   commissioningDate,
   onReset,
-  onSignUp
+  hideActions = false
 }: CalculationResultsProps) => {
+  const [revenueData, setRevenueData] = useState<Record<string, number>>({});
+  const [isLoadingRevenue, setIsLoadingRevenue] = useState(true);
+  
+  // First-time client pricing configuration
+  const portfolioSize = 0; // No existing portfolio
+  const clientSharePercentage = 60.20; // Lowest tier (0-5MWp range)
+  
+  useEffect(() => {
+    const loadRevenueData = async () => {
+      try {
+        setIsLoadingRevenue(true);
+        const revenue = await calculateRevenueByYear(
+          results.carbonCredits,
+          clientSharePercentage,
+          commissioningDate
+        );
+        setRevenueData(revenue);
+      } catch (error) {
+        logger.error("Error calculating revenue data", { error });
+        setRevenueData({});
+      } finally {
+        setIsLoadingRevenue(false);
+      }
+    };
+    
+    loadRevenueData();
+  }, [results.carbonCredits, commissioningDate]);
+  
+  // Calculate totals for the table
+  const totalMWhGenerated = results.yearsData.reduce((sum, year) => sum + (year.generation / 1000), 0);
+  const totalCarbonCredits = results.yearsData.reduce((sum, year) => sum + year.carbonCredits, 0);
+  const totalClientSpecificRevenue = Object.values(revenueData).reduce((sum, val) => sum + val, 0);
+  
+  // Prepare pre-calculated yearly data for the table
+  const preCalculatedYearlyMWh: Record<string, number> = {};
+  const preCalculatedYearlyCredits: Record<string, number> = {};
+  results.yearsData.forEach(year => {
+    preCalculatedYearlyMWh[year.year.toString()] = year.generation / 1000; // Convert to MWh
+    preCalculatedYearlyCredits[year.year.toString()] = year.carbonCredits;
+  });
+  
   return (
-    <div className="meta-card p-8">
-      <h2 className="text-2xl font-bold text-center mb-6 text-crunch-black">
+    <div className="meta-card p-4 md:p-6 lg:p-8">
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6 text-crunch-black">
         Your Solar Impact
       </h2>
       
@@ -49,7 +93,7 @@ export const CalculationResults = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 md:mb-8">
         <ResultCard 
           title="Annual Energy" 
           value={formatNumber(results.annualGeneration)} 
@@ -72,113 +116,86 @@ export const CalculationResults = ({
         />
       </div>
       
-      <div className="relative mb-8 overflow-hidden rounded-xl border border-crunch-black/10">
-        <div className="absolute inset-0 z-10 bg-gradient-to-br from-transparent via-transparent to-white/70"></div>
+      <div className="mb-8 overflow-hidden rounded-xl border border-crunch-black/10">
         <div className="bg-white/50 backdrop-blur-sm p-4">
-          <h3 className="text-sm font-medium text-crunch-black/70 mb-2">Estimated Carbon Credits</h3>
-          <p className="text-2xl font-bold text-crunch-black mb-2">
-            {formatNumber(results.carbonCredits)} <span className="text-sm font-normal">credits per year</span>
+          <h3 className="text-sm font-medium text-crunch-black/70 mb-4">Carbon Credit Revenue Projection</h3>
+          <p className="text-xs text-crunch-black/60 mb-4">
+            Based on first-time client pricing tier ({clientSharePercentage}% client share)
           </p>
           
-          <div className="relative">
-            <table className="w-full text-sm mt-4">
-              <thead className="text-crunch-black/70 text-xs">
-                <tr>
-                  <th className="text-left pb-2">Year</th>
-                  <th className="text-right pb-2">Energy (kWh)</th>
-                  <th className="text-right pb-2">Carbon Offset (tonnes)</th>
-                  <th className="text-right pb-2">Carbon Credits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.yearsData.slice(0, 4).map((year) => (
-                  <tr key={year.year} className="border-t border-crunch-black/5">
-                    <td className="py-2 text-left font-medium">{year.year}</td>
-                    <td className="py-2 text-right">{formatNumber(year.generation)}</td>
-                    <td className="py-2 text-right">{formatNumber(year.carbonOffset)}</td>
-                    <td className="py-2 text-right">{formatNumber(year.carbonCredits)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/90 to-transparent h-24 backdrop-blur-sm flex items-end justify-center p-4 z-20">
-          <div className="text-center">
-            <p className="font-medium text-crunch-black mb-3">
-              💰 Want to see what that's worth?
-            </p>
-            <Button 
-              onClick={onSignUp}
-              className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black font-medium px-6"
-            >
-              Sign up to reveal your potential earnings
-            </Button>
-          </div>
+          {isLoadingRevenue ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
+            </div>
+          ) : (
+            <CarbonCreditTable
+              revenue={revenueData}
+              systemSizeKWp={systemSize}
+              commissionDate={format(commissioningDate, "yyyy-MM-dd")}
+              portfolioSize={portfolioSize}
+              totalMWhGenerated={totalMWhGenerated}
+              totalCarbonCredits={totalCarbonCredits}
+              totalClientSpecificRevenue={totalClientSpecificRevenue}
+              preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+              preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+            />
+          )}
         </div>
       </div>
       
-      <div className="flex justify-center">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="text-crunch-black/70">
-              See Full Forecast (2025-2030)
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[540px]">
-            <DialogHeader>
-              <DialogTitle>Your Full Carbon Credit Forecast</DialogTitle>
-              <DialogDescription>
-                Projected credits from {format(commissioningDate, "dd MMM yyyy")} to 2030
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="max-h-[400px] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white text-crunch-black/70 text-xs">
-                  <tr>
-                    <th className="text-left p-2">Year</th>
-                    <th className="text-right p-2">Energy (kWh)</th>
-                    <th className="text-right p-2">Carbon Offset (tonnes)</th>
-                    <th className="text-right p-2">Carbon Credits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.yearsData.map((year) => (
-                    <tr key={year.year} className="border-t border-crunch-black/5">
-                      <td className="p-2 text-left font-medium">{year.year}</td>
-                      <td className="p-2 text-right">{formatNumber(year.generation)}</td>
-                      <td className="p-2 text-right">{formatNumber(year.carbonOffset)}</td>
-                      <td className="p-2 text-right">{formatNumber(year.carbonCredits)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <DialogFooter className="pt-4 border-t border-crunch-black/10">
-              <p className="text-xs text-crunch-black/60 italic mr-auto">
-                * Estimates are based on current carbon emission factors and may vary.
-              </p>
-              <Button
-                onClick={onSignUp}
-                className="bg-crunch-yellow hover:bg-crunch-yellow/90 text-crunch-black"
-              >
-                Sign Up to Reveal Value
+      {!hideActions && (
+        <div className="flex justify-center">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="text-crunch-black/70">
+                See Full Forecast (2025-2030)
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        <Button 
-          variant="ghost" 
-          onClick={onReset}
-          className="ml-2 text-crunch-black/70"
-        >
-          Reset Calculator
-        </Button>
-      </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[800px]">
+              <DialogHeader>
+                <DialogTitle>Your Full Carbon Credit Revenue Forecast</DialogTitle>
+                <DialogDescription>
+                  Complete revenue projection from {format(commissioningDate, "dd MMM yyyy")} to 2030
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="max-h-[500px] overflow-auto">
+                {isLoadingRevenue ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
+                  </div>
+                ) : (
+                  <CarbonCreditTable
+                    revenue={revenueData}
+                    systemSizeKWp={systemSize}
+                    commissionDate={format(commissioningDate, "yyyy-MM-dd")}
+                    portfolioSize={portfolioSize}
+                    totalMWhGenerated={totalMWhGenerated}
+                    totalCarbonCredits={totalCarbonCredits}
+                    totalClientSpecificRevenue={totalClientSpecificRevenue}
+                    preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+                    preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+                  />
+                )}
+              </div>
+              
+              <DialogFooter className="pt-4 border-t border-crunch-black/10">
+                <p className="text-xs text-crunch-black/60 italic">
+                  * Revenue projections based on first-time client pricing ({clientSharePercentage}% share). Carbon prices are dynamic and may vary.
+                </p>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Button 
+            variant="ghost" 
+            onClick={onReset}
+            className="ml-2 text-crunch-black/70"
+          >
+            Reset Calculator
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

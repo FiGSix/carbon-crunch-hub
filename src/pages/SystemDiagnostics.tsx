@@ -1,22 +1,18 @@
 
 import { useAuth } from '@/contexts/auth';
 import { RoleValidator } from '@/services/unified/utils/RoleValidator';
-import { GoogleMapsIntegrationTest } from '@/components/testing/GoogleMapsIntegrationTest';
-import { GoogleMapsHealthMonitor } from '@/components/common/GoogleMapsHealthMonitor';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShieldCheck, Activity, TestTube } from 'lucide-react';
+import { ShieldCheck, Activity } from 'lucide-react';
 
 /**
  * Admin-only System Diagnostics page
- * Provides comprehensive system monitoring and testing tools
+ * Provides system monitoring tools
  */
 const SystemDiagnostics = () => {
   const { profile } = useAuth();
 
-  // Double-check admin access at component level
   if (!RoleValidator.isAdmin(profile?.role)) {
     return (
       <DashboardLayout>
@@ -39,7 +35,7 @@ const SystemDiagnostics = () => {
           <div>
             <h1 className="text-3xl font-bold">System Diagnostics</h1>
             <p className="text-muted-foreground">
-              Monitor and test system components and integrations
+              Monitor system components and integrations
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -48,41 +44,22 @@ const SystemDiagnostics = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="health-monitor" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="health-monitor" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Health Monitor
-            </TabsTrigger>
-            <TabsTrigger value="integration-test" className="flex items-center gap-2">
-              <TestTube className="h-4 w-4" />
-              Integration Tests
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="health-monitor" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Google Maps API Health Monitor</CardTitle>
-                <CardDescription>
-                  Real-time monitoring of Google Maps API status and performance
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <GoogleMapsHealthMonitor 
-                  autoRefresh={true}
-                  refreshInterval={300}
-                  showDetails={true}
-                  compact={false}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="integration-test" className="mt-6">
-            <GoogleMapsIntegrationTest />
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              System Status
+            </CardTitle>
+            <CardDescription>
+              All mapping services use Mapbox. Google Maps has been removed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Address autocomplete and geocoding are powered by the Mapbox Geocoding API via the <code>mapbox-geocode</code> edge function.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

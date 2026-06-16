@@ -1,21 +1,32 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { LoginLayout } from '@/components/auth/LoginLayout';
 import { LoginHeader } from '@/components/auth/LoginHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, session, isLoading: authLoading, isInitialized } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, session, profile, isLoading: authLoading, isInitialized } = useAuth();
   const [loginAttempts, setLoginAttempts] = useState(0);
+  
+  // Check if user was logged out due to inactivity
+  const logoutReason = searchParams.get('reason');
   
   // Enhanced redirect tracking with loop prevention
   const hasRedirectedRef = useRef(false);
   const lastRedirectAttemptRef = useRef<number>(0);
   
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     // Prevent rapid redirect attempts
     const now = Date.now();
@@ -32,17 +43,27 @@ const Login = () => {
       if (session.expires_at && new Date(session.expires_at * 1000) > new Date()) {
         hasRedirectedRef.current = true;
         lastRedirectAttemptRef.current = now;
-        const from = location.state?.from || '/dashboard';
         
+        // Check for returnTo in URL query params first
+        const searchParams = new URLSearchParams(location.search);
+        const returnTo = searchParams.get('returnTo');
+
+        // Resolve role-based default landing
+        const roleDefault = (profile?.role === 'super_partner')
+          ? '/super-partner/dashboard'
+          : '/dashboard';
+
+        const from = returnTo || location.state?.from || roleDefault;
+
         // Avoid redirecting to login if that's where we came from
         if (from !== '/login') {
           navigate(from, { replace: true });
         } else {
-          navigate('/dashboard', { replace: true });
+          navigate(roleDefault, { replace: true });
         }
       }
     }
-  }, [user, session, navigate, isInitialized, authLoading, location.state]);
+  }, [user, session, navigate, isInitialized, authLoading, location.state, location.search]);
 
   const handleLoginAttempt = () => {
     setLoginAttempts(prev => prev + 1);
@@ -66,6 +87,14 @@ const Login = () => {
   
   return (
     <LoginLayout>
+      {logoutReason === 'inactivity' && (
+        <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-800">
+          <Clock className="h-4 w-4" />
+          <AlertDescription>
+            You've been logged out after inactivity for security purposes. Simply sign in again to pick up where you left off.
+          </AlertDescription>
+        </Alert>
+      )}
       <LoginHeader />
       <LoginForm 
         loginAttempts={loginAttempts}

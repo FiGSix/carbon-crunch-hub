@@ -2,12 +2,15 @@
 import { useState } from "react";
 import { useProposalOperations } from "../useProposalOperations";
 import { logger } from "@/lib/logger";
+import { useAuth } from "@/contexts/auth";
+import { RoleValidator } from "@/services/unified/utils/RoleValidator";
 
 /**
  * Hook for handling proposal action operations (approve, reject, delete)
  */
 export function useProposalActions(refreshData: () => Promise<void>, onDeleteSuccess?: () => void) {
   const { loading: operationLoading, approveProposal, rejectProposal, deleteProposal, toggleReviewLater } = useProposalOperations();
+  const { userRole, user } = useAuth();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Create a contextualized logger
@@ -16,16 +19,16 @@ export function useProposalActions(refreshData: () => Promise<void>, onDeleteSuc
     feature: 'proposals' 
   });
 
-  const handleApprove = async (proposalId: string) => {
+  const handleApprove = async (proposalId: string, typedName?: string) => {
     if (!proposalId) {
       actionsLogger.error({ message: "Cannot approve proposal", action: 'approve', reason: 'missing proposal ID' });
       return false;
     }
     
-    actionsLogger.info({ message: "Approving proposal", proposalId });
+    actionsLogger.info({ message: "Approving proposal", proposalId, hasSignature: !!typedName });
     
     try {
-      const result = await approveProposal(proposalId);
+      const result = await approveProposal(proposalId, typedName);
       if (result.success) {
         actionsLogger.info({ message: "Proposal approved successfully, refreshing data", proposalId });
         // Refresh data from the server
@@ -79,6 +82,17 @@ export function useProposalActions(refreshData: () => Promise<void>, onDeleteSuc
   };
 
   const handleDelete = async (proposalId: string, userId: string) => {
+    // Security check: Only agents and admins can delete proposals
+    if (!RoleValidator.isAgent(userRole)) {
+      actionsLogger.error({ 
+        message: "Unauthorized delete attempt", 
+        userId, 
+        userRole,
+        action: 'delete' 
+      });
+      throw new Error("Only agents and admins can delete proposals");
+    }
+    
     if (!proposalId || !userId) {
       actionsLogger.error({ message: "Cannot delete proposal", action: 'delete', reason: 'missing proposal ID or user ID' });
       return false;
@@ -114,6 +128,17 @@ export function useProposalActions(refreshData: () => Promise<void>, onDeleteSuc
   };
 
   const handleReviewLater = async (proposalId: string, isCurrentlyMarkedForReviewLater: boolean) => {
+    // Security check: Only agents and admins can use review later
+    if (!RoleValidator.isAgent(userRole)) {
+      actionsLogger.error({ 
+        message: "Unauthorized review later attempt", 
+        userId: user?.id, 
+        userRole,
+        action: 'reviewLater' 
+      });
+      throw new Error("Only agents and admins can use the review later feature");
+    }
+    
     if (!proposalId) {
       actionsLogger.error({ message: "Cannot toggle review later", action: 'reviewLater', reason: 'missing proposal ID' });
       return false;

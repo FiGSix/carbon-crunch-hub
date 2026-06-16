@@ -1,13 +1,9 @@
 
-import { Search, Filter, Settings } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 interface AgentsTableFiltersProps {
-  statusFilter: string;
-  onStatusFilterChange: (value: string) => void;
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
   showAdvancedFilters: boolean;
@@ -15,21 +11,11 @@ interface AgentsTableFiltersProps {
 }
 
 export function AgentsTableFilters({
-  statusFilter,
-  onStatusFilterChange,
   searchTerm,
   onSearchTermChange,
   showAdvancedFilters,
   onToggleAdvancedFilters
 }: AgentsTableFiltersProps) {
-  const statusOptions = [
-    { value: 'all', label: 'All Statuses', count: null },
-    { value: 'active', label: 'Active', count: null },
-    { value: 'inactive', label: 'Inactive', count: null },
-    { value: 'suspended', label: 'Suspended', count: null },
-    { value: 'pending_approval', label: 'Pending Approval', count: null }
-  ];
-
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-1 gap-4">
@@ -42,27 +28,6 @@ export function AgentsTableFilters({
             className="pl-9"
           />
         </div>
-        
-        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-          <SelectTrigger className="w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex items-center gap-2">
-                  {option.label}
-                  {option.count && (
-                    <Badge variant="secondary" className="text-xs">
-                      {option.count}
-                    </Badge>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         <Button
           variant={showAdvancedFilters ? "default" : "outline"}

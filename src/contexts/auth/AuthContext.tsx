@@ -1,5 +1,5 @@
 
-import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { UserProfile, UserRole } from './types';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,7 @@ interface AuthContextType {
   userRole: UserRole | undefined;
   isLoading: boolean;
   isAdmin: boolean;
+  isSuperPartner: boolean;
   isAuthenticated: boolean;
   isInitialized: boolean;
   authError: string | null;
@@ -28,6 +29,10 @@ interface AuthProviderProps {
 // Static state tracker to reduce console spam
 let lastLoggedState: any = null;
 
+// Global profile cache to prevent duplicate fetches across re-renders
+let profileCache: { data: UserProfile | null; userId: string; timestamp: number } | null = null;
+let profileLoadingPromise: Promise<void> | null = null;
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -38,55 +43,86 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const loadProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          role,
-          company_name,
-          phone,
-          avatar_url,
-          company_logo_url,
-          terms_accepted_at,
-          created_at,
-          intro_video_viewed,
-          intro_video_viewed_at
-        `)
-        .eq('id', userId)
-        .single();
+    // Check cache first (5 second TTL)
+    if (profileCache && 
+        profileCache.userId === userId && 
+        Date.now() - profileCache.timestamp < 5000) {
+      setProfile(profileCache.data);
+      setUserRole(profileCache.data?.role);
+      return;
+    }
 
-      if (error) {
+    // If already loading, wait for that promise
+    if (profileLoadingPromise) {
+      await profileLoadingPromise;
+      return;
+    }
+
+    // Start new load
+    profileLoadingPromise = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            email,
+            first_name,
+            last_name,
+            role,
+            company_name,
+            phone,
+            avatar_url,
+            company_logo_url,
+            agent_status,
+            terms_accepted_at,
+            created_at,
+            intro_video_viewed,
+            intro_video_viewed_at,
+            super_partner_status,
+            can_create_proposals
+          `)
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          profileCache = { data: null, userId, timestamp: Date.now() };
+          setProfile(null);
+          setUserRole(undefined);
+          return;
+        }
+
+        const userProfile: UserProfile = {
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone,
+          company_name: data.company_name,
+          company_logo_url: data.company_logo_url,
+          avatar_url: data.avatar_url,
+          role: data.role as UserRole,
+          agent_status: data.agent_status,
+          terms_accepted_at: data.terms_accepted_at,
+          created_at: data.created_at,
+          intro_video_viewed: data.intro_video_viewed,
+          intro_video_viewed_at: data.intro_video_viewed_at,
+          super_partner_status: data.super_partner_status ?? null,
+          can_create_proposals: data.can_create_proposals ?? false
+        };
+
+        profileCache = { data: userProfile, userId, timestamp: Date.now() };
+        setProfile(userProfile);
+        setUserRole(userProfile.role);
+      } catch {
+        profileCache = { data: null, userId, timestamp: Date.now() };
         setProfile(null);
         setUserRole(undefined);
-        return;
+      } finally {
+        profileLoadingPromise = null;
       }
+    })();
 
-      const userProfile: UserProfile = {
-        id: data.id,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        company_name: data.company_name,
-        company_logo_url: data.company_logo_url,
-        avatar_url: data.avatar_url,
-        role: data.role as UserRole,
-        terms_accepted_at: data.terms_accepted_at,
-        created_at: data.created_at,
-        intro_video_viewed: data.intro_video_viewed,
-        intro_video_viewed_at: data.intro_video_viewed_at
-      };
-
-      setProfile(userProfile);
-      setUserRole(userProfile.role);
-    } catch {
-      setProfile(null);
-      setUserRole(undefined);
-    }
+    await profileLoadingPromise;
   };
 
   useEffect(() => {
@@ -113,8 +149,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const nextUser = session?.user ?? null;
         setUser(nextUser);
         if (nextUser) {
-          loadProfile(nextUser.id);
+          // Load profile with error handling to prevent blocking initialization
+          loadProfile(nextUser.id).catch((err) => {
+            console.error('[Auth] Profile load failed during initialization:', err);
+            setAuthError('Profile load failed');
+          });
         }
+        // Always set initialization state, regardless of profile load status
         setIsLoading(false);
         setIsInitialized(true);
       })
@@ -166,29 +207,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     new Date(session.expires_at * 1000) > new Date()
   );
 
-  // Reduced logging frequency to prevent console spam
-  if (import.meta.env.DEV && isInitialized && !isLoading) {
-    const currentState = {
-      hasUser: !!user,
-      hasSession: !!session,
-      hasProfile: !!profile,
-      userRole,
-      isAuthenticated,
-      sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
-    };
-
-    if (!lastLoggedState || JSON.stringify(lastLoggedState) !== JSON.stringify(currentState)) {
-      console.log('🔄 AuthContext state update:', {
-        ...currentState,
-        isInitialized,
-        isLoading,
-        authError,
-        sessionExpiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none',
-        profileId: profile?.id || 'none'
-      });
-      lastLoggedState = currentState;
-    }
-  }
 
   const contextValue: AuthContextType = {
     user,
@@ -197,6 +215,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     userRole,
     isLoading,
     isAdmin: userRole === 'admin',
+    isSuperPartner: userRole === 'super_partner',
     isAuthenticated,
     isInitialized,
     authError,

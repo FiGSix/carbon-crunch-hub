@@ -1,6 +1,9 @@
 /**
  * Security Headers Configuration
- * Production deployment security recommendations
+ * ✅ DEPLOYED: Security headers are now active via public/_headers file
+ * 
+ * These headers are automatically applied to all routes by Lovable's hosting platform.
+ * The _headers file in the public directory controls the actual deployed headers.
  */
 
 export const SECURITY_HEADERS = {

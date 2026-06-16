@@ -38,6 +38,11 @@ export function EligibilityCriteriaList({
       id: "legalOwnership" as keyof EligibilityCriteria,
       title: "Legal ownership of system or green attributes",
       description: "The client must have legal ownership of either the renewable energy system or its green attributes."
+    },
+    {
+      id: "noGovernmentFunding" as keyof EligibilityCriteria,
+      title: "South African Government Funding Initiatives",
+      description: "The project is not participating in any South African Government funded initiatives."
     }
   ];
 

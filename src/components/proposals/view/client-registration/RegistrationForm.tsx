@@ -11,9 +11,16 @@ interface RegistrationFormProps {
   clientEmail: string;
   onComplete: () => void;
   onError?: (errorMessage: string) => void;
+  onRegistrationSuccess?: () => void;
 }
 
-export function RegistrationForm({ proposalId, clientEmail, onComplete, onError }: RegistrationFormProps) {
+export function RegistrationForm({ 
+  proposalId, 
+  clientEmail, 
+  onComplete, 
+  onError,
+  onRegistrationSuccess 
+}: RegistrationFormProps) {
   const {
     firstName,
     lastName,
@@ -23,14 +30,14 @@ export function RegistrationForm({ proposalId, clientEmail, onComplete, onError 
     error,
     handleChange,
     handleSignUp
-  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError);
+  } = useRegistrationFormLogic(proposalId, clientEmail, onComplete, onError, onRegistrationSuccess);
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Create Your Account</CardTitle>
         <CardDescription>
-          Register to view and respond to this proposal. Your account will be linked to the email address: {clientEmail}
+          Create your account to approve or reject this proposal. We'll use {clientEmail} for your account.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,7 +73,7 @@ export function RegistrationForm({ proposalId, clientEmail, onComplete, onError 
       </CardContent>
       <CardFooter className="flex justify-between">
         <p className="text-sm text-muted-foreground">
-          Already have an account? Use the Sign In option above.
+          Already have an account? Switch to "Returning User" above.
         </p>
       </CardFooter>
     </Card>

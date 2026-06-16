@@ -1,8 +1,11 @@
 
+import { lazy, Suspense } from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle } from "lucide-react";
-import { TermsDialog } from "./TermsDialog";
-import { PrivacyPolicyDialog } from "./PrivacyPolicyDialog";
+
+// Lazy load dialogs to reduce initial bundle size
+const TermsDialog = lazy(() => import("./TermsDialogUpdated").then(m => ({ default: m.TermsDialogUpdated })));
+const PrivacyPolicyDialog = lazy(() => import("./PrivacyPolicyDialog").then(m => ({ default: m.PrivacyPolicyDialog })));
 
 interface RegisterTermsProps {
   showAgentTerms: boolean;
@@ -12,7 +15,7 @@ interface RegisterTermsProps {
   setTermsDialogOpen: (open: boolean) => void;
   privacyDialogOpen: boolean;
   setPrivacyDialogOpen: (open: boolean) => void;
-  onTermsAccept: () => void;
+  onTermsAccept: (documentId: string, version: number) => void;
   isLoading: boolean;
 }
 
@@ -46,12 +49,14 @@ export function RegisterTerms({
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
               >
                 I agree to the 
-                <TermsDialog
-                  open={termsDialogOpen}
-                  onOpenChange={setTermsDialogOpen}
-                  onAccept={onTermsAccept}
-                  isLoading={isLoading}
-                />
+                <Suspense fallback={<span className="text-carbon-green-600">Terms & Conditions</span>}>
+                  <TermsDialog
+                    open={termsDialogOpen}
+                    onOpenChange={setTermsDialogOpen}
+                    onAccept={onTermsAccept}
+                    isLoading={isLoading}
+                  />
+                </Suspense>
               </label>
             </div>
           </div>
@@ -62,11 +67,13 @@ export function RegisterTerms({
         <CheckCircle className="h-4 w-4 text-carbon-green-500 mr-2" />
         <span>
           By signing up, you agree to our{" "}
-          <PrivacyPolicyDialog
-            open={privacyDialogOpen}
-            onOpenChange={setPrivacyDialogOpen}
-            isLoading={isLoading}
-          />
+          <Suspense fallback={<span className="text-carbon-green-600">Privacy Policy</span>}>
+            <PrivacyPolicyDialog
+              open={privacyDialogOpen}
+              onOpenChange={setPrivacyDialogOpen}
+              isLoading={isLoading}
+            />
+          </Suspense>
         </span>
       </div>
     </>

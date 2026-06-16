@@ -1,14 +1,18 @@
 
 import { useEffect, memo, useMemo, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ProposalStatusDropdown } from "./components/ProposalStatusDropdown";
+import { Badge } from "@/components/ui/badge";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
+import { ClientShareCell } from "./components/ClientShareCell";
+import { EmailEngagementBadge } from "./components/EmailEngagementBadge";
+import { ProposalEngagementBadge } from "./list/ProposalEngagementBadge";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
@@ -35,28 +39,90 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
     [proposal.size]
   );
   
-  const formattedRevenue = useMemo(
-    () => `R ${proposal.revenue.toLocaleString()}`,
-    [proposal.revenue]
-  );
-
   return (
     <TableRow className={isCurrentUser ? "bg-carbon-green-50" : ""}>
       <TableCell className="font-medium">{proposal.name}</TableCell>
       <TableCell>{proposal.client}</TableCell>
-      <TableCell>{formattedDate}</TableCell>
+      <TableCell>
+        {proposal.isMultiPhase ? (
+          <div className="flex items-center gap-2">
+            <span>{formattedDate}</span>
+            <Badge variant="outline" className="text-xs">Multi</Badge>
+          </div>
+        ) : (
+          formattedDate
+        )}
+      </TableCell>
       <TableCell>{formattedSize}</TableCell>
       <TableCell>
-        <ProposalStatusDropdown 
-          proposalId={proposal.id} 
-          currentStatus={proposal.status} 
-          onStatusUpdate={onProposalUpdate} 
-        />
+        <div className="flex flex-col gap-1.5">
+          {/* Status hierarchy: Draft → Sent → Delivered/Opened/Clicked → Approved/Rejected → Signed → Onboarding → Review → Audit */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Audit Ready (highest priority) */}
+            {proposal.audit_ready ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+                Audit
+              </Badge>
+            ) : proposal.submitted_for_review ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-violet-50 text-violet-700 border-violet-200">
+                Review
+              </Badge>
+            ) : proposal.onboarding_complete ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-cyan-50 text-cyan-700 border-cyan-200">
+                Onboarding
+              </Badge>
+            ) : proposal.signed_at ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-purple-50 text-purple-700 border-purple-200">
+                <CheckCircle2 className="h-3 w-3" />
+                Signed
+              </Badge>
+            ) : proposal.status === 'approved' ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-green-50 text-green-700 border-green-200">
+                <CheckCircle2 className="h-3 w-3" />
+                Approved
+              </Badge>
+            ) : proposal.status === 'rejected' ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-red-50 text-red-700 border-red-200">
+                <XCircle className="h-3 w-3" />
+                Rejected
+              </Badge>
+            ) : proposal.status === 'stale' ? (
+              <Badge variant="outline" className="gap-1 text-xs bg-gray-100 text-gray-500 border-gray-300">
+                Stale
+              </Badge>
+            ) : proposal.last_email_event_type ? (
+              <EmailEngagementBadge 
+                eventType={proposal.last_email_event_type} 
+                sentAt={proposal.last_email_sent_at}
+              />
+            ) : proposal.invitation_sent_at ? (
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                Sent
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">
+                Draft
+              </Badge>
+            )}
+            
+            {/* View count badge (supplementary info) */}
+            {proposal.engagement_count > 0 && !proposal.signed_at && proposal.status !== 'approved' && proposal.status !== 'rejected' && (
+              <ProposalEngagementBadge 
+                engagementCount={proposal.engagement_count}
+                last_engagement_at={proposal.last_engagement_at}
+              />
+            )}
+          </div>
+        </div>
       </TableCell>
       {userRole === "admin" && (
         <TableCell>{proposal.agent || "Unassigned"}</TableCell>
       )}
-      <TableCell className="text-center">{formattedRevenue}</TableCell>
+      {userRole === "admin" && (
+        <TableCell>
+          <ClientShareCell proposal={proposal} />
+        </TableCell>
+      )}
       <TableCell className="text-right">
         <ProposalActionButtons 
           proposal={proposal} 
@@ -70,7 +136,12 @@ const MemoizedProposalRow = memo<ProposalRowProps>(({
   return (
     prevProps.proposal.id === nextProps.proposal.id &&
     prevProps.proposal.status === nextProps.proposal.status &&
-    prevProps.proposal.revenue === nextProps.proposal.revenue &&
+    prevProps.proposal.last_email_event_type === nextProps.proposal.last_email_event_type &&
+    prevProps.proposal.engagement_count === nextProps.proposal.engagement_count &&
+    prevProps.proposal.audit_ready === nextProps.proposal.audit_ready &&
+    prevProps.proposal.submitted_for_review === nextProps.proposal.submitted_for_review &&
+    prevProps.proposal.onboarding_complete === nextProps.proposal.onboarding_complete &&
+    prevProps.proposal.signed_at === nextProps.proposal.signed_at &&
     prevProps.userRole === nextProps.userRole &&
     prevProps.isCurrentUser === nextProps.isCurrentUser
   );
@@ -146,7 +217,7 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
             <TableHead>Size</TableHead>
             <TableHead>Status</TableHead>
             {userRole === "admin" && <TableHead>Agent</TableHead>}
-            <TableHead className="text-center">First Yr Est. Revenue</TableHead>
+            {userRole === "admin" && <TableHead>Client Share</TableHead>}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>

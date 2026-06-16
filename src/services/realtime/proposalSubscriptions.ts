@@ -41,8 +41,11 @@ export class ProposalSubscriptions extends BaseSubscriptionManager {
               userId 
             });
             
-            // Debounce updates to prevent excessive re-renders
-            DebounceUtils.debounceUpdate(channelKey, onUpdate, payload);
+            // Optimized debounce: Status changes need faster feedback
+            const debounceTime = payload.eventType === 'UPDATE' && 
+              payload.new?.status !== payload.old?.status ? 300 : 1000;
+            
+            DebounceUtils.debounceUpdate(channelKey, onUpdate, payload, debounceTime);
           }
         )
         .subscribe();

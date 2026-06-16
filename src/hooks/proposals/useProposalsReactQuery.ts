@@ -27,8 +27,8 @@ export function useProposalsReactQuery(options: UseProposalsReactQueryOptions = 
   const {
     enabled = true,
     refetchInterval = false,
-    staleTime = 2 * 60 * 1000, // 2 minutes
-    filters = {}
+    staleTime = 3 * 60 * 1000, // 3 minutes - optimized cache time
+    filters = {},
   } = options;
 
   const cacheManager = useProposalCacheManager({
@@ -79,6 +79,7 @@ export function useProposalsReactQuery(options: UseProposalsReactQueryOptions = 
     },
     enabled: enabled && !!user?.id && !!userRole,
     staleTime,
+    gcTime: 10 * 60 * 1000, // 10 minutes - optimized garbage collection
     refetchInterval,
     refetchOnWindowFocus: false,
     retry: (failureCount, error: any) => {

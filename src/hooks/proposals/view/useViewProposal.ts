@@ -1,10 +1,9 @@
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth";
 import { useProposalData } from "./useProposalData";
 import { useProposalActions } from "./useProposalActions";
 import { useProposalStatus } from "./useProposalStatus";
-import { ProposalData } from "@/types/proposals";
+import { useProposalClientCompanyId } from "./useProposalClientCompanyId";
 import { logger } from "@/lib/logger";
 
 /**
@@ -12,10 +11,10 @@ import { logger } from "@/lib/logger";
  */
 export function useViewProposal(id?: string, token?: string | null, onDeleteSuccess?: () => void) {
   const { user } = useAuth();
-  const { proposal: initialProposal, loading: initialLoading, error: initialError, clientEmail, fetchProposal } = useProposalData(id, token);
-  const [proposal, setProposal] = useState<ProposalData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { proposal, loading, error, clientEmail, fetchProposal } = useProposalData(id, token);
+  
+  // Fetch client company ID for team member permission check
+  const { clientCompanyId } = useProposalClientCompanyId(proposal);
   
   // Create a contextualized logger
   const viewProposalLogger = logger.withContext({ 
@@ -27,28 +26,22 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     handleApprove, 
     handleReject,
     handleDelete,
-    handleReviewLater,
     deleteDialogOpen,
     setDeleteDialogOpen,
     deleteLoading
   } = useProposalActions(fetchProposal, onDeleteSuccess);
   
-  // Update local state when initial data loads
-  useEffect(() => {
-    if (!initialLoading) {
-      setProposal(initialProposal);
-      setLoading(initialLoading);
-      setError(initialError);
-    }
-  }, [initialProposal, initialLoading, initialError]);
-  
-  // Get proposal status data
-  const { canDelete, isReviewLater, isClient, canTakeAction, isAuthenticated } = useProposalStatus(proposal);
+  // Get proposal status data - now includes team member check via clientCompanyId
+  const { isClient, canTakeAction, isAuthenticated } = useProposalStatus(
+    proposal, 
+    token,
+    { proposalClientCompanyId: clientCompanyId }
+  );
 
-  // Create wrapper functions that convert boolean returns to void
-  const handleApproveWrapper = async (): Promise<void> => {
+  // Create wrapper functions that convert boolean returns to void and pass typed name
+  const handleApproveWrapper = async (typedName: string): Promise<void> => {
     if (proposal?.id) {
-      await handleApprove(proposal.id);
+      await handleApprove(proposal.id, typedName);
     }
   };
 
@@ -64,12 +57,6 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     }
   };
 
-  const handleReviewLaterWrapper = async (): Promise<void> => {
-    if (proposal?.id) {
-      await handleReviewLater(proposal.id, !!proposal.review_later_until);
-    }
-  };
-
   return {
     proposal,
     loading,
@@ -78,12 +65,9 @@ export function useViewProposal(id?: string, token?: string | null, onDeleteSucc
     handleApprove: handleApproveWrapper,
     handleReject: handleRejectWrapper,
     handleDelete: handleDeleteWrapper,
-    handleReviewLater: handleReviewLaterWrapper,
     deleteDialogOpen,
     setDeleteDialogOpen,
     deleteLoading,
-    canDelete,
-    isReviewLater,
     canTakeAction,
     isClient,
     isAuthenticated,

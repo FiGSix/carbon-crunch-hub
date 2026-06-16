@@ -1,25 +1,30 @@
 
 
-import { CheckCircle2, Trash2, ChevronLeft } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, ChevronLeft, Pencil, RotateCcw, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ProposalReviewLaterButton } from "./ProposalReviewLaterButton";
 import { ProposalPdfButton } from "./ProposalPdfButton";
+import { CessionAgreementPdfButton } from "./CessionAgreementPdfButton";
+import { SignedAgreementDownloadButton } from "./SignedAgreementDownloadButton";
+import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
+import { ProposalEditDialog } from "./ProposalEditDialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { Proposal } from "@/components/proposals/types";
+import { ProposalData } from "@/types/proposals";
+import { useReactivateProposal } from "@/hooks/dashboard/useCloseoutQueue";
 
 interface ProposalHeaderProps {
   title: string;
   showInvitationBadge: boolean;
   projectSize?: string;
   projectName?: string;
-  canDelete?: boolean;
   isDeleted?: boolean;
-  isReviewLater?: boolean;
-  onDeleteClick?: () => void;
-  onReviewLaterClick?: () => void;
   showBackButton?: boolean;
-  proposalId?: string; // Added for PDF generation
+  proposalId?: string;
+  proposal?: Proposal;
+  proposalData?: ProposalData;
+  onProposalUpdate?: () => void;
 }
 
 export function ProposalHeader({ 
@@ -27,16 +32,36 @@ export function ProposalHeader({
   showInvitationBadge, 
   projectSize, 
   projectName,
-  canDelete,
   isDeleted,
-  isReviewLater,
-  onDeleteClick,
-  onReviewLaterClick,
   showBackButton = true,
-  proposalId
+  proposalId,
+  proposal,
+  proposalData,
+  onProposalUpdate
 }: ProposalHeaderProps) {
   const navigate = useNavigate();
-  const { userRole, profile } = useAuth();
+  const { user, userRole, profile } = useAuth();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const reactivate = useReactivateProposal();
+
+  const isArchived = !!proposal?.archived_at;
+  const canManageArchive =
+    !isDeleted &&
+    !!proposalId &&
+    (userRole === "admin" ||
+      (userRole === "agent" && proposal?.agent_id === user?.id));
+
+  // Statuses where editing is blocked (proposal is finalized)
+  const NON_EDITABLE_STATUSES = ['approved', 'rejected', 'signed'];
+  const canEdit = !isDeleted
+    && proposal
+    && !NON_EDITABLE_STATUSES.includes(proposal.status || '')
+    && !proposal.signed_at
+    && !proposal.archived_at
+    && (
+      userRole === 'admin'
+      || (userRole === 'agent' && proposal.agent_id === user?.id)
+    );
 
   const handleBack = () => {
     navigate('/proposals');
@@ -91,11 +116,29 @@ export function ProposalHeader({
           </div>
         )}
         
-        {/* Only clients can use "Review Later" feature for pending proposals */}
-        {!isDeleted && userRole === "client" && onReviewLaterClick && (
-          <ProposalReviewLaterButton 
-            onClick={onReviewLaterClick} 
-            isReviewLater={isReviewLater}
+        {isArchived && (
+          <div className="flex items-center bg-muted text-muted-foreground px-3 py-1.5 rounded-md text-xs">
+            <Archive className="h-3.5 w-3.5 mr-1.5" />
+            Archived
+          </div>
+        )}
+        {isArchived && canManageArchive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => proposalId && reactivate.mutate(proposalId, { onSuccess: () => onProposalUpdate?.() })}
+            disabled={reactivate.isPending}
+            className="flex items-center gap-1"
+          >
+            <RotateCcw className="h-4 w-4" /> Reactivate
+          </Button>
+        )}
+
+        {/* Signed Agreement Download button - Shown for all users on signed proposals */}
+        {!isDeleted && proposalId && proposal?.status === 'approved' && (
+          <SignedAgreementDownloadButton 
+            proposalId={proposalId} 
+            proposalTitle={title}
           />
         )}
         
@@ -106,27 +149,45 @@ export function ProposalHeader({
             proposalTitle={title}
           />
         )}
+
+        {/* Cession Agreement PDF - Admin only */}
+        {!isDeleted && userRole === "admin" && proposalId && (
+          <CessionAgreementPdfButton 
+            proposalId={proposalId} 
+            proposalTitle={title}
+          />
+        )}
         
-        {canDelete && !isDeleted && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDeleteClick}
-                  className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete this proposal</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        {/* Edit button - agents/admins on editable proposals */}
+        {canEdit && proposalData && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditDialogOpen(true)}
+            className="flex items-center gap-1"
+          >
+            <Pencil className="h-4 w-4" /> Edit
+          </Button>
+        )}
+
+        {/* Invitation Button - Shown for agents and admins viewing proposals */}
+        {proposal && (userRole === "agent" || userRole === "admin") && !isDeleted && (
+          <ProposalInviteButton 
+            proposal={proposal as any} 
+            onProposalUpdate={onProposalUpdate}
+          />
         )}
       </div>
+
+      {/* Edit Dialog */}
+      {canEdit && proposalData && (
+        <ProposalEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          proposal={proposalData}
+          onSaved={() => onProposalUpdate?.()}
+        />
+      )}
     </div>
   );
 }

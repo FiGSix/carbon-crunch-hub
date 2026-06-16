@@ -1,6 +1,10 @@
 
 import { ProposalListItem } from '@/types/proposals';
-import { AgentCommissionStats } from './useAgentCommissionStats';
+
+export interface AgentCommissionStats {
+  projectedCommission: number;
+  filteredProposalsCount: number;
+}
 
 export interface DashboardStats {
   totalProposals: number;
@@ -45,4 +49,51 @@ export interface ComputedDataCache {
   stats: DashboardStats;
   recentProposals: ProposalListItem[];
   chartData: ProposalListItem[];
+}
+
+// ============= Phase 2: New Dashboard Metrics by Stage =============
+
+/**
+ * Dashboard metrics organized by project pipeline stage
+ * Used for the new 4-card dashboard layout
+ */
+export interface DashboardMetricsByStage {
+  /** Card 1: Audit Ready Projects - Total MWp (3 decimals) */
+  auditReadyMwp: number;
+  
+  /** Card 2: Total Revenue (Audit Ready, 2025-2030) in Rands */
+  auditReadyRevenue: number;
+  
+  /** Card 3: Audit Review Requests - Number of projects awaiting admin review */
+  auditReviewRequests: number;
+  
+  /** Card 4: Onboarding Projects - Total MWp (3 decimals) */
+  onboardingMwp: number;
+  
+  /** Card 4b: Onboarding Revenue (2025-2030) in Rands */
+  onboardingRevenue: number;
+  
+  /** Card 5: Pending Approval - Total MWp (3 decimals) */
+  pendingApprovalMwp: number;
+  
+  /** Card 6: Pending Approval Revenue (2025-2030) in Rands */
+  pendingApprovalRevenue: number;
+}
+
+/**
+ * Unified dashboard data structure (V2)
+ * Combines metrics by stage with recent proposals
+ */
+export interface UnifiedDashboardDataV2 {
+  /** The 4 key metrics for the dashboard cards */
+  metrics: DashboardMetricsByStage;
+  
+  /** Recent proposals for the "Recent Projects" section */
+  proposals: ProposalListItem[];
+  
+  /** Loading state for the entire dashboard */
+  loading: boolean;
+  
+  /** Error message if any operation failed */
+  error: string | null;
 }

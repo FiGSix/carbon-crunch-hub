@@ -4,19 +4,16 @@
  */
 
 import { RetryService } from '@/lib/reliability/RetryService';
-import { BackgroundTaskManager } from '@/lib/reliability/BackgroundTaskManager';
 import { ConnectionManager } from '@/lib/reliability/ConnectionManager';
 import { createProposal, searchClients } from './unifiedProposalService';
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from '@/types/proposals';
+import { EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from '@/types/proposals';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ReliableProposalResult {
   success: boolean;
   proposalId?: string;
-  taskId?: string;
   error?: string;
-  isBackground?: boolean;
 }
 
 export interface ProposalProgress {
@@ -29,12 +26,10 @@ export interface ProposalProgress {
 export class ReliableProposalService {
   private static instance: ReliableProposalService;
   private connectionManager: ConnectionManager;
-  private taskManager: BackgroundTaskManager;
   private progressCallbacks = new Map<string, (progress: ProposalProgress) => void>();
 
   constructor() {
     this.connectionManager = ConnectionManager.getInstance();
-    this.taskManager = BackgroundTaskManager.getInstance();
   }
 
   static getInstance(): ReliableProposalService {
@@ -54,7 +49,8 @@ export class ReliableProposalService {
     projectInfo: ProjectInformation,
     clientInfo: ClientInformation,
     selectedClientId?: string,
-    onProgress?: (progress: ProposalProgress) => void
+    onProgress?: (progress: ProposalProgress) => void,
+    additionalClients?: AdditionalClient[]
   ): Promise<ReliableProposalResult> {
     const operationId = `proposal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -81,7 +77,7 @@ export class ReliableProposalService {
         throw new Error('Invalid proposal data');
       }
 
-      // Try immediate creation first (fast path)
+      // Try immediate creation with extended timeout and retries
       const immediateResult = await this.tryImmediateCreation(
         proposalTitle,
         agentId,
@@ -89,7 +85,8 @@ export class ReliableProposalService {
         projectInfo,
         clientInfo,
         selectedClientId,
-        operationId
+        operationId,
+        additionalClients
       );
 
       if (immediateResult.success) {
@@ -99,22 +96,12 @@ export class ReliableProposalService {
           message: 'Proposal created successfully!'
         });
 
-        serviceLogger.info('Proposal created via fast path', { proposalId: immediateResult.proposalId });
+        serviceLogger.info('Proposal created successfully', { proposalId: immediateResult.proposalId });
         return immediateResult;
       }
 
-      serviceLogger.warn('Fast path failed, using background processing', { error: immediateResult.error });
-
-      // Fall back to background processing
-      return await this.createProposalInBackground(
-        proposalTitle,
-        agentId,
-        eligibilityCriteria,
-        projectInfo,
-        clientInfo,
-        selectedClientId,
-        operationId
-      );
+      serviceLogger.error('Proposal creation failed', { error: immediateResult.error });
+      throw new Error(immediateResult.error || 'Failed to create proposal');
 
     } catch (error) {
       serviceLogger.error('Proposal creation failed', { error });
@@ -148,7 +135,8 @@ export class ReliableProposalService {
     projectInfo: ProjectInformation,
     clientInfo: ClientInformation,
     selectedClientId: string | undefined,
-    operationId: string
+    operationId: string,
+    additionalClients?: AdditionalClient[]
   ): Promise<ReliableProposalResult> {
     
     return await RetryService.executeWithRetry(
@@ -173,7 +161,8 @@ export class ReliableProposalService {
           eligibilityCriteria,
           projectInfo,
           clientInfo,
-          selectedClientId
+          selectedClientId,
+          additionalClients
         );
 
         if (!result.success) {
@@ -192,9 +181,9 @@ export class ReliableProposalService {
         };
       },
       {
-        maxAttempts: 2,
-        baseDelay: 500,
-        timeoutMs: 15000
+        maxAttempts: 3,
+        baseDelay: 1000,
+        timeoutMs: 90000 // Increased from 45s to 90s for complex calculations
       }
     ).then(result => {
       if (result.success) {
@@ -202,77 +191,33 @@ export class ReliableProposalService {
       } else {
         return { success: false, error: result.error?.message };
       }
-    });
-  }
-
-  /**
-   * Create proposal in background with full reliability
-   */
-  private async createProposalInBackground(
-    proposalTitle: string,
-    agentId: string,
-    eligibilityCriteria: EligibilityCriteria,
-    projectInfo: ProjectInformation,
-    clientInfo: ClientInformation,
-    selectedClientId: string | undefined,
-    operationId: string
-  ): Promise<ReliableProposalResult> {
-
-    this.updateProgress(operationId, {
-      stage: 'saving',
-      progress: 20,
-      message: 'Processing in background for reliability...'
-    });
-
-    const taskId = await this.taskManager.queueTask({
-      id: operationId,
-      priority: 'high',
-      maxRetries: 3,
-      operation: async () => {
-        await this.connectionManager.waitForHealthyConnection();
-
-        this.updateProgress(operationId, {
-          stage: 'creating_client',
-          progress: 40,
-          message: 'Creating client profile...'
-        });
-
-        const result = await createProposal(
-          proposalTitle,
-          agentId,
-          eligibilityCriteria,
-          projectInfo,
-          clientInfo,
-          selectedClientId
-        );
-
-        if (!result.success) {
-          throw new Error(result.error || 'Background creation failed');
-        }
-
-        this.updateProgress(operationId, {
-          stage: 'completed',
-          progress: 100,
-          message: 'Proposal created successfully!'
-        });
-
-        return result.proposalId;
-      },
-      onError: (error) => {
-        this.updateProgress(operationId, {
-          stage: 'failed',
-          progress: 0,
-          message: 'Failed to create proposal',
-          error: error.message
-        });
+    }).catch((error: any) => {
+      console.error('Immediate proposal creation failed:', error);
+      
+      let userMessage = 'Unable to create proposal. Please try again.';
+      
+      // Map technical errors to user-friendly messages
+      if (error.message?.includes('Email cannot be empty') || error.message?.includes('email is required')) {
+        userMessage = 'Client email is required to create a proposal.';
+      } else if (error.message?.includes('agent account must be approved')) {
+        userMessage = error.message; // Pass through specific approval message
+      } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
+        userMessage = 'You do not have permission to create proposals. Please contact support.';
+      } else if (error.message?.includes('duplicate') || error.message?.includes('unique constraint')) {
+        userMessage = 'A technical issue occurred with client data. Please try again or contact support.';
       }
+      
+      this.updateProgress(operationId, {
+        stage: 'failed',
+        progress: 100,
+        message: userMessage
+      });
+      
+      return {
+        success: false,
+        error: userMessage
+      };
     });
-
-    return {
-      success: true,
-      taskId,
-      isBackground: true
-    };
   }
 
   /**
@@ -283,20 +228,6 @@ export class ReliableProposalService {
     if (callback) {
       callback(progress);
     }
-  }
-
-  /**
-   * Get task status
-   */
-  getTaskStatus(taskId: string) {
-    return this.taskManager.getTaskStatus(taskId);
-  }
-
-  /**
-   * Wait for background task completion
-   */
-  async waitForTask<T>(taskId: string, timeoutMs = 30000): Promise<T> {
-    return this.taskManager.waitForTask<T>(taskId, timeoutMs);
   }
 
   /**
@@ -337,13 +268,10 @@ export class ReliableProposalService {
       () => this.connectionManager.executeWithHealthCheck(async () => {
         const { updateProposalStatus } = await import('./statusUpdateService');
         
-        const updateResult = await updateProposalStatus(proposalId, 'pending', userId);
-        
-        if (!updateResult.success) {
-          throw new Error(`Status update failed: ${updateResult.error}`);
-        }
-
-        return { proposalId, status: 'pending' };
+        // Status remains as 'draft' until proposal is actually sent
+        // The send-proposal-invitation edge function will change status to 'sent'
+        // No longer auto-promoting to 'pending' - that status is removed
+        return { proposalId, status: 'draft' };
       }),
       {
         maxAttempts: 3,
@@ -355,20 +283,16 @@ export class ReliableProposalService {
     if (result.success) {
       serviceLogger.info('Proposal submission completed successfully with audit trail');
       
-      // Queue background notification
-      this.taskManager.queueTask({
-        id: `notify-submission-${proposalId}`,
-        operation: async () => {
-          await supabase.from('notifications').insert({
-            user_id: userId,
-            type: 'proposal_submitted',
-            title: 'Proposal Submitted',
-            message: 'Your proposal has been successfully submitted for review.',
-            related_type: 'proposal',
-            related_id: proposalId
-          });
-        },
-        priority: 'normal'
+      // Create notification (non-blocking)
+      void supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'proposal_submitted',
+        title: 'Proposal Submitted',
+        message: 'Your proposal has been successfully submitted for review.',
+        related_type: 'proposal',
+        related_id: proposalId
+      }).then(() => {
+        serviceLogger.info('Notification created for proposal submission');
       });
     } else {
       serviceLogger.error('Proposal submission failed', { error: result.error?.message });

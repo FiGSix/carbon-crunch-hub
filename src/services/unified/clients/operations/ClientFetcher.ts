@@ -1,15 +1,20 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../../cache/CacheManager';
+import { CACHE_TTL } from '@/services/cache/types';
 import { RoleValidator } from '../../utils/RoleValidator';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 import type { UnifiedClient, PaginatedClientsResult } from '../types';
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { withTimeout } from '../../utils/withTimeout';
 
 /**
  * Handles fetching clients with pagination and role-based access control
  */
 export class ClientFetcher {
+  // Request deduplication map
+  private static pendingRequests = new Map<string, Promise<PaginatedClientsResult>>();
+
   /**
    * Get all clients for an agent (unified view of registered users and contacts) with pagination
    */
@@ -46,7 +51,7 @@ export class ClientFetcher {
     if (import.meta.env.DEV) {
       devLogger.clients.debug('Role validation passed - user can manage clients');
     }
-
+    
     const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
     
     if (!forceRefresh) {
@@ -54,82 +59,149 @@ export class ClientFetcher {
       if (cached) return cached;
     }
 
+    // Request deduplication - if same request is in flight, wait for it
+    const requestKey = `${userId}_${userRole}_${limit}_${offset}_${forceRefresh}`;
+    if (this.pendingRequests.has(requestKey)) {
+      if (import.meta.env.DEV) {
+        devLogger.clients.debug('Deduplicating request - waiting for existing request');
+      }
+      return this.pendingRequests.get(requestKey)!;
+    }
+
+    // Start new request
+    const promise = this._fetchClients(userId, userRole, cacheKey, limit, offset);
+    this.pendingRequests.set(requestKey, promise);
+
     try {
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('=== Database Operations ===');
-        
-        // Debug current session state before making database calls
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        devLogger.clients.debug('Current session state:', {
-          hasSession: !!session,
-          sessionValid: session ? (new Date(session.expires_at * 1000) > new Date()) : false,
-          sessionError: sessionError?.message,
-          userId: session?.user?.id
-        });
+      return await promise;
+    } finally {
+      this.pendingRequests.delete(requestKey);
+    }
+  }
 
-        // Test auth.uid() function directly
-        const { data: authTest, error: authTestError } = await supabase.rpc('auth_user_id');
-        devLogger.clients.debug('auth.uid() test result:', { authTest, authTestError });
+  /**
+   * Internal fetch method (separated for deduplication)
+   */
+  private static async _fetchClients(
+    userId: string,
+    userRole: UserRole,
+    cacheKey: string,
+    limit: number,
+    offset: number
+  ): Promise<PaginatedClientsResult> {
 
-        if (authTestError || !authTest) {
-          devLogger.clients.error('❌ auth.uid() is returning null - authentication not properly synchronized');
-        }
-      }
-
-      // Check for auth issues and handle gracefully
-      const { data: authTest, error: authTestError } = await supabase.rpc('auth_user_id');
-      if (authTestError || !authTest) {
-        // Try to refresh session to fix auth.uid() issue
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          throw new Error('Authentication session invalid. Please sign out and sign in again.');
-        }
-      }
+    try {
+      console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset });
       
-      // Get total count efficiently using the new function
-      const { data: countData, error: countError } = await supabase.rpc('get_agent_clients_count', {
-        agent_id_param: userRole === 'admin' ? null : userId
+      // Build RPC calls with correct params (avoid null for admin)
+      const countCall = userRole === 'admin'
+        ? supabase.rpc('get_agent_clients_count', {})
+        : supabase.rpc('get_agent_clients_count', { agent_id_param: userId });
+
+      const dataCall = userRole === 'admin'
+        ? supabase.rpc('get_agent_clients_paginated_admin', { 
+            limit_param: limit, 
+            offset_param: offset 
+          })
+        : supabase.rpc('get_agent_clients_paginated', { 
+            agent_id_param: userId,
+            limit_param: limit,
+            offset_param: offset
+          });
+
+      // Wrap with timeout to prevent hanging
+      const [countResult, dataResult] = await withTimeout(
+        Promise.allSettled([countCall, dataCall]),
+        12000
+      );
+
+      console.info('✅ RPC calls completed', { 
+        countStatus: countResult.status, 
+        dataStatus: dataResult.status 
       });
 
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Count RPC result:', { countData, countError });
+      // Extract count (non-critical)
+      let totalCount = 0;
+      if (countResult.status === 'fulfilled' && !countResult.value.error) {
+        totalCount = countResult.value.data || 0;
       }
 
-      if (countError) {
-        if (import.meta.env.DEV) {
-          devLogger.clients.error('Count error:', countError);
-        }
-        throw countError;
-      }
-
-      const totalCount = countData || 0;
+      // Extract paginated data (critical)
+      let data: any[] | null = null;
       
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Total count:', totalCount);
+      if (dataResult.status === 'fulfilled' && !dataResult.value.error) {
+        data = dataResult.value.data;
+      } else {
+        // RPC failed - use fallback query
+        console.info('⚠️ RPC failed, using fallback query');
+        
+        try {
+          // Query the clients table (not profiles) to match RPC behavior
+          let fallbackQueryBuilder = supabase
+            .from('clients')
+            .select(`
+              id,
+              first_name,
+              last_name,
+              email,
+              company_name,
+              user_id,
+              created_at,
+              created_by
+            `)
+            .not('email', 'is', null)
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+          // For agents, filter by their created clients
+          if (userRole !== 'admin') {
+            fallbackQueryBuilder = fallbackQueryBuilder.eq('created_by', userId);
+          }
+
+          // Execute query with timeout
+          const fallbackResult = await Promise.race([
+            fallbackQueryBuilder,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Fallback query timed out')), 8000)
+            )
+          ]) as Awaited<typeof fallbackQueryBuilder>;
+          
+          if (fallbackResult.error) throw fallbackResult.error;
+          
+          console.info('✅ Fallback query succeeded', { count: fallbackResult.data?.length });
+          
+          // Map fallback data to expected format
+          data = (fallbackResult.data || []).map(row => ({
+            client_id: row.id,
+            client_name: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || row.company_name || 'Unknown',
+            client_email: row.email,
+            company_name: row.company_name || '',
+            is_registered: row.user_id !== null,
+            project_count: 0,
+            total_mwp: 0,
+            created_at: row.created_at,
+            agent_id: row.created_by || null,
+            is_active: (row as any).is_active ?? true,
+            client_type: (row as any).client_type,
+            parent_company_id: (row as any).parent_company_id,
+            is_team_member: (row as any).is_team_member ?? false
+          }));
+          
+          if (totalCount === 0) {
+            totalCount = data.length;
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback query also failed:', fallbackError);
+          return {
+            clients: [],
+            hasMore: false,
+            totalCount: 0,
+            nextOffset: 0
+          };
+        }
       }
 
-      // Get paginated data using the new optimized function
-      const { data, error } = await supabase.rpc('get_agent_clients_paginated', {
-        agent_id_param: userRole === 'admin' ? null : userId,
-        limit_param: limit,
-        offset_param: offset
-      });
-
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('Paginated RPC result:', { data, error });
-        devLogger.clients.debug('Data array length:', data?.length);
-        devLogger.clients.debug('Sample data item:', data?.[0]);
-      }
-
-      if (error) {
-        if (import.meta.env.DEV) {
-          devLogger.clients.error('Paginated data error:', error);
-        }
-        const errorResult = ErrorHandler.handleRLSError(error, 'unified clients fetch');
-        if (errorResult.requiresReauth) {
-          window.dispatchEvent(new CustomEvent('auth-required'));
-        }
+      if (!data) {
         return {
           clients: [],
           hasMore: false,
@@ -138,30 +210,27 @@ export class ClientFetcher {
         };
       }
 
-      const clients: UnifiedClient[] = (data || []).map(client => {
-        if (import.meta.env.DEV) {
-          devLogger.clients.debug('Mapping client:', client);
-        }
-        return {
-          id: client.client_id,
-          name: client.client_name || 'Unknown Client',
-          email: client.client_email,
-          company: client.company_name,
-          isRegistered: client.is_registered || false,
-          projectCount: client.project_count || 0,
-          totalKwp: (client.total_mwp || 0) * 1000, // Convert MWp to kWp
-          createdAt: client.created_at || new Date().toISOString()
-        };
-      });
+      console.info('📊 Processing client data', { count: data.length });
 
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('=== Final mapped clients ===');
-        devLogger.clients.debug('Mapped clients:', clients);
-        devLogger.clients.debug('Mapped clients count:', clients.length);
-      }
+      const clients: UnifiedClient[] = data.map(client => ({
+        id: client.client_id,
+        name: client.client_name || 'Unknown Client',
+        email: client.client_email,
+        company: client.company_name,
+        isRegistered: client.is_registered || false,
+        projectCount: client.project_count || 0,
+        totalKwp: (client.total_mwp || 0) * 1000,
+        createdAt: client.created_at || new Date().toISOString(),
+        agentCompanyName: (client as any).agent_company_name,
+        agentId: (client as any).agent_id,
+        isActive: (client as any).is_active ?? true,
+        clientType: (client as any).client_type,
+        parentCompanyId: (client as any).parent_company_id,
+        isTeamMember: (client as any).is_team_member ?? false
+      }));
 
-      const hasMore = offset + limit < totalCount;
-      const nextOffset = hasMore ? offset + limit : totalCount;
+      const hasMore = totalCount > 0 ? offset + limit < totalCount : clients.length >= limit;
+      const nextOffset = hasMore ? offset + limit : (totalCount > 0 ? totalCount : offset + clients.length);
 
       const result: PaginatedClientsResult = {
         clients,
@@ -170,15 +239,13 @@ export class ClientFetcher {
         nextOffset
       };
 
-      if (import.meta.env.DEV) {
-        devLogger.clients.debug('=== Final result ===');
-        devLogger.clients.debug('Result:', result);
-      }
+      console.info('🏁 Fetch complete', { clientCount: clients.length, hasMore });
 
-      CacheManager.setCache(cacheKey, result);
+      // Cache with 15 minute TTL for better performance
+      CacheManager.setCache(cacheKey, result, CACHE_TTL.MEDIUM);
       return result;
     } catch (error) {
-      devLogger.clients.error('Error fetching unified clients:', error);
+      console.error('❌ ClientFetcher error:', error);
       ErrorHandler.logSecurityEvent({
         type: 'access_denied',
         userId,

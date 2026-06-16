@@ -140,8 +140,3 @@ export function cleanupExpiredCache() {
     console.log(`🧹 Cleaned up ${keysToDelete.length} expired cache entries`);
   }
 }
-
-// Auto-cleanup every 5 minutes
-if (typeof window !== 'undefined') {
-  setInterval(cleanupExpiredCache, 5 * 60 * 1000);
-}

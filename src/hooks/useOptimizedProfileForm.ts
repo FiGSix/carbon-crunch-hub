@@ -10,7 +10,6 @@ interface FormData {
   email: string;
   phone: string;
   companyName: string;
-  companyLogoUrl: string;
   avatarUrl: string;
 }
 
@@ -21,7 +20,6 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     email: '',
     phone: '',
     companyName: '',
-    companyLogoUrl: '',
     avatarUrl: ''
   });
   
@@ -49,7 +47,6 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
           email: profile.email || '',
           phone: profile.phone || '',
           companyName: profile.company_name || '',
-          companyLogoUrl: profile.company_logo_url || '',
           avatarUrl: profile.avatar_url || ''
         });
       }
@@ -69,10 +66,6 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCompanyLogoChange = (logoUrl: string | null) => {
-    setFormData(prev => ({ ...prev, companyLogoUrl: logoUrl || '' }));
-  };
-
   const handleAvatarChange = (avatarUrl: string | null) => {
     setFormData(prev => ({ ...prev, avatarUrl: avatarUrl || '' }));
   };
@@ -89,7 +82,6 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
         email: formData.email,
         phone: formData.phone,
         company_name: formData.companyName,
-        company_logo_url: formData.companyLogoUrl,
         avatar_url: formData.avatarUrl
       };
 
@@ -122,7 +114,6 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     isLoading,
     isSubmitting,
     handleInputChange,
-    handleCompanyLogoChange,
     handleAvatarChange,
     handleSubmit
   };

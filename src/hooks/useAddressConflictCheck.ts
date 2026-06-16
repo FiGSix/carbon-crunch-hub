@@ -18,8 +18,11 @@ export function useAddressConflictCheck() {
       feature: 'conflict-detection'
     });
 
-    // Don't check if fields are empty
-    if (!addressData.street || !addressData.city || !addressData.state || !addressData.zipCode) {
+    // Don't check if no meaningful data (need GPS or address components)
+    const hasGps = addressData.gpsLat && addressData.gpsLng;
+    const hasAddress = addressData.street && addressData.city;
+    
+    if (!hasGps && !hasAddress) {
       setConflictResult(null);
       return;
     }
@@ -40,7 +43,7 @@ export function useAddressConflictCheck() {
     } catch (error) {
       conflictLogger.error('Error during conflict check', { error });
       // Set no conflict on error to avoid blocking users
-      setConflictResult({ hasConflict: false });
+      setConflictResult({ hasConflict: false, proximityLevel: null });
     } finally {
       setIsChecking(false);
     }

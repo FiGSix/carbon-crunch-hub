@@ -8,15 +8,21 @@ import { useProposalFilters } from "./proposals/useProposalFilters";
 import { getCachedProposals, isCacheValid, updateProposalsCache, clearProposalsCache } from "./proposals/utils/proposalCache";
 import { UseProposalsResult } from "./proposals/types";
 import { logger } from "@/lib/logger";
+import { AdvancedFilters } from "@/components/proposals/filters/AdvancedProposalFilters";
 
 export function useProposals(): UseProposalsResult {
   const { user, userRole, refreshUser } = useAuth();
   const { toast } = useToast();
   const { filters, handleFilterChange } = useProposalFilters();
   
-  const [proposals, setProposals] = useState<ProposalListItem[]>([]);
+  const [allProposals, setAllProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
+    engagementLevel: 'all',
+    automationStatus: 'all',
+    emailStatus: 'all'
+  });
 
   const proposalsLogger = useMemo(() => logger.withContext({
     component: 'UseProposals',
@@ -29,7 +35,7 @@ export function useProposals(): UseProposalsResult {
     filters,
     toast,
     refreshUser,
-    setProposals,
+    setProposals: setAllProposals,
     setLoading,
     setError
   });
@@ -40,7 +46,7 @@ export function useProposals(): UseProposalsResult {
       const cachedProposals = getCachedProposals();
       if (cachedProposals) {
         proposalsLogger.info("Using cached proposals", { count: cachedProposals.length });
-        setProposals(cachedProposals);
+        setAllProposals(cachedProposals);
         setLoading(false);
         return;
       }
@@ -50,24 +56,69 @@ export function useProposals(): UseProposalsResult {
     await fetchProposalsCore(forceRefresh);
   }, [filters, fetchProposalsCore, proposalsLogger]);
 
+  // Client-side search filtering for instant search performance
+  const proposals = useMemo(() => {
+    if (!filters.search || !filters.search.trim()) {
+      return allProposals;
+    }
+    
+    const search = filters.search.toLowerCase().trim();
+    return allProposals.filter(proposal => {
+      // Search in title
+      if (proposal.title?.toLowerCase().includes(search)) return true;
+      
+      // Search in agent name
+      if (proposal.agent_name?.toLowerCase().includes(search)) return true;
+      
+      // Search in status
+      if (proposal.status?.toLowerCase().includes(search)) return true;
+      
+      // Search in client info from content
+      const content = proposal.content;
+      const clientInfo = content?.clientInfo;
+      
+      if (clientInfo) {
+        const email = clientInfo.email?.toLowerCase() || '';
+        const name = clientInfo.name?.toLowerCase() || '';
+        const companyName = clientInfo.companyName?.toLowerCase() || '';
+        
+        if (email.includes(search) || 
+            name.includes(search) ||
+            companyName.includes(search)) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+  }, [allProposals, filters.search]);
+
   // Update cache when proposals change
   useEffect(() => {
-    if (proposals.length > 0) {
-      updateProposalsCache(proposals, filters);
+    if (allProposals.length > 0) {
+      updateProposalsCache(allProposals, filters);
     }
-  }, [proposals, filters]);
+  }, [allProposals, filters]);
 
-  // Listen for proposal status change events to refresh data - STABLE EVENT LISTENER
+  // Listen for proposal status change events to refresh data - DEBOUNCED
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleProposalStatusChange = () => {
-      proposalsLogger.info("Proposal status change detected - refreshing");
-      clearProposalsCache();
-      fetchProposals(true);
+      proposalsLogger.info("Proposal status change detected - scheduling refresh");
+      
+      // Debounce to prevent multiple rapid refetches
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        clearProposalsCache();
+        fetchProposals(true);
+      }, 500); // Wait 500ms before refetching
     };
 
     window.addEventListener('proposal-status-changed', handleProposalStatusChange);
     
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('proposal-status-changed', handleProposalStatusChange);
     };
   }, [fetchProposals, proposalsLogger]);
@@ -84,6 +135,8 @@ export function useProposals(): UseProposalsResult {
     loading,
     error,
     handleFilterChange,
-    fetchProposals
+    fetchProposals,
+    advancedFilters,
+    setAdvancedFilters
   };
 }

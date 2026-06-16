@@ -22,7 +22,7 @@ export function ClientsTableLoading({ onRefresh }: ClientsTableLoadingProps) {
             <Button 
               variant="outline" 
               size="sm" 
-              disabled={true}
+              onClick={onRefresh}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh

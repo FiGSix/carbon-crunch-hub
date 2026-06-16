@@ -25,15 +25,15 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
     feature: 'proposals' 
   });
 
-  const approveProposal = async (proposalId: string): Promise<ProposalOperationResult> => {
+  const approveProposal = async (proposalId: string, typedName?: string): Promise<ProposalOperationResult> => {
     try {
-      proposalLogger.info({ message: `Starting approval process for proposal: ${proposalId}`, proposalId });
+      proposalLogger.info({ message: `Starting approval process for proposal: ${proposalId}`, proposalId, hasSignature: !!typedName });
       setLoadingState('approve', true);
       
-      // Fetch the proposal to get agent_id for notification
+      // Fetch the proposal to get agent_id and client info for notification
       const { data: proposals, error: fetchError } = await supabase
         .from('proposals')
-        .select('agent_id, title, client_id')
+        .select('agent_id, title, client_id, client_reference_id')
         .eq('id', proposalId);
         
       if (fetchError) {
@@ -51,6 +51,44 @@ export function useApproveProposal(setLoadingState: (operation: 'approve', isLoa
         title: proposal.title, 
         agentId: proposal.agent_id 
       });
+      
+      // If we have a typed name, create the agreement record
+      if (typedName) {
+        try {
+          // Get user info for audit trail
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const { ip } = await ipResponse.json();
+          const userAgent = navigator.userAgent;
+
+          const { error: agreementError } = await supabase
+            .from('proposal_agreements')
+            .insert({
+              proposal_id: proposalId,
+              signed_by: proposal.client_id || proposal.client_reference_id,
+              signature_type: 'typed_name',
+              typed_name: typedName,
+              ip_address: ip,
+              user_agent: userAgent,
+              accepted_terms_version: '1.0',
+              metadata: {
+                signed_via: 'web_ui',
+                browser: navigator.userAgent,
+                timestamp: new Date().toISOString()
+              }
+            });
+
+          if (agreementError) {
+            proposalLogger.error({ message: "Failed to create agreement record", error: agreementError });
+            throw new Error("Failed to create signature record");
+          }
+          
+          proposalLogger.info({ message: "Agreement record created successfully", proposalId });
+        } catch (agreementError) {
+          // Log the error but continue with approval
+          proposalLogger.error({ message: "Error creating agreement record", error: agreementError });
+          throw agreementError;
+        }
+      }
       
       // Update proposal status - ensuring we include the proposal ID in the query
       const { error } = await supabase

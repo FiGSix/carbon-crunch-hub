@@ -1,37 +1,38 @@
-
-import React, { memo } from "react";
+import { useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { RecentProjectsNew } from "@/components/dashboard/preview/RecentProjectsNew";
-import { OptimizedStatsCardsSection } from "@/components/dashboard/sections/OptimizedStatsCardsSection";
-import { ChartsSection } from "@/components/dashboard/sections/ChartsSection";
-import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
-import { useUnifiedDashboardData } from "@/hooks/dashboard/useUnifiedDashboardData";
-import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
-import { useOptimizedAgentPortfolio } from "@/hooks/dashboard/useOptimizedAgentPortfolio";
-import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useAuth } from "@/contexts/auth";
-import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { RefreshCw, AlertCircle, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
+import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
+import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
+import { AgentWarmCards } from "@/components/dashboard/sections/AgentWarmCards";
+import { PortfolioReviewSection } from "@/components/dashboard/sections/PortfolioReviewSection";
+import { CloseoutQueueSection } from "@/components/dashboard/sections/CloseoutQueueSection";
+import { LearningDashboardSection } from "@/components/dashboard/sections/LearningDashboardSection";
+import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
+import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
+import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
+import { useToast } from "@/hooks/use-toast";
 
-const Dashboard = memo(() => {
-  const { userRole } = useAuth();
-  
-  // Single unified data source - replaces multiple scattered hooks
-  const {
-    data: dashboardData,
-    isLoading: loading,
-    error,
-    refetch
-  } = useUnifiedDashboardData();
+export default function Dashboard() {
+  const { user, userRole, profile } = useAuth();
+  const { toast } = useToast();
 
-  // Helper functions with stable references
+  // Fetch dashboard metrics by stage
+  const { 
+    data: metricsByStage, 
+    isLoading, 
+    isError,
+    refetch 
+  } = useDashboardMetricsByStage();
+
   const {
     getWelcomeMessage,
     getUserDisplayName,
-    formatUserRole,
-    handleRefreshProposals
+    formatUserRole
   } = useDashboardHelpers(() => refetch());
 
   const {
@@ -41,15 +42,26 @@ const Dashboard = memo(() => {
     skipVideo,
     closeModal
   } = useAgentIntroVideo();
+  
+  // Phase 4: Add success message handler for post-registration redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authSuccess = params.get('auth');
+    const proposalId = params.get('proposal');
+    
+    if (authSuccess === 'success' && proposalId) {
+      toast({
+        title: "Registration successful!",
+        description: "Your account has been created. You can now view and respond to your proposal.",
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [toast]);
 
-  // Load agent portfolio data only for agents
-  const { 
-    portfolioData: agentPortfolioData, 
-    loading: agentPortfolioLoading 
-  } = useOptimizedAgentPortfolio();
-
-  // Handle loading and error states
-  if (loading) {
+  // Loading state
+  if (isLoading && !metricsByStage) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -59,13 +71,21 @@ const Dashboard = memo(() => {
     );
   }
 
-  if (error || !dashboardData) {
+  // Error state
+  if (isError && !metricsByStage) {
+    const errorMessage = "Failed to load dashboard metrics";
+    
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-muted-foreground mb-4">Failed to load dashboard data</p>
-            <Button onClick={handleRefreshProposals} variant="outline">
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">{errorMessage}</p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => refetch()}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
             </Button>
@@ -74,53 +94,67 @@ const Dashboard = memo(() => {
       </DashboardLayout>
     );
   }
-  
+
   return (
     <DashboardLayout>
       <DashboardHeader 
         title="Dashboard" 
-        description={`${getWelcomeMessage()} Here's an overview of your carbon credits.`}
+        description={`${getWelcomeMessage()} Here's an overview of your carbon credit projects.`}
         userName={getUserDisplayName()}
         userRole={formatUserRole(userRole)}
         actions={
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRefreshProposals}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''} text-crunch-yellow`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''} text-crunch-yellow`} />
             Refresh Data
           </Button>
         }
       />
       
-      <QueryErrorBoundary>
-        <OptimizedStatsCardsSection 
-          userRole={userRole}
-          portfolioSize={dashboardData.portfolioSize}
-          totalProposals={dashboardData.totalProposals}
-          potentialRevenue={dashboardData.potentialRevenue}
-          co2Offset={dashboardData.co2Offset}
-          loading={false}
-        />
-      </QueryErrorBoundary>
-      
-      {shouldRenderCharts(userRole) && (
-        <QueryErrorBoundary>
-          <ChartsSection userRole={userRole} />
-        </QueryErrorBoundary>
+      {/* Show pending approval notice for agents */}
+      {userRole === "agent" && profile?.agent_status === "pending_approval" && (
+        <Alert className="mb-6">
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Account Pending Approval</AlertTitle>
+          <AlertDescription>
+            Your agent account is under review. You can browse the dashboard, but you will not be able to create proposals or access client management until an administrator approves your account. This typically takes 24-48 hours.
+          </AlertDescription>
+        </Alert>
       )}
       
-      <QueryErrorBoundary>
-        <div className="grid grid-cols-1 gap-6">
-          <RecentProjectsNew 
-            proposals={dashboardData.proposals}
-            loading={false}
-            onRefresh={handleRefreshProposals}
-          />
-        </div>
-      </QueryErrorBoundary>
+      {/* Agent Engine — flagship section */}
+      {(userRole === "agent" || userRole === "admin") && (
+        <>
+          {/* Warm cards: full-width, the single most actionable surface */}
+          <AgentWarmCards limit={5} />
+
+          {/* Secondary action lists side-by-side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
+            <PortfolioReviewSection limit={4} />
+            <CloseoutQueueSection limit={5} />
+          </div>
+
+          {/* Learning dashboard: admin-only — aggregate KPIs aren't daily-actionable for agents */}
+          {userRole === "admin" && <LearningDashboardSection />}
+        </>
+      )}
+
+      {/* TOP ROW: Combined grid with Placeholder Cards and Countdown */}
+      <DashboardTopRow 
+        loading={isLoading} 
+        metrics={metricsByStage}
+        userRole={userRole}
+      />
+      
+      {/* BOTTOM ROW: Metric Cards */}
+      <DashboardMetricsByStageCards 
+        metrics={metricsByStage || getEmptyMetrics()} 
+        loading={isLoading}
+      />
 
       {/* Agent Introduction Video Modal */}
       <AgentIntroVideoModal
@@ -132,11 +166,4 @@ const Dashboard = memo(() => {
       />
     </DashboardLayout>
   );
-});
-
-// Memoized helper function to determine if charts should be rendered
-const shouldRenderCharts = (userRole: string | null): boolean => {
-  return userRole !== 'agent';
-};
-
-export default Dashboard;
+}

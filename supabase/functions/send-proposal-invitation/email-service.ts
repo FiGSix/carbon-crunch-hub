@@ -10,37 +10,157 @@ export class EmailService {
   }
 
   generateEmailTemplate(data: EmailTemplateData): string {
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1>Proposal Invitation</h1>
-        <p>Hello ${data.clientName},</p>
-        <p>You have been invited to review a carbon credit proposal for the project: <strong>${data.projectName}</strong>.</p>
-        <p>To view the proposal, please click the link below:</p>
-        <p style="text-align: center;">
-          <a href="${data.invitationLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Proposal</a>
-        </p>
-        <p>This invitation is valid for 48 hours. If you did not expect this invitation, please ignore this email.</p>
-        <p>Best regards,<br>Your Carbon Credit Team</p>
-        
-        <!-- Debug info (hidden) -->
-        <div style="display: none;">
-          <!-- Token: ${data.tokenPreview} -->
-          <!-- Proposal: ${data.proposalId} -->
-        </div>
+    const projectDetailsHtml = (data.systemSize || data.carbonCredits) ? `
+      <div style="background: #F8F9FA; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #F4C430;">
+        <h3 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 16px; font-weight: 600;">Project Summary</h3>
+        ${data.systemSize ? `<p style="margin: 8px 0; color: #4A5568; font-size: 14px;"><strong>System Size:</strong> ${data.systemSize}</p>` : ''}
+        ${data.carbonCredits ? `<p style="margin: 8px 0; color: #4A5568; font-size: 14px;"><strong>Estimated Carbon Credits:</strong> ${data.carbonCredits.toLocaleString()}</p>` : ''}
       </div>
+    ` : '';
+
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Proposal Invitation - Crunch Carbon</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #F3F4F6;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F3F4F6; padding: 20px 0;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <table cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); box-sizing: border-box;">
+                
+                <!-- Header with Golden Gradient -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #1A1A1A; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                      Crunch Carbon
+                    </h1>
+                    <p style="margin: 8px 0 0 0; color: #2D3748; font-size: 14px; font-weight: 500; letter-spacing: 0.5px;">
+                      CARBON CREDIT PROPOSAL
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Main Content -->
+                <tr>
+                  <td style="padding: 40px 30px;">
+            <p style="margin: 0 0 20px 0; color: #1A1A1A; font-size: 16px; line-height: 1.6;">
+              Dear <strong>${data.clientName}</strong>,
+            </p>
+            
+            <p style="margin: 0 0 20px 0; color: #4A5568; font-size: 15px; line-height: 1.7;">
+              You have been invited to review a carbon credit proposal for:
+            </p>
+
+            <div style="background: #F8F9FA; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #F4C430;">
+              <h2 style="margin: 0; color: #1A1A1A; font-size: 20px; font-weight: 600;">
+                ${data.projectName}
+              </h2>
+            </div>
+
+            ${projectDetailsHtml}
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${data.invitationLink}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #F4C430 0%, #D4A017 100%); color: #1A1A1A; text-decoration: none; padding: 22px 50px; border-radius: 10px; font-weight: 700; font-size: 18px; letter-spacing: 0.5px; border: 2px solid #FFFFFF; box-shadow: 0 6px 20px rgba(244, 196, 48, 0.5); transition: transform 0.2s;">
+                View Your Proposal →
+              </a>
+            </div>
+
+            <!-- What Happens Next -->
+            <div style="background: #F8FAFC; border-left: 3px solid #F4C430; border-radius: 6px; padding: 20px; margin: 30px 0;">
+              <h3 style="margin: 0 0 12px 0; color: #1A1A1A; font-size: 16px; font-weight: 600;">What happens next?</h3>
+              <ul style="margin: 0; padding: 0 0 0 20px; color: #4A5568; font-size: 14px; line-height: 1.8;">
+                <li style="margin: 8px 0;">Click the button above to view your complete proposal (no login required)</li>
+                <li style="margin: 8px 0;">Review all the details at your convenience</li>
+                <li style="margin: 8px 0;">When ready to approve or reject, you'll create a quick account or sign in (takes 30 seconds)</li>
+              </ul>
+            </div>
+
+            <!-- Why Am I Receiving This -->
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 20px; margin: 30px 0;">
+              <h3 style="margin: 0 0 12px 0; color: #1A1A1A; font-size: 14px; font-weight: 600;">
+                Why am I receiving this?
+              </h3>
+              <p style="margin: 0; color: #4A5568; font-size: 14px; line-height: 1.6;">
+                ${data.agentFirstName && data.agentLastName 
+                  ? `${data.agentFirstName} ${data.agentLastName}${data.agentCompanyName ? ` from ${data.agentCompanyName}` : ''} has prepared a personalized carbon credit proposal for your project. If you have questions or didn't expect this, please contact ${data.agentFirstName} directly at ${data.agentEmail || 'proposals@crunchcarbon.com'}.`
+                  : `A carbon credit proposal has been prepared for your project. If you have questions or didn't expect this, please contact us at proposals@crunchcarbon.com.`
+                }
+              </p>
+            </div>
+
+            <!-- Important Notice -->
+            <div style="background: #FFF8E1; border: 1px solid #FFE082; border-radius: 8px; padding: 16px; margin: 30px 0;">
+              <p style="margin: 0; color: #F57C00; font-size: 14px; line-height: 1.6;">
+                ⏱️ <strong>Important:</strong> This invitation is valid for 10 days. If you did not expect this invitation, please disregard this email.
+              </p>
+            </div>
+
+                    <p style="margin: 25px 0 0 0; color: #4A5568; font-size: 15px; line-height: 1.7;">
+                      If you have any questions about this proposal, please don't hesitate to reach out to our team.
+                    </p>
+
+                    <p style="margin: 30px 0 8px 0; color: #1A1A1A; font-size: 15px; font-weight: 600;">
+                      Best regards,
+                    </p>
+                    <p style="margin: 0; color: #4A5568; font-size: 15px;">
+                      The Crunch Carbon Team
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #1A1A1A; padding: 25px 30px; text-align: center;">
+                    <p style="margin: 0 0 10px 0; color: #CCCCCC; font-size: 14px;">
+                      Crunch Carbon - Sustainable Energy Solutions
+                    </p>
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      For support, contact us at <a href="mailto:support@crunchcarbon.com" style="color: #F4C430; text-decoration: none;">support@crunchcarbon.com</a>
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Debug info (hidden) -->
+                <tr>
+                  <td style="display: none;">
+                    <!-- Token: ${data.tokenPreview} -->
+                    <!-- Proposal: ${data.proposalId} -->
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
   }
 
   async sendInvitationEmail(
     clientEmail: string,
     projectName: string,
-    emailTemplate: string
+    emailTemplate: string,
+    ccEmail?: string
   ) {
-    return await this.resend.emails.send({
-      from: "Carbon Credit Proposals <proposals@crunchcarbon.app>",
+    const emailPayload: any = {
+      from: "Crunch Carbon <proposals@crunchcarbon.com>",
       to: [clientEmail],
-      subject: `Proposal Invitation for ${projectName}`,
+      subject: `Carbon Credit Proposal - ${projectName}`,
       html: emailTemplate,
-    });
+    };
+
+    // Add CC if agent email is provided
+    if (ccEmail) {
+      emailPayload.cc = [ccEmail];
+    }
+
+    return await this.resend.emails.send(emailPayload);
   }
 }

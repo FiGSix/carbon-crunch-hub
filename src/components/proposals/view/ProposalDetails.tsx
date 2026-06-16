@@ -1,6 +1,4 @@
-
-
-import { FileText } from "lucide-react";
+import { FileText, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientInfoSection } from "./ClientInfoSection";
 import { ProjectInfoSection } from "./ProjectInfoSection";
@@ -9,19 +7,21 @@ import { RevenueDistributionSection } from "@/components/proposals/summary/Reven
 import { ProposalStatusFooter } from "./ProposalStatusFooter";
 import { ProposalActionFooter } from "./ProposalActionFooter";
 import { ProposalArchivedBanner } from "./ProposalArchivedBanner";
+import { EmailActivityTimeline } from "@/components/proposals/email/EmailActivityTimeline";
+import { AutomationToggle } from "@/components/proposals/automation/AutomationToggle";
 import { useAuth } from "@/contexts/auth";
 import { ProposalData, ProjectInformation } from "@/types/proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon/normalization";
+import { resolveClientInfo } from "@/utils/proposals/resolveClientInfo";
 
 interface ProposalDetailsProps {
   proposal: ProposalData;
   token?: string | null;
-  onApprove: () => Promise<void>;
+  onApprove: (typedName: string) => Promise<void>;
   onReject: () => Promise<void>;
-  isReviewLater?: boolean;
   showActions?: boolean;
+  isClient?: boolean;
 }
 
 export function ProposalDetails({ 
@@ -29,13 +29,19 @@ export function ProposalDetails({
   token, 
   onApprove, 
   onReject,
-  isReviewLater = false,
-  showActions = false
+  showActions = false,
+  isClient = false
 }: ProposalDetailsProps) {
   const { userRole } = useAuth();
   
   // Extract project info from the proposal content and properly type it
   const projectInfo = (proposal.content?.projectInfo || {}) as ProjectInformation;
+  
+  // Resolve client info: prioritize live data from clients table over snapshot
+  const resolvedClientInfo = resolveClientInfo(
+    proposal.content?.clientInfo || {},
+    proposal.client
+  );
   
   // Get the client ID for portfolio-based pricing
   const clientId = proposal.client_reference_id || proposal.client_id;
@@ -51,7 +57,8 @@ export function ProposalDetails({
   // Extract agent commission data from proposal
   const proposalData = {
     agent_commission_percentage: proposal.agent_commission_percentage,
-    agent_portfolio_kwp: proposal.agent_portfolio_kwp
+    agent_portfolio_kwp: proposal.agent_portfolio_kwp,
+    client_share_percentage: proposal.client_share_percentage
   };
   
   return (
@@ -85,22 +92,46 @@ export function ProposalDetails({
             </Alert>
           )}
           
-          <ClientInfoSection clientInfo={proposal.content?.clientInfo || {}} />
+          {/* Email Activity Timeline - Only visible to agents */}
+          {userRole === 'agent' && (
+            <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Email Activity & Automation</h3>
+                <AutomationToggle 
+                  proposalId={proposal.id}
+                  automationPaused={proposal.automation_paused || false}
+                  pauseReason={proposal.automation_pause_reason}
+                />
+              </div>
+              <EmailActivityTimeline proposalId={proposal.id} />
+            </div>
+          )}
+          
+          <ClientInfoSection clientInfo={resolvedClientInfo} />
           <ProjectInfoSection projectInfo={projectInfo} />
           
-          {projectInfo.size && (
+          {/* Show carbon credit section for both single-phase and multi-phase projects */}
+          {(projectInfo.size || (projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0)) && (
             <>
               <CarbonCreditSection 
-                systemSize={projectInfo.size} 
+                systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}
                 commissionDate={projectInfo.commissionDate}
                 selectedClientId={clientId}
                 proposalId={proposal.id}
+                phases={projectInfo.phases}
+                isMultiPhase={projectInfo.isMultiPhase}
+                clientShareOverride={proposal.client_share_percentage}
               />
               <RevenueDistributionSection 
-                systemSize={projectInfo.size} 
+                systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}
                 selectedClientId={clientId}
                 proposalId={proposal.id}
                 proposalData={proposalData}
+                isClient={isClient}
+                token={token}
+                commissionDate={projectInfo.commissionDate}
+                phases={projectInfo.phases}
+                isMultiPhase={projectInfo.isMultiPhase}
               />
             </>
           )}
@@ -112,7 +143,7 @@ export function ProposalDetails({
         reviewLaterUntil={proposal.review_later_until}
       />
       
-      {!proposal.archived_at && !isReviewLater && proposal.status !== 'pending' && (
+      {!proposal.archived_at && proposal.status !== 'pending' && (
         <ProposalStatusFooter 
           status={proposal.status} 
           signedAt={proposal.signed_at} 
@@ -125,6 +156,12 @@ export function ProposalDetails({
           onApprove={onApprove}
           onReject={onReject}
           showActions={showActions}
+          clientName={resolvedClientInfo.name || 'Client'}
+          proposalTitle={proposal.title}
+          isClient={isClient}
+          accessedViaToken={!!token}
+          token={token}
+          proposalId={proposal.id}
         />
       )}
     </Card>

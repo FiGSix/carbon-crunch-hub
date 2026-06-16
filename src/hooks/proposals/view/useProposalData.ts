@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ProposalData } from "@/types/proposals";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useInvitationToken } from "@/hooks/useInvitationToken";
@@ -9,6 +9,7 @@ import {
   logProposalFetchStart, 
   logProposalFetchError 
 } from "./utils/proposalDataLogger";
+import { supabase } from "@/lib/supabase/client";
 
 /**
  * Hook to fetch and manage proposal data using direct token validation
@@ -33,75 +34,107 @@ export function useProposalData(id?: string, token?: string | null) {
     navigateOnFatal: false
   });
 
-  const fetchProposal = useCallback(async (proposalId?: string, invitationToken?: string | null) => {
-    // Add comprehensive logging
-    if (import.meta.env.DEV) {
-      console.log("🔍 fetchProposal called with:", { proposalId, invitationToken: invitationToken ? `${invitationToken.substring(0, 8)}...` : null });
-    }
-    
+  // Memoize setters to prevent fetchProposal recreation
+  const stableSetters = useMemo(() => ({
+    setProposal,
+    setClientEmail,
+    setLoading,
+    setError
+  }), [setProposal, setClientEmail, setLoading, setError]);
+
+  const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryCountRef = useRef(0);
+
+  const fetchProposal = useCallback(async (proposalId?: string, invitationToken?: string | null, isRetry = false) => {
     // Validate inputs
     if (!proposalId && !invitationToken) {
       const errorMsg = "No proposal ID or invitation token provided. Please check the URL and try again.";
-      setError(errorMsg);
-      setLoading(false);
+      stableSetters.setError(errorMsg);
+      stableSetters.setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
-      setProposal(null); // Clear any existing proposal data
+      stableSetters.setLoading(true);
+      stableSetters.setError(null);
+      stableSetters.setProposal(null);
       logProposalFetchStart(proposalId, invitationToken);
       
       if (invitationToken) {
-        if (import.meta.env.DEV) {
-          console.log("🎫 Fetching by token...");
-        }
-        // Use direct token-based fetching
         const { proposal: fetchedProposal, clientEmail: fetchedClientEmail } = await fetchProposalByToken(invitationToken);
-        if (import.meta.env.DEV) {
-          console.log("✅ Token fetch successful:", { proposalId: fetchedProposal?.id, clientEmail: fetchedClientEmail });
-        }
-        setProposal(fetchedProposal);
-        setClientEmail(fetchedClientEmail);
+        stableSetters.setProposal(fetchedProposal);
+        stableSetters.setClientEmail(fetchedClientEmail);
+        retryCountRef.current = 0; // Reset on success
       } else if (proposalId) {
-        if (import.meta.env.DEV) {
-          console.log("🆔 Fetching by ID...");
-        }
-        // Regular fetch by ID (for authenticated users)
         const fetchedProposal = await fetchProposalById(proposalId);
-        if (import.meta.env.DEV) {
-          console.log("✅ ID fetch successful:", { proposalId: fetchedProposal?.id });
-        }
-        setProposal(fetchedProposal);
+        stableSetters.setProposal(fetchedProposal);
+        retryCountRef.current = 0; // Reset on success
       } else {
         throw new Error("No proposal ID or invitation token provided. Please check the URL and try again.");
       }
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error("💥 Error in fetchProposal:", err);
-      }
+    } catch (err: any) {
       const errorMessage = logProposalFetchError(err, proposalId, invitationToken);
-      setError(errorMessage);
-      setProposal(null); // Clear any existing proposal data
+      
+      // Check if this is a permission error and we should retry
+      const isPermissionError = err?.code === 'PERMISSION_DENIED' || 
+                                err?.message?.includes('permission') ||
+                                err?.message?.includes("don't have permission");
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      const shouldRetry = isPermissionError && !session && !isRetry && retryCountRef.current < 6;
+      
+      if (shouldRetry) {
+        retryCountRef.current++;
+        console.log(`Auth not ready, retrying in 300ms (attempt ${retryCountRef.current}/6)`);
+        retryTimeoutRef.current = setTimeout(() => {
+          fetchProposal(proposalId, invitationToken, true);
+        }, 300);
+      } else {
+        // Set special error code for UI to detect
+        if (isPermissionError && !session) {
+          stableSetters.setError("REQUIRES_AUTH");
+        } else {
+          stableSetters.setError(errorMessage);
+        }
+        stableSetters.setProposal(null);
+      }
     } finally {
-      setLoading(false);
+      if (!retryTimeoutRef.current) {
+        stableSetters.setLoading(false);
+      }
     }
-  }, [setProposal, setClientEmail, setLoading, setError]);
+  }, [stableSetters]);
+
+  // Cleanup retry timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log("🔄 useProposalData effect triggered:", { id, token: token ? `${token.substring(0, 8)}...` : null });
-    }
     if (id || token) {
       fetchProposal(id, token);
     } else {
-      if (import.meta.env.DEV) {
-        console.log("⚠️ No ID or token provided, skipping fetch");
-      }
       setLoading(false);
     }
-  }, [id, token]); // ✅ Removed fetchProposal from dependencies to prevent infinite loop
+  }, [id, token]);
+
+  // Listen for auth state changes and refetch if we have an id/token
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && (id || token)) {
+        console.log("Auth state changed, refetching proposal");
+        fetchProposal(id, token);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [id, token]);
 
   return {
     proposal,

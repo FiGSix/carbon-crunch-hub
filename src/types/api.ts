@@ -38,7 +38,20 @@ export type Notification = Database['public']['Tables']['notifications']['Row'];
 export type UserRole = 'client' | 'agent' | 'admin';
 
 // Proposal status with strict typing
-export type ProposalStatus = 'draft' | 'pending' | 'review_later' | 'signed' | 'archived' | 'deleted';
+// Removed 'pending' - proposals now use explicit status lifecycle
+export type ProposalStatus = 
+  | 'draft'      // Created, not yet sent
+  | 'sent'       // Email dispatched
+  | 'delivered'  // Email confirmed delivered
+  | 'opened'     // Client opened email
+  | 'viewed'     // Client viewed proposal
+  | 'stale'      // 10 working days no activity
+  | 'approved'   // Client accepted
+  | 'rejected'   // Client declined
+  | 'signed'     // Cession agreement signed
+  | 'bounced'    // Email bounced
+  | 'archived'   // Manually archived
+  | 'deleted';   // Soft deleted
 
 // Agent status with strict typing
 export type AgentStatus = 'pending_approval' | 'active' | 'inactive' | 'suspended';

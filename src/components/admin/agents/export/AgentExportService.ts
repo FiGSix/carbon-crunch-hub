@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { AgentData } from '../AgentsManagementTable';
+import { AgentData } from '../types';
 
 export interface ExportOptions {
   format: 'csv' | 'xlsx';

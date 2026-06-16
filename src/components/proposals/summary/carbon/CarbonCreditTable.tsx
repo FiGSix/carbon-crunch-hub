@@ -22,6 +22,10 @@ interface CarbonCreditTableProps {
   totalMWhGenerated: number;
   totalCarbonCredits: number;
   totalClientSpecificRevenue: number;
+  isPhaseTable?: boolean;
+  preCalculatedYearlyMWh?: Record<string, number>;
+  preCalculatedYearlyCredits?: Record<string, number>;
+  clientShareOverride?: number;
 }
 
 interface TableRowData {
@@ -39,7 +43,11 @@ export function CarbonCreditTable({
   portfolioSize,
   totalMWhGenerated,
   totalCarbonCredits,
-  totalClientSpecificRevenue
+  totalClientSpecificRevenue,
+  isPhaseTable = false,
+  preCalculatedYearlyMWh,
+  preCalculatedYearlyCredits,
+  clientShareOverride
 }: CarbonCreditTableProps) {
   const [tableData, setTableData] = useState<TableRowData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,13 +56,27 @@ export function CarbonCreditTable({
     const loadTableData = async () => {
       try {
         setLoading(true);
+        
+        // Handle empty revenue gracefully
+        if (Object.keys(revenue).length === 0) {
+          setTableData([]);
+          return;
+        }
+        
         const data: TableRowData[] = [];
         
         for (const [year, amount] of Object.entries(revenue)) {
-          const yearlyEnergy = calculateYearlyEnergy(systemSizeKWp, parseInt(year), commissionDate);
-          const yearlyCarbonCredits = calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
-          const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize);
-          const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize);
+          // Use pre-calculated data if available (multi-phase consolidated), otherwise calculate
+          const yearlyEnergy = preCalculatedYearlyMWh?.[year] !== undefined
+            ? preCalculatedYearlyMWh[year] * 1000 // Convert MWh back to kWh for consistency
+            : calculateYearlyEnergy(systemSizeKWp, parseInt(year), commissionDate);
+            
+          const yearlyCarbonCredits = preCalculatedYearlyCredits?.[year] !== undefined
+            ? preCalculatedYearlyCredits[year]
+            : calculateYearlyCarbonCredits(systemSizeKWp, parseInt(year), commissionDate);
+          
+          const clientPrice = await getFormattedClientSpecificCarbonPrice(year, portfolioSize, clientShareOverride);
+          const clientRevenue = await calculateClientSpecificRevenue(year, yearlyCarbonCredits, portfolioSize, clientShareOverride);
           
           data.push({
             year,
@@ -74,10 +96,8 @@ export function CarbonCreditTable({
       }
     };
     
-    if (Object.keys(revenue).length > 0) {
-      loadTableData();
-    }
-  }, [revenue, systemSizeKWp, commissionDate, portfolioSize]);
+    loadTableData();
+  }, [revenue, systemSizeKWp, commissionDate, portfolioSize, preCalculatedYearlyMWh, preCalculatedYearlyCredits, clientShareOverride]);
 
   if (loading) {
     return (
@@ -89,11 +109,22 @@ export function CarbonCreditTable({
     );
   }
 
+  if (!loading && tableData.length === 0) {
+    return (
+      <div className="overflow-x-auto">
+        <div className="p-8 text-center text-muted-foreground">
+          <p>No carbon credit projection data available for this configuration.</p>
+          <p className="text-sm mt-2">Check that commission dates are valid and pricing exists for the selected years (currently through 2030).</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
-      <Table>
+      <Table className={isPhaseTable ? 'text-sm' : ''}>
         <TableHeader>
-          <TableRow className="bg-carbon-gray-50">
+          <TableRow className={isPhaseTable ? 'bg-muted/50' : 'bg-carbon-gray-50'}>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">Year</TableHead>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">MWh Generated per Year</TableHead>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">tCO₂e Offset per Year</TableHead>

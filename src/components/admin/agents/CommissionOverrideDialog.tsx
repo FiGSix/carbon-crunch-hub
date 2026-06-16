@@ -11,7 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AgentData } from './AgentsManagementTable';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
+import { AgentData } from './types';
+import { getDefaultCommissionDescription } from '@/utils/admin/commissionHelpers';
 
 interface CommissionOverrideDialogProps {
   open: boolean;
@@ -76,11 +84,23 @@ export function CommissionOverrideDialog({
                 onChange={() => setUseDefault(true)}
                 className="w-4 h-4"
               />
-              <Label htmlFor="use-default" className="flex-1">
+              <Label htmlFor="use-default" className="flex-1 flex items-center gap-2">
                 Use default commission rate
-                <Badge variant="secondary" className="ml-2">
-                  5.0%
-                </Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs">
+                          Tier-based
+                        </Badge>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">{getDefaultCommissionDescription()}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </Label>
             </div>
             
@@ -119,10 +139,16 @@ export function CommissionOverrideDialog({
             )}
           </div>
 
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Commission overrides apply to all future proposals. 
-              Existing proposals will retain their original commission rates.
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg space-y-2">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>Default Tier Structure:</strong>
+            </p>
+            <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
+              <li>Portfolios under 15 MWp: <strong>4%</strong> commission</li>
+              <li>Portfolios 15 MWp and above: <strong>7%</strong> commission</li>
+            </ul>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+              Overrides apply to all future proposals. Existing proposals retain their original rates.
             </p>
           </div>
         </div>

@@ -43,14 +43,38 @@ export interface ClientInformation {
   phone: string;
   companyName: string;
   existingClient: boolean;
-  address?: string; // Added address field as optional
+  address?: string;
+  registrationNumber?: string;
+}
+
+export interface AdditionalClient {
+  name: string;
+  email: string;
+  phone?: string;
+  companyName?: string;
+  clientId?: string; // If selected from existing clients
+}
+
+export interface ProjectPhase {
+  phaseNumber: number;
+  phaseName?: string;
+  sizeKWp: number;
+  commissionDate: string;
 }
 
 export interface ProjectInformation {
   name: string;
   address: string;
+  addressSource?: 'autocomplete' | 'pin_drop' | 'manual';
+  gpsLat?: number;
+  gpsLng?: number;
+  isMultiPhase: boolean;
+  // Legacy fields for single-phase projects
   size: string;
   commissionDate: string;
+  // Multi-phase data
+  phases?: ProjectPhase[];
+  totalSystemSize?: number;
   additionalNotes: string;
 }
 
@@ -60,6 +84,7 @@ export interface EligibilityCriteria {
   under15MWp: boolean;
   commissionedAfter2022: boolean;
   legalOwnership: boolean;
+  noGovernmentFunding: boolean;
 }
 
 /**
@@ -75,6 +100,7 @@ export interface CalculationMetadata {
 export interface ProposalContent {
   clientInfo: ClientInformation;
   projectInfo: ProjectInformation;
+  additionalClients?: AdditionalClient[];
   portfolioSize?: number; // Store portfolio size for transparency
   revenue?: Record<string, number>; // Legacy field - kept for backward compatibility
   marketRevenue?: Record<string, number>; // Market-rate revenue breakdown
@@ -82,6 +108,9 @@ export interface ProposalContent {
   agentCommissionRevenue?: Record<string, number>; // Agent commission by year
   crunchCommissionRevenue?: Record<string, number>; // Crunch Carbon commission by year
   calculationMetadata?: CalculationMetadata; // Metadata about how calculations were performed
+  financials?: {
+    totalClientRevenue?: number; // Total client revenue across all years
+  };
 }
 
 /**
@@ -112,6 +141,25 @@ export interface ProposalData {
   invitation_expires_at?: string | null;
   invitation_sent_at?: string | null;
   invitation_viewed_at?: string | null;
+  engagement_count?: number | null;
+  last_engagement_at?: string | null;
+  last_email_event_type?: string | null;
+  last_email_sent_at?: string | null;
+  automation_paused?: boolean | null;
+  automation_pause_reason?: string | null;
+  
+  // Resolved user_id from clients table for identity matching
+  client_reference_user_id?: string | null;
+  
+  // Live client data from clients table (joined at fetch time)
+  client?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    company_name?: string | null;
+    registration_number?: string | null;
+  } | null;
 }
 
 /**
@@ -140,6 +188,7 @@ export interface ProposalListItem {
   annual_energy?: number | null;
   carbon_credits?: number | null;
   client_share_percentage?: number | null;
+  client_share_override_enabled?: boolean;
   agent_commission_percentage?: number | null;
   agent_portfolio_kwp?: number | null;
   invitation_sent_at?: string | null;
@@ -147,7 +196,21 @@ export interface ProposalListItem {
   invitation_expires_at?: string | null;
   system_size_kwp?: number | null;
   agent?: string;
-  content?: ProposalContent; // Add content property to fix build errors
+  content?: ProposalContent;
+  isMultiPhase?: boolean;
+  phases?: ProjectPhase[];
+  
+  // Email engagement tracking
+  last_email_event_type?: string | null;
+  last_email_sent_at?: string | null;
+  engagement_count?: number | null;
+  last_engagement_at?: string | null;
+  
+  // Project onboarding status
+  onboarding_complete?: boolean | null;
+  submitted_for_review?: boolean | null;
+  admin_validated?: boolean | null;
+  audit_ready?: boolean | null;
 }
 
 /**
@@ -191,4 +254,68 @@ export interface ProposalFilters {
 export interface ProposalListProps {
   proposals: ProposalListItem[];
   onProposalUpdate?: () => void;
+}
+
+/**
+ * Bulk upload types for Excel-based proposal creation
+ */
+export interface BulkProposalRow {
+  proposal_title: string;
+  client_email: string;
+  client_first_name: string;
+  client_last_name: string;
+  client_phone?: string;
+  client_company_name?: string;
+  project_name: string;
+  project_address: string;
+  system_size: number;
+  system_size_unit: 'kWp' | 'MWp';
+  commission_date: string;
+  in_south_africa: boolean;
+  not_registered: boolean;
+  under_15mwp: boolean;
+  commissioned_after_2022: boolean;
+  legal_ownership: boolean;
+  additional_notes?: string;
+  assigned_agent_email?: string;
+}
+
+export interface BulkUploadResult {
+  success: boolean;
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  errors: Array<{
+    row: number;
+    data: Partial<BulkProposalRow>;
+    error: string;
+  }>;
+  createdProposalIds: string[];
+}
+
+/**
+ * Proposal Agreement with signature metadata
+ */
+export interface ProposalAgreement {
+  id: string;
+  proposal_id: string;
+  signed_by: string;
+  typed_name: string;
+  signature_type: 'typed_name';
+  signed_at: string;
+  ip_address: string;
+  user_agent: string;
+  witness_1_name: string;
+  witness_1_verified_at: string;
+  witness_2_name: string;
+  witness_2_verified_at: string;
+  accepted_terms_version: string;
+  metadata: {
+    signed_via: 'acceptance_link' | 'authenticated_user';
+    token_used?: string;
+    proposal_id_used?: string;
+    timestamp: string;
+  };
+  signed_pdf_url?: string;
+  created_at: string;
 }

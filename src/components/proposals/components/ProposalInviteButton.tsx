@@ -19,13 +19,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Only agents can send invitations
-  if (userRole !== "agent") {
-    return null;
-  }
-  
-  // Don't render anything for draft proposals
-  if (proposal.status === "draft") {
+  // Only agents and admins can send invitations
+  if (userRole !== "agent" && userRole !== "admin") {
     return null;
   }
 
@@ -37,7 +32,7 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
         status: proposal.status
       });
       
-      // For pending proposals that haven't been sent yet
+      // For draft or pending proposals that haven't been sent yet
       const result = await handleSendInvitation(proposal.id);
       
       if (result.success) {
@@ -110,8 +105,8 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     }
   };
   
-  // For pending proposals that haven't been sent yet
-  if (proposal.status === "pending" && !proposal.invitation_sent_at) {
+  // For draft proposals that haven't been sent yet (pending was removed from status lifecycle)
+  if (proposal.status === "draft" && !proposal.invitation_sent_at) {
     return (
       <Button
         variant="outline"
@@ -126,15 +121,15 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
           </>
         ) : (
           <>
-            Invite <Mail className="h-4 w-4 ml-1" />
+            Send Invitation <Mail className="h-4 w-4 ml-1" />
           </>
         )}
       </Button>
     );
   }
   
-  // For pending proposals that have been sent but not viewed
-  if (proposal.invitation_sent_at && !proposal.invitation_viewed_at) {
+  // For sent/delivered/opened proposals that have been sent but not viewed
+  if ((proposal.status === "sent" || proposal.status === "delivered" || proposal.status === "opened") && proposal.invitation_sent_at && !proposal.invitation_viewed_at) {
     return (
       <Button
         variant="outline"
@@ -156,6 +151,52 @@ export function ProposalInviteButton({ proposal, onProposalUpdate }: ProposalInv
     );
   }
   
-  // Don't show invitation buttons for proposals that have been viewed
+  // For proposals that have been viewed, allow resending
+  if ((proposal.status === "sent" || proposal.status === "delivered" || proposal.status === "viewed") && proposal.invitation_viewed_at) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResend}
+        className="text-carbon-blue-600"
+        disabled={isProcessing || sending}
+      >
+        {isProcessing || sending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...
+          </>
+        ) : (
+          <>
+            Send Again <Mail className="h-4 w-4 ml-1" />
+          </>
+        )}
+      </Button>
+    );
+  }
+  
+  // For stale proposals - allow revival with new invitation
+  if (proposal.status === "stale") {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResend}
+        className="text-carbon-blue-600"
+        disabled={isProcessing || sending}
+      >
+        {isProcessing || sending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...
+          </>
+        ) : (
+          <>
+            Revive & Send <Mail className="h-4 w-4 ml-1" />
+          </>
+        )}
+      </Button>
+    );
+  }
+  
+  // Don't show for other statuses (signed, rejected, etc.)
   return null;
 }

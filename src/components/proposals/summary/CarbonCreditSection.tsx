@@ -1,23 +1,29 @@
 
-
 import { Skeleton } from "@/components/ui/skeleton";
-import { CarbonCreditTable } from "./carbon/CarbonCreditTable";
+import { CarbonCreditTableWrapper } from "./carbon/CarbonCreditTableWrapper";
 import { calculateAnnualEnergy, calculateCarbonCredits, normalizeToKWp } from "@/lib/calculations/carbon";
 import { 
   calculateTotalMWhGenerated, 
-  calculateTotalCarbonCredits
+  calculateTotalCarbonCredits,
+  aggregateYearlyMWhFromPhases,
+  aggregateYearlyCarbonCreditsFromPhases
 } from "./carbon/carbonCalculations";
 import { usePortfolioData } from "./carbon/hooks/usePortfolioData";
 import { useRevenueCalculations } from "./carbon/hooks/useRevenueCalculations";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef } from "react";
 
 interface CarbonCreditSectionProps {
   systemSize: string;
   commissionDate?: string;
   selectedClientId?: string | null;
   proposalId?: string | null;
+  phases?: any[];
+  isMultiPhase?: boolean;
+  clientShareOverride?: number | null;
 }
 
-export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId }: CarbonCreditSectionProps) {
+export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId, phases, isMultiPhase, clientShareOverride }: CarbonCreditSectionProps) {
   const { portfolioData, loading: portfolioLoading } = usePortfolioData({
     selectedClientId,
     systemSize,
@@ -25,6 +31,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   });
 
   const { 
+    calculationResult,
     clientSpecificRevenue, 
     loading: revenueLoading, 
     systemSizeKWp 
@@ -32,18 +39,85 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     systemSize,
     commissionDate,
     portfolioData,
-    proposalId
+    proposalId,
+    phases,
+    isMultiPhase,
+    clientShareOverride
   });
 
   const loading = portfolioLoading || revenueLoading;
+
+  // Extract multi-phase data from calculation result (for display in table)
+  const calculatedPhases = calculationResult?.phases || [];
+  const calculatedIsMultiPhase = calculationResult?.isMultiPhase || false;
 
   // Use client-specific revenue for display (this is what the client actually gets)
   const displayRevenue = clientSpecificRevenue;
 
   // Calculate totals using helper functions
-  const totalMWhGenerated = calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
-  const totalCarbonCredits = calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
+  // For multi-phase, aggregate from phases to respect individual commission dates
+  const totalMWhGenerated = calculatedIsMultiPhase && calculatedPhases.length > 0
+    ? Object.values(aggregateYearlyMWhFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
+    : calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
+  
+  const totalCarbonCredits = calculatedIsMultiPhase && calculatedPhases.length > 0
+    ? Object.values(aggregateYearlyCarbonCreditsFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
+    : calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
+  
   const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum: number, val: number) => sum + val, 0);
+
+  // Persist totalClientRevenue to proposal when calculated
+  const lastSavedRevenue = useRef<number | null>(null);
+  
+  useEffect(() => {
+    const persistRevenue = async () => {
+      if (!proposalId || !totalClientSpecificRevenue || loading) return;
+      
+      const roundedRevenue = Math.round(totalClientSpecificRevenue);
+      
+      // Only update if value has changed
+      if (lastSavedRevenue.current === roundedRevenue) return;
+      
+      try {
+        const { data: currentProposal } = await supabase
+          .from('proposals')
+          .select('content')
+          .eq('id', proposalId)
+          .single();
+        
+        if (!currentProposal) return;
+        
+        const content = currentProposal.content as any;
+        const currentRevenue = content?.financials?.totalClientRevenue;
+        
+        // Skip if already set to the same value
+        if (currentRevenue === roundedRevenue) {
+          lastSavedRevenue.current = roundedRevenue;
+          return;
+        }
+        
+        // Update the proposal with the calculated revenue
+        await supabase
+          .from('proposals')
+          .update({
+            content: {
+              ...(typeof content === 'object' ? content : {}),
+              financials: {
+                ...(content?.financials || {}),
+                totalClientRevenue: roundedRevenue
+              }
+            }
+          })
+          .eq('id', proposalId);
+        
+        lastSavedRevenue.current = roundedRevenue;
+      } catch (error) {
+        console.error('Failed to persist total client revenue:', error);
+      }
+    };
+    
+    persistRevenue();
+  }, [proposalId, totalClientSpecificRevenue, loading]);
 
   if (loading) {
     return (
@@ -79,14 +153,17 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
       
       <h4 className="font-medium text-carbon-gray-700 mb-2">Client Revenue by Year</h4>
       
-      <CarbonCreditTable 
-        revenue={displayRevenue}
+      <CarbonCreditTableWrapper
+        isMultiPhase={calculatedIsMultiPhase}
+        phases={calculatedPhases}
+        consolidatedRevenue={displayRevenue}
         systemSizeKWp={systemSizeKWp}
         commissionDate={commissionDate}
         portfolioSize={portfolioData?.totalKWp || systemSizeKWp}
         totalMWhGenerated={totalMWhGenerated}
         totalCarbonCredits={totalCarbonCredits}
         totalClientSpecificRevenue={totalClientSpecificRevenue}
+        clientShareOverride={clientShareOverride ?? undefined}
       />
       
       {commissionDate && (

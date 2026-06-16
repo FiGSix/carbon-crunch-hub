@@ -13,14 +13,14 @@ import { useAuth } from "@/contexts/auth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { PageLoading } from '@/components/ui/loading-states';
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { componentLogger } from '@/lib/logger';
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  requiredRole?: 'client' | 'agent' | 'admin';
+  requiredRole?: 'client' | 'agent' | 'admin' | 'super_partner';
 }
 
 export function DashboardLayout({ 
@@ -39,6 +39,7 @@ export function DashboardLayout({
     if (userRole === 'client') title = isMobile ? 'CLIENT' : 'CLIENT DASHBOARD';
     else if (userRole === 'agent') title = isMobile ? 'AGENT' : 'AGENT DASHBOARD';
     else if (userRole === 'admin') title = isMobile ? 'ADMIN' : 'ADMIN DASHBOARD';
+    else if (userRole === 'super_partner') title = isMobile ? 'PARTNER' : 'SUPER PARTNER';
 
     const initials = profile?.first_name?.[0]?.toUpperCase() || userRole?.[0]?.toUpperCase() || '?';
 
@@ -116,6 +117,12 @@ export function DashboardLayout({
                 onClick={() => navigate('/profile')}
               >
                 <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  {profile?.avatar_url && (
+                    <AvatarImage 
+                      src={profile.avatar_url} 
+                      alt={profile?.first_name || 'Profile'} 
+                    />
+                  )}
                   <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs md:text-sm">
                     {userInitials}
                   </AvatarFallback>
@@ -126,7 +133,7 @@ export function DashboardLayout({
           
           <motion.main 
             className={cn(
-              "flex-1 bg-gray-50 overflow-x-hidden",
+              "flex-1 bg-gray-50 overflow-visible",
               isMobile ? "p-3" : "p-4 md:p-6 lg:p-8"
             )}
             initial={{ opacity: 0 }}

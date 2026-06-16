@@ -1,9 +1,10 @@
 
-
+import { useEffect } from 'react';
 import { ProposalSkeleton } from "@/components/proposals/loading/ProposalSkeleton";
 import { ProposalError } from "@/components/proposals/view/ProposalError";
 import { ProposalContent } from "@/components/proposals/view/ProposalContent";
 import { ClientAuthWrapper } from "@/components/proposals/view/ClientAuthWrapper";
+import { ProposalAuthRequired } from "@/components/proposals/view/ProposalAuthRequired";
 import { ProposalData } from "@/types/proposals";
 
 interface ViewProposalContentProps {
@@ -21,20 +22,18 @@ interface ViewProposalContentProps {
   showSignInPrompt: boolean;
   
   // Action props
-  canDelete: boolean;
-  isReviewLater: boolean;
   canTakeAction: boolean;
   isClient: boolean;
-  handleApprove: () => Promise<void>;
+  handleApprove: (typedName: string) => Promise<void>;
   handleReject: () => Promise<void>;
   handleDelete: () => Promise<void>;
-  handleReviewLater: () => Promise<void>;
   handleSignInClick: () => void;
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: (open: boolean) => void;
   
   // Utility props
   handleRetry: () => void;
+  onProposalUpdate?: () => void;
 }
 
 export function ViewProposalContent({
@@ -47,22 +46,30 @@ export function ViewProposalContent({
   showAuthForm,
   handleAuthComplete,
   showSignInPrompt,
-  canDelete,
-  isReviewLater,
   canTakeAction,
   isClient,
   handleApprove,
   handleReject,
   handleDelete,
-  handleReviewLater,
   handleSignInClick,
   deleteDialogOpen,
   setDeleteDialogOpen,
-  handleRetry
+  handleRetry,
+  onProposalUpdate
 }: ViewProposalContentProps) {
   
+  // Log when user authenticates (auth listener in useProposalData handles refetch)
+  useEffect(() => {
+    if (user && !showAuthForm) {
+      if (import.meta.env.DEV) {
+        console.log("User authenticated, auth listener will handle refetch", {
+          userId: user.id
+        });
+      }
+    }
+  }, [user?.id, showAuthForm]);
+  
   if (loading) {
-    console.log("=== Showing Loading State ===");
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <ProposalSkeleton />
@@ -70,8 +77,11 @@ export function ViewProposalContent({
     );
   }
   
+  if (error === "REQUIRES_AUTH") {
+    return <ProposalAuthRequired onRetry={handleRetry} />;
+  }
+  
   if (error) {
-    console.log("=== Showing Error State ===", error);
     return <ProposalError errorMessage={error} onRetry={handleRetry} />;
   }
   
@@ -79,12 +89,11 @@ export function ViewProposalContent({
   if (showAuthForm && clientEmail && proposal) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          Sign in to take action on this proposal
+        <h1 className="text-2xl font-bold text-center mb-4">
+          Almost there! Complete your account to respond
         </h1>
-        <p className="text-center mb-8">
-          To respond to the proposal "{proposal.title}", 
-          please sign in or create an account.
+        <p className="text-center text-muted-foreground mb-8">
+          To approve or reject "{proposal.title}", create your account or sign in below.
         </p>
         <ClientAuthWrapper
           proposalId={proposal.id} 
@@ -97,25 +106,22 @@ export function ViewProposalContent({
   }
   
   if (!proposal) {
-    console.log("=== No Proposal Found ===");
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <div className="text-center">
-          <p className="text-carbon-gray-500">Proposal not found</p>
+          <p className="text-muted-foreground">Proposal not found</p>
         </div>
       </div>
     );
   }
   
-  console.log("=== Showing Proposal Content ===", { id: proposal.id, title: proposal.title });
-  
   // Action wrapper functions that handle authentication state
-  const handleApproveWrapper = async () => {
+  const handleApproveWrapper = async (typedName: string) => {
     if (!user) {
       handleSignInClick();
       return;
     }
-    await handleApprove();
+    await handleApprove(typedName);
   };
   
   const handleRejectWrapper = async () => {
@@ -139,18 +145,16 @@ export function ViewProposalContent({
       proposal={proposal}
       token={token}
       clientEmail={clientEmail}
-      canDelete={canDelete && !!user}
-      isReviewLater={isReviewLater}
       canTakeAction={canTakeAction && !!user}
       isClient={isClient}
       handleApprove={handleApproveWrapper}
       handleReject={handleRejectWrapper}
       handleDelete={handleDeleteWrapper}
-      handleReviewLater={handleReviewLater}
       handleSignInClick={handleSignInClick}
       deleteDialogOpen={deleteDialogOpen}
       setDeleteDialogOpen={setDeleteDialogOpen}
       showSignInPrompt={showSignInPrompt}
+      onProposalUpdate={onProposalUpdate}
     />
   );
 }

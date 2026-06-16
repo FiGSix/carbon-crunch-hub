@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
 import { ProposalStepper } from "@/components/proposals/ProposalStepper";
@@ -7,12 +7,26 @@ import { EligibilityStep } from "@/components/proposals/EligibilityStep";
 import { ClientInfoStep } from "@/components/proposals/ClientInfoStep";
 import { ProjectInfoStep } from "@/components/proposals/ProjectInfoStep";
 import { SummaryStep } from "@/components/proposals/SummaryStep";
-import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { FormStep, EligibilityCriteria, ClientInformation, ProjectInformation, AdditionalClient } from "@/types/proposals";
 import { useToast } from "@/hooks/use-toast";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
+import { useAuth } from "@/contexts/auth";
+import { AccessNotEnabled } from "@/components/common/AccessNotEnabled";
 
 const CreateProposal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
+
+  // Super Partners must have can_create_proposals explicitly enabled by admin
+  if (profile?.role === 'super_partner' && !profile?.can_create_proposals) {
+    return (
+      <DashboardLayout>
+        <AccessNotEnabled />
+      </DashboardLayout>
+    );
+  }
+
   const [step, setStep] = useState<FormStep>("eligibility");
   
   // Form state
@@ -22,6 +36,7 @@ const CreateProposal = () => {
     under15MWp: false,
     commissionedAfter2022: false,
     legalOwnership: false,
+    noGovernmentFunding: false,
   });
   
   const [clientInfo, setClientInfo] = useState<ClientInformation>({
@@ -33,16 +48,29 @@ const CreateProposal = () => {
   });
   
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [additionalClients, setAdditionalClients] = useState<AdditionalClient[]>([]);
   
   const [projectInfo, setProjectInfo] = useState<ProjectInformation>({
     name: "",
     address: "",
+    isMultiPhase: false,
     size: "",
     commissionDate: "",
+    phases: [],
     additionalNotes: "",
+    gpsLat: undefined,
+    gpsLng: undefined,
+    addressSource: undefined,
   });
   
   const isEligible = Object.values(eligibility).every(value => value === true);
+  
+  // Lazy load carbon prices on mount
+  useEffect(() => {
+    dynamicCarbonPricingService.getCarbonPrices().catch(() => {
+      // Silently fail - fallback constants will be used
+    });
+  }, []);
   
   const nextStep = () => {
     switch (step) {
@@ -135,6 +163,8 @@ const CreateProposal = () => {
           setClientInfo={setClientInfoDirectly}
           selectedClientId={selectedClientId}
           setSelectedClientId={setSelectedClientId}
+          additionalClients={additionalClients}
+          setAdditionalClients={setAdditionalClients}
         />
       )}
       
@@ -144,6 +174,7 @@ const CreateProposal = () => {
           updateProjectInfo={updateProjectInfo}
           nextStep={nextStep}
           prevStep={prevStep}
+          setProjectInfo={setProjectInfo}
         />
       )}
       
@@ -156,6 +187,7 @@ const CreateProposal = () => {
           prevStep={prevStep}
           selectedClientId={selectedClientId}
           proposalId={null}
+          additionalClients={additionalClients}
         />
       )}
     </DashboardLayout>

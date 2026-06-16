@@ -1,10 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { EligibilityCriteria, ClientInformation, ProjectInformation } from "@/types/proposals";
+import { EligibilityCriteria, ClientInformation, ProjectInformation, ProjectPhase, AdditionalClient } from "@/types/proposals";
 import { logger } from "@/lib/logger";
 import { normalizeToKWp } from "@/lib/calculations/carbon/normalization";
 import { calculateAnnualEnergy, calculateCarbonCredits } from "@/lib/calculations/carbon";
 import type { Database } from "@/integrations/supabase/types";
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
+import { UnifiedCarbonService } from '@/services/calculations/carbon';
+import type { SystemSpecs } from '@/services/calculations/carbon/types';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
@@ -29,40 +31,67 @@ function calculateAgentCommissionPercentage(portfolioKWp: number, commissionOver
   return portfolioKWp < 15000 ? 4 : 7;
 }
 
-// Simple client management
-async function findOrCreateClient(clientInfo: ClientInformation, agentId: string): Promise<string> {
+/**
+ * Find or create client using secure RPC function
+ * This bypasses RLS to allow multi-agent collaboration
+ */
+async function findOrCreateClient(
+  clientInfo: ClientInformation, 
+  agentId: string
+): Promise<string> {
   const normalizedEmail = clientInfo.email.toLowerCase().trim();
+  const [firstName, ...lastNameParts] = clientInfo.name.split(' ');
+  const lastName = lastNameParts.join(' ') || null;
   
-  // Try to find existing client
-  const { data: existingClient } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('email', normalizedEmail)
-    .maybeSingle();
+  const proposalLogger = logger.withContext({
+    component: 'UnifiedProposalService',
+    method: 'findOrCreateClient'
+  });
   
-  if (existingClient) {
-    return existingClient.id;
-  }
-  
-  // Create new client
-  const { data: newClient, error } = await supabase
-    .from('clients')
-    .insert({
-      first_name: clientInfo.name.split(' ')[0] || clientInfo.name,
-      last_name: clientInfo.name.split(' ').slice(1).join(' ') || null,
+  try {
+    proposalLogger.info("Resolving client via RPC", { 
       email: normalizedEmail,
-      phone: clientInfo.phone || null,
-      company_name: clientInfo.companyName || null,
-      created_by: agentId
-    })
-    .select('id')
-    .single();
-  
-  if (error) {
-    throw new Error(`Failed to create client: ${error.message}`);
+      agentId 
+    });
+    
+    // Call secure RPC function that bypasses RLS for email lookup
+    const { data: clientId, error } = await supabase
+      .rpc('find_or_create_client_by_email', {
+        p_email: normalizedEmail,
+        p_first_name: firstName || clientInfo.name,
+        p_last_name: lastName,
+        p_phone: clientInfo.phone || null,
+        p_company_name: clientInfo.companyName || null,
+        p_created_by: agentId
+      });
+    
+    if (error) {
+      proposalLogger.error("RPC call failed", { error });
+      throw new Error(`Failed to process client: ${error.message}`);
+    }
+    
+    if (!clientId) {
+      proposalLogger.error("RPC returned no client ID");
+      throw new Error('RPC function returned no client ID');
+    }
+    
+    proposalLogger.info("Client resolved successfully", { 
+      clientId,
+      email: normalizedEmail 
+    });
+    
+    return clientId;
+    
+  } catch (error: any) {
+    proposalLogger.error("Error in findOrCreateClient", { error });
+    
+    // User-friendly error messages
+    if (error.message?.includes('Email cannot be empty')) {
+      throw new Error('Client email is required');
+    }
+    
+    throw new Error(error.message || 'Failed to create or find client');
   }
-  
-  return newClient.id;
 }
 
 // Get portfolio sizes
@@ -80,7 +109,8 @@ export async function createProposal(
   eligibilityCriteria: EligibilityCriteria,
   projectInfo: ProjectInformation,
   clientInfo: ClientInformation,
-  selectedClientId?: string
+  selectedClientId?: string,
+  additionalClients?: AdditionalClient[]
 ): Promise<{ success: boolean; proposalId?: string; error?: string }> {
   const proposalLogger = logger.withContext({
     component: 'UnifiedProposalService',
@@ -88,6 +118,22 @@ export async function createProposal(
   });
 
   try {
+    // Step 1: Get agent profile to check approval status and commission override
+    const { data: agentProfile } = await supabase
+      .from('profiles')
+      .select('agent_status, role, commission_override')
+      .eq('id', agentId)
+      .single();
+    
+    // Check if agent is approved before proceeding
+    if (agentProfile?.role === 'agent' && agentProfile?.agent_status === 'pending_approval') {
+      proposalLogger.warn("Attempted proposal creation by pending agent", { agentId });
+      return {
+        success: false,
+        error: "Your agent account must be approved before you can create proposals."
+      };
+    }
+
     proposalLogger.info("Creating proposal", { 
       proposalTitle, 
       agentId, 
@@ -96,44 +142,138 @@ export async function createProposal(
       clientEmail: clientInfo.email
     });
 
-    // Step 1: Handle client
+    // Step 2: Handle client
     const clientId = selectedClientId || await findOrCreateClient(clientInfo, agentId);
     
-    // Step 2: Calculate system values
-    const systemSizeKWp = normalizeToKWp(projectInfo.size) || 0;
+    // Step 2.5: Check if client has existing cession agreement (master agreement check).
+    // Defence-in-depth: only treat as returning if the referenced anchor proposal still
+    // exists and is not soft-deleted. Prevents auto-signing when the original agreement
+    // proposal has been deleted but the client row was not cleaned up.
+    const { data: clientRecord } = await supabase
+      .from('clients')
+      .select('cession_signed_at, first_agreement_id')
+      .eq('id', clientId)
+      .single();
+
+    let hasExistingAgreement = false;
+    if (clientRecord?.cession_signed_at && clientRecord?.first_agreement_id) {
+      const { data: anchorProposal } = await supabase
+        .from('proposals')
+        .select('id')
+        .eq('id', clientRecord.first_agreement_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+      hasExistingAgreement = !!anchorProposal;
+
+      if (!hasExistingAgreement) {
+        proposalLogger.warn("Client cession_signed_at present but anchor proposal missing/deleted; treating as new client", {
+          clientId,
+          firstAgreementId: clientRecord.first_agreement_id
+        });
+      }
+    }
+
+    if (hasExistingAgreement) {
+      proposalLogger.info("Auto-approving proposal for returning client", {
+        clientId,
+        cessionSignedAt: clientRecord!.cession_signed_at
+      });
+    }
+    
+    // Step 3: Calculate system values
+    const systemSizeKWp = projectInfo.isMultiPhase && projectInfo.phases
+      ? projectInfo.phases.reduce((sum, p) => sum + p.sizeKWp, 0)
+      : normalizeToKWp(projectInfo.size) || 0;
+    
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
     const carbonCredits = calculateCarbonCredits(systemSizeKWp);
     
-    // Step 3: Get agent profile to check for commission override
-    const { data: agentProfile } = await supabase
-      .from('profiles')
-      .select('commission_override')
-      .eq('id', agentId)
-      .single();
-    
-    // Step 4: Get portfolio sizes
-    const [clientPortfolioKWp, agentPortfolioKWp] = await Promise.all([
-      getPortfolioSize(supabase.from('proposals').select('system_size_kwp').eq('client_id', clientId).not('system_size_kwp', 'is', null)),
-      getPortfolioSize(supabase.from('proposals').select('system_size_kwp').eq('agent_id', agentId).not('system_size_kwp', 'is', null))
+    // Step 4a: Resolve agent's company (auto-creates solo company if needed)
+    const { data: companyIdResolved, error: companyErr } = await supabase
+      .rpc('ensure_agent_has_company', { p_agent_id: agentId });
+    if (companyErr || !companyIdResolved) {
+      proposalLogger.error('Failed to resolve agent company', { error: companyErr });
+      throw new Error(companyErr?.message || 'Failed to resolve agent company');
+    }
+    const companyId = companyIdResolved as string;
+
+    // Step 4b: Portfolio sizes — client portfolio (per client) + company portfolio (per company)
+    const [clientPortfolioKWp, companyPortfolioKWp] = await Promise.all([
+      getPortfolioSize(
+        supabase
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('client_reference_id', clientId)
+          .is('deleted_at', null)
+          .not('system_size_kwp', 'is', null)
+      ),
+      getPortfolioSize(
+        supabase
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('company_id', companyId)
+          .is('deleted_at', null)
+          .not('system_size_kwp', 'is', null)
+      )
     ]);
-    
+
     const totalClientPortfolio = clientPortfolioKWp + systemSizeKWp;
-    const totalAgentPortfolio = agentPortfolioKWp + systemSizeKWp;
-    
+    const totalCompanyPortfolio = companyPortfolioKWp + systemSizeKWp;
+
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
-    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio, agentProfile?.commission_override);
-    
-    // Step 4: Insert proposal
-    const proposalData: ProposalInsert = {
+    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalCompanyPortfolio, agentProfile?.commission_override);
+
+    proposalLogger.info("Portfolio tier calculations (company-based)", {
+      clientId,
+      companyId,
+      systemSizeKWp,
+      clientPortfolioKWp,
+      companyPortfolioKWp,
+      totalClientPortfolio,
+      totalCompanyPortfolio,
+      clientSharePercentage,
+      agentCommissionPercentage,
+      commissionOverride: agentProfile?.commission_override
+    });
+
+    // Step 5: Calculate total client revenue using UnifiedCarbonService
+    const calculationSpecs: SystemSpecs = projectInfo.isMultiPhase && projectInfo.phases
+      ? {
+          sizeKwp: systemSizeKWp,
+          phases: projectInfo.phases,
+          commissionDate: projectInfo.phases[0]?.commissionDate,
+          clientShareOverride: clientSharePercentage
+        }
+      : {
+          sizeKwp: systemSizeKWp,
+          commissionDate: projectInfo.commissionDate,
+          clientShareOverride: clientSharePercentage
+        };
+
+    const { revenueByYear } = await UnifiedCarbonService.calculateComplete(
+      calculationSpecs,
+      totalClientPortfolio
+    );
+
+    const totalClientRevenue = Object.values(revenueByYear).reduce((sum: number, val: number) => sum + val, 0);
+
+    // Step 6: Insert proposal (company_id anchors the proposal permanently)
+    const proposalData = {
       title: proposalTitle,
       agent_id: agentId,
+      company_id: companyId,
       client_reference_id: clientId,
-      status: 'pending',
+      status: hasExistingAgreement ? 'approved' : 'draft',
+      signed_at: hasExistingAgreement ? new Date().toISOString() : null,
       content: {
         title: proposalTitle,
         eligibilityCriteria,
         projectInfo,
-        clientInfo
+        clientInfo,
+        additionalClients: additionalClients && additionalClients.length > 0 ? additionalClients : undefined,
+        financials: {
+          totalClientRevenue: Math.round(totalClientRevenue)
+        }
       } as any,
       eligibility_criteria: eligibilityCriteria as any,
       project_info: projectInfo as any,
@@ -142,8 +282,8 @@ export async function createProposal(
       carbon_credits: carbonCredits,
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
-      agent_portfolio_kwp: totalAgentPortfolio
-    };
+      agent_portfolio_kwp: totalCompanyPortfolio
+    } as unknown as ProposalInsert;
 
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')
@@ -164,6 +304,36 @@ export async function createProposal(
       agentCommissionPercentage
     });
 
+    // Step 7: Insert additional clients into proposal_clients junction table
+    if (additionalClients && additionalClients.length > 0) {
+      const additionalClientRows = [];
+      
+      for (const ac of additionalClients) {
+        const acClientId = ac.clientId || await findOrCreateClient(
+          { name: ac.name, email: ac.email, phone: ac.phone || "", companyName: ac.companyName || "", existingClient: !!ac.clientId },
+          agentId
+        );
+        additionalClientRows.push({
+          proposal_id: insertedProposal.id,
+          client_id: acClientId,
+          added_by: agentId,
+        });
+      }
+
+      if (additionalClientRows.length > 0) {
+        const { error: junctionError } = await supabase
+          .from('proposal_clients')
+          .insert(additionalClientRows);
+        
+        if (junctionError) {
+          proposalLogger.warn("Failed to insert additional clients into proposal_clients", { error: junctionError });
+          // Non-fatal: proposal was created, additional client linking failed
+        } else {
+          proposalLogger.info("Additional clients linked", { count: additionalClientRows.length });
+        }
+      }
+    }
+
     return {
       success: true,
       proposalId: insertedProposal.id
@@ -179,7 +349,7 @@ export async function createProposal(
 }
 
 /**
- * Simple client search
+ * Simple client search - uses secure RPC function
  */
 export async function searchClients(searchTerm: string): Promise<Array<{
   id: string;
@@ -188,24 +358,27 @@ export async function searchClients(searchTerm: string): Promise<Array<{
   company?: string;
   isRegistered: boolean;
 }>> {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('id, first_name, last_name, email, company_name, user_id')
-    .or(`email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%`)
-    .limit(10);
+  try {
+    const { data, error } = await supabase.rpc('search_clients', {
+      search_term: searchTerm
+    });
 
-  if (error) {
-    devLogger.clients.error("Client search error:", error);
+    if (error) {
+      devLogger.clients.error("Client search error:", error);
+      return [];
+    }
+
+    return (data || []).map(client => ({
+      id: client.id,
+      name: client.name,
+      email: client.email,
+      company: client.company,
+      isRegistered: client.is_registered
+    }));
+  } catch (error) {
+    devLogger.clients.error("Client search exception:", error);
     return [];
   }
-
-  return data?.map(client => ({
-    id: client.id,
-    name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
-    email: client.email,
-    company: client.company_name || undefined,
-    isRegistered: client.user_id !== null
-  })) || [];
 }
 
 export type { ProposalInsert };

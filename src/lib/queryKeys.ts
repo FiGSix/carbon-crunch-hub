@@ -26,6 +26,15 @@ export const queryKeys = {
       [...queryKeys.dashboard.all, 'unified-data', userId, userRole] as const,
     agentPortfolio: (userId: string) => 
       [...queryKeys.dashboard.all, 'agent-portfolio', userId] as const,
+    // Phase 2: New metrics by stage query key
+    metricsByStage: (userId: string, userRole: string) => 
+      [...queryKeys.dashboard.all, 'metrics-by-stage', userId, userRole] as const,
+    vintageRevenue: (userId: string) =>
+      [...queryKeys.dashboard.all, 'vintage-revenue', userId] as const,
+    agentVintageRevenue: (userId: string) =>
+      [...queryKeys.dashboard.all, 'agent-vintage-revenue', userId] as const,
+    adminVintageRevenue: () =>
+      [...queryKeys.dashboard.all, 'admin-vintage-revenue'] as const,
   },
 
   // Proposals related queries
@@ -55,12 +64,18 @@ export const queryKeys = {
   // Agent management related queries
   agents: {
     all: ['agents'] as const,
+    leads: (statusFilter?: string, searchTerm?: string) =>
+      ['agents', 'leads', statusFilter, searchTerm] as const,
     management: {
       all: ['agents', 'management'] as const,
       list: (filters: Record<string, any>, pagination: { page: number; size: number }) =>
         ['agents', 'management', 'list', filters, pagination] as const,
       stats: () => ['agents', 'management', 'stats'] as const,
       count: () => ['agents', 'management', 'count'] as const,
+      tabCounts: () => ['agents', 'management', 'tab-counts'] as const,
+      invited: () => ['agents', 'management', 'invited'] as const,
+      pending: () => ['agents', 'management', 'pending'] as const,
+      suspended: () => ['agents', 'management', 'suspended'] as const,
     },
     commissions: {
       all: ['agents', 'commissions'] as const,
@@ -99,6 +114,7 @@ export const queryKeyUtils = {
         queryKeys.dashboard.stats(userId, userRole),
         queryKeys.dashboard.unifiedData(userId, userRole),
         queryKeys.dashboard.agentPortfolio(userId),
+        queryKeys.dashboard.metricsByStage(userId, userRole), // Phase 2: Added new key
       ];
     }
     return [queryKeys.dashboard.all];

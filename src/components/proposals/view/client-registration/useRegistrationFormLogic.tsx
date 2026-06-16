@@ -10,7 +10,8 @@ export function useRegistrationFormLogic(
   proposalId: string,
   clientEmail: string,
   onComplete: () => void,
-  onError?: (errorMessage: string) => void
+  onError?: (errorMessage: string) => void,
+  onRegistrationSuccess?: () => void
 ) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -82,7 +83,7 @@ export function useRegistrationFormLogic(
         proposalId
       });
       
-      // Create a new user with Supabase Auth
+      // Phase 5: Create a new user with Supabase Auth, including proposal context
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: clientEmail,
         password,
@@ -91,12 +92,22 @@ export function useRegistrationFormLogic(
             first_name: firstName,
             last_name: lastName,
             role: 'client',
+            // Phase 5: Store proposal context in user metadata
+            proposal_id: proposalId,
+            registration_source: 'proposal_invitation'
           },
+          // Phase 5: Set redirect URL to return to proposal after email confirmation
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=email&redirect_to=${encodeURIComponent(`/view-proposal/${proposalId}?source=email_verification`)}`
         },
       });
 
       if (signUpError) {
         throw signUpError;
+      }
+
+      // Detect duplicate signup: Supabase returns user with empty identities
+      if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+        throw new Error("An account with this email already exists. Please sign in instead.");
       }
 
       // Once registered, update the proposal's client_id
@@ -106,25 +117,50 @@ export function useRegistrationFormLogic(
           proposalId
         });
         
+        // Wait for proposal update to complete
         const updateSuccess = await updateProposalClientId({
           proposalId,
           userId: data.user.id
         });
         
-        if (updateSuccess) {
-          toast({
-            title: "Registration successful!",
-            description: "Your account has been created and linked to this proposal.",
-            variant: "default"
+        if (!updateSuccess) {
+          registrationLogger.error("Failed to link proposal to user account", {
+            userId: data.user.id,
+            proposalId
           });
+          // Continue anyway - user can still access via client_reference_id
         }
 
-        // Notify the parent component that registration is complete
-        onComplete();
+        // Wait for database sync to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        registrationLogger.info("Registration flow complete", {
+          step: "proposal_linked",
+          success: updateSuccess,
+          proposalId,
+          userId: data.user.id
+        });
+        
+        // Show success dialog instead of immediate redirect
+        if (onRegistrationSuccess) {
+          onRegistrationSuccess();
+        } else {
+          // Fallback to original behavior if no success callback provided
+          toast({
+            title: "Registration successful!",
+            description: "Your account has been created. Please check your email to confirm.",
+            variant: "default"
+          });
+          onComplete();
+        }
       }
     } catch (error: any) {
+      // Log detailed error information for diagnostics
       registrationLogger.error("Registration error", { 
-        error: error.message,
+        message: error.message,
+        name: error.name,
+        status: error.status,
+        code: error.code,
         email: clientEmail
       });
       
@@ -135,6 +171,13 @@ export function useRegistrationFormLogic(
         toast({
           title: "Account exists",
           description: "This email is already registered. Please use the login option instead.",
+          variant: "destructive"
+        });
+      } else if (error.message === "Database error saving new user") {
+        errorMessage = "We couldn't create your account due to a temporary issue. Please try again. If you've tried before, tap 'Returning User' to sign in.";
+        toast({
+          title: "Registration Error",
+          description: errorMessage,
           variant: "destructive"
         });
       } else {

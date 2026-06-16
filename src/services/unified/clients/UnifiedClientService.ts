@@ -3,6 +3,7 @@ import { UserRole } from '@/contexts/auth/types';
 import { CacheManager } from '../cache/CacheManager';
 import { ClientFetcher, ClientCreator } from './operations';
 import { ClientSearch } from './ClientSearch';
+import { ClientDeleter } from './operations/ClientDeleter';
 
 // Re-export types for backward compatibility
 export type { 
@@ -50,6 +51,21 @@ export class UnifiedClientService {
     createdBy: string;
   }) {
     return ClientCreator.createClient(clientData);
+  }
+
+  /**
+   * Update client information (agents can update own clients, admins can update all)
+   */
+  static async updateClient(clientId: string, updates: any) {
+    const { ClientUpdater } = await import('./operations/ClientUpdater');
+    return ClientUpdater.updateClient(clientId, updates);
+  }
+
+  /**
+   * Delete a client and all associated proposals (ADMIN ONLY)
+   */
+  static async deleteClient(clientId: string) {
+    return ClientDeleter.deleteClient(clientId);
   }
 
   /**

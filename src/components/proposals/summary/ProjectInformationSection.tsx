@@ -27,10 +27,27 @@ export function ProjectInformationSection({ projectInfo }: ProjectInformationSec
         <div className="md:col-span-2">
           <p className="text-sm text-carbon-gray-500">Address</p>
           <p className="font-medium">{projectInfo.address}</p>
+          {projectInfo.gpsLat && projectInfo.gpsLng && (
+            <p className="text-xs text-carbon-gray-500 mt-1">
+              GPS: {projectInfo.gpsLat.toFixed(6)}, {projectInfo.gpsLng.toFixed(6)}
+            </p>
+          )}
         </div>
         <div>
-          <p className="text-sm text-carbon-gray-500">Commission Date</p>
-          <p className="font-medium">{projectInfo.commissionDate && new Date(projectInfo.commissionDate).toLocaleDateString()}</p>
+          <p className="text-sm text-carbon-gray-500">Commission Date{projectInfo.isMultiPhase && projectInfo.phases ? 's' : ''}</p>
+          <div className="font-medium">
+            {projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0 ? (
+              <div className="space-y-1">
+                {projectInfo.phases.map((phase: any, idx: number) => (
+                  <div key={idx}>
+                    {phase.phaseName || `Phase ${phase.phaseNumber}`}: {new Date(phase.commissionDate).toLocaleDateString()}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              projectInfo.commissionDate && new Date(projectInfo.commissionDate).toLocaleDateString()
+            )}
+          </div>
         </div>
       </div>
     </div>

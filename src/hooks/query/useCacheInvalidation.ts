@@ -1,9 +1,23 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { queryKeys, queryKeyUtils } from '@/lib/queryKeys';
 import { cacheUtils } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/auth';
 import { logger } from '@/lib/logger';
+
+// Module-level cooldown tracking to prevent realtime echo loops
+export const mutationCooldowns = new Map<string, number>();
+const COOLDOWN_MS = 3000;
+
+export function isInCooldown(key: string): boolean {
+  const lastMutation = mutationCooldowns.get(key);
+  if (!lastMutation) return false;
+  return Date.now() - lastMutation < COOLDOWN_MS;
+}
+
+export function markMutation(key: string): void {
+  mutationCooldowns.set(key, Date.now());
+}
 
 /**
  * Centralized cache invalidation hook
@@ -14,11 +28,12 @@ import { logger } from '@/lib/logger';
 export function useCacheInvalidation() {
   const queryClient = useQueryClient();
   const { user, userRole } = useAuth();
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
-  const invalidationLogger = logger.withContext({ 
+  const invalidationLogger = useMemo(() => logger.withContext({ 
     component: 'CacheInvalidation',
     feature: 'cache-management' 
-  });
+  }), []);
 
   /**
    * Invalidate dashboard related data
@@ -57,7 +72,7 @@ export function useCacheInvalidation() {
    */
   const invalidateClients = useCallback(async () => {
     if (!user?.id || !userRole) return;
-    
+    markMutation('clients');
     const keys = queryKeyUtils.getClientKeys(user.id, userRole);
     await cacheUtils.invalidateQueries(queryClient, keys as any);
     
@@ -69,9 +84,12 @@ export function useCacheInvalidation() {
   }, [queryClient, user?.id, userRole, invalidationLogger]);
 
   /**
-   * Invalidate agent management data
+   * Invalidate agent management data - DEBOUNCED
    */
   const invalidateAgentManagement = useCallback(async () => {
+    // Record mutation timestamp so realtime handlers can skip echo events
+    markMutation('agent-management');
+    
     const keys = queryKeyUtils.getAgentManagementKeys();
     await cacheUtils.invalidateQueries(queryClient, keys as any);
     

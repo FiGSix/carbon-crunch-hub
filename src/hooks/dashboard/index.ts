@@ -1,7 +1,10 @@
 
 export { useDashboardData } from '../useDashboardData';
-export { useDashboardStats } from './useDashboardStats';
-export { useDashboardComputedData } from './useDashboardComputedData';
 export { useDashboardHelpers } from './useDashboardHelpers';
-export { useAgentCommissionStats } from './useAgentCommissionStats';
+export { useDashboardMetricsByStage, isValidMetrics, getEmptyMetrics } from './useDashboardMetricsByStage';
+export { useVintageRevenueBreakdown } from './useVintageRevenueBreakdown';
+export { useAgentVintageRevenueBreakdown } from './useAgentVintageRevenueBreakdown';
+export { useAdminVintageRevenueBreakdown } from './useAdminVintageRevenueBreakdown';
+export { usePendingAgentApprovals } from './usePendingAgentApprovals';
+export { useClientReferralStats } from './useClientReferralStats';
 export * from './types';

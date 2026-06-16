@@ -176,6 +176,7 @@ export class SecureProfileService {
         company_logo_url: data.company_logo_url,
         avatar_url: data.avatar_url,
         role: data.role as UserRole,
+        agent_status: data.agent_status,
         terms_accepted_at: data.terms_accepted_at,
         created_at: data.created_at,
         intro_video_viewed: data.intro_video_viewed,

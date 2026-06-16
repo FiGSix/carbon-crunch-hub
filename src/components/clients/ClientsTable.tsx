@@ -1,18 +1,17 @@
 
 
-import { ClientData } from '@/hooks/useMyClients';
+import { ClientData } from '@/hooks/clients/types';
 import { ClientsTableLoading } from './table/ClientsTableLoading';
 import { ClientsTableError } from './table/ClientsTableError';
 import { ClientsTableEmpty } from './table/ClientsTableEmpty';
 import { ClientsTableContent } from './table/ClientsTableContent';
-import { LoadMoreButton } from './LoadMoreButton';
 
 interface ClientsTableProps {
   clients: ClientData[];
   isLoading: boolean;
-  isRefreshing?: boolean;
   isLoadingMore?: boolean;
   hasMore?: boolean;
+  isRefreshing?: boolean;
   totalCount?: number;
   error: string | null;
   isAdmin: boolean;
@@ -22,10 +21,10 @@ interface ClientsTableProps {
 
 export function ClientsTable({ 
   clients, 
-  isLoading, 
-  isRefreshing = false,
+  isLoading,
   isLoadingMore = false,
   hasMore = false,
+  isRefreshing = false,
   totalCount = 0,
   error, 
   isAdmin,
@@ -66,25 +65,16 @@ export function ClientsTable({
   // Show content with data (this handles refreshing state while showing data)
   // Rendering content
   return (
-    <div className="space-y-4">
-      <ClientsTableContent 
-        clients={clients}
-        isAdmin={isAdmin}
-        isRefreshing={isRefreshing}
-        onRefresh={onRefresh}
-        error={error} // Pass error for inline display
-      />
-      
-      {/* Load More Button */}
-      {onLoadMore && (
-        <LoadMoreButton
-          onLoadMore={onLoadMore}
-          isLoading={isLoadingMore}
-          hasMore={hasMore}
-          totalCount={totalCount}
-          currentCount={clients.length}
-        />
-      )}
-    </div>
+    <ClientsTableContent 
+      clients={clients}
+      isAdmin={isAdmin}
+      isRefreshing={isRefreshing}
+      isLoadingMore={isLoadingMore}
+      hasMore={hasMore}
+      totalCount={totalCount}
+      onRefresh={onRefresh}
+      onLoadMore={onLoadMore}
+      error={error} // Pass error for inline display
+    />
   );
 }

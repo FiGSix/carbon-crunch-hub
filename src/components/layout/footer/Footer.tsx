@@ -19,12 +19,13 @@ export function Footer({ className }: { className?: string }) {
           <div className="md:col-span-4">
             <div className="mb-4">
               <OptimizedImage 
-                src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png" 
-                alt="CrunchCarbon Logo" 
+                src="/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png"
+                alt="CrunchCarbon Logo"
                 className="h-12"
                 width={141}
                 height={48}
                 priority={false}
+                sizes="141px"
               />
             </div>
             <p className="text-crunch-black/70 mb-6 max-w-md">

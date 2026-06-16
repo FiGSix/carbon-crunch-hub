@@ -1,93 +1,164 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "lucide-react";
-import { SecureGoogleAddressAutocomplete } from "@/components/common/SecureGoogleAddressAutocomplete";
+import { MapAddressPicker } from "@/components/common/MapAddressPicker";
 import { ProjectInformation } from "@/types/proposals";
 import { getMinimumDateString } from "@/utils/dateValidation";
+import { ProjectPhasesInput } from "./ProjectPhasesInput";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProjectInfoFormProps {
   projectInfo: ProjectInformation;
   updateProjectInfo: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleAddressChange: (address: string) => void;
+  onPhaseToggle?: (isMultiPhase: boolean) => void;
+  onPhasesChange?: (phases: any[]) => void;
+  setProjectInfo?: (info: ProjectInformation) => void;
 }
 
 export function ProjectInfoForm({
   projectInfo,
   updateProjectInfo,
-  handleAddressChange
+  handleAddressChange,
+  onPhaseToggle,
+  onPhasesChange,
+  setProjectInfo
 }: ProjectInfoFormProps) {
-  const [mapsError, setMapsError] = useState(false);
+  const { toast } = useToast();
 
-  const handleMapsError = (hasError: boolean) => {
-    setMapsError(hasError);
+  const handleMapLocationSelect = (lat: number, lng: number, address: string) => {
+    if (setProjectInfo) {
+      setProjectInfo({
+        ...projectInfo,
+        address,
+        gpsLat: lat,
+        gpsLng: lng,
+        addressSource: 'pin_drop'
+      });
+    } else {
+      const event = {
+        target: { name: 'address', value: address }
+      } as React.ChangeEvent<HTMLInputElement>;
+      updateProjectInfo(event);
+      
+      const gpsEvent = {
+        target: { name: 'gpsData', value: JSON.stringify({ lat, lng, addressSource: 'pin_drop' }) }
+      } as React.ChangeEvent<HTMLInputElement>;
+      updateProjectInfo(gpsEvent);
+    }
+    
+    toast({
+      title: "Location Selected",
+      description: "Your location has been saved successfully.",
+    });
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-2">
-        <Label htmlFor="name">Project Name</Label>
-        <Input 
-          id="name" 
-          name="name" 
-          value={projectInfo.name}
-          onChange={updateProjectInfo}
-          className="retro-input"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="size">System Size (kWp)</Label>
-        <Input 
-          id="size" 
-          name="size" 
-          type="number"
-          step="0.01"
-          min="0"
-          max="15000"
-          value={projectInfo.size}
-          onChange={updateProjectInfo}
-          className="retro-input"
-          required
-        />
-        <p className="text-xs text-carbon-gray-500">Must be less than 15,000 kWp</p>
-      </div>
-      
-      <div className="space-y-2 md:col-span-2">
-        <Label htmlFor="address">Project Address</Label>
-        <SecureGoogleAddressAutocomplete
-          value={projectInfo.address}
-          onChange={handleAddressChange}
-          className="retro-input"
-          required
-          placeholder="Enter the project's physical address"
-          onError={handleMapsError}
-        />
-        <p className="text-xs text-carbon-gray-500">Enter the complete physical address of the project</p>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="commissionDate">Commission Date</Label>
-        <div className="relative">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="name">Project Name</Label>
           <Input 
-            id="commissionDate" 
-            name="commissionDate" 
-            type="date"
-            value={projectInfo.commissionDate}
+            id="name" 
+            name="name" 
+            value={projectInfo.name}
             onChange={updateProjectInfo}
             className="retro-input"
             required
-            min={getMinimumDateString()}
           />
-          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-carbon-gray-400 pointer-events-none" />
         </div>
-        <p className="text-xs text-carbon-gray-500">Must be on or after September 15, 2022</p>
+        
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="address">Project Address</Label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Search for an address or drop a pin on the map to set the project location.
+          </p>
+          <MapAddressPicker
+            onLocationSelect={handleMapLocationSelect}
+            initialLat={projectInfo.gpsLat}
+            initialLng={projectInfo.gpsLng}
+          />
+          {projectInfo.address && projectInfo.gpsLat && projectInfo.gpsLng && (
+            <div className="mt-2 p-2 bg-muted rounded text-sm">
+              <p className="font-medium">Selected: {projectInfo.address}</p>
+              <p className="text-xs text-muted-foreground">
+                GPS: {projectInfo.gpsLat.toFixed(6)}, {projectInfo.gpsLng.toFixed(6)}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-      
-      <div className="space-y-2 md:col-span-2">
+
+      <div className="space-y-4 p-4 border rounded-lg bg-card">
+        <Label className="text-base font-semibold">Project Type</Label>
+        <RadioGroup
+          value={projectInfo.isMultiPhase ? "multi" : "single"}
+          onValueChange={(value) => onPhaseToggle?.(value === "multi")}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="single" id="single" />
+            <Label htmlFor="single" className="font-normal cursor-pointer">
+              Single-Phase Project
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="multi" id="multi" />
+            <Label htmlFor="multi" className="font-normal cursor-pointer">
+              Multi-Phase Project (multiple commissioning dates)
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {projectInfo.isMultiPhase ? (
+        <ProjectPhasesInput
+          phases={projectInfo.phases || [{ phaseNumber: 1, sizeKWp: 0, commissionDate: "" }]}
+          onChange={onPhasesChange || (() => {})}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="size">System Size (kWp)</Label>
+            <Input 
+              id="size" 
+              name="size" 
+              type="number"
+              step="0.01"
+              min="0"
+              max="15000"
+              value={projectInfo.size}
+              onChange={updateProjectInfo}
+              className="retro-input"
+              required
+            />
+            <p className="text-xs text-carbon-gray-500">Must be less than 15,000 kWp</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="commissionDate">Commission Date</Label>
+            <div className="relative">
+              <Input 
+                id="commissionDate" 
+                name="commissionDate" 
+                type="date"
+                value={projectInfo.commissionDate}
+                onChange={updateProjectInfo}
+                className="retro-input"
+                required
+                min={getMinimumDateString()}
+              />
+              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-carbon-gray-400 pointer-events-none" />
+            </div>
+            <p className="text-xs text-carbon-gray-500">Must be on or after September 15, 2022</p>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
         <Label htmlFor="additionalNotes">Additional Notes (Optional)</Label>
         <Textarea 
           id="additionalNotes" 

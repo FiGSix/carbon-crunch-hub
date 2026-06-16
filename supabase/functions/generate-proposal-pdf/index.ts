@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
+import { getMinimumVintageYear } from "../_shared/vintageConfig.ts"
 
 // Create Supabase admin client with service role key
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://uyjryuopuqgmsvayiccl.supabase.co"
@@ -35,6 +36,8 @@ interface ProposalData {
   agent_commission_percentage: number
   pdf_version: number
   created_at: string
+  invitation_token?: string
+  invitation_expires_at?: string
 }
 
 serve(async (req) => {
@@ -45,7 +48,7 @@ serve(async (req) => {
   try {
     const { proposalId, forceRegenerate = false }: ProposalPdfRequest = await req.json()
 
-    console.log(`Generating PDF for proposal: ${proposalId}, force regenerate: ${forceRegenerate}`)
+    console.log(`[PDF] Generating PDF for proposal: ${proposalId}, force regenerate: ${forceRegenerate}`)
 
     // Fetch proposal data with client information
     const { data: proposal, error: proposalError } = await supabaseAdmin
@@ -59,20 +62,83 @@ serve(async (req) => {
       .single()
 
     if (proposalError || !proposal) {
-      console.error('Error fetching proposal:', proposalError)
+      console.error('[PDF] Error fetching proposal:', proposalError)
       return new Response(
         JSON.stringify({ error: 'Proposal not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Check if PDF exists and is current (unless force regenerating)
-    if (!forceRegenerate && proposal.pdf_url && proposal.pdf_generated_at) {
+    console.log(`[PDF] Proposal fetched: ${proposal.title}, status: ${proposal.status}`)
+
+    // CRITICAL: Ensure invitation token exists for ANY unsigned proposal
+    // Token renewal now works for all statuses (draft, sent, pending, etc.) as long as proposal is unsigned
+    let tokenUpdated = false
+    const isUnsigned = !proposal.signed_at
+    if (isUnsigned) {
+      const now = new Date()
+      const tokenExpired = !proposal.invitation_expires_at || new Date(proposal.invitation_expires_at) <= now
+      
+      if (!proposal.invitation_token || tokenExpired) {
+        console.log(`[PDF] Generating new invitation token for unsigned proposal (status: ${proposal.status})`)
+        
+        const newToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
+        const expiresAt = new Date(now.getTime() + 240 * 60 * 60 * 1000) // 10 days
+        
+        const { error: updateError } = await supabaseAdmin
+          .from('proposals')
+          .update({
+            invitation_token: newToken,
+            invitation_expires_at: expiresAt.toISOString()
+          })
+          .eq('id', proposalId)
+        
+        if (updateError) {
+          console.error('[PDF] Failed to update invitation token:', updateError)
+        } else {
+          // CRITICAL: Re-fetch to confirm the token was saved correctly
+          const { data: refreshedProposal, error: refreshError } = await supabaseAdmin
+            .from('proposals')
+            .select('invitation_token, invitation_expires_at')
+            .eq('id', proposalId)
+            .single()
+          
+          if (refreshError) {
+            console.error('[PDF] Failed to re-fetch proposal after token update:', refreshError)
+            // Fallback to local values
+            proposal.invitation_token = newToken
+            proposal.invitation_expires_at = expiresAt.toISOString()
+          } else if (refreshedProposal) {
+            proposal.invitation_token = refreshedProposal.invitation_token
+            proposal.invitation_expires_at = refreshedProposal.invitation_expires_at
+            console.log(`[PDF] Token confirmed from database:`, {
+              hasToken: !!refreshedProposal.invitation_token,
+              tokenLength: refreshedProposal.invitation_token?.length,
+              expiresAt: refreshedProposal.invitation_expires_at
+            })
+          }
+          tokenUpdated = true
+          console.log(`[PDF] Token updated for ${proposal.status} proposal, expires at: ${proposal.invitation_expires_at}`)
+        }
+      } else {
+        console.log('[PDF] Existing token is valid:', {
+          hasToken: !!proposal.invitation_token,
+          tokenLength: proposal.invitation_token?.length,
+          expiresAt: proposal.invitation_expires_at
+        })
+      }
+    } else {
+      console.log('[PDF] Proposal already signed, skipping token renewal')
+    }
+
+    // Check if PDF exists and is current (unless force regenerating or token was just updated)
+    if (!forceRegenerate && !tokenUpdated && proposal.pdf_url && proposal.pdf_generated_at) {
       const pdfAge = new Date().getTime() - new Date(proposal.pdf_generated_at).getTime()
       const proposalAge = new Date().getTime() - new Date(proposal.updated_at || proposal.created_at).getTime()
       
       // If PDF is newer than proposal updates, return existing URL
       if (pdfAge < proposalAge) {
+        console.log('[PDF] Valid PDF already exists, returning cached version')
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -109,18 +175,33 @@ serve(async (req) => {
       .from('proposal-pdfs')
       .getPublicUrl(fileName)
 
-    // Update proposal with PDF metadata
+    // Build update payload with PDF metadata
+    const updatePayload: Record<string, any> = {
+      pdf_url: publicUrl,
+      pdf_generated_at: new Date().toISOString(),
+      pdf_version: (proposal.pdf_version || 1) + 1
+    }
+
+    // If proposal was stale, revive it when PDF is regenerated
+    // This signals the agent has actively re-engaged with this proposal
+    const wasStale = proposal.status === 'stale'
+    if (wasStale) {
+      console.log(`[PDF] Reviving stale proposal ${proposalId} - agent regenerated PDF`)
+      updatePayload.status = 'sent'
+      updatePayload.invitation_sent_at = new Date().toISOString()
+      updatePayload.last_email_sent_at = new Date().toISOString()
+    }
+
+    // Update proposal with PDF metadata (and status revival if stale)
     const { error: updateError } = await supabaseAdmin
       .from('proposals')
-      .update({
-        pdf_url: publicUrl,
-        pdf_generated_at: new Date().toISOString(),
-        pdf_version: (proposal.pdf_version || 1) + 1
-      })
+      .update(updatePayload)
       .eq('id', proposalId)
 
     if (updateError) {
       console.error('Error updating proposal with PDF metadata:', updateError)
+    } else if (wasStale) {
+      console.log(`[PDF] Successfully revived proposal from stale to sent`)
     }
 
     return new Response(
@@ -145,7 +226,7 @@ serve(async (req) => {
 async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const start = Date.now();
   // Dynamically import pdf-lib to avoid top-level imports
-  const { PDFDocument, StandardFonts, rgb } = await import('https://esm.sh/pdf-lib@1.17.1');
+  const { PDFDocument, StandardFonts, rgb, PDFString, PDFArray, PDFName } = await import('https://esm.sh/pdf-lib@1.17.1');
 
   const pdfDoc = await PDFDocument.create();
   const A4: [number, number] = [595.28, 841.89];
@@ -263,6 +344,42 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
       }
     }
     if (line) lines.push(line);
+    return lines;
+  };
+
+  const wrapUrl = (url: string, maxWidth: number, size: number, f = font) => {
+    const usedFont = (f && typeof (f as any).widthOfTextAtSize === 'function') ? f : font;
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    // Break URL at logical points: /, ?, &, =
+    for (let i = 0; i < url.length; i++) {
+      const char = url[i];
+      const testLine = currentLine + char;
+      const width = usedFont.widthOfTextAtSize(testLine, size);
+      
+      if (width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = char;
+      } else {
+        currentLine = testLine;
+        
+        // Force break opportunity after these characters
+        if (char === '/' || char === '?' || char === '&' || char === '=') {
+          const nextChar = url[i + 1];
+          if (nextChar) {
+            const projectedWidth = usedFont.widthOfTextAtSize(currentLine + nextChar + nextChar, size);
+            // If adding more chars would exceed, break now
+            if (projectedWidth > maxWidth * 0.9) {
+              lines.push(currentLine);
+              currentLine = '';
+            }
+          }
+        }
+      }
+    }
+    
+    if (currentLine) lines.push(currentLine);
     return lines;
   };
 
@@ -1082,14 +1199,21 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const commissionDateStr = anyProposal.project_info?.commission_date || 
                             anyProposal.content?.projectInfo?.commissionDate || null;
   const commissionDate = commissionDateStr ? new Date(commissionDateStr) : null;
-  const commissionYear = commissionDate ? commissionDate.getFullYear() : new Date().getFullYear();
   
-  // Calculate yearly energy with pro-rating for commission year
+  // Get minimum vintage year from configuration
+  const currentYear = await getMinimumVintageYear(supabaseAdmin);
+  
+  // Calculate yearly energy with pro-rating for commission year (matching frontend logic)
   const calculateYearlyEnergy = (systemKWp: number, actualYear: number): number => {
     const annualEnergy = systemKWp * ANNUAL_GENERATION_FACTOR;
     
-    // Pro-rate for commission year
-    if (commissionDate && actualYear === commissionYear) {
+    // Return 0 for years before commissioning
+    if (commissionDate && actualYear < commissionDate.getFullYear()) {
+      return 0;
+    }
+    
+    // Pro-rate only for the ACTUAL commission year (not artificially moved forward)
+    if (commissionDate && actualYear === commissionDate.getFullYear()) {
       const yearStart = new Date(actualYear, 0, 1);
       const yearEnd = new Date(actualYear, 11, 31);
       const remainingDays = Math.max(0, Math.floor((yearEnd.getTime() - commissionDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
@@ -1097,6 +1221,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
       return annualEnergy * (remainingDays / totalDaysInYear);
     }
     
+    // Full year for years after commission year
     return annualEnergy;
   };
   
@@ -1119,9 +1244,13 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   let totalTCO2 = 0;
   let totalRevenue = 0;
   
-  for (let year = 1; year <= 7; year++) {
-    const actualYear = commissionYear + year - 1;
-    
+  // Build table using available carbon price years (filtered to current/future only)
+  const availableYears = Object.keys(carbonPrices)
+    .map(y => parseInt(y))
+    .filter(y => y >= currentYear)
+    .sort((a, b) => a - b);
+
+  for (const actualYear of availableYears) {
     // Use real calculation functions
     const yearlyEnergyKWh = calculateYearlyEnergy(systemSizeKWp, actualYear);
     const yearlyEnergyMWh = yearlyEnergyKWh / 1000;
@@ -1154,7 +1283,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   const revenueTableY = y;
   const revenueTableWidth = page4.getSize().width - p4x * 2;
   const revenueRowHeight = mm(12);
-  const revenueTableHeight = revenueRowHeight * 9; // Header + 7 data rows + totals row
+  const revenueTableHeight = revenueRowHeight * (revenueData.length + 2); // Header + data rows + totals row
   
   // Draw outer border
   page4.drawRectangle({
@@ -1294,7 +1423,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     page4.drawText(row.year.toString(), { 
       x: leftTextInColumn(colYearX), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1302,9 +1431,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // MWh Generated (center-aligned, 2 decimals)
     const mwhText = row.mwhGenerated.toFixed(2);
     page4.drawText(mwhText, { 
-      x: centerTextInColumn(mwhText, colMWhX, colMWhWidth, 0, font, 9), 
+      x: centerTextInColumn(mwhText, colMWhX, colMWhWidth, 0, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1312,9 +1441,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // tCO₂e Offset (center-aligned, 2 decimals)
     const tco2Text = row.tco2Offset.toFixed(2);
     page4.drawText(tco2Text, { 
-      x: centerTextInColumn(tco2Text, colTCO2X, colTCO2Width, 0, font, 9), 
+      x: centerTextInColumn(tco2Text, colTCO2X, colTCO2Width, 0, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1322,9 +1451,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // Client Price (center-aligned)
     const priceText = `R ${row.clientPrice.toFixed(2)}`;
     page4.drawText(priceText, { 
-      x: centerTextInColumn(priceText, colPriceX, colPriceWidth, 0, font, 9), 
+      x: centerTextInColumn(priceText, colPriceX, colPriceWidth, 0, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1332,9 +1461,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     // Client Revenue (right-aligned, with commas)
     const revenueText = `R ${row.clientRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     page4.drawText(revenueText, { 
-      x: rightTextInColumn(revenueText, colRevenueX, colRevenueWidth, font, 9), 
+      x: rightTextInColumn(revenueText, colRevenueX, colRevenueWidth, font, 11), 
       y: currentRowY + verticalOffset, 
-      size: 9, 
+      size: 11, 
       font, 
       color: crunchCharcoal 
     });
@@ -1354,7 +1483,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   page4.drawText('TOTAL', { 
     x: leftTextInColumn(colYearX), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1362,9 +1491,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total MWh
   const totalMWhText = totalMWh.toFixed(2);
   page4.drawText(totalMWhText, { 
-    x: centerTextInColumn(totalMWhText, colMWhX, colMWhWidth, 0, bold, 9), 
+    x: centerTextInColumn(totalMWhText, colMWhX, colMWhWidth, 0, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1372,9 +1501,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total tCO₂e
   const totalTCO2Text = totalTCO2.toFixed(2);
   page4.drawText(totalTCO2Text, { 
-    x: centerTextInColumn(totalTCO2Text, colTCO2X, colTCO2Width, 0, bold, 9), 
+    x: centerTextInColumn(totalTCO2Text, colTCO2X, colTCO2Width, 0, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1382,9 +1511,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Price column shows "-" for totals
   const dashText = '-';
   page4.drawText(dashText, { 
-    x: centerTextInColumn(dashText, colPriceX, colPriceWidth, 0, bold, 9), 
+    x: centerTextInColumn(dashText, colPriceX, colPriceWidth, 0, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1392,9 +1521,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   // Total Revenue
   const totalRevenueText = `R ${totalRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   page4.drawText(totalRevenueText, { 
-    x: rightTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, bold, 9), 
+    x: rightTextInColumn(totalRevenueText, colRevenueX, colRevenueWidth, bold, 11), 
     y: currentRowY + verticalOffset, 
-    size: 9, 
+    size: 11, 
     font: bold, 
     color: crunchCharcoal 
   });
@@ -1412,18 +1541,183 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   y -= mm(15);
   drawHeading(page4, 'Acceptance', p4x, y);
   y -= mm(12);
-  y = drawParagraph(page4, 'By signing below, the Client acknowledges the indicative terms herein and agrees to proceed to contracting subject to final due diligence and mutually agreed terms.', p4x, y, page4.getSize().width - p4x * 2);
-
-  y -= mm(12);
-  // Signature lines
-  page4.drawText('Client Signature:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page4, p4x + mm(35), y + mm(2), mm(90));
-  y -= mm(10);
-  page4.drawText('Name:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page4, p4x + mm(18), y + mm(2), mm(70));
-  y -= mm(10);
-  page4.drawText('Date:', { x: p4x, y, size: 10, font: bold, color: crunchCharcoal });
-  drawDivider(page4, p4x + mm(15), y + mm(2), mm(40));
+  
+  // Digital Signature Section - for unsigned proposals (draft, sent, delivered, opened, viewed, stale)
+  const unsignedStatuses = ['draft', 'sent', 'delivered', 'opened', 'viewed', 'stale'];
+  const isUnsigned = unsignedStatuses.includes(proposal.status);
+  console.log('[PDF] Signature section check:', {
+    status: proposal.status,
+    hasInvitationToken: !!proposal.invitation_token,
+    tokenLength: proposal.invitation_token?.length || 0,
+    hasExpiresAt: !!proposal.invitation_expires_at,
+    expiresAt: proposal.invitation_expires_at,
+    willShowSignature: isUnsigned && !!proposal.invitation_token && !!proposal.invitation_expires_at
+  });
+  
+  if (isUnsigned && proposal.invitation_token && proposal.invitation_expires_at) {
+    y -= mm(2);
+    
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
+    const acceptanceUrl = `${siteUrl}/proposals/${proposal.id}/accept?token=${proposal.invitation_token}`;
+    
+    // Calculate days until expiry
+    const expiryDate = new Date(proposal.invitation_expires_at);
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    console.log('[PDF] Creating digital signature link:', {
+      proposalId: proposal.id,
+      status: proposal.status,
+      siteUrl,
+      fullUrl: acceptanceUrl,
+      tokenLength: proposal.invitation_token.length,
+      expiresAt: proposal.invitation_expires_at,
+      daysUntilExpiry
+    });
+    
+    // Draw highlighted box for digital signature
+    const boxY = y;
+    const boxHeight = mm(42);
+    const boxWidth = page4.getSize().width - p4x * 2;
+    
+    // Background box (light yellow/cream)
+    page4.drawRectangle({
+      x: p4x,
+      y: boxY - boxHeight,
+      width: boxWidth,
+      height: boxHeight,
+      color: rgb(1, 0.98, 0.9), // Light yellow/cream background
+      borderColor: rgb(0.9, 0.72, 0.01), // Darker yellow-gold border
+      borderWidth: 2,
+    });
+    
+    y -= mm(6);
+    page4.drawText('Digital Signature', { 
+      x: p4x + mm(5), 
+      y, 
+      size: 12, 
+      font: bold,
+      color: crunchCharcoal 
+    });
+    
+    y -= mm(6);
+    const instructionText = 'To accept this proposal please sign digitally below:';
+    const instructionLines = wrapText(instructionText, boxWidth - mm(10), 12, font);
+    for (const line of instructionLines) {
+      page4.drawText(line, { 
+        x: p4x + mm(5), 
+        y, 
+        size: 12, 
+        font, 
+        color: crunchCharcoal 
+      });
+      y -= mm(4);
+    }
+    
+    y -= mm(8);
+    // Create clickable link with underline
+    const linkText = 'CLICK HERE TO SIGN DIGITALLY';
+    const linkWidth = bold.widthOfTextAtSize(linkText, 12);
+    const linkX = p4x + mm(5);
+    
+    page4.drawText(linkText, { 
+      x: linkX, 
+      y, 
+      size: 12, 
+      font: bold, 
+      color: rgb(0.9, 0.72, 0.01) // Yellow-gold color for link
+    });
+    
+    // Draw underline to make it obviously clickable
+    page4.drawLine({
+      start: { x: linkX, y: y - mm(1) },
+      end: { x: linkX + linkWidth, y: y - mm(1) },
+      thickness: 1,
+      color: rgb(0.9, 0.72, 0.01),
+    });
+    
+    // Add link annotation to make it clickable
+    const linkAnnotation = pdfDoc.context.register(
+      pdfDoc.context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: [linkX, y - mm(2), linkX + linkWidth, y + mm(5)],
+        Border: [0, 0, 0],
+        C: [0.9, 0.72, 0.01],
+        A: {
+          Type: 'Action',
+          S: 'URI',
+          URI: PDFString.of(acceptanceUrl),
+        },
+      })
+    );
+    
+    // Get existing annotations and append the new one
+    const existingAnnots = page4.node.get(PDFName.of('Annots'));
+    const annotsArray = existingAnnots ? existingAnnots : pdfDoc.context.obj([]);
+    
+    if (annotsArray instanceof PDFArray) {
+      annotsArray.push(linkAnnotation);
+      page4.node.set(PDFName.of('Annots'), annotsArray);
+    } else {
+      page4.node.set(PDFName.of('Annots'), pdfDoc.context.obj([linkAnnotation]));
+    }
+    
+    console.log('[PDF] Link annotation created successfully');
+    
+    y -= mm(6);
+    // Display the full URL as fallback
+    page4.drawText('Or copy this link:', { 
+      x: p4x + mm(5), 
+      y, 
+      size: 12, 
+      font, 
+      color: crunchCharcoal 
+    });
+    
+    y -= mm(4);
+    const urlLines = wrapUrl(acceptanceUrl, boxWidth - mm(10), 7, font);
+    for (const line of urlLines) {
+      page4.drawText(line, { 
+        x: p4x + mm(5), 
+        y, 
+        size: 7, 
+        font, 
+        color: rgb(0.9, 0.72, 0.01) 
+      });
+      y -= mm(3.5);
+    }
+    
+    y -= mm(4);
+    const validityText = `This link is valid for ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. You'll review full terms and type your name to complete the signature.`;
+    const validityLines = wrapText(validityText, boxWidth - mm(10), 9, font);
+    for (const line of validityLines) {
+      page4.drawText(line, { x: p4x + mm(5), y, size: 9, font, color: crunchCharcoal });
+      y -= mm(3.5);
+    }
+    
+    y -= mm(8);
+  } else if (proposal.status === 'signed' && proposal.signed_at) {
+    // Show signed status for approved proposals
+    y -= mm(8);
+    const signedDate = new Date(proposal.signed_at).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const signedText = `[SIGNED] This proposal was digitally signed on ${signedDate}`;
+    page4.drawText(signedText, {
+      x: p4x,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.13, 0.55, 0.13) // Green color
+    });
+    
+    y -= mm(8);
+    console.log('[PDF] Showing signed status for approved proposal');
+  }
 
   drawPageNumber(page4, 4, 4);
 

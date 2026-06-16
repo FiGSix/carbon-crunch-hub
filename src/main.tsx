@@ -1,16 +1,30 @@
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client'
+import { HelmetProvider } from 'react-helmet-async';
 import * as Sentry from '@sentry/react';
 import App from './App.tsx'
 import './index.css'
+import './styles/base.css'
+import './styles/components.css'
+import './styles/animations.css'
 import { validateSecurityConfig } from './lib/security/headers'
-import { consoleOptimizer } from './lib/performance/ConsoleOptimizer'
 
-// Console Logging Cleanup: Immediate performance optimization
-// Eliminates 445+ console statements for 15-25% performance gain
-consoleOptimizer.optimizeForProduction();
-consoleOptimizer.replaceGlobalConsole();
+// Global startup error handlers - catch issues before React mounts
+window.onerror = (message, source, lineno, colno, error) => {
+  console.error('[Startup Error]', { message, source, lineno, colno, error });
+  if (import.meta.env.PROD) {
+    Sentry.captureException(error || new Error(String(message)));
+  }
+  return false;
+};
+
+window.onunhandledrejection = (event) => {
+  console.error('[Unhandled Promise]', event.reason);
+  if (import.meta.env.PROD) {
+    Sentry.captureException(event.reason);
+  }
+};
 
 // Only enable Sentry in production to avoid interference during development
 if (import.meta.env.PROD) {
@@ -24,22 +38,10 @@ if (import.meta.env.PROD) {
 // Validate security configuration in development
 validateSecurityConfig();
 
-// Register or clean up Service Worker safely
-if ('serviceWorker' in navigator) {
-  if (import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(console.error);
-    });
-  } else {
-    // In dev/preview, ensure no stale SW interferes with module loading
-    navigator.serviceWorker.getRegistrations?.().then((regs) => {
-      regs.forEach((r) => r.unregister());
-    }).catch(() => {});
-  }
-}
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
   </StrictMode>
 );

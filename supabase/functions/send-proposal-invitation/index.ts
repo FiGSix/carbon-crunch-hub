@@ -6,6 +6,7 @@ import { verifyTokenConsistency } from "./token-verification.ts";
 import { EmailService } from "./email-service.ts";
 import { createClientNotification } from "./notification-service.ts";
 import { 
+  corsHeaders,
   createCorsResponse, 
   createSuccessResponse, 
   createEmailErrorResponse, 
@@ -14,6 +15,13 @@ import {
 import type { InvitationRequest, EmailTemplateData } from "./types.ts";
 
 const handler = async (req: Request): Promise<Response> => {
+  // Entry logging for debugging
+  console.log("=== 🚀 SEND-PROPOSAL-INVITATION INVOKED ===");
+  console.log("Timestamp:", new Date().toISOString());
+  console.log("Method:", req.method);
+  console.log("Has Authorization header:", !!req.headers.get('authorization'));
+  console.log("==========================================");
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return createCorsResponse();
@@ -27,6 +35,44 @@ const handler = async (req: Request): Promise<Response> => {
     if (!hasApiKey) {
       throw new Error("RESEND_API_KEY is not configured. Please set this environment variable.");
     }
+
+    // Verify authentication (JWT required)
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error("❌ Missing authorization header");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Authentication required. Please refresh your session and try again.",
+          code: "AUTH_REQUIRED"
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    // Verify JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error("❌ Invalid or expired JWT token:", authError?.message);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Session expired. Please refresh the page and try again.",
+          code: "AUTH_EXPIRED"
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("✅ Authenticated user:", user.id);
     
     // Parse and validate request
     const requestData = await req.json();
@@ -48,11 +94,41 @@ const handler = async (req: Request): Promise<Response> => {
     // CRITICAL: Verify the token from the request matches what's stored in the database
     const verifiedToken = await verifyTokenConsistency(proposalId, invitationToken, supabase);
     
+    // Fetch agent email and project details for the invitation
+    const { data: proposalData } = await supabase
+      .from('proposals')
+      .select('agent_id, system_size_kwp, carbon_credits')
+      .eq('id', proposalId)
+      .single();
+    
+    let agentEmail: string | undefined;
+    let agentFirstName: string | undefined;
+    let agentLastName: string | undefined;
+    let agentCompanyName: string | undefined;
+    
+    if (proposalData?.agent_id) {
+      const { data: agentProfile } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name, company_name')
+        .eq('id', proposalData.agent_id)
+        .single();
+      
+      agentEmail = agentProfile?.email;
+      agentFirstName = agentProfile?.first_name;
+      agentLastName = agentProfile?.last_name;
+      agentCompanyName = agentProfile?.company_name;
+      
+      if (agentEmail) {
+        console.log(`Agent will be CC'd: ${agentEmail}`);
+      }
+    }
+    
     // Get site URL from environment variable, with fallback
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://www.crunchcarbon.app';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 
     // Use the VERIFIED token from the database to construct invitation link
-    const invitationLink = `${siteUrl}/proposals/view?token=${verifiedToken}`;
+    // Direct clients to main proposal view page
+    const invitationLink = `${siteUrl}/proposals/${proposalId}?token=${verifiedToken}`;
 
     console.log(`Sending invitation email to ${clientEmail} for project ${projectName}`);
     console.log(`Invitation link: ${invitationLink}`);
@@ -61,12 +137,23 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize email service and send email
     const emailService = new EmailService(Deno.env.get("RESEND_API_KEY")!);
     
+    // Format system size for display
+    const systemSizeKwp = proposalData?.system_size_kwp;
+    const carbonCredits = proposalData?.carbon_credits;
+    const formattedSystemSize = systemSizeKwp ? `${Math.round(systemSizeKwp)} kWp` : undefined;
+    
     const emailTemplateData: EmailTemplateData = {
       clientName,
       projectName,
       invitationLink,
       tokenPreview: verifiedToken.substring(0, 8) + "...",
-      proposalId
+      proposalId,
+      systemSize: formattedSystemSize,
+      carbonCredits: carbonCredits ? Math.round(carbonCredits) : undefined,
+      agentFirstName,
+      agentLastName,
+      agentCompanyName,
+      agentEmail
     };
     
     const emailTemplate = emailService.generateEmailTemplate(emailTemplateData);
@@ -75,8 +162,60 @@ const handler = async (req: Request): Promise<Response> => {
       const emailResponse = await emailService.sendInvitationEmail(
         clientEmail,
         projectName,
-        emailTemplate
+        emailTemplate,
+        agentEmail
       );
+
+      // Store the Resend message_id for webhook tracking
+      // IMPORTANT: Resend returns { data: { id: "..." }, error: null } structure
+      const emailId = emailResponse.data?.id || emailResponse.id;
+      
+      console.log(`📧 Resend response structure:`, JSON.stringify(emailResponse));
+      
+      if (emailId) {
+        console.log(`📧 Storing message_id for webhook tracking: ${emailId}`);
+        
+        const { error: logError } = await supabase
+          .from('proposal_automation_log')
+          .insert({
+            proposal_id: proposalId,
+            automation_type: 'email_sent',
+            email_type: 'initial_invite',
+            email_message_id: emailId,
+            details: {
+              recipient: clientEmail,
+              subject: `Carbon Credit Proposal: ${projectName}`,
+              agent_email: agentEmail
+            }
+          });
+
+        if (logError) {
+          console.error(`❌ Failed to log email to proposal_automation_log:`, logError);
+          // Continue anyway - email was sent successfully
+        } else {
+          console.log(`✅ Successfully logged email to proposal_automation_log`);
+        }
+
+        // Update proposal status to 'sent' and track email send time
+        const { error: updateError } = await supabase
+          .from('proposals')
+          .update({
+            status: 'sent',
+            last_email_event_type: 'email.sent',
+            last_email_sent_at: new Date().toISOString(),
+            invitation_sent_at: new Date().toISOString()
+          })
+          .eq('id', proposalId);
+
+        if (updateError) {
+          console.error(`❌ Failed to update proposal status:`, updateError);
+          // Continue anyway - email was sent successfully
+        } else {
+          console.log(`✅ Successfully updated proposal ${proposalId} status to 'sent'`);
+        }
+      } else {
+        console.error(`❌ No email ID returned from Resend - cannot track email events. Full response:`, JSON.stringify(emailResponse));
+      }
 
       // Create a notification for the client if we have their ID
       if (clientId) {

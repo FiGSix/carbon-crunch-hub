@@ -34,17 +34,25 @@ export function buildBaseProposalsQuery(
       unit_standard,
       invitation_sent_at,
       invitation_viewed_at,
-      invitation_expires_at
+      invitation_expires_at,
+      last_email_event_type,
+      last_email_sent_at,
+      engagement_count,
+      last_engagement_at,
+      project_onboarding (
+        onboarding_complete,
+        submitted_for_review,
+        admin_validated,
+        audit_ready
+      )
     `)
     .is('deleted_at', null); // Exclude soft-deleted proposals
 
   // Apply role-based filtering
-  if (userRole === 'client' && userId) {
-    query = query.or(`client_id.eq.${userId},client_reference_id.eq.${userId}`);
-  } else if (userRole === 'agent' && userId) {
-    query = query.eq('agent_id', userId);
-  }
-  // Admin role gets all non-deleted proposals (no additional filter needed)
+  // For clients: RLS policy handles access via is_proposal_client() function
+  // which properly checks both client_id and client_reference_id linkage
+  // No additional client-side filtering needed - database enforces proper visibility
+  // Agent and admin roles: RLS policy handles access control (including company membership)
 
   // Apply status filter
   if (filters.status && filters.status !== 'all') {
@@ -59,12 +67,8 @@ export function buildBaseProposalsQuery(
     }
   }
 
-  // Apply search filter
-  if (filters.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,content->clientInfo->>email.ilike.%${filters.search}%,content->clientInfo->>firstName.ilike.%${filters.search}%,content->clientInfo->>lastName.ilike.%${filters.search}%,content->clientInfo->>companyName.ilike.%${filters.search}%`
-    );
-  }
+  // NOTE: Search filter is now applied client-side for instant performance
+  // Server-side filtering was causing slow queries on every keystroke
 
   // Apply sorting
   if (filters.sort === 'oldest') {
@@ -77,6 +81,13 @@ export function buildBaseProposalsQuery(
     // Default to newest first
     query = query.order('created_at', { ascending: false });
   }
+
+  // Lift Supabase's default 1000-row cap so older active proposals are not
+  // silently dropped from the client-side search. The list is rendered with
+  // virtualization + client-side filtering, so 5000 is safe today.
+  // TODO: replace with proper server-side pagination once active proposals
+  // routinely exceed a few thousand rows.
+  query = query.range(0, 4999);
 
   return query;
 }

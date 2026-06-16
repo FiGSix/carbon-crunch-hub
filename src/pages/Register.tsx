@@ -1,4 +1,4 @@
-
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -7,14 +7,20 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get('token');
   const initialRole = searchParams.get('role') === 'agent' ? 'agent' : 'client';
+  
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 flex items-center justify-center py-12">
-        <div className="w-full max-w-md px-4">
+      <main className="flex-1 flex items-center justify-center py-12 px-4">
+        <div className="w-full max-w-lg">
           <div className="mb-6">
             <Link to="/" className="flex items-center text-carbon-gray-600 hover:text-carbon-green-600">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -23,17 +29,20 @@ const Register = () => {
           </div>
           
           <div className="retro-card">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-carbon-gray-900">Create an account</h1>
-              <p className="text-carbon-gray-600 mt-2">Join CrunchCarbon and start earning from carbon credits</p>
+            <div className="text-center mb-10">
+              <h1 className="text-2xl md:text-3xl font-bold text-carbon-gray-900">Create an account</h1>
+              <p className="text-carbon-gray-600 mt-3">Join CrunchCarbon and start earning from carbon credits</p>
             </div>
             
-            <RegisterForm initialRole={initialRole as "client" | "agent"} />
+            <RegisterForm 
+              initialRole={initialRole as "client" | "agent"} 
+              invitationToken={invitationToken || undefined}
+            />
             
-            <div className="mt-6 text-center">
+            <div className="mt-8 pt-6 border-t border-border text-center">
               <p className="text-carbon-gray-600">
                 Already have an account?{" "}
-                <Link to="/login" className="text-carbon-green-600 hover:underline">
+                <Link to="/login" className="text-carbon-green-600 hover:underline font-medium">
                   Log in
                 </Link>
               </p>

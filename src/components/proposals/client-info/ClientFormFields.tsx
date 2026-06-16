@@ -47,6 +47,7 @@ export function ClientFormFields({
         email: client.email,
         phone: "",
         companyName: client.company || "",
+        registrationNumber: "",
         existingClient: true,
       });
     }
@@ -120,6 +121,18 @@ export function ClientFormFields({
           value={clientInfo.companyName}
           onChange={updateClientInfo}
           placeholder="Company Name (optional)"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="registrationNumber">Company Registration Number</Label>
+        <Input
+          id="registrationNumber"
+          name="registrationNumber"
+          type="text"
+          value={clientInfo.registrationNumber || ""}
+          onChange={updateClientInfo}
+          placeholder="Registration Number (optional)"
         />
       </div>
     </div>

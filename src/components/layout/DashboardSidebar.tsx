@@ -8,7 +8,19 @@ import {
   Settings,
   LogOut,
   User,
-  UserCog
+  UserCog,
+  FileSignature,
+  ClipboardCheck,
+  Shield,
+  UserCheck,
+  Database,
+  Mail,
+  Scale,
+  Calculator,
+  Code2,
+  BookOpen,
+  ShieldOff
+
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -41,10 +53,34 @@ export function DashboardSidebar() {
       roles: ["admin", "agent", "client"]
     },
     {
+      name: "Dashboard",
+      href: "/super-partner/dashboard",
+      icon: LayoutDashboard,
+      roles: ["super_partner"]
+    },
+    {
       name: "Profile",
       href: "/profile",
       icon: User,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
+    },
+    {
+      name: "Team",
+      href: "/team",
+      icon: UserCheck,
+      roles: ["admin", "agent"]
+    },
+    {
+      name: "Quick Calc",
+      href: "/quick-calc",
+      icon: Calculator,
+      roles: ["admin", "agent"]
+    },
+    {
+      name: "Knowledge Hub",
+      href: "/knowledge-hub",
+      icon: BookOpen,
+      roles: ["admin", "agent"]
     },
     {
       name: "Proposals",
@@ -59,10 +95,72 @@ export function DashboardSidebar() {
       roles: ["admin", "agent"]
     },
     {
+      name: "Create Proposal",
+      href: "/create-proposal",
+      icon: FileText,
+      roles: ["super_partner"],
+      gate: (p: any) => p?.can_create_proposals === true,
+    },
+    {
+      name: "Project Onboarding",
+      href: "/onboarding",
+      icon: ClipboardCheck,
+      roles: ["admin", "agent", "client"]
+    },
+    {
+      name: "Submit a Project",
+      href: "/submit-project",
+      icon: FileText,
+      roles: ["client"]
+    },
+    {
+      name: "Audit Status",
+      href: "/admin/audit-status",
+      icon: ClipboardCheck,
+      roles: ["admin"]
+    },
+    {
       name: "My Clients",
       href: "/my-clients",
       icon: Users,
       roles: ["admin", "agent"]
+    },
+    {
+      name: "My Clients",
+      href: "/my-clients",
+      icon: Users,
+      roles: ["super_partner"],
+      gate: (p: any) => p?.can_create_proposals === true,
+    },
+    {
+      name: "My Companies",
+      href: "/super-partner/my-companies",
+      icon: Users,
+      roles: ["super_partner"]
+    },
+    {
+      name: "Commission",
+      href: "/super-partner/commission",
+      icon: FileText,
+      roles: ["super_partner"]
+    },
+    {
+      name: "Notifications",
+      href: "/notifications",
+      icon: Bell,
+      roles: ["admin", "agent", "client", "super_partner"]
+    },
+    {
+      name: "Team",
+      href: "/client-team",
+      icon: UserCheck,
+      roles: ["client"]
+    },
+    {
+      name: "Refer a Friend",
+      href: "/referral",
+      icon: UserPlus,
+      roles: ["client"]
     },
     {
       name: "Agent Management",
@@ -71,10 +169,52 @@ export function DashboardSidebar() {
       roles: ["admin"]
     },
     {
-      name: "Notifications",
-      href: "/notifications",
-      icon: Bell,
-      roles: ["admin", "agent", "client"]
+      name: "Super Partners",
+      href: "/admin/super-partners",
+      icon: Shield,
+      roles: ["admin"]
+    },
+    {
+      name: "User Management",
+      href: "/admin/users",
+      icon: Shield,
+      roles: ["admin"]
+    },
+    {
+      name: "Digital Signatures",
+      href: "/admin/signatures",
+      icon: FileSignature,
+      roles: ["admin"]
+    },
+    {
+      name: "Email Automation",
+      href: "/admin/email-automation",
+      icon: Mail,
+      roles: ["admin"]
+    },
+    {
+      name: "Blocked Emails",
+      href: "/admin/blocked-emails",
+      icon: ShieldOff,
+      roles: ["admin"]
+    },
+    {
+      name: "Legal Documents",
+      href: "/admin/legal-documents",
+      icon: Scale,
+      roles: ["admin"]
+    },
+    {
+      name: "Partner API",
+      href: "/admin/partners",
+      icon: Code2,
+      roles: ["admin"]
+    },
+    {
+      name: "Knowledge Hub Mgmt",
+      href: "/admin/knowledge-hub",
+      icon: BookOpen,
+      roles: ["admin"]
     },
     {
       name: "System Settings",
@@ -87,12 +227,18 @@ export function DashboardSidebar() {
       href: "/system-diagnostics",
       icon: Settings,
       roles: ["admin"]
+    },
+    {
+      name: "Data Diagnostics",
+      href: "/admin/data-diagnostics",
+      icon: Database,
+      roles: ["admin"]
     }
   ];
 
-  // Filter nav items based on user role
-  const filteredNavItems = navItems.filter(item => 
-    profile?.role && item.roles.includes(profile.role)
+  // Filter nav items based on user role and optional per-item gate
+  const filteredNavItems = navItems.filter((item: any) =>
+    profile?.role && item.roles.includes(profile.role) && (!item.gate || item.gate(profile))
   );
 
   return (

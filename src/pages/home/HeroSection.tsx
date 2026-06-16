@@ -7,39 +7,21 @@ import { OptimizedImage } from '@/components/ui/OptimizedImage';
 export const HeroSection = () => {
   const navigate = useNavigate();
   
-  // Diagnostic logging
-  console.log("[HeroSection] Rendering hero section");
-  
   return <section className="bg-gradient-to-br from-background to-accent py-16 md:py-24 overflow-hidden">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <SafeMotionDiv initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          duration: 0.5
-        }} className="space-y-8">
-            <SafeMotionDiv initial={{
-            opacity: 0
-          }} animate={{
-            opacity: 1
-          }} transition={{
-            duration: 0.5,
-            delay: 0.2
-          }} className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
-              <span className="text-sm font-medium text-muted-foreground">Renewable Energy Monetised</span>
-            </SafeMotionDiv>
+          <div className="space-y-8">
+            <div className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
+              <span className="text-sm font-medium text-muted-foreground">1,500+ Solar Systems Already Earning</span>
+            </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
-              <span className="text-foreground">Carbon Made</span>{" "}
-              <span className="text-primary drop-shadow-sm">Simple</span>
+              <span className="text-foreground">Turn Your Solar System</span>{" "}
+              <span className="text-primary drop-shadow-sm">Into Cash</span>
             </h1>
             
-            <p className="text-xl font-bold text-foreground max-w-xl">
-              Your Launchpad for Lightning-Fast Carbon Proposals
+            <p className="text-xl text-muted-foreground max-w-xl">
+              South African homeowners earn <span className="font-bold text-foreground">R600-R1,000+ per year</span> from verified carbon credits. Free to join.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -49,7 +31,7 @@ export const HeroSection = () => {
                   className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg py-6 px-8 w-full sm:w-auto rounded-2xl shadow-sm hover:shadow-lg group transition-all duration-300" 
                   size="lg"
                 >
-                  <span>Get Started</span> 
+                  <span>Start Earning</span>
                   <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </SafeMotionDiv>
@@ -60,16 +42,16 @@ export const HeroSection = () => {
                   className="text-foreground text-lg py-6 px-8 w-full sm:w-auto rounded-2xl transition-all duration-300" 
                   size="lg"
                 >
-                  Calculate Your Potential
+                  Calculate My Earnings
                 </Button>
               </SafeMotionDiv>
             </div>
             
             <div className="flex items-center text-muted-foreground pt-2">
               <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-              <span className="text-sm">Get setup in minutes. Proposals out like lightning.</span>
+              <span className="text-sm">Free setup • Verra certified • Annual payouts</span>
             </div>
-          </SafeMotionDiv>
+          </div>
           
           <SafeMotionDiv className="hidden lg:block relative" initial={{
           opacity: 0,
@@ -84,20 +66,15 @@ export const HeroSection = () => {
             <div className="relative">
               <div className="absolute -z-10 -right-4 -bottom-4 w-full h-full rounded-3xl bg-gradient-to-br from-primary/30 to-primary/10"></div>
               <div className="meta-card rounded-3xl p-6">
-                <img
-                  src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.png" 
-                  alt="CrunchCarbon Pac-Man Style Logo" 
+                <OptimizedImage
+                  src="/lovable-uploads/9542096a-435e-4372-b09c-fb7cbaa80634.webp"
+                  alt="CrunchCarbon Pac-Man Style Logo"
                   className="w-full h-auto rounded-2xl transition-all hover:scale-105 duration-500"
                   width={488}
                   height={275}
-                  loading="eager"
+                  priority={true}
                   fetchPriority="high"
-                  style={{ maxWidth: '100%', height: 'auto', aspectRatio: '488 / 275', objectFit: 'contain' }}
-                  onLoad={() => console.log("[HeroSection] Logo image loaded successfully")}
-                  onError={(e) => {
-                    console.error("[HeroSection] Logo image failed to load:", e);
-                    e.currentTarget.src = "/placeholder.svg";
-                  }}
+                  sizes="(max-width: 768px) 100vw, 488px"
                 />
               </div>
               

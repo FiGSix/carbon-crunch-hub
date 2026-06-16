@@ -1,0 +1,21 @@
+{
+  "name": "Crunch Carbon Hub",
+  "short_name": "Crunch Carbon",
+  "description": "Turning Solar Energy into Carbon Credits and Cash",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FFC700",
+  "icons": [
+    {
+      "src": "/lovable-uploads/cc-favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/lovable-uploads/cc-favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
