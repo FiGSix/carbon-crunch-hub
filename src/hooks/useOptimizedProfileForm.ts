@@ -21,7 +21,8 @@ export function useOptimizedProfileForm(userId?: string, userRole?: UserRole) {
     email: '',
     phone: '',
     companyName: '',
-    avatarUrl: ''
+    avatarUrl: '',
+    companyLogoUrl: ''
   });
   
   const [isLoading, setIsLoading] = useState(true);
