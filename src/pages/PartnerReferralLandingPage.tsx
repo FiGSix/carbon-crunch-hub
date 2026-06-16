@@ -231,56 +231,22 @@ export default function PartnerReferralLandingPage() {
       </Helmet>
 
       {/* Top bar */}
-      <header className="border-b border-zinc-800 bg-black">
+      <header className="bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          {/* C logomark — clip the horizontal lockup to show only the C */}
-          <div className="h-9 w-9 overflow-hidden flex items-center justify-start shrink-0" aria-label="Crunch Carbon">
+          <img
+            src="/crunch-carbon-logo-new.png"
+            alt="Crunch Carbon"
+            className="h-10 w-auto object-contain [filter:brightness(0)_invert(1)]"
+          />
+          {partner.company_logo_url && (
             <img
-              src="/crunch-carbon-logo-new.png"
-              alt="Crunch Carbon"
-              className="h-9 w-auto max-w-none object-cover object-left"
-              style={{ objectPosition: "0 50%" }}
+              src={partner.company_logo_url}
+              alt={partner.company_name ?? "Company logo"}
+              loading="lazy"
+              className="h-10 w-auto object-contain [filter:brightness(0)_invert(1)]"
             />
-          </div>
-
-          <div className="flex items-center gap-3 min-w-0">
-            {partner.avatar_url ? (
-              <img
-                src={partner.avatar_url}
-                alt={partnerName}
-                width={40}
-                height={40}
-                loading="lazy"
-                className="h-10 w-10 rounded-full object-cover ring-2 ring-[#F5C518]"
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-[rgba(245,197,24,0.15)] ring-2 ring-[#F5C518] flex items-center justify-center font-semibold text-[#F5C518]">
-                {(partner.first_name?.[0] ?? "?").toUpperCase()}
-              </div>
-            )}
-            <div className="text-sm min-w-0">
-              <div className="font-semibold text-white truncate">{partnerName}</div>
-              {partner.company_name && (
-                <div className="text-xs text-zinc-400 truncate">{partner.company_name}</div>
-              )}
-            </div>
-            {partner.company_logo_url && (
-              <img
-                src={partner.company_logo_url}
-                alt={partner.company_name ?? "Company logo"}
-                width={36}
-                height={36}
-                loading="lazy"
-                className="h-9 w-auto object-contain rounded bg-white/5 p-1"
-              />
-            )}
-          </div>
+          )}
         </div>
-        {partner.referral_bio && (
-          <div className="max-w-3xl mx-auto px-4 pb-3 text-xs italic text-zinc-400">
-            "{partner.referral_bio}"
-          </div>
-        )}
         <Progress
           value={progress}
           className="h-1 rounded-none bg-zinc-800 [&>*]:bg-[#F5C518]"
