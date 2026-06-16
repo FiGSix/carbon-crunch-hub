@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface CompanyManagementDialogProps {
   companyId: string | null;
@@ -23,6 +24,7 @@ export function CompanyManagementDialog({
   open,
   onOpenChange,
 }: CompanyManagementDialogProps) {
+  const { toast } = useToast();
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
