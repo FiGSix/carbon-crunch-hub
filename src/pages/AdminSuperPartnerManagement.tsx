@@ -22,7 +22,7 @@ interface SuperPartner {
   phone: string | null;
   super_partner_status: string | null;
   can_create_proposals: boolean | null;
-  commission_override: number | null;
+  
   created_at: string;
 }
 
@@ -74,8 +74,6 @@ export default function AdminSuperPartnerManagement() {
   const [spCompanies, setSpCompanies] = useState<Record<string, SpCompanyRow[]>>({});
   const [linkCompanyId, setLinkCompanyId] = useState<string>("");
   const [expandedCompany, setExpandedCompany] = useState<Record<string, boolean>>({});
-  const [commissionOverride, setCommissionOverride] = useState<number | null>(null);
-  const [savingOverride, setSavingOverride] = useState(false);
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
@@ -83,7 +81,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, commission_override, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -113,28 +111,8 @@ export default function AdminSuperPartnerManagement() {
 
   useEffect(() => { loadAll(); }, []);
 
-  useEffect(() => {
-    if (!selectedSP) { setCommissionOverride(null); return; }
-    const sp = partners.find((p) => p.id === selectedSP);
-    setCommissionOverride(sp?.commission_override ?? null);
-  }, [selectedSP, partners]);
 
-  const handleSaveCommissionOverride = async (override?: number | null) => {
-    if (!selectedSP) return;
-    const value = override !== undefined ? override : commissionOverride;
-    setSavingOverride(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ commission_override: value })
-      .eq('id', selectedSP);
-    setSavingOverride(false);
-    if (error) {
-      toast({ title: 'Failed to save commission override', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: value === null ? 'Cleared — SP will use tier rate' : `Override set to ${value}%` });
-      loadAll();
-    }
-  };
+
 
 
   const loadSpCompanies = async (spId: string) => {
