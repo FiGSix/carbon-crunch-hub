@@ -11,6 +11,8 @@ const QRCodeCanvas = lazy(() => import("qrcode.react").then((m) => ({ default: m
 
 interface Props {
   linkType: "client" | "agent";
+  title?: string;
+  subtitle?: string;
 }
 
 interface LinkRow {
@@ -22,7 +24,7 @@ interface LinkRow {
   conversions: number;
 }
 
-export function ReferralLinkWidget({ linkType }: Props) {
+export function ReferralLinkWidget({ linkType, title, subtitle }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [link, setLink] = useState<LinkRow | null>(null);
@@ -110,11 +112,12 @@ export function ReferralLinkWidget({ linkType }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your referral link</CardTitle>
+        <CardTitle>{title ?? "Your referral link"}</CardTitle>
         <CardDescription>
-          {linkType === "client"
-            ? "Share this link — clients receive a signable proposal immediately and are assigned to you automatically."
-            : "Share this link — partners who sign up are linked to your network pending admin approval."}
+          {subtitle ??
+            (linkType === "client"
+              ? "Share this link — clients receive a signable proposal immediately and are assigned to you automatically."
+              : "Share this link — partners who sign up are linked to your network pending admin approval.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

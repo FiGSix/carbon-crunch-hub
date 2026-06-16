@@ -31,12 +31,26 @@ const Profile = () => {
           />
 
           {/* Referral system - for agents and super partners */}
-          {(isAgent || isSuperPartner) && (
+          {isAgent && <ReferralLinkWidget linkType="client" />}
+
+          {isSuperPartner && (
             <>
-              <ReferralLinkWidget linkType={isAgent ? 'client' : 'agent'} />
-              <ReferralBioCard />
+              <ReferralLinkWidget
+                linkType="agent"
+                title="Partner recruitment link"
+                subtitle="Share this link — partners who sign up are linked to your network pending admin approval."
+              />
+              {profile?.can_create_proposals && (
+                <ReferralLinkWidget
+                  linkType="client"
+                  title="Client referral link"
+                  subtitle="Share this link — clients complete an assessment and receive a signable proposal instantly, attributed to you."
+                />
+              )}
             </>
           )}
+
+          {(isAgent || isSuperPartner) && <ReferralBioCard />}
 
           {/* Client Referral Section - Only for agents and admins */}
           {(isAgent || isAdmin) && (

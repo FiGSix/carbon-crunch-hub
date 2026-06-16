@@ -183,8 +183,21 @@ export default function AdminSuperPartnerManagement() {
       .from("profiles")
       .update({ can_create_proposals: value })
       .eq("id", id);
-    if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
-    else { toast({ title: value ? "Direct proposal creation enabled" : "Direct proposal creation disabled" }); loadAll(); }
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (value) {
+      // Ensure SP has a client referral link; unique (owner_id, link_type) makes this idempotent
+      const { error: linkError } = await supabase
+        .from("referral_links")
+        .insert({ owner_id: id, link_type: "client" });
+      if (linkError && !/duplicate key|unique/i.test(linkError.message)) {
+        toast({ title: "Referral link warning", description: linkError.message, variant: "destructive" });
+      }
+    }
+    toast({ title: value ? "Direct proposal creation enabled" : "Direct proposal creation disabled" });
+    loadAll();
   };
 
   const reviewRequest = async (req: LinkRequest, approve: boolean) => {
