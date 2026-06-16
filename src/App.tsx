@@ -80,6 +80,8 @@ const BlockedEmails = createOptimizedLazyComponent(() => import("./pages/admin/B
 const AdminSuperPartnerManagement = createOptimizedLazyComponent(() => import("./pages/AdminSuperPartnerManagement"), "AdminSuperPartnerManagement");
 const SuperPartnerDashboard = createOptimizedLazyComponent(() => import("./pages/SuperPartnerDashboard"), "SuperPartnerDashboard");
 const SuperPartnerMyCompanies = createOptimizedLazyComponent(() => import("./pages/SuperPartnerMyCompanies"), "SuperPartnerMyCompanies");
+const PartnerReferralLandingPage = createOptimizedLazyComponent(() => import("./pages/PartnerReferralLandingPage"), "PartnerReferralLandingPage");
+const AdminReferralLinks = createOptimizedLazyComponent(() => import("./pages/admin/AdminReferralLinks"), "AdminReferralLinks");
 const SuperPartnerCommission = createOptimizedLazyComponent(() => import("./pages/SuperPartnerCommission"), "SuperPartnerCommission");
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
@@ -159,6 +161,18 @@ function App() {
                     <PageErrorBoundary pageName="Calculator">
                       <Suspense fallback={<PageLoader />}><Calculator /></Suspense>
                     </PageErrorBoundary>
+                  } />
+                  <Route path="/ref/:token" element={
+                    <PageErrorBoundary pageName="Referral Landing">
+                      <Suspense fallback={<PageLoader />}><PartnerReferralLandingPage /></Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="/admin/referral-links" element={
+                    <PrivateRoute allowedRoles={["admin"]}>
+                      <PageErrorBoundary pageName="Admin Referral Links">
+                        <Suspense fallback={<PageLoader />}><AdminReferralLinks /></Suspense>
+                      </PageErrorBoundary>
+                    </PrivateRoute>
                   } />
                   <Route 
                     path="/quick-calc" 
