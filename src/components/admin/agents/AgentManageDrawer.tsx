@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,29 +23,18 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Building,
-  Calendar,
+  ArrowRight,
   CheckCircle2,
   Copy,
-  Info,
-  Mail,
+  Pencil,
   RefreshCw,
   Shield,
-  TrendingUp,
-  User,
   X,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCacheInvalidation } from '@/hooks/query/useCacheInvalidation';
 import { createNotification } from '@/services/notificationService';
-import { getDefaultCommissionDescription } from '@/utils/admin/commissionHelpers';
 import { AgentData } from './types';
 import { renderStatusBadge } from './statusBadge';
 
@@ -63,68 +52,183 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
-const tierRate = (portfolioKwp: number) => (portfolioKwp >= 15000 ? 7 : 4);
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    {children}
+  </h3>
+);
 
 export function AgentManageDrawer({ agent, open, onOpenChange }: AgentManageDrawerProps) {
   const { toast } = useToast();
   const { invalidateAgentManagement } = useCacheInvalidation();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  const [useDefaultRate, setUseDefaultRate] = useState(true);
-  const [customRate, setCustomRate] = useState<string>('');
+  const partnerId = agent?.agent_id ?? null;
+  const isInvitation = !!agent?.is_invitation;
+
+  const [editing, setEditing] = useState(false);
+  const [editFirst, setEditFirst] = useState('');
+  const [editLast, setEditLast] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [confirmUpgradeOpen, setConfirmUpgradeOpen] = useState(false);
   const [confirmCancelInviteOpen, setConfirmCancelInviteOpen] = useState(false);
 
-  useEffect(() => {
-    if (!agent) return;
-    if (agent.commission_override !== null && agent.commission_override !== undefined) {
-      setUseDefaultRate(false);
-      setCustomRate(String(agent.commission_override));
-    } else {
-      setUseDefaultRate(true);
-      setCustomRate('');
-    }
-  }, [agent]);
+  // ───────────────────── Fresh profile data on open ─────────────────────
+  const { data: profileData, refetch: refetchProfile } = useQuery({
+    queryKey: ['admin-partner-drawer-profile', partnerId],
+    enabled: !!partnerId && open && !isInvitation,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone, agent_status, last_active_at, company_name')
+        .eq('id', partnerId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  const commissionMutation = useMutation({
-    mutationFn: async (value: number | null) => {
-      if (!agent) return;
+  // ───────────────────── Fresh company membership ─────────────────────
+  const { data: membership } = useQuery({
+    queryKey: ['admin-partner-drawer-membership', partnerId],
+    enabled: !!partnerId && open && !isInvitation,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_members')
+        .select('role, created_at, company_id, companies:company_id(id, company_name, commission_override)')
+        .eq('user_id', partnerId!)
+        .eq('status', 'active')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  // ───────────────────── Fresh proposals (live) ─────────────────────
+  const { data: proposals, refetch: refetchProposals } = useQuery({
+    queryKey: ['admin-partner-drawer-proposals', partnerId],
+    enabled: !!partnerId && open && !isInvitation,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('id, system_size_kwp, signed_at, status')
+        .eq('agent_id', partnerId!)
+        .is('deleted_at', null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // ───────────────────── Fresh earnings (live) ─────────────────────
+  const { data: earnings } = useQuery({
+    queryKey: ['admin-partner-drawer-earnings', partnerId],
+    enabled: !!partnerId && open && !isInvitation,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agent_commissions')
+        .select('commission_amount')
+        .eq('agent_id', partnerId!);
+      if (error) throw error;
+      return (data ?? []).reduce((s, r: any) => s + Number(r.commission_amount ?? 0), 0);
+    },
+  });
+
+  // ───────────────────── Realtime: only for the open partner ─────────────────────
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  useEffect(() => {
+    if (!partnerId || !open || isInvitation) return;
+    const channel = supabase
+      .channel(`partner-drawer-${partnerId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${partnerId}` },
+        () => {
+          refetchProfile();
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'proposals', filter: `agent_id=eq.${partnerId}` },
+        () => {
+          refetchProposals();
+        },
+      )
+      .subscribe();
+    channelRef.current = channel;
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [partnerId, open, isInvitation, refetchProfile, refetchProposals]);
+
+  // Sync edit form when profile loads or drawer reopens
+  useEffect(() => {
+    if (profileData) {
+      setEditFirst(profileData.first_name ?? '');
+      setEditLast(profileData.last_name ?? '');
+      setEditPhone(profileData.phone ?? '');
+    }
+    setEditing(false);
+  }, [profileData?.id, open]);
+
+  // ─────────────────────────── Mutations ───────────────────────────
+  const savePartnerMutation = useMutation({
+    mutationFn: async () => {
+      if (!partnerId) return;
       const { error } = await supabase
         .from('profiles')
-        .update({ commission_override: value })
-        .eq('id', agent.agent_id);
+        .update({
+          first_name: editFirst.trim() || null,
+          last_name: editLast.trim() || null,
+          phone: editPhone.trim() || null,
+        })
+        .eq('id', partnerId);
       if (error) throw error;
     },
     onSuccess: async () => {
-      await invalidateAgentManagement();
-      toast({ title: 'Commission updated' });
+      await Promise.all([
+        invalidateAgentManagement(),
+        queryClient.invalidateQueries({ queryKey: ['admin-partner-drawer-profile', partnerId] }),
+      ]);
+      toast({ title: 'Partner details saved' });
+      setEditing(false);
     },
     onError: (e: Error) =>
-      toast({ title: 'Update failed', description: e.message, variant: 'destructive' }),
+      toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   });
 
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
-      if (!agent) return;
-      const wasPending = agent.agent_status === 'pending_approval';
+      if (!partnerId) return;
+      const wasPending = (profileData?.agent_status ?? agent?.agent_status) === 'pending_approval';
       const { error } = await supabase
         .from('profiles')
         .update({ agent_status: status })
-        .eq('id', agent.agent_id);
+        .eq('id', partnerId);
       if (error) throw error;
 
       if (status === 'active' && wasPending) {
         await createNotification({
-          userId: agent.agent_id,
+          userId: partnerId,
           title: 'Account Approved!',
           message:
-            'Your agent account has been approved. You can now start creating proposals and managing clients.',
+            'Your partner account has been approved. You can now start creating proposals and managing clients.',
           type: 'success',
           relatedType: 'agent_approval',
-          relatedId: agent.agent_id,
+          relatedId: partnerId,
         });
         try {
           await supabase.functions.invoke('send-agent-approval-email', {
-            body: { agentId: agent.agent_id },
+            body: { agentId: partnerId },
           });
         } catch {
           /* non-blocking */
@@ -141,16 +245,16 @@ export function AgentManageDrawer({ agent, open, onOpenChange }: AgentManageDraw
 
   const upgradeMutation = useMutation({
     mutationFn: async () => {
-      if (!agent) return;
+      if (!partnerId) return;
       const { error } = await supabase.rpc('upgrade_agent_to_super_partner', {
-        p_agent_id: agent.agent_id,
+        p_agent_id: partnerId,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
       await invalidateAgentManagement();
       toast({
-        title: 'Agent upgraded',
+        title: 'Partner upgraded',
         description: 'They now appear under Super Partners.',
       });
       onOpenChange(false);
@@ -197,327 +301,359 @@ export function AgentManageDrawer({ agent, open, onOpenChange }: AgentManageDraw
       toast({ title: 'Cancel failed', description: e.message, variant: 'destructive' }),
   });
 
+  // ─────────────────────── Derived live stats ───────────────────────
+  const stats = useMemo(() => {
+    const list = proposals ?? [];
+    const total = list.length;
+    const signed = list.filter((p: any) => !!p.signed_at).length;
+    const signedKwp = list
+      .filter((p: any) => !!p.signed_at)
+      .reduce((s: number, p: any) => s + Number(p.system_size_kwp ?? 0), 0);
+    return { total, signed, mwp: signedKwp / 1000 };
+  }, [proposals]);
+
   if (!agent) return null;
 
-  const isInvitation = !!agent.is_invitation;
-  const portfolioMWp = (agent.portfolio_size_kwp || 0) / 1000;
-  const currentTier = tierRate(agent.portfolio_size_kwp || 0);
-  const overrideActive =
-    agent.commission_override !== null && agent.commission_override !== undefined;
+  const companyId = membership?.company_id ?? agent.company_id ?? null;
+  const companyName = membership?.companies?.company_name ?? agent.company_name ?? null;
+  const companyOverride: number | null =
+    membership?.companies?.commission_override ?? agent.company_commission_override ?? null;
+  const companySignedKwp = agent.company_signed_kwp ?? 0;
+  const companySignedMwp = companySignedKwp / 1000;
+  const tierRate = companySignedKwp >= 15000 ? 7 : 4;
 
-  const handleSaveCommission = () => {
-    if (useDefaultRate) {
-      commissionMutation.mutate(null);
-    } else {
-      const v = parseFloat(customRate);
-      if (isNaN(v) || v < 0 || v > 100) {
-        toast({ title: 'Invalid rate', description: 'Enter a value 0–100', variant: 'destructive' });
-        return;
-      }
-      commissionMutation.mutate(v);
-    }
-  };
+  const status = profileData?.agent_status ?? agent.agent_status;
+  const lastActive = profileData?.last_active_at ?? agent.last_active_at;
+  const isPending = status === 'pending_approval';
+  const fullName =
+    [profileData?.first_name, profileData?.last_name].filter(Boolean).join(' ') ||
+    agent.agent_name ||
+    agent.agent_email;
 
-  const copyInviteLink = () => {
-    if (!agent.invitation_token) return;
-    const link = `${window.location.origin}/agent-invitation/${agent.invitation_token}`;
-    navigator.clipboard.writeText(link);
-    toast({ title: 'Invitation link copied' });
-  };
-
-  const renderInvitationDrawer = () => (
-    <Tabs defaultValue="overview" className="mt-4">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="manage">Manage</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="overview" className="space-y-4 pt-4">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <Label className="text-muted-foreground">Name</Label>
-            <p className="font-medium">{agent.agent_name || '—'}</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">Email</Label>
-            <p className="font-medium break-all">{agent.agent_email}</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">Company</Label>
-            <p className="font-medium">{agent.company_name || '—'}</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">Invited by</Label>
-            <p className="font-medium break-all">{agent.invited_by_email || '—'}</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">Expires</Label>
-            <p className="font-medium">
-              {agent.invitation_expires_at
-                ? format(new Date(agent.invitation_expires_at), 'MMM d, yyyy')
-                : '—'}
-            </p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">Status</Label>
-            <div>{renderStatusBadge(agent)}</div>
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="manage" className="space-y-3 pt-4">
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={() => resendInviteMutation.mutate()}
-          disabled={resendInviteMutation.isPending}
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Resend Invitation
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={copyInviteLink}
-          disabled={!agent.invitation_token}
-        >
-          <Copy className="h-4 w-4 mr-2" />
-          Copy Invitation Link
-        </Button>
-        <Button
-          variant="destructive"
-          className="w-full justify-start"
-          onClick={() => setConfirmCancelInviteOpen(true)}
-        >
-          <X className="h-4 w-4 mr-2" />
-          Cancel Invitation
-        </Button>
-
-        <AlertDialog open={confirmCancelInviteOpen} onOpenChange={setConfirmCancelInviteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel this invitation?</AlertDialogTitle>
-              <AlertDialogDescription>
-                The recipient will no longer be able to use this invitation link.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep invitation</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => cancelInviteMutation.mutate()}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Cancel invitation
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </TabsContent>
-    </Tabs>
-  );
-
-  const renderAgentDrawer = () => {
-    const statusButtons = [
-      { label: 'Set Active', value: 'active' },
-      { label: 'Set Inactive', value: 'inactive' },
-      { label: 'Suspend', value: 'suspended' },
-      { label: 'Mark Pending', value: 'pending_approval' },
-    ];
-    const isPending = agent.agent_status === 'pending_approval';
-
+  // ─────────────────────── Invitation variant ───────────────────────
+  if (isInvitation) {
+    const copyInviteLink = () => {
+      if (!agent.invitation_token) return;
+      const link = `${window.location.origin}/register?role=agent&token=${agent.invitation_token}`;
+      navigator.clipboard.writeText(link);
+      toast({ title: 'Invitation link copied' });
+    };
     return (
-      <Tabs defaultValue="overview" className="mt-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="manage">Manage</TabsTrigger>
-        </TabsList>
-
-        {/* OVERVIEW */}
-        <TabsContent value="overview" className="space-y-6 pt-4">
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">Personal Information</h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <User className="h-3 w-3" />Full Name
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="w-full sm:max-w-[560px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle asChild>
+              <div className="space-y-1 text-left">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold">{agent.agent_name || agent.agent_email}</span>
+                  {renderStatusBadge(agent)}
                 </div>
-                <p className="font-medium">{agent.agent_name || '—'}</p>
-              </div>
-              <div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Mail className="h-3 w-3" />Email
-                </div>
-                <p className="font-medium break-all">{agent.agent_email}</p>
-              </div>
-              {agent.company_name && (
-                <div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Building className="h-3 w-3" />Company
-                  </div>
-                  <p className="font-medium">{agent.company_name}</p>
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Calendar className="h-3 w-3" />Join Date
-                </div>
-                <p className="font-medium">
-                  {agent.join_date
-                    ? format(new Date(agent.join_date), 'MMM d, yyyy')
-                    : 'Not available'}
+                <p className="text-sm text-muted-foreground font-normal break-all">
+                  {agent.agent_email}
                 </p>
               </div>
-            </div>
-          </section>
+            </SheetTitle>
+          </SheetHeader>
 
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Account Status</h3>
-            <div>{renderStatusBadge(agent)}</div>
-          </section>
+          <div className="mt-6 space-y-6">
+            <section className="rounded-lg bg-muted/40 p-4 space-y-3">
+              <SectionLabel>Invitation</SectionLabel>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Invited by</div>
+                  <div className="font-medium break-all">{agent.invited_by_email || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Expires</div>
+                  <div className="font-medium">
+                    {agent.invitation_expires_at
+                      ? format(new Date(agent.invitation_expires_at), 'MMM d, yyyy')
+                      : '—'}
+                  </div>
+                </div>
+                {agent.company_name && (
+                  <div className="col-span-2">
+                    <div className="text-muted-foreground">Company</div>
+                    <div className="font-medium">{agent.company_name}</div>
+                  </div>
+                )}
+              </div>
+            </section>
 
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />Performance Metrics
-            </h3>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg bg-muted p-3">
-                <div className="text-xl font-bold">{agent.total_proposals}</div>
-                <div className="text-xs text-muted-foreground">Total Proposals</div>
-              </div>
-              <div className="rounded-lg bg-muted p-3">
-                <div className="text-xl font-bold text-blue-600">{agent.active_proposals}</div>
-                <div className="text-xs text-muted-foreground">Active</div>
-              </div>
-              <div className="rounded-lg bg-muted p-3">
-                <div className="text-xl font-bold text-green-600">{agent.signed_proposals}</div>
-                <div className="text-xs text-muted-foreground">Signed</div>
-              </div>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => resendInviteMutation.mutate()}
+                disabled={resendInviteMutation.isPending}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Resend Invitation
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={copyInviteLink}
+                disabled={!agent.invitation_token}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Invitation Link
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full justify-start"
+                onClick={() => setConfirmCancelInviteOpen(true)}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel Invitation
+              </Button>
             </div>
-            {agent.total_proposals > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Success Rate:{' '}
-                {Math.round((agent.signed_proposals / agent.total_proposals) * 100)}%
-              </p>
+          </div>
+
+          <AlertDialog open={confirmCancelInviteOpen} onOpenChange={setConfirmCancelInviteOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel this invitation?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The recipient will no longer be able to use this invitation link.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep invitation</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => cancelInviteMutation.mutate()}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Cancel invitation
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // ─────────────────────── Registered partner ───────────────────────
+  const statusButtons = [
+    { label: 'Set Active', value: 'active' },
+    { label: 'Set Inactive', value: 'inactive' },
+    { label: 'Suspend', value: 'suspended' },
+  ];
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-[560px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle asChild>
+            <div className="space-y-1 text-left">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-lg font-semibold">{fullName}</span>
+                {renderStatusBadge({ ...agent, agent_status: status })}
+              </div>
+              {companyName && (
+                <p className="text-sm text-muted-foreground font-normal">{companyName}</p>
+              )}
+            </div>
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-6">
+          {/* Section 1: Partner Details (editable) */}
+          <section className="rounded-lg bg-muted/40 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <SectionLabel>Partner Details</SectionLabel>
+              {!editing ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  aria-label="Edit partner details"
+                  className="h-7 w-7 p-0"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              ) : null}
+            </div>
+            {editing ? (
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">First Name</Label>
+                    <Input value={editFirst} onChange={(e) => setEditFirst(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Last Name</Label>
+                    <Input value={editLast} onChange={(e) => setEditLast(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Phone</Label>
+                  <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Email</Label>
+                  <Input value={profileData?.email ?? agent.agent_email} readOnly disabled />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Email changes require account settings.
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => savePartnerMutation.mutate()}
+                    disabled={savePartnerMutation.isPending}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditing(false);
+                      setEditFirst(profileData?.first_name ?? '');
+                      setEditLast(profileData?.last_name ?? '');
+                      setEditPhone(profileData?.phone ?? '');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-muted-foreground text-xs">First Name</div>
+                  <div className="font-medium">{profileData?.first_name || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs">Last Name</div>
+                  <div className="font-medium">{profileData?.last_name || '—'}</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-muted-foreground text-xs">Email</div>
+                  <div className="font-medium break-all">{profileData?.email ?? agent.agent_email}</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-muted-foreground text-xs">Phone</div>
+                  <div className="font-medium">{profileData?.phone || '—'}</div>
+                </div>
+              </div>
             )}
           </section>
 
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">Commission Information</h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          {/* Section 2: Company */}
+          <section className="rounded-lg bg-muted/40 p-4 space-y-3">
+            <SectionLabel>Company</SectionLabel>
+            <div className="space-y-2 text-sm">
               <div>
-                <Label className="text-muted-foreground">Commission Rate</Label>
-                <div className="mt-1">
-                  {overrideActive ? (
-                    <Badge variant="outline">{agent.commission_override}% (Override)</Badge>
-                  ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="inline-flex items-center gap-1 cursor-help">
-                            <Badge variant="secondary">{currentTier}%</Badge>
-                            <Info className="h-3 w-3 text-muted-foreground" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="text-xs">Under 15 MWp: 4% / 15 MWp+: 7%</p>
-                          <p className="text-xs mt-1">
-                            Current portfolio: {portfolioMWp.toFixed(2)} MWp
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
+                <div className="text-muted-foreground text-xs">Company</div>
+                <div className="font-medium">{companyName || '—'}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-muted-foreground text-xs">Role</div>
+                  <div className="font-medium capitalize">
+                    {membership?.role?.replace(/_/g, ' ') || '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs">Member since</div>
+                  <div className="font-medium">
+                    {membership?.created_at
+                      ? format(new Date(membership.created_at), 'MMM d, yyyy')
+                      : '—'}
+                  </div>
                 </div>
               </div>
-              <div>
-                <Label className="text-muted-foreground">Total Earnings</Label>
-                <p className="font-semibold text-green-600">
-                  {formatCurrency(agent.total_commission)}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Recent Activity</h3>
-            <p className="text-sm text-muted-foreground">
-              {agent.last_active_at
-                ? format(new Date(agent.last_active_at), "MMM d, yyyy 'at' h:mm a")
-                : 'Never logged in'}
-            </p>
-          </section>
-        </TabsContent>
-
-        {/* MANAGE */}
-        <TabsContent value="manage" className="space-y-6 pt-4">
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">Commission Override</h3>
-
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={useDefaultRate}
-                  onChange={() => setUseDefaultRate(true)}
-                />
-                Use default commission rate
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex items-center gap-1">
-                        <Badge variant="secondary" className="text-xs">{currentTier}%</Badge>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="text-xs">{getDefaultCommissionDescription()}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </label>
-
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={!useDefaultRate}
-                  onChange={() => setUseDefaultRate(false)}
-                />
-                Custom commission rate
-              </label>
-
-              {!useDefaultRate && (
-                <div className="flex items-center gap-2 pl-6">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    className="w-28"
-                    value={customRate}
-                    onChange={(e) => setCustomRate(e.target.value)}
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
-                </div>
+              {companyId && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="px-0 h-auto"
+                  onClick={() => navigate(`/admin/companies/${companyId}`)}
+                >
+                  Manage company <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
               )}
             </div>
-
-            <div className="rounded-md bg-blue-50 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-200 space-y-1">
-              <p>Under 15 MWp: <strong>4%</strong></p>
-              <p>15 MWp+: <strong>7%</strong></p>
-              <p>Overrides apply to future proposals only.</p>
-            </div>
-
-            <Button
-              size="sm"
-              onClick={handleSaveCommission}
-              disabled={commissionMutation.isPending}
-            >
-              Save Changes
-            </Button>
           </section>
 
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">Account Status</h3>
+          {/* Section 3: Performance (live) */}
+          <section className="rounded-lg bg-muted/40 p-4 space-y-3">
+            <SectionLabel>Performance</SectionLabel>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-md bg-background p-3">
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-xs text-muted-foreground">Total Proposals</div>
+              </div>
+              <div className="rounded-md bg-background p-3">
+                <div className="text-2xl font-bold text-green-600">{stats.signed}</div>
+                <div className="text-xs text-muted-foreground">Signed</div>
+              </div>
+              <div className="rounded-md bg-background p-3">
+                <div className="text-2xl font-bold text-green-600">{stats.mwp.toFixed(2)}</div>
+                <div className="text-xs text-muted-foreground">MWp Signed</div>
+              </div>
+            </div>
+            {stats.total > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {Math.round((stats.signed / stats.total) * 100)}% sign rate
+              </p>
+            )}
+            <div className="text-xs text-muted-foreground pt-1 border-t border-border/50">
+              Last Active:{' '}
+              {lastActive ? format(new Date(lastActive), "MMM d, yyyy 'at' h:mm a") : 'Never'}
+            </div>
+          </section>
+
+          {/* Section 4: Commission (read-only) */}
+          <section className="rounded-lg bg-muted/40 p-4 space-y-3">
+            <SectionLabel>Commission</SectionLabel>
+            <div className="space-y-2">
+              {companyOverride != null ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                    >
+                      {companyOverride}% — Company rate
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Managed at company level</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-base font-semibold">{tierRate}% — MWp tier</div>
+                  <p className="text-xs text-muted-foreground">
+                    Based on {companySignedMwp.toFixed(2)} MWp signed by company
+                  </p>
+                </>
+              )}
+              <div className="pt-2">
+                <div className="text-xs text-muted-foreground">Total Earnings</div>
+                <div className="text-lg font-semibold text-green-600">
+                  {formatCurrency(earnings ?? 0)}
+                </div>
+              </div>
+              {companyId && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="px-0 h-auto"
+                  onClick={() => navigate(`/admin/companies/${companyId}`)}
+                >
+                  Adjust company rate <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              )}
+            </div>
+          </section>
+
+          {/* Section 5: Account Status */}
+          <section className="rounded-lg bg-muted/40 p-4 space-y-3">
+            <SectionLabel>Account Status</SectionLabel>
+            <div>{renderStatusBadge({ ...agent, agent_status: status })}</div>
             <div className="grid grid-cols-2 gap-2">
               {isPending && (
                 <Button
@@ -527,84 +663,62 @@ export function AgentManageDrawer({ agent, open, onOpenChange }: AgentManageDraw
                   disabled={statusMutation.isPending}
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Approve Agent
+                  Approve Partner
                 </Button>
               )}
-              {statusButtons
-                .filter((b) => !(isPending && b.value === 'active'))
-                .map((b) => (
-                  <Button
-                    key={b.value}
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      agent.agent_status === b.value || statusMutation.isPending
-                    }
-                    onClick={() => statusMutation.mutate(b.value)}
-                  >
-                    {b.label}
-                  </Button>
-                ))}
+              {statusButtons.map((b) => (
+                <Button
+                  key={b.value}
+                  size="sm"
+                  variant="outline"
+                  disabled={status === b.value || statusMutation.isPending}
+                  onClick={() => statusMutation.mutate(b.value)}
+                >
+                  {b.label}
+                </Button>
+              ))}
             </div>
           </section>
 
+          {/* Section 6: Upgrade to Super Partner */}
           {!isPending && (
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Role Upgrade</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => setConfirmUpgradeOpen(true)}
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Upgrade to Super Partner
-              </Button>
-
-              <AlertDialog open={confirmUpgradeOpen} onOpenChange={setConfirmUpgradeOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Upgrade to Super Partner?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently change their role. They will appear under Super
-                      Partners and be removed from this list.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => upgradeMutation.mutate()}>
-                      Upgrade
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </section>
-          )}
-        </TabsContent>
-      </Tabs>
-    );
-  };
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[560px] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle asChild>
-            <div className="space-y-1 text-left">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold">{agent.agent_name || agent.agent_email}</span>
-                {renderStatusBadge(agent)}
-              </div>
-              {agent.company_name && (
-                <p className="text-sm text-muted-foreground font-normal">
-                  {agent.company_name}
+            <>
+              <div className="border-t border-border" />
+              <section className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setConfirmUpgradeOpen(true)}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Upgrade to Super Partner
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Promote this partner to Super Partner. This is permanent — they will move to
+                  the Super Partners section.
                 </p>
-              )}
-            </div>
-          </SheetTitle>
-        </SheetHeader>
+              </section>
+            </>
+          )}
+        </div>
 
-        {isInvitation ? renderInvitationDrawer() : renderAgentDrawer()}
+        <AlertDialog open={confirmUpgradeOpen} onOpenChange={setConfirmUpgradeOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Upgrade to Super Partner?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently changes the partner's role. They will appear under Super
+                Partners and be removed from this list.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => upgradeMutation.mutate()}>
+                Upgrade
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   );
