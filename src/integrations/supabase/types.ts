@@ -751,6 +751,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          commission_override: number | null
           company_name: string
           created_at: string
           created_by: string | null
@@ -762,6 +763,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          commission_override?: number | null
           company_name: string
           created_at?: string
           created_by?: string | null
@@ -773,6 +775,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          commission_override?: number | null
           company_name?: string
           created_at?: string
           created_by?: string | null
@@ -3644,7 +3647,10 @@ export type Database = {
           agent_name: string
           agent_status: string
           commission_override: number
+          company_commission_override: number
+          company_id: string
           company_name: string
+          company_signed_kwp: number
           invitation_expires_at: string
           invitation_id: string
           invitation_token: string
