@@ -188,45 +188,54 @@ export async function createProposal(
     const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
     const carbonCredits = calculateCarbonCredits(systemSizeKWp);
     
-    // Step 4: Get portfolio sizes - FIXED to use correct fields and filters
-    const [clientPortfolioKWp, agentPortfolioKWp] = await Promise.all([
+    // Step 4a: Resolve agent's company (auto-creates solo company if needed)
+    const { data: companyIdResolved, error: companyErr } = await supabase
+      .rpc('ensure_agent_has_company', { p_agent_id: agentId });
+    if (companyErr || !companyIdResolved) {
+      proposalLogger.error('Failed to resolve agent company', { error: companyErr });
+      throw new Error(companyErr?.message || 'Failed to resolve agent company');
+    }
+    const companyId = companyIdResolved as string;
+
+    // Step 4b: Portfolio sizes — client portfolio (per client) + company portfolio (per company)
+    const [clientPortfolioKWp, companyPortfolioKWp] = await Promise.all([
       getPortfolioSize(
         supabase
           .from('proposals')
           .select('system_size_kwp')
-          .eq('client_reference_id', clientId)  // ✅ FIXED: Use client_reference_id, not client_id
-          .is('deleted_at', null)               // ✅ FIXED: Exclude soft-deleted proposals
+          .eq('client_reference_id', clientId)
+          .is('deleted_at', null)
           .not('system_size_kwp', 'is', null)
       ),
       getPortfolioSize(
-        supabase
+        (supabase as any)
           .from('proposals')
           .select('system_size_kwp')
-          .eq('agent_id', agentId)
-          .is('deleted_at', null)               // ✅ FIXED: Exclude soft-deleted proposals
+          .eq('company_id', companyId)
+          .is('deleted_at', null)
           .not('system_size_kwp', 'is', null)
       )
     ]);
-    
+
     const totalClientPortfolio = clientPortfolioKWp + systemSizeKWp;
-    const totalAgentPortfolio = agentPortfolioKWp + systemSizeKWp;
-    
+    const totalCompanyPortfolio = companyPortfolioKWp + systemSizeKWp;
+
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
-    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalAgentPortfolio, agentProfile?.commission_override);
-    
-    // Log portfolio calculations for debugging tier issues
-    proposalLogger.info("Portfolio tier calculations", {
+    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalCompanyPortfolio, agentProfile?.commission_override);
+
+    proposalLogger.info("Portfolio tier calculations (company-based)", {
       clientId,
+      companyId,
       systemSizeKWp,
       clientPortfolioKWp,
-      agentPortfolioKWp,
+      companyPortfolioKWp,
       totalClientPortfolio,
-      totalAgentPortfolio,
+      totalCompanyPortfolio,
       clientSharePercentage,
       agentCommissionPercentage,
       commissionOverride: agentProfile?.commission_override
     });
-    
+
     // Step 5: Calculate total client revenue using UnifiedCarbonService
     const calculationSpecs: SystemSpecs = projectInfo.isMultiPhase && projectInfo.phases
       ? {
@@ -245,13 +254,14 @@ export async function createProposal(
       calculationSpecs,
       totalClientPortfolio
     );
-    
+
     const totalClientRevenue = Object.values(revenueByYear).reduce((sum: number, val: number) => sum + val, 0);
-    
-    // Step 6: Insert proposal
-    const proposalData: ProposalInsert = {
+
+    // Step 6: Insert proposal (company_id anchors the proposal permanently)
+    const proposalData = {
       title: proposalTitle,
       agent_id: agentId,
+      company_id: companyId,
       client_reference_id: clientId,
       status: hasExistingAgreement ? 'approved' : 'draft',
       signed_at: hasExistingAgreement ? new Date().toISOString() : null,
@@ -272,8 +282,8 @@ export async function createProposal(
       carbon_credits: carbonCredits,
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
-      agent_portfolio_kwp: totalAgentPortfolio
-    };
+      agent_portfolio_kwp: totalCompanyPortfolio
+    } as unknown as ProposalInsert;
 
     const { data: insertedProposal, error: insertError } = await supabase
       .from('proposals')

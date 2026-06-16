@@ -133,8 +133,8 @@ export function DashboardSidebar() {
       gate: (p: any) => p?.can_create_proposals === true,
     },
     {
-      name: "My Agents",
-      href: "/super-partner/my-agents",
+      name: "My Companies",
+      href: "/super-partner/my-companies",
       icon: Users,
       roles: ["super_partner"]
     },

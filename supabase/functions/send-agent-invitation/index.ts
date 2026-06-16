@@ -17,7 +17,7 @@ interface InvitationRequest {
   lastName?: string;
   companyName?: string;
   resend?: boolean;
-  super_partner_id?: string | null;
+  target_company_id?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -79,11 +79,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Admin company:", adminCompany);
 
-    const { email, firstName, lastName, companyName, resend, super_partner_id: bodySuperPartnerId }: InvitationRequest = await req.json();
-    // Super partners can only invite for themselves; admins may pass any value
-    const effectiveSuperPartnerId = callerRole === 'super_partner'
-      ? user.id
-      : (bodySuperPartnerId ?? null);
+    const { email, firstName, lastName, companyName, resend, target_company_id: bodyTargetCompanyId }: InvitationRequest = await req.json();
+
+    // Super partners can only invite into companies linked to them; validate ownership
+    let effectiveTargetCompanyId: string | null = bodyTargetCompanyId ?? null;
+    if (callerRole === 'super_partner') {
+      if (!effectiveTargetCompanyId) {
+        return new Response(
+          JSON.stringify({ error: "Super partners must specify target_company_id from a linked company" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: ownedCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('id', effectiveTargetCompanyId)
+        .eq('super_partner_id', user.id)
+        .maybeSingle();
+      if (!ownedCompany) {
+        return new Response(
+          JSON.stringify({ error: "Target company is not linked to your Super Partner account" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     console.log("Processing invitation for:", email, "Resend:", resend);
 
@@ -305,7 +324,7 @@ const handler = async (req: Request): Promise<Response> => {
         invitation_token: invitationToken,
         expires_at: expiresAt.toISOString(),
         invited_by: user.id,
-        super_partner_id: effectiveSuperPartnerId,
+        target_company_id: effectiveTargetCompanyId,
       })
       .select()
       .single();
