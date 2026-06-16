@@ -225,7 +225,72 @@ export function CompanyManagementDialog({
                 </div>
               </div>
 
+              {!isClientCompany && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Partner commission rate override</h4>
+                    <p className="text-sm text-muted-foreground">
+                      When set, all partners in this company earn this fixed rate regardless of
+                      their MWp tier. Leave blank to use the standard 4% / 7% tier.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        placeholder="e.g. 5"
+                        className="w-32"
+                        value={commissionOverride}
+                        onChange={(e) => setCommissionOverride(e.target.value)}
+                        disabled={!overrideLoaded || savingOverride}
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (commissionOverride.trim() === '') {
+                            saveCommissionOverride(null);
+                            return;
+                          }
+                          const v = Number(commissionOverride);
+                          if (Number.isNaN(v) || v < 0 || v > 100) {
+                            toast({
+                              title: 'Invalid rate',
+                              description: 'Enter a value between 0 and 100.',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          saveCommissionOverride(v);
+                        }}
+                        disabled={savingOverride}
+                      >
+                        Save
+                      </Button>
+                      {commissionOverride !== '' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => saveCommissionOverride(null)}
+                          disabled={savingOverride}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {commissionOverride !== '' && !Number.isNaN(Number(commissionOverride))
+                        ? `Effective rate: ${Number(commissionOverride)}% (override)`
+                        : `Effective rate: ${companySignedKwp < 15000 ? 4 : 7}% by MWp tier (${(companySignedKwp / 1000).toFixed(2)} MWp signed)`}
+                    </p>
+                  </div>
+                </>
+              )}
+
               <Separator />
+
 
               {/* Team Leads / Account Admins Section */}
               <div className="space-y-3">
