@@ -106,8 +106,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           created_at: data.created_at,
           intro_video_viewed: data.intro_video_viewed,
           intro_video_viewed_at: data.intro_video_viewed_at,
-          super_partner_status: (data as any).super_partner_status ?? null,
-          can_create_proposals: (data as any).can_create_proposals ?? false
+          super_partner_status: data.super_partner_status ?? null,
+          can_create_proposals: data.can_create_proposals ?? false
         };
 
         profileCache = { data: userProfile, userId, timestamp: Date.now() };

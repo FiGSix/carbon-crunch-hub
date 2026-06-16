@@ -208,7 +208,7 @@ export async function createProposal(
           .not('system_size_kwp', 'is', null)
       ),
       getPortfolioSize(
-        (supabase as any)
+        supabase
           .from('proposals')
           .select('system_size_kwp')
           .eq('company_id', companyId)

@@ -45,9 +45,9 @@ export default function SuperPartnerMyCompanies() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any).rpc("get_super_partner_companies");
+    const { data, error } = await supabase.rpc("get_super_partner_companies");
     if (error) toast({ title: "Failed to load companies", description: error.message, variant: "destructive" });
-    setCompanies(((data as any[]) || []).map((row) => ({
+    setCompanies(((data ?? []) as unknown as CompanyRow[]).map((row) => ({
       ...row,
       members: Array.isArray(row.members) ? row.members : [],
     })));
@@ -58,7 +58,7 @@ export default function SuperPartnerMyCompanies() {
 
   const requestCompanyLink = async () => {
     if (!user || !linkCompanyId.trim()) return;
-    const { error } = await (supabase as any).rpc("request_company_link", { p_company_id: linkCompanyId.trim() });
+    const { error } = await supabase.rpc("request_company_link", { p_company_id: linkCompanyId.trim() });
     if (error) {
       toast({ title: "Request failed", description: error.message, variant: "destructive" });
       return;

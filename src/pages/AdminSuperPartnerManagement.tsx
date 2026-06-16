@@ -93,7 +93,7 @@ export default function AdminSuperPartnerManagement() {
     }));
     setRates(rateMap);
 
-    const { data: cos } = await (supabase as any)
+    const { data: cos } = await supabase
       .from("companies")
       .select("id, company_name, super_partner_id");
     setCompanies((cos as CompanyLite[]) || []);
@@ -111,9 +111,12 @@ export default function AdminSuperPartnerManagement() {
   useEffect(() => { loadAll(); }, []);
 
   const loadSpCompanies = async (spId: string) => {
-    const { data, error } = await (supabase as any).rpc("get_super_partner_companies", { p_super_partner_id: spId });
+    const { data, error } = await supabase.rpc("get_super_partner_companies", { p_super_partner_id: spId });
     if (error) { toast({ title: "Failed to load companies", description: error.message, variant: "destructive" }); return; }
-    const rows = ((data as any[]) || []).map((r) => ({ ...r, members: Array.isArray(r.members) ? r.members : [] }));
+    const rows = ((data ?? []) as unknown as SpCompanyRow[]).map((r) => ({
+      ...r,
+      members: Array.isArray(r.members) ? r.members : [],
+    }));
     setSpCompanies((p) => ({ ...p, [spId]: rows }));
   };
 
@@ -138,7 +141,7 @@ export default function AdminSuperPartnerManagement() {
 
   const linkCompany = async (super_partner_id: string, company_id: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("companies")
       .update({
         super_partner_id,
@@ -157,7 +160,7 @@ export default function AdminSuperPartnerManagement() {
   };
 
   const unlinkCompany = async (super_partner_id: string, company_id: string) => {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("companies")
       .update({ super_partner_id: null, super_partner_linked_at: null, super_partner_linked_by: null })
       .eq("id", company_id);
