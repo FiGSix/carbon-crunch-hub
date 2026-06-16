@@ -113,6 +113,30 @@ export default function AdminSuperPartnerManagement() {
 
   useEffect(() => { loadAll(); }, []);
 
+  useEffect(() => {
+    if (!selectedSP) { setCommissionOverride(null); return; }
+    const sp = partners.find((p) => p.id === selectedSP);
+    setCommissionOverride(sp?.commission_override ?? null);
+  }, [selectedSP, partners]);
+
+  const handleSaveCommissionOverride = async (override?: number | null) => {
+    if (!selectedSP) return;
+    const value = override !== undefined ? override : commissionOverride;
+    setSavingOverride(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ commission_override: value })
+      .eq('id', selectedSP);
+    setSavingOverride(false);
+    if (error) {
+      toast({ title: 'Failed to save commission override', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: value === null ? 'Cleared — SP will use tier rate' : `Override set to ${value}%` });
+      loadAll();
+    }
+  };
+
+
   const loadSpCompanies = async (spId: string) => {
     const { data, error } = await (supabase as any).rpc("get_super_partner_companies", { p_super_partner_id: spId });
     if (error) { toast({ title: "Failed to load companies", description: error.message, variant: "destructive" }); return; }
