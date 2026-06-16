@@ -40,7 +40,7 @@ export function RevenueTab({ project, proposal, onRefresh }: RevenueTabProps) {
     proposal.client_share_percentage ?? getClientSharePercentage(portfolioKWp);
   const agentCommissionPercentage =
     proposal.agent_commission_percentage ??
-    getAgentCommissionPercentage(portfolioKWp, undefined, !!proposal.agent_id);
+    getAgentCommissionPercentage(portfolioKWp, !!proposal.agent_id);
   const crunchCommissionPercentage = parseFloat((100 - clientSharePercentage - agentCommissionPercentage).toFixed(2));
 
   // Calculate revenues using existing hook
