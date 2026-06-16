@@ -2246,6 +2246,9 @@ export type Database = {
           notes: string | null
           onboarding_completed: boolean | null
           phone: string | null
+          referral_bio: string | null
+          referred_by_agent_id: string | null
+          referred_by_link_id: string | null
           role: string
           status_changed_at: string | null
           status_changed_by: string | null
@@ -2277,6 +2280,9 @@ export type Database = {
           notes?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          referral_bio?: string | null
+          referred_by_agent_id?: string | null
+          referred_by_link_id?: string | null
           role: string
           status_changed_at?: string | null
           status_changed_by?: string | null
@@ -2308,6 +2314,9 @@ export type Database = {
           notes?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          referral_bio?: string | null
+          referred_by_agent_id?: string | null
+          referred_by_link_id?: string | null
           role?: string
           status_changed_at?: string | null
           status_changed_by?: string | null
@@ -2318,6 +2327,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_agent_id_fkey"
+            columns: ["referred_by_agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_link_id_fkey"
+            columns: ["referred_by_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_status_changed_by_fkey"
             columns: ["status_changed_by"]
@@ -2866,6 +2889,92 @@ export type Database = {
           {
             foreignKeyName: "proposals_super_partner_id_fkey"
             columns: ["super_partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          referral_link_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          referral_link_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          referral_link_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_events_referral_link_id_fkey"
+            columns: ["referral_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_links: {
+        Row: {
+          clicks: number
+          conversions: number
+          created_at: string
+          id: string
+          is_active: boolean
+          link_type: string
+          owner_id: string
+          signups: number
+          token: string
+        }
+        Insert: {
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          link_type: string
+          owner_id: string
+          signups?: number
+          token?: string
+        }
+        Update: {
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          link_type?: string
+          owner_id?: string
+          signups?: number
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_links_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3421,6 +3530,10 @@ export type Database = {
         Args: { client_id_param: string }
         Returns: boolean
       }
+      apply_referral_on_signup: {
+        Args: { p_new_user_id: string; p_token: string }
+        Returns: undefined
+      }
       archive_proposal: {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
@@ -3805,6 +3918,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_referral_partner_info: { Args: { p_token: string }; Returns: Json }
       get_super_partner_commission_ledger: {
         Args: never
         Returns: {
@@ -3913,6 +4027,10 @@ export type Database = {
           result_count_param?: number
           search_term_param?: string
         }
+        Returns: undefined
+      }
+      log_referral_conversion: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
       mark_invitation_viewed: {
