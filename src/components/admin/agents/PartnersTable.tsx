@@ -27,7 +27,7 @@ import { TablePagination } from './TablePagination';
 import { AgentManageDrawer } from './AgentManageDrawer';
 import { STATUS_OPTIONS, StatusKey, renderStatusBadge } from './statusBadge';
 
-const tierRate = (portfolioKwp: number) => (portfolioKwp >= 15000 ? 7 : 4);
+const tierRate = (companyKwp: number) => (companyKwp >= 15000 ? 7 : 4);
 
 const escapeCsv = (v: unknown) => {
   const s = v === null || v === undefined ? '' : String(v);
@@ -58,7 +58,7 @@ export function PartnersTable() {
         offset_param: (page - 1) * pageSize,
       });
       if (error) throw error;
-      return (data ?? []) as AgentData[];
+      return (data ?? []) as unknown as AgentData[];
     },
   });
 
@@ -76,23 +76,24 @@ export function PartnersTable() {
     return data.filter((a) => a.company_name === companyFilter);
   }, [data, companyFilter]);
 
+  const renderRate = (a: AgentData) => {
+    if (a.is_invitation) return '';
+    if (a.company_commission_override != null) {
+      return `${a.company_commission_override}% (Company rate)`;
+    }
+    return `${tierRate(a.company_signed_kwp || 0)}% (Tier)`;
+  };
+
   const exportCsv = () => {
-    const headers = ['Company', 'Name', 'Email', 'Status', 'Rate', 'MWp Signed'];
+    const headers = ['Company', 'Name', 'Email', 'Status', 'Rate', 'Company MWp Signed'];
     const lines = filteredRows.map((a) => {
-      const rate = a.is_invitation
-        ? ''
-        : a.commission_override != null
-        ? `${a.commission_override}% (Override)`
-        : `${tierRate(a.portfolio_size_kwp || 0)}%`;
-      const mwp = a.is_invitation
-        ? ''
-        : ((a.portfolio_size_kwp || 0) / 1000).toFixed(2);
+      const mwp = a.is_invitation ? '' : ((a.company_signed_kwp || 0) / 1000).toFixed(2);
       const status = a.is_invitation
         ? a.invitation_expires_at && new Date(a.invitation_expires_at) < new Date()
           ? 'Expired'
           : 'Invited'
         : a.agent_status;
-      return [a.company_name || '', a.agent_name || '', a.agent_email, status, rate, mwp]
+      return [a.company_name || '', a.agent_name || '', a.agent_email, status, renderRate(a), mwp]
         .map(escapeCsv)
         .join(',');
     });
@@ -128,6 +129,7 @@ export function PartnersTable() {
             }}
             placeholder="Search by name, email or company…"
             className="pl-9"
+            aria-label="Search partners"
           />
         </div>
 
@@ -138,7 +140,7 @@ export function PartnersTable() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px]" aria-label="Filter by status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -154,7 +156,7 @@ export function PartnersTable() {
         </Select>
 
         <Select value={companyFilter} onValueChange={setCompanyFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[200px]" aria-label="Filter by company">
             <SelectValue placeholder="All Companies" />
           </SelectTrigger>
           <SelectContent>
@@ -207,7 +209,7 @@ export function PartnersTable() {
               </TableRow>
             ) : (
               filteredRows.map((a) => {
-                const mwp = (a.portfolio_size_kwp || 0) / 1000;
+                const mwp = (a.company_signed_kwp || 0) / 1000;
                 return (
                   <TableRow key={`${a.is_invitation ? 'inv' : 'ag'}-${a.agent_id}`}>
                     <TableCell>
@@ -223,15 +225,17 @@ export function PartnersTable() {
                     <TableCell>
                       {a.is_invitation ? (
                         <span className="text-muted-foreground">N/A</span>
-                      ) : a.commission_override != null ? (
-                        <span className="inline-flex items-center gap-1">
-                          {a.commission_override}%
-                          <Badge variant="outline" className="text-xs">
-                            Override
-                          </Badge>
-                        </span>
+                      ) : a.company_commission_override != null ? (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                        >
+                          {a.company_commission_override}% (Company rate)
+                        </Badge>
                       ) : (
-                        `${tierRate(a.portfolio_size_kwp || 0)}%`
+                        <span className="text-sm">
+                          {tierRate(a.company_signed_kwp || 0)}% (Tier)
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -242,7 +246,12 @@ export function PartnersTable() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => openManage(a)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openManage(a)}
+                        aria-label={`Manage partner ${a.agent_name || a.agent_email}`}
+                      >
                         Manage
                       </Button>
                     </TableCell>

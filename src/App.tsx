@@ -58,6 +58,7 @@ const SystemSettings = createOptimizedLazyComponent(() => import("./pages/System
 const Notifications = createOptimizedLazyComponent(() => import("./pages/Notifications"), "Notifications");
 const AdminAgentManagement = createOptimizedLazyComponent(() => import("./pages/AdminAgentManagement"), "AdminAgentManagement");
 const AdminUserManagement = createOptimizedLazyComponent(() => import("./pages/AdminUserManagement"), "AdminUserManagement");
+const AdminCompanyDetail = createOptimizedLazyComponent(() => import("./pages/AdminCompanyDetail"), "AdminCompanyDetail");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
@@ -428,6 +429,18 @@ function App() {
                         </PageErrorBoundary>
                       </PrivateRoute>
                     } 
+                  />
+                  <Route
+                    path="/admin/companies/:companyId"
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Company Detail">
+                          <Suspense fallback={<PageLoader />}>
+                            <AdminCompanyDetail />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
                   />
                   <Route 
                     path="/admin/signatures" 

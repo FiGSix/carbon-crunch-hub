@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface CompanyManagementDialogProps {
   companyId: string | null;
@@ -23,9 +24,14 @@ export function CompanyManagementDialog({
   open,
   onOpenChange,
 }: CompanyManagementDialogProps) {
+  const { toast } = useToast();
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [commissionOverride, setCommissionOverride] = useState<string>('');
+  const [companySignedKwp, setCompanySignedKwp] = useState<number>(0);
+  const [savingOverride, setSavingOverride] = useState(false);
+  const [overrideLoaded, setOverrideLoaded] = useState(false);
   
   const {
     companyDetails,
@@ -74,6 +80,53 @@ export function CompanyManagementDialog({
   const handleCancelEdit = () => {
     setEditedName(companyDetails?.company_name || '');
     setIsEditingName(false);
+  };
+
+  // Load company commission override + company-signed MWp (agent companies only)
+  useEffect(() => {
+    let cancelled = false;
+    setOverrideLoaded(false);
+    if (!companyId || companyDetails?.companyType === 'client') {
+      setCommissionOverride('');
+      setCompanySignedKwp(0);
+      return;
+    }
+    (async () => {
+      const [{ data: co }, { data: props }] = await Promise.all([
+        (supabase as any).from('companies').select('commission_override').eq('id', companyId).maybeSingle(),
+        (supabase as any)
+          .from('proposals')
+          .select('system_size_kwp')
+          .eq('company_id', companyId)
+          .not('signed_at', 'is', null)
+          .is('deleted_at', null),
+      ]);
+      if (cancelled) return;
+      setCommissionOverride(co?.commission_override == null ? '' : String(co.commission_override));
+      setCompanySignedKwp((props ?? []).reduce((s: number, r: any) => s + Number(r.system_size_kwp ?? 0), 0));
+      setOverrideLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [companyId, companyDetails?.companyType]);
+
+  const saveCommissionOverride = async (value: number | null) => {
+    if (!companyId) return;
+    setSavingOverride(true);
+    const { error } = await (supabase as any)
+      .from('companies')
+      .update({ commission_override: value })
+      .eq('id', companyId);
+    setSavingOverride(false);
+    if (error) {
+      toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setCommissionOverride(value == null ? '' : String(value));
+    toast({
+      title: value == null
+        ? 'Override cleared — company will use MWp tier'
+        : 'Rate applied — affects all future proposals from this company',
+    });
   };
 
   if (!companyId) return null;
@@ -172,7 +225,72 @@ export function CompanyManagementDialog({
                 </div>
               </div>
 
+              {!isClientCompany && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Partner commission rate override</h4>
+                    <p className="text-sm text-muted-foreground">
+                      When set, all partners in this company earn this fixed rate regardless of
+                      their MWp tier. Leave blank to use the standard 4% / 7% tier.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        placeholder="e.g. 5"
+                        className="w-32"
+                        value={commissionOverride}
+                        onChange={(e) => setCommissionOverride(e.target.value)}
+                        disabled={!overrideLoaded || savingOverride}
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (commissionOverride.trim() === '') {
+                            saveCommissionOverride(null);
+                            return;
+                          }
+                          const v = Number(commissionOverride);
+                          if (Number.isNaN(v) || v < 0 || v > 100) {
+                            toast({
+                              title: 'Invalid rate',
+                              description: 'Enter a value between 0 and 100.',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          saveCommissionOverride(v);
+                        }}
+                        disabled={savingOverride}
+                      >
+                        Save
+                      </Button>
+                      {commissionOverride !== '' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => saveCommissionOverride(null)}
+                          disabled={savingOverride}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {commissionOverride !== '' && !Number.isNaN(Number(commissionOverride))
+                        ? `Effective rate: ${Number(commissionOverride)}% (override)`
+                        : `Effective rate: ${companySignedKwp < 15000 ? 4 : 7}% by MWp tier (${(companySignedKwp / 1000).toFixed(2)} MWp signed)`}
+                    </p>
+                  </div>
+                </>
+              )}
+
               <Separator />
+
 
               {/* Team Leads / Account Admins Section */}
               <div className="space-y-3">

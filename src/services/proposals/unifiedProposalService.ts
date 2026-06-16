@@ -23,12 +23,8 @@ function calculateClientSharePercentage(portfolioKWp: number): number {
   return 70; // 30+MWp
 }
 
-function calculateAgentCommissionPercentage(portfolioKWp: number, commissionOverride?: number | null): number {
-  // If commission override is set, use it
-  if (commissionOverride !== null && commissionOverride !== undefined) {
-    return commissionOverride;
-  }
-  return portfolioKWp < 15000 ? 4 : 7;
+function calculateAgentCommissionPercentage(companyKWp: number): number {
+  return companyKWp < 15000 ? 4 : 7;
 }
 
 /**
@@ -118,13 +114,13 @@ export async function createProposal(
   });
 
   try {
-    // Step 1: Get agent profile to check approval status and commission override
+    // Step 1: Get agent profile to check approval status
     const { data: agentProfile } = await supabase
       .from('profiles')
-      .select('agent_status, role, commission_override')
+      .select('agent_status, role')
       .eq('id', agentId)
       .single();
-    
+
     // Check if agent is approved before proceeding
     if (agentProfile?.role === 'agent' && agentProfile?.agent_status === 'pending_approval') {
       proposalLogger.warn("Attempted proposal creation by pending agent", { agentId });
@@ -197,6 +193,16 @@ export async function createProposal(
     }
     const companyId = companyIdResolved as string;
 
+    // Step 4a-ii: Fetch company-level commission override.
+    // When set, all partners in this company earn this fixed rate regardless of tier.
+    const { data: companyRow } = await (supabase as any)
+      .from('companies')
+      .select('commission_override')
+      .eq('id', companyId)
+      .maybeSingle();
+    const companyCommissionOverride: number | null =
+      companyRow?.commission_override ?? null;
+
     // Step 4b: Portfolio sizes — client portfolio (per client) + company portfolio (per company)
     const [clientPortfolioKWp, companyPortfolioKWp] = await Promise.all([
       getPortfolioSize(
@@ -221,7 +227,10 @@ export async function createProposal(
     const totalCompanyPortfolio = companyPortfolioKWp + systemSizeKWp;
 
     const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
-    const agentCommissionPercentage = calculateAgentCommissionPercentage(totalCompanyPortfolio, agentProfile?.commission_override);
+    const agentCommissionPercentage =
+      companyCommissionOverride != null
+        ? companyCommissionOverride
+        : calculateAgentCommissionPercentage(totalCompanyPortfolio);
 
     proposalLogger.info("Portfolio tier calculations (company-based)", {
       clientId,
@@ -233,7 +242,7 @@ export async function createProposal(
       totalCompanyPortfolio,
       clientSharePercentage,
       agentCommissionPercentage,
-      commissionOverride: agentProfile?.commission_override
+      companyCommissionOverride,
     });
 
     // Step 5: Calculate total client revenue using UnifiedCarbonService
