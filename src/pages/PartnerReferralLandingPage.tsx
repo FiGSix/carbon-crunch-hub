@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
+import crunchLogo from "@/assets/crunch-carbon-logo.png.asset.json";
 
 const PROVINCES = [
   "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo",
@@ -234,16 +235,16 @@ export default function PartnerReferralLandingPage() {
       <header className="bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <img
-            src="/crunch-carbon-logo-new.png"
+            src={crunchLogo.url}
             alt="Crunch Carbon"
-            className="h-12 w-auto object-contain [filter:brightness(0)_invert(1)]"
+            className="h-12 w-auto object-contain"
           />
           {partner.company_logo_url && (
             <img
               src={partner.company_logo_url}
               alt={partner.company_name ?? "Company logo"}
               loading="lazy"
-              className="h-12 w-auto object-contain [filter:brightness(0)_invert(1)]"
+              className="h-12 w-auto object-contain"
             />
           )}
         </div>
