@@ -1,160 +1,106 @@
-# Super Partner linking: agent → company
+## Goal
 
-Replaces every part of the existing agent-level SP relationship with company-level linking. Single PR.
+Tighten types where the SP→company migration left `as any` casts, then verify the critical path end-to-end with a mix of SQL checks I run and a short UI checklist for you.
 
-## Decisions confirmed
+---
 
-- **Existing `profiles.super_partner_id` data**: discarded. No data migration; admins re-link companies after deploy.
-- **SP-invited new agents**: join the SP-selected linked company on signup.
-- **Multi-company agents**: proposals always attribute to the agent's *earliest* active `company_members` row.
-- **One PR, atomic cutover.**
+## Part 1 — Type cleanup (migration-introduced casts only)
 
-## Migration 1 — schema cutover
+The Supabase types file is regenerated automatically after a migration runs in Lovable, so no CLI step is needed. I'll only touch casts added during the SP→company refactor and leave pre-existing JSONB casts (`eligibility_criteria`, `project_info`, etc.) alone.
 
-```sql
-ALTER TABLE companies
-  ADD COLUMN super_partner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
-  ADD COLUMN super_partner_linked_at timestamptz,
-  ADD COLUMN super_partner_linked_by uuid REFERENCES profiles(id);
+**Files & casts to replace:**
 
-ALTER TABLE proposals
-  ADD COLUMN company_id uuid REFERENCES companies(id);
+1. `src/contexts/auth/AuthContext.tsx` (lines 109–110)
+   - Drop `(data as any)` — `super_partner_status` and `can_create_proposals` are real columns on `profiles` in the regenerated types.
 
-ALTER TABLE super_partner_link_requests
-  DROP COLUMN agent_id,
-  ADD COLUMN company_id uuid NOT NULL REFERENCES companies(id);
+2. `src/pages/SuperPartnerMyCompanies.tsx` (lines 48, 50, 61)
+   - Replace `(supabase as any).rpc("get_super_partner_companies")` with a typed call. Define a local `SuperPartnerCompanyRow` interface mirroring the RPC return shape and use `supabase.rpc("get_super_partner_companies")` directly (types now know it). Same for `request_company_link`.
 
-ALTER TABLE profiles DROP COLUMN super_partner_id;
-```
+3. `src/pages/AdminSuperPartnerManagement.tsx` (lines 96, 114, 116, 123, 126, 141, 160)
+   - Typed `supabase.from("companies")` queries (no cast).
+   - Typed `rpc("get_super_partner_companies", { p_super_partner_id })` and `rpc("backfill_super_partner_commissions", ...)` calls.
+   - Keep narrow `as` casts only where the edge-function error context is genuinely untyped.
 
-New RLS on `companies`: SP can `SELECT` rows where `super_partner_id = auth.uid()`. Existing agent/admin policies untouched.
+4. `src/services/proposals/unifiedProposalService.ts` (line 211)
+   - Replace `(supabase as any).rpc("ensure_agent_has_company", ...)` with a typed call. Lines 277–279 are pre-existing JSONB casts — leave them.
 
-## Migration 2 — `ensure_agent_has_company(p_agent_id uuid) returns uuid`
+5. `src/services/proposals/clientProjectSubmission.ts` (line 130)
+   - This cast predates the migration (JSONB payload shape) — verify it's still required, leave it if so.
 
-`SECURITY DEFINER`. Returns earliest active `company_members.company_id` for the agent. If none, creates a `companies` row (name = trimmed `profiles.company_name`, else `"First Last (Solo)"`) and a `company_members` row (`role='team_lead'`, `status='active'`, `invited_by`/`approved_by` = the agent).
+6. `supabase/functions/send-agent-invitation/index.ts`
+   - No `as any` found; nothing to do.
 
-## Migration 3 — `get_super_partner_rate(p_super_partner_id uuid)` rewrite
+After each replacement I'll let TypeScript verify there are no resulting type errors before moving on.
 
-Aggregate MWp from `proposals` joined to `companies` on `proposals.company_id` where `companies.super_partner_id = p_super_partner_id`, `signed_at IS NOT NULL`, `deleted_at IS NULL`. Apply existing `system_settings` tier rates (0 / tier1 / tier2). SP's own proposals naturally excluded because their own company has `super_partner_id = NULL`.
+---
 
-## Migration 4 — `handle_proposal_signing_commissions` trigger rewrite
+## Part 2 — Smoke test
 
-Trigger stays attached to the same `BEFORE INSERT/UPDATE` events on `proposals` when `signed_at` transitions to non-null.
+### A. Automated SQL checks (I run these)
 
-1. If `NEW.company_id IS NULL`: call `ensure_agent_has_company(NEW.agent_id)`, assign to `NEW.company_id`.
-2. Look up `companies.super_partner_id` for `NEW.company_id` → `v_sp_id`.
-3. Compute **agent commission tier from company MWp**: `SUM(system_size_kwp)` over signed non-deleted proposals with `company_id = NEW.company_id` (excluding `NEW` if pre-insert). `< 15000 → 4%`, else `7%`. `profiles.commission_override` still wins when set.
-4. Snapshot `NEW.agent_portfolio_kwp = <that company total>` (semantics change: now company MWp, not agent MWp — accepted; downstream display components keep working with the new meaning).
-5. If `v_sp_id IS NOT NULL`: call `get_super_partner_rate(v_sp_id)`, snapshot `NEW.super_partner_id`, `NEW.super_partner_commission_percentage`, insert `super_partner_commissions` row.
-6. Recompute `platform_fee_percentage` unless `platform_fee_override = true` (unchanged).
-7. Always insert `agent_commissions` row (unchanged shape).
+I'll execute read-only queries via `supabase--read_query` to verify the schema & data state:
 
-## Migration 5 — `backfill_super_partner_commissions(p_super_partner_id uuid)` rewrite
+1. **Function signatures present:**
+   ```sql
+   SELECT proname, pg_get_function_arguments(oid)
+   FROM pg_proc
+   WHERE proname IN (
+     'ensure_agent_has_company','get_super_partner_companies',
+     'get_super_partner_rate','backfill_super_partner_commissions',
+     'handle_proposal_signing_commissions','request_company_link'
+   );
+   ```
 
-Drop the old two-arg signature. New signature takes only the SP id. Loops over all signed, non-deleted proposals where `company_id` joins to a company with `super_partner_id = p_super_partner_id`. For each: insert missing `super_partner_commissions` row, refresh proposal snapshots (`super_partner_id`, `super_partner_commission_percentage`, `platform_fee_percentage`), respect `platform_fee_override`. Admin-only guard via `is_current_user_admin()`.
+2. **Schema pivot landed:**
+   - `companies` has `super_partner_id`, `super_partner_linked_at`, `super_partner_linked_by`
+   - `proposals` has `company_id`
+   - `super_partner_link_requests` has `company_id` (no `agent_id`)
+   - `profiles.super_partner_id` is gone
 
-## Migration 6 — `request_company_link(p_company_id uuid)` RPC
+3. **Backfill integrity:**
+   ```sql
+   SELECT COUNT(*) FILTER (WHERE company_id IS NULL) AS missing,
+          COUNT(*) AS total
+   FROM proposals WHERE deleted_at IS NULL;
+   ```
 
-Replaces `request_agent_link_by_email`. Validates caller `is_super_partner()`, inserts `super_partner_link_requests` row with `super_partner_id = auth.uid()`, `company_id = p_company_id`, `request_type='link'`, `status='pending'`. Update RLS on `super_partner_link_requests` to match new shape.
+4. **Revenue path sanity** (the previously-flagged TBD):
+   ```sql
+   SELECT id, content->'financials'->>'totalClientRevenue'
+   FROM proposals WHERE signed_at IS NOT NULL LIMIT 5;
+   ```
 
-**Build-time check**: before creating `request_company_link`, verify `is_super_partner()` exists in the live DB (`SELECT proname FROM pg_proc WHERE proname='is_super_partner'`). If missing, define it in the same migration:
+5. **Linked-company commissions exist where expected:**
+   ```sql
+   SELECT c.id, c.company_name, c.super_partner_id,
+          COUNT(spc.id) AS commission_rows
+   FROM companies c
+   LEFT JOIN super_partner_commissions spc ON spc.company_id = c.id
+   WHERE c.super_partner_id IS NOT NULL
+   GROUP BY c.id, c.company_name, c.super_partner_id;
+   ```
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_super_partner()
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_partner'
-  )
-$$;
-```
+I'll report each query result inline with PASS/FAIL.
 
-## Migration 7 — `upgrade_agent_to_super_partner` patch
+### B. UI checklist (you drive — I provide the verification SQL)
 
-Add `PERFORM ensure_agent_has_company(p_agent_id);` at the top before the role update. Promoted SP owns their own company (with `super_partner_id = NULL` on that company) so their own proposals don't count toward their own SP commission.
+For each step below I'll give you the exact verification query to paste:
 
-## Migration 8 — `send-agent-invitation` + `handle_new_user`
+| # | Action in UI | What I'll verify |
+|---|---|---|
+| 1 | Create a proposal as an agent who is already a company member | `proposals.company_id` matches that company |
+| 2 | Create a proposal as a brand-new solo agent | A new `companies` row was auto-created with `' (Solo · …)'` suffix and the proposal is anchored to it |
+| 3 | As admin, link a company to a Super Partner | `companies.super_partner_id` set; `backfill_super_partner_commissions` ran; `super_partner_commissions` rows appear for prior signed proposals of that company |
+| 4 | Sign a new proposal from an agent in the linked company | New `super_partner_commissions` row with correct rate (3% or 5% based on company MWp) and correct `platform_fee_percentage` on the proposal |
 
-- Add `target_company_id` to `agent_invitations`. Keep existing `super_partner_id` column.
-- `send-agent-invitation` edge function: when caller is an SP, require `target_company_id` (must be a company linked to that SP), store it on the invitation.
-- `handle_new_user` trigger: if invitation has `target_company_id`, insert a `company_members` row (`role='agent'`, `status='active'`) for the new user under that company. Drop any code that wrote `profiles.super_partner_id` (column no longer exists).
+For step 4 specifically I'll also confirm the agent tier (4% vs 7%) on `agent_commissions` matches the company's aggregated MWp threshold.
 
-## Migration 9 — historical `proposals.company_id` backfill
+---
 
-For each proposal where `company_id IS NULL AND agent_id IS NOT NULL`:
-- Set to the earliest `company_members` row for that agent with `status='active' AND created_at <= proposals.created_at`.
-- If none, call `ensure_agent_has_company(proposal.agent_id)` and use the returned id.
+## Technical notes
 
-Run once at end of migration set. Does NOT touch `super_partner_id`/commission snapshots on historical proposals — historical attribution is preserved.
+- No new migrations expected; this is purely code cleanup + verification.
+- If a query reveals a real bug (e.g. `company_id` left NULL on backfilled rows, wrong tier math), I'll surface it and propose a follow-up migration rather than silently patching.
+- The `unifiedProposalService.ts` JSONB casts (lines 277–279) and `clientProjectSubmission.ts` line 130 cast are pre-migration and out of scope — they handle JSONB payload shapes the generated types don't narrow.
 
-## Migration 10 — `get_super_partner_companies()` RPC
-
-New `SECURITY DEFINER` function. Callable by `super_partner` (filtered to `auth.uid()`) or `admin` (sees all SPs — admin variant takes optional `p_super_partner_id` arg). Returns one row per linked company with a nested `members` JSON array, mirroring the shape `get_super_partner_agents` returned so the UI swap is a drop-in.
-
-Per-company columns:
-- `company_id` (uuid)
-- `company_name` (text)
-- `super_partner_linked_at` (timestamptz)
-- `active_member_count` (int) — `COUNT(company_members) WHERE status='active'`
-- `total_signed_mwp` (numeric) — `SUM(proposals.system_size_kwp)/1000` where `signed_at IS NOT NULL AND deleted_at IS NULL AND company_id = c.id`
-- `members` (jsonb) — aggregated array of:
-  - `user_id`, `first_name`, `last_name`, `email`, `role`, `status`
-  - `signed_mwp` — that member's `SUM(system_size_kwp)/1000` over signed non-deleted proposals with `company_id = c.id AND agent_id = member.user_id`
-  - `proposal_count` — that member's count of signed non-deleted proposals with `company_id = c.id`
-
-Filter: `companies.super_partner_id = auth.uid()` for SP callers; admin sees all (or argument-scoped). Drop the old `get_super_partner_agents` function in the same migration.
-
-## Frontend changes
-
-### `src/services/proposals/unifiedProposalService.ts`
-- Before computing portfolio, call `supabase.rpc('ensure_agent_has_company', { p_agent_id: agentId })` → `companyId`.
-- Replace agent-MWp aggregation with company-MWp aggregation: `SUM(system_size_kwp)` where `company_id = companyId`, signed non-deleted. `commission_override` still wins.
-- Write `company_id: companyId` and the company-MWp-derived `agent_portfolio_kwp` into the insert payload.
-
-### Auth / types
-- `src/contexts/auth/types.ts`: drop `super_partner_id` from `UserProfile`. Keep `super_partner_status`.
-- `src/contexts/auth/AuthContext.tsx`: remove `super_partner_id` from `select(...)` and mapping.
-
-### Admin SP page — `src/pages/AdminSuperPartnerManagement.tsx`
-- Rebuild the per-SP detail panel from scratch (component rebuild rule). New panel shows:
-  - Linked companies table: name, active member count, signed MWp, linked date (sourced from `get_super_partner_companies(p_super_partner_id)` admin variant).
-  - "Add Company": searchable dropdown of companies where `super_partner_id IS NULL`. On confirm: `UPDATE companies SET super_partner_id, super_partner_linked_at, super_partner_linked_by` then `rpc('backfill_super_partner_commissions', { p_super_partner_id })`.
-  - "Remove Company": null out the three company fields. Existing `super_partner_commissions` rows preserved.
-  - Expand-row member list (read-only): agent name, role, status, individual MWp.
-- Pending link requests queue shows company name instead of agent name.
-- Drop all reads/writes of `profiles.super_partner_id`.
-
-### SP "My Companies" page
-- Rename file `src/pages/SuperPartnerMyAgents.tsx` → `SuperPartnerMyCompanies.tsx`. Reimplement from scratch (do not patch).
-- Route in `src/App.tsx`: `/super-partner/my-agents` → `/super-partner/my-companies`.
-- Sidebar entry in `src/components/layout/DashboardSidebar.tsx`: label "My Companies", new href.
-- Backing data source: `supabase.rpc('get_super_partner_companies')` (no args for SP callers — function filters by `auth.uid()`).
-- "Invite new agent": SP selects target company from their linked companies → call `send-agent-invitation` with `target_company_id` and `super_partner_id`.
-- "Request to link existing company": searchable company dropdown → `rpc('request_company_link', { p_company_id })`.
-- Remove the direct `super_partner_link_requests` insert at the current line 45-47.
-
-### Removals
-- Delete `request_agent_link_by_email` SQL function and any frontend references.
-- Delete `get_super_partner_agents` SQL function (replaced by `get_super_partner_companies`).
-- Drop the two-arg form of `backfill_super_partner_commissions`.
-
-## Out of scope (explicitly unchanged)
-
-Client share tiers, `agent_commissions` table shape and payout, `accept-proposal` edge function body, existing `companies`/`company_members`/`team_invitations` logic, `adminCompanyOperations.ts`, `useCompanyManagement`, `TeamManagement` page, SP commission rate values, `system_settings` tier thresholds, `RevenueDistributionSection` / `ClientShareCell` / `ProposalActionButtons` (they keep reading `agent_portfolio_kwp` — meaning changes from agent-level to company-level by design).
-
-## Verification
-
-1. Solo agent creates proposal → solo company auto-created, `proposals.company_id` set, agent rate 4%.
-2. Agent in 18 MWp company creates first proposal → rate 7% from proposal #1.
-3. Admin links company to SP → `companies.super_partner_id` set; `backfill_super_partner_commissions` inserts rows for that company's signed history.
-4. New proposal signed by agent in SP-linked company → `super_partner_commissions` row + snapshots + correct platform fee.
-5. Agent leaves company (`company_members.status` flipped) → historical proposals keep original `company_id`; SP/agent attribution unchanged.
-6. SP's own proposal (created via `can_create_proposals=true`) → attributed to SP's own company which has `super_partner_id = NULL` → no SP commission, agent commission as normal.
-7. SP "My Companies" page renders linked companies with expandable member sub-lists from `get_super_partner_companies()`.
-8. `rg "super_partner_id" src/` shows zero matches against `profiles`; only `companies` and `agent_invitations` remain.
-9. Typecheck + build pass after Supabase types regenerate.
-
-## Risk notes
-
-- Hard cutover on `profiles.super_partner_id`: any production SP-agent links in place today are lost. Admins must re-link companies on day one.
-- `agent_portfolio_kwp` semantics change in place. Acceptable per addendum; flagged so anyone reading historical proposal snapshots understands rows written pre-cutover reflect agent MWp, rows written post-cutover reflect company MWp.
-- Trigger rewrite is the highest-blast-radius change; behavioural verification (steps 1–6 above) is mandatory before merge.
+Approve and I'll start with the type cleanup, then run the SQL checks and hand you the UI checklist.
