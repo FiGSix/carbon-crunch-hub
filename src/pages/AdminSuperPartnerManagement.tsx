@@ -173,9 +173,29 @@ export default function AdminSuperPartnerManagement() {
   };
 
   const setStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("profiles").update({ super_partner_status: status }).eq("id", id);
-    if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
-    else { toast({ title: `Status: ${status}` }); loadAll(); }
+    // Suspending an SP downgrades them to a regular agent. Reactivating restores super_partner.
+    const newRole = status === "suspended" ? "agent" : "super_partner";
+    const { error } = await supabase
+      .from("profiles")
+      .update({ super_partner_status: status, role: newRole as any })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Keep user_roles table in sync so has_role() reflects the change
+    if (status === "suspended") {
+      await (supabase as any).from("user_roles").delete().eq("user_id", id).eq("role", "super_partner");
+    } else {
+      const { error: insErr } = await (supabase as any)
+        .from("user_roles")
+        .insert({ user_id: id, role: "super_partner" });
+      if (insErr && !/duplicate key|unique/i.test(insErr.message)) {
+        toast({ title: "Role sync warning", description: insErr.message, variant: "destructive" });
+      }
+    }
+    toast({ title: `Status: ${status}` });
+    loadAll();
   };
 
   const toggleCanCreateProposals = async (id: string, value: boolean) => {

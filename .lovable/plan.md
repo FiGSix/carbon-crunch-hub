@@ -1,21 +1,28 @@
-## Changes in `src/pages/PartnerReferralLandingPage.tsx`
+## Goal
+Remove the "Account Suspended" screen for Super Partners. When an SP is suspended, they should simply continue as a regular agent on next login — no banner, no redirect.
 
-1. **Upload the attached logo to Lovable Assets CDN** (the file is white-on-transparent, perfect for the dark top bar):
-   ```
-   lovable-assets create --file /mnt/user-uploads/CRUNCH-CARBON-LOGO-ALL-2.png --filename crunch-carbon-logo.png > src/assets/crunch-carbon-logo.png.asset.json
-   ```
-   This gives a stable CDN URL that bypasses the broken `/public/crunch-carbon-logo-new.png` file.
+## Changes
 
-2. **Import and use the asset** for the Crunch Carbon logo in the top bar:
-   ```tsx
-   import crunchLogo from "@/assets/crunch-carbon-logo.png.asset.json";
-   ...
-   <img src={crunchLogo.url} alt="Crunch Carbon" className="h-12 w-auto object-contain" />
-   ```
-   The logo is already white in the source, so no filter is needed.
+### 1. `src/components/layout/DashboardLayout.tsx`
+Remove the suspension guard block (lines ~83-104) that renders the "Account Suspended" screen. No replacement UI — suspended SPs just keep using the app under whatever role they have.
 
-3. **Remove the white filter from partner logos** (both `company_logo_url` and `avatar_url` fallback):
-   - Drop `[filter:brightness(0)_invert(1)]` from both `<img>` classNames.
-   - Keep `h-12 w-auto object-contain` (and `rounded-full` on the avatar).
+### 2. Ensure suspension downgrades role to `agent`
+Need to verify how suspension is performed today (admin UI / SQL). Two options:
 
-No other layout, data, or logic changes.
+- **Option A (preferred, no DB change):** Update the admin "suspend super partner" action so that, in addition to setting `super_partner_status = 'suspended'`, it also sets `profiles.role = 'agent'` (and removes the `super_partner` row from `user_roles` if present). This way, on next login the user simply loads as an agent — sidebar, routes, and dashboard all reflect agent automatically with no extra gating code.
+- **Option B (DB trigger):** Add a trigger on `profiles` that, when `super_partner_status` transitions to `'suspended'`, downgrades `role` to `'agent'` and syncs `user_roles`. Safer if suspension can happen from multiple code paths.
+
+I'll go with **Option A** unless exploration shows multiple suspension code paths, in which case I'll add the trigger (Option B) as well.
+
+### 3. No other UI changes
+- Sidebar/routes already handle agent role correctly.
+- The `isSuperPartner` flag in `AuthContext` will naturally become false once role is downgraded.
+- Removing the SP-specific pages (My Companies / Commission) for the downgraded user happens automatically via the existing role-based nav gating.
+
+## Out of scope
+- No change to how SPs are *promoted* or how `super_partner_status` is otherwise used.
+- No change to the partner referral landing page or logo work.
+
+## Technical notes
+- Need to locate the admin suspend action (likely under `src/components/admin/` or an edge function) before writing the migration/code change.
+- If the role downgrade is done in the DB, also clear/replace any `user_roles` row with `role = 'super_partner'` for that user to keep `has_role()` correct.
