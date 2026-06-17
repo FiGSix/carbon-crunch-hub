@@ -236,10 +236,15 @@ export function DashboardSidebar() {
     }
   ];
 
-  // Filter nav items based on user role and optional per-item gate
-  const filteredNavItems = navItems.filter((item: any) =>
-    profile?.role && item.roles.includes(profile.role) && (!item.gate || item.gate(profile))
-  );
+  // Filter nav items based on user role and optional per-item gate.
+  // Defense-in-depth: a suspended Super Partner should never see SP-only items
+  // even if their role somehow still reads as 'super_partner'.
+  const isSuspendedSP = profile?.super_partner_status === 'suspended';
+  const filteredNavItems = navItems.filter((item: any) => {
+    if (!profile?.role || !item.roles.includes(profile.role)) return false;
+    if (isSuspendedSP && item.roles.length === 1 && item.roles[0] === 'super_partner') return false;
+    return !item.gate || item.gate(profile);
+  });
 
   return (
     <Sidebar className="border-r border-gray-200 bg-white">
