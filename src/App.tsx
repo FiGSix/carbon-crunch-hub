@@ -177,7 +177,7 @@ function App() {
                   <Route 
                     path="/quick-calc" 
                     element={
-                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                      <PrivateRoute allowedRoles={['agent', 'admin', 'super_partner']}>
                         <AgentApprovalGuard>
                           <PageErrorBoundary pageName="Quick Calc">
                             <Suspense fallback={<PageLoader />}>
