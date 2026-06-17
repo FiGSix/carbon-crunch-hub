@@ -86,6 +86,28 @@ export function DashboardLayout({
     return <Navigate to="/dashboard" replace />;
   }
 
+  // Block suspended super partners
+  if (userRole === 'super_partner' && profile?.super_partner_status === 'suspended') {
+    componentLogger.warn('Suspended super partner blocked from dashboard', { userId: user?.id });
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-md w-full bg-white border border-gray-200 rounded-lg shadow-sm p-8 text-center">
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Account Suspended</h1>
+          <p className="text-gray-600 mb-6">
+            Your Super Partner account has been suspended. Please contact{' '}
+            <a href="mailto:support@crunchcarbon.com" className="text-blue-600 underline">
+              support@crunchcarbon.com
+            </a>{' '}
+            for assistance.
+          </p>
+          <Button variant="outline" onClick={() => navigate('/login')}>
+            Return to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
