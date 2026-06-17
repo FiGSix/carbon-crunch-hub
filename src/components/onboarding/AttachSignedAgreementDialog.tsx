@@ -80,13 +80,14 @@ export function AttachSignedAgreementDialog({
         ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || profile.email || "Admin"
         : "Admin";
 
-      // 3. Insert the proposal_agreements row
+      // 3. Insert the proposal_agreements row (DB trigger propagates to sibling proposals)
+      const signedAt = new Date().toISOString();
       const { error: insertErr } = await supabase
         .from("proposal_agreements")
         .insert({
           proposal_id: proposalId,
           signed_by: user.id,
-          signed_at: new Date().toISOString(),
+          signed_at: signedAt,
           signature_type: "manual",
           signature_type_used: "manual_upload",
           typed_name: typedName,
@@ -101,6 +102,17 @@ export function AttachSignedAgreementDialog({
         });
 
       if (insertErr) throw insertErr;
+
+      // 4. Mark this proposal as signed so it reflects the attached agreement
+      const { error: proposalUpdateErr } = await supabase
+        .from("proposals")
+        .update({ status: "signed", signed_at: signedAt })
+        .eq("id", proposalId);
+
+      if (proposalUpdateErr) {
+        console.warn("Failed to update proposal status after attach:", proposalUpdateErr);
+      }
+
 
       toast({
         title: "Agreement attached",
