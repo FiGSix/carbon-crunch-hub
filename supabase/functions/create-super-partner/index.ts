@@ -111,19 +111,36 @@ serve(async (req) => {
       console.error("listUsers threw:", e);
     }
 
-    // 2) Create the user if not found
-    if (!uid) {
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email,
-        email_confirm: false,
-        user_metadata: userMeta,
+    // SAFETY: If a user already exists with this email, REFUSE to mutate them here.
+    // This endpoint is for brand-new Super Partner accounts only. Promoting an
+    // existing user must go through public.upgrade_agent_to_super_partner(uuid),
+    // otherwise we silently overwrite the user's existing role (which is exactly
+    // how 213 clients/agents were turned into super partners by mistake).
+    if (uid) {
+      const { data: existing } = await admin
+        .from("profiles")
+        .select("role")
+        .eq("id", uid)
+        .maybeSingle();
+      return json(409, {
+        error: `A user with email ${email} already exists (role: ${existing?.role ?? "unknown"}). Use "Promote existing user" instead — this avoids overwriting their current role.`,
+        existing_user_id: uid,
+        existing_role: existing?.role ?? null,
       });
-      if (createErr || !created?.user) {
-        console.error("createUser failed:", createErr);
-        return json(400, { error: `Create user failed: ${errMsg(createErr)}` });
-      }
-      uid = created.user.id;
     }
+
+    // 2) Create the brand-new auth user
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      user_metadata: userMeta,
+    });
+    if (createErr || !created?.user) {
+      console.error("createUser failed:", createErr);
+      return json(400, { error: `Create user failed: ${errMsg(createErr)}` });
+    }
+    uid = created.user.id;
+
 
     // 3) Generate invite link (best-effort — depends on Auth SMTP config)
     try {
