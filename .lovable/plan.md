@@ -1,59 +1,69 @@
-## Problem
 
-Shaun (`shaun@nuvoconsulting.com`) is `super_partner_status = 'suspended'` but still has `profiles.role = 'super_partner'` and a `super_partner` row in `user_roles`, so every route guard and sidebar entry still treats him as a Super Partner.
+# Fix: 214 incorrect Super Partners
 
-Two root causes:
+## What I found
 
-1. **Data drift** — his suspension predates (or bypassed) the downgrade logic in `AdminSuperPartnerManagement.setStatus`, so his role was never flipped.
-2. **Incomplete downgrade logic** — `setStatus` deletes the `super_partner` row from `user_roles` but never inserts an `agent` row, leaving suspended users with no `user_roles` entry. It also relies entirely on the admin clicking the button — there's no DB-level guarantee that `super_partner_status = 'suspended'` ⇒ role is `agent`.
+| Table | super_partner | agent | client | admin |
+|---|---|---|---|---|
+| `profiles.role` | **214** | 2 | (clients role) | 2 |
+| `user_roles.role` | 214 | 84 | 129 | 4 |
 
-## Fix
+- 213 of the 214 "super partners" own **zero** linked companies.
+- 127 of them have a row in `clients` (i.e. they are actually system-owner clients).
+- The three you actually want as super partners are already correct:
+  - `shaun.slabber.africa@gmail.com` — role=agent, suspended (already demoted)
+  - `brian.hosking@vitalista.co.za` — role=super_partner, active ✓
+  - `shaun@nuvoconsulting.com` — role=agent, suspended (already demoted)
 
-### 1. Database trigger (source of truth)
+## Root cause
 
-Add `sync_super_partner_status()` trigger on `profiles` (AFTER INSERT OR UPDATE OF `super_partner_status`):
+`supabase/functions/create-super-partner/index.ts` (lines 143-169) does a `profiles.upsert({ role: 'super_partner', ... }, { onConflict: 'id' })` **after** looking up an existing auth user by email. If the email already belongs to a client or agent, that user's `role` is silently overwritten to `super_partner`, and a `super_partner` row is inserted into `user_roles`. The admin "Add Super Partner" dialog has been hitting existing users, flipping clients/agents into super partners en masse. No `user_role_audit` entries were created because the function bypasses the audit trigger.
 
-- When `super_partner_status = 'suspended'`:
-  - `UPDATE profiles SET role = 'agent'` (if currently `super_partner`)
-  - `DELETE FROM user_roles WHERE user_id = NEW.id AND role = 'super_partner'`
-  - `INSERT INTO user_roles (user_id, role) VALUES (NEW.id, 'agent') ON CONFLICT DO NOTHING`
-- When `super_partner_status = 'active'` (and previously suspended):
-  - `UPDATE profiles SET role = 'super_partner'`
-  - `INSERT INTO user_roles (user_id, role) VALUES (NEW.id, 'super_partner') ON CONFLICT DO NOTHING`
-  - (leave the `agent` row in place — harmless, and means demotion later still has a fallback role)
+## Plan
 
-This guarantees the two tables can never drift again, regardless of how the status is changed.
+### 1. Patch the edge function (root cause)
 
-### 2. Backfill Shaun + any other drifted rows
+In `supabase/functions/create-super-partner/index.ts`, when an existing auth user is found:
+- **Do not** upsert role.
+- Return a 409 with a clear error: "User already exists with role X — use the Super Partner upgrade flow instead."
 
-Single statement that re-applies the rule to every existing row:
+Only when a brand-new auth user is created should we set `role='super_partner'`. For promoting an existing agent, the admin should use the existing `upgrade_agent_to_super_partner(uuid)` RPC (already in the DB), and we should surface that as a separate "Promote existing user" button in `AdminSuperPartnerManagement.tsx`.
 
-```sql
-UPDATE profiles
-SET super_partner_status = super_partner_status
-WHERE super_partner_status IN ('suspended','active');
-```
+### 2. Migration — restore correct roles
 
-The trigger then corrects `profiles.role` and `user_roles` for Shaun and anyone else in the same state. Verify afterwards with a `SELECT` on Shaun's row.
+Single migration that, for every profile where `role='super_partner'` AND `id NOT IN` the 3 keepers (Brian, plus the two Shauns who are already agents — they will be skipped by the filter anyway):
 
-### 3. Clean up `AdminSuperPartnerManagement.setStatus`
+1. Compute the user's **true** role using this priority:
+   - If `EXISTS (SELECT 1 FROM clients WHERE user_id = p.id)` → `'client'`
+   - Else if `EXISTS (SELECT 1 FROM company_members WHERE user_id = p.id AND role IN ('agent','team_lead'))` OR `EXISTS (SELECT 1 FROM agent_invitations WHERE lower(email)=lower(p.email) AND status='accepted')` → `'agent'`
+   - Else → `'client'` (safe default; they can be re-promoted manually)
+2. `UPDATE profiles SET role = <true_role>, super_partner_status = NULL, can_create_proposals = false`.
+3. `DELETE FROM user_roles WHERE role = 'super_partner' AND user_id NOT IN (<3 keepers>)`.
+4. `INSERT INTO user_roles (user_id, role) VALUES (..., <true_role>) ON CONFLICT DO NOTHING`.
+5. For each affected user, insert a `user_role_audit` row (`action='removed', role='super_partner'`) + (`action='added', role=<true_role>`) so the change is traceable.
+6. `UPDATE companies SET super_partner_id = NULL, super_partner_linked_at = NULL, super_partner_linked_by = NULL WHERE super_partner_id NOT IN (<3 keepers>)` so orphaned links don't leave dangling references. (Brian is the only keeper currently in the DB, since the two Shauns are agents.)
+7. Existing `super_partner_commissions` rows are **preserved** (historical record).
 
-Now that the trigger owns the sync, the page handler only needs to update `super_partner_status`. Remove the manual `role` update and the manual `user_roles` insert/delete (lines 177-196). Keeps the UI in line with the "fix at the root, no patched layers" guideline.
+### 3. Verify
 
-### 4. Defense-in-depth UI guard (small)
+Re-run the role distribution query and confirm:
+- `profiles.role='super_partner'` count = **1** (Brian)
+- `user_roles.role='super_partner'` count = **1**
+- All previously-mislabelled clients/agents show their corrected role on next login.
 
-In `DashboardSidebar.tsx` and `DashboardLayout.tsx` (`requiredRole` check), additionally hide/redirect Super Partner items when `profile.super_partner_status === 'suspended'`. Belt-and-braces in case the trigger is ever bypassed; no behaviour change for normal accounts.
+### 4. Admin UI cleanup
 
-`AuthContext` already exposes `profile.super_partner_status`, so no schema or context changes are needed.
+`AdminSuperPartnerManagement.tsx`:
+- Show a clear "Promote existing user to Super Partner" option that calls `upgrade_agent_to_super_partner` instead of `create-super-partner`.
+- "Add Super Partner" stays for genuinely new accounts only.
 
-## Technical notes
+## Risks
 
-- Trigger is `SECURITY DEFINER` with `SET search_path = public` so it can write to `user_roles` regardless of caller RLS.
-- Uses `ON CONFLICT (user_id, role) DO NOTHING` to be idempotent (the table already has that unique constraint).
-- No changes to the `app_role` enum, RLS policies, or `has_role()`.
-- Existing profile cache TTL is 5 s, so Shaun will see the change on his next request after the backfill runs.
+- The "true role" inference for users with no clients/agent signals defaults to `'client'`. A handful of legitimate agents who were never properly recorded as agents may need manual re-promotion afterwards. I will print a list of those edge cases in the migration output for review.
+- Anyone currently logged in as super_partner will lose access on their next session — expected and desired.
 
-## Out of scope
+## Files touched
 
-- Notifying the affected user
-- Auditing who suspended them (already covered by `user_role_audit` going forward once the trigger writes through `manage-user-role`-style flows — not changing that here)
+- `supabase/functions/create-super-partner/index.ts` — refuse to mutate existing users
+- `supabase/migrations/<new>.sql` — the role-restoration script + audit logging
+- `src/pages/AdminSuperPartnerManagement.tsx` — add explicit "Promote existing user" path
