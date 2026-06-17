@@ -348,7 +348,7 @@ function App() {
                   <Route 
                     path="/team" 
                     element={
-                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                      <PrivateRoute allowedRoles={['agent', 'admin', 'super_partner']}>
                         <AgentApprovalGuard>
                           <PageErrorBoundary pageName="Team Management">
                             <Suspense fallback={<PageLoader />}>
