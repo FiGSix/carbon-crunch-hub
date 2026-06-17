@@ -105,7 +105,7 @@ export function DashboardSidebar() {
       name: "Project Onboarding",
       href: "/onboarding",
       icon: ClipboardCheck,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
     },
     {
       name: "Submit a Project",
