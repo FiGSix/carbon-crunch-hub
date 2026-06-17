@@ -77,6 +77,13 @@ export default function AdminSuperPartnerManagement() {
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
+  // Promote existing user flow
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [promoteEmail, setPromoteEmail] = useState("");
+  const [promoteLookup, setPromoteLookup] = useState<{ id: string; email: string; role: string | null; first_name: string | null; last_name: string | null } | null>(null);
+  const [promoteSearching, setPromoteSearching] = useState(false);
+
+
   const loadAll = async () => {
     setLoading(true);
     const { data: sps } = await supabase
@@ -138,6 +145,46 @@ export default function AdminSuperPartnerManagement() {
     toast({ title: "Super partner created", description: newSP.email });
     setCreateOpen(false);
     setNewSP({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
+    loadAll();
+  };
+
+  const lookupPromoteUser = async () => {
+    const email = promoteEmail.trim().toLowerCase();
+    if (!email) return;
+    setPromoteSearching(true);
+    setPromoteLookup(null);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, role, first_name, last_name")
+      .ilike("email", email)
+      .is("deleted_at", null)
+      .maybeSingle();
+    setPromoteSearching(false);
+    if (error) { toast({ title: "Lookup failed", description: error.message, variant: "destructive" }); return; }
+    if (!data) { toast({ title: "User not found", description: `No active profile with email ${email}`, variant: "destructive" }); return; }
+    setPromoteLookup(data as any);
+  };
+
+  const promoteExistingUser = async () => {
+    if (!promoteLookup) return;
+    if (promoteLookup.role === "super_partner") {
+      toast({ title: "Already a Super Partner", description: promoteLookup.email });
+      return;
+    }
+    if (promoteLookup.role !== "agent") {
+      toast({
+        title: "Only agents can be promoted",
+        description: `${promoteLookup.email} is currently a ${promoteLookup.role ?? "unknown"}. Change them to 'agent' first.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const { error } = await (supabase as any).rpc("upgrade_agent_to_super_partner", { p_agent_id: promoteLookup.id });
+    if (error) { toast({ title: "Promotion failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Promoted to Super Partner", description: promoteLookup.email });
+    setPromoteOpen(false);
+    setPromoteEmail("");
+    setPromoteLookup(null);
     loadAll();
   };
 
@@ -259,7 +306,43 @@ export default function AdminSuperPartnerManagement() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <Dialog open={promoteOpen} onOpenChange={(o) => { setPromoteOpen(o); if (!o) { setPromoteEmail(""); setPromoteLookup(null); } }}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">Promote existing user</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Promote existing user to Super Partner</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Use this for users that already have an account. They must currently be an <strong>agent</strong>. To onboard a brand-new email, use "Add Super Partner".
+                </p>
+                <div>
+                  <Label>Email</Label>
+                  <div className="flex gap-2">
+                    <Input type="email" value={promoteEmail} onChange={(e) => setPromoteEmail(e.target.value)} placeholder="user@example.com" />
+                    <Button variant="outline" onClick={lookupPromoteUser} disabled={!promoteEmail.trim() || promoteSearching}>
+                      {promoteSearching ? "Searching…" : "Find"}
+                    </Button>
+                  </div>
+                </div>
+                {promoteLookup && (
+                  <div className="rounded-md border p-3 text-sm space-y-1">
+                    <div><strong>Name:</strong> {[promoteLookup.first_name, promoteLookup.last_name].filter(Boolean).join(" ") || "—"}</div>
+                    <div><strong>Email:</strong> {promoteLookup.email}</div>
+                    <div><strong>Current role:</strong> <Badge variant="outline">{promoteLookup.role ?? "unknown"}</Badge></div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPromoteOpen(false)}>Cancel</Button>
+                <Button onClick={promoteExistingUser} disabled={!promoteLookup || promoteLookup.role !== "agent"}>
+                  Promote to Super Partner
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
+
       </div>
 
       {requests.length > 0 && (
