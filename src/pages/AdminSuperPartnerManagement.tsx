@@ -148,6 +148,46 @@ export default function AdminSuperPartnerManagement() {
     loadAll();
   };
 
+  const lookupPromoteUser = async () => {
+    const email = promoteEmail.trim().toLowerCase();
+    if (!email) return;
+    setPromoteSearching(true);
+    setPromoteLookup(null);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, role, first_name, last_name")
+      .ilike("email", email)
+      .is("deleted_at", null)
+      .maybeSingle();
+    setPromoteSearching(false);
+    if (error) { toast({ title: "Lookup failed", description: error.message, variant: "destructive" }); return; }
+    if (!data) { toast({ title: "User not found", description: `No active profile with email ${email}`, variant: "destructive" }); return; }
+    setPromoteLookup(data as any);
+  };
+
+  const promoteExistingUser = async () => {
+    if (!promoteLookup) return;
+    if (promoteLookup.role === "super_partner") {
+      toast({ title: "Already a Super Partner", description: promoteLookup.email });
+      return;
+    }
+    if (promoteLookup.role !== "agent") {
+      toast({
+        title: "Only agents can be promoted",
+        description: `${promoteLookup.email} is currently a ${promoteLookup.role ?? "unknown"}. Change them to 'agent' first.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const { error } = await (supabase as any).rpc("upgrade_agent_to_super_partner", { p_agent_id: promoteLookup.id });
+    if (error) { toast({ title: "Promotion failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Promoted to Super Partner", description: promoteLookup.email });
+    setPromoteOpen(false);
+    setPromoteEmail("");
+    setPromoteLookup(null);
+    loadAll();
+  };
+
   const linkCompany = async (super_partner_id: string, company_id: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await (supabase as any)
