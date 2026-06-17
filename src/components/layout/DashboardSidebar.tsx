@@ -68,25 +68,25 @@ export function DashboardSidebar() {
       name: "Team",
       href: "/team",
       icon: UserCheck,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "super_partner"]
     },
     {
       name: "Quick Calc",
       href: "/quick-calc",
       icon: Calculator,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "super_partner"]
     },
     {
       name: "Knowledge Hub",
       href: "/knowledge-hub",
       icon: BookOpen,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "super_partner"]
     },
     {
       name: "Proposals",
       href: "/proposals",
       icon: FileText,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
     },
     {
       name: "Create Proposal",
@@ -105,7 +105,7 @@ export function DashboardSidebar() {
       name: "Project Onboarding",
       href: "/onboarding",
       icon: ClipboardCheck,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
     },
     {
       name: "Submit a Project",
