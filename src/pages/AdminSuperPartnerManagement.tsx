@@ -306,7 +306,43 @@ export default function AdminSuperPartnerManagement() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <Dialog open={promoteOpen} onOpenChange={(o) => { setPromoteOpen(o); if (!o) { setPromoteEmail(""); setPromoteLookup(null); } }}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">Promote existing user</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Promote existing user to Super Partner</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Use this for users that already have an account. They must currently be an <strong>agent</strong>. To onboard a brand-new email, use "Add Super Partner".
+                </p>
+                <div>
+                  <Label>Email</Label>
+                  <div className="flex gap-2">
+                    <Input type="email" value={promoteEmail} onChange={(e) => setPromoteEmail(e.target.value)} placeholder="user@example.com" />
+                    <Button variant="outline" onClick={lookupPromoteUser} disabled={!promoteEmail.trim() || promoteSearching}>
+                      {promoteSearching ? "Searching…" : "Find"}
+                    </Button>
+                  </div>
+                </div>
+                {promoteLookup && (
+                  <div className="rounded-md border p-3 text-sm space-y-1">
+                    <div><strong>Name:</strong> {[promoteLookup.first_name, promoteLookup.last_name].filter(Boolean).join(" ") || "—"}</div>
+                    <div><strong>Email:</strong> {promoteLookup.email}</div>
+                    <div><strong>Current role:</strong> <Badge variant="outline">{promoteLookup.role ?? "unknown"}</Badge></div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPromoteOpen(false)}>Cancel</Button>
+                <Button onClick={promoteExistingUser} disabled={!promoteLookup || promoteLookup.role !== "agent"}>
+                  Promote to Super Partner
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
+
       </div>
 
       {requests.length > 0 && (
