@@ -86,7 +86,7 @@ export function DashboardSidebar() {
       name: "Proposals",
       href: "/proposals",
       icon: FileText,
-      roles: ["admin", "agent", "client"]
+      roles: ["admin", "agent", "client", "super_partner"]
     },
     {
       name: "Create Proposal",
