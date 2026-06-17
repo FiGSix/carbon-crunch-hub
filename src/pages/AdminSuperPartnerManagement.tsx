@@ -77,6 +77,13 @@ export default function AdminSuperPartnerManagement() {
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
+  // Promote existing user flow
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [promoteEmail, setPromoteEmail] = useState("");
+  const [promoteLookup, setPromoteLookup] = useState<{ id: string; email: string; role: string | null; first_name: string | null; last_name: string | null } | null>(null);
+  const [promoteSearching, setPromoteSearching] = useState(false);
+
+
   const loadAll = async () => {
     setLoading(true);
     const { data: sps } = await supabase
