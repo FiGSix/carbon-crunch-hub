@@ -68,19 +68,19 @@ export function DashboardSidebar() {
       name: "Team",
       href: "/team",
       icon: UserCheck,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "super_partner"]
     },
     {
       name: "Quick Calc",
       href: "/quick-calc",
       icon: Calculator,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "super_partner"]
     },
     {
       name: "Knowledge Hub",
       href: "/knowledge-hub",
       icon: BookOpen,
-      roles: ["admin", "agent"]
+      roles: ["admin", "agent", "super_partner"]
     },
     {
       name: "Proposals",
