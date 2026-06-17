@@ -33,7 +33,10 @@ export function DashboardLayout({
 
   // Performance optimization: Memoize computed values with redirect protection
   const { hasAccess, shouldRedirect, dashboardTitle, userInitials } = useMemo(() => {
-    const hasRequiredRole = !requiredRole || userRole === 'admin' || userRole === requiredRole;
+    // Defense-in-depth: a suspended Super Partner cannot enter SP-gated routes.
+    const isSuspendedSP = profile?.super_partner_status === 'suspended';
+    const blockedAsSuspendedSP = requiredRole === 'super_partner' && isSuspendedSP && userRole !== 'admin';
+    const hasRequiredRole = !blockedAsSuspendedSP && (!requiredRole || userRole === 'admin' || userRole === requiredRole);
     
     let title = 'DASHBOARD';
     if (userRole === 'client') title = isMobile ? 'CLIENT' : 'CLIENT DASHBOARD';
