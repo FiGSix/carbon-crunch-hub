@@ -191,7 +191,7 @@ function App() {
                   <Route 
                     path="/knowledge-hub" 
                     element={
-                      <PrivateRoute allowedRoles={['agent', 'admin']}>
+                      <PrivateRoute allowedRoles={['agent', 'admin', 'super_partner']}>
                         <AgentApprovalGuard>
                           <PageErrorBoundary pageName="Knowledge Hub">
                             <Suspense fallback={<PageLoader />}>
