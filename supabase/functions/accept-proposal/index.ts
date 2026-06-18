@@ -6,6 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ProjectDetailsInput {
+  systemAddress?: string;
+  systemLat?: number | null;
+  systemLng?: number | null;
+  commissioningDate?: string;
+  installerCompanyName?: string;
+  installerEmail?: string;
+}
+
 interface AcceptProposalRequest {
   token?: string;
   proposalId?: string;
@@ -14,6 +23,7 @@ interface AcceptProposalRequest {
   signatureType?: 'canvas' | 'typed_name';
   ipAddress?: string;
   userAgent?: string;
+  projectDetails?: ProjectDetailsInput;
 }
 
 serve(async (req) => {
@@ -28,14 +38,15 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { 
-      token, 
-      proposalId, 
-      typedName, 
+    const {
+      token,
+      proposalId,
+      typedName,
       signatureImage,
       signatureType = 'typed_name',
-      ipAddress, 
-      userAgent 
+      ipAddress,
+      userAgent,
+      projectDetails,
     }: AcceptProposalRequest = await req.json();
 
     // Sanitize IP for Postgres `inet` columns — empty string is invalid (22P02).
