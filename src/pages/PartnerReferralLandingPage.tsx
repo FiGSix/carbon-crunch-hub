@@ -10,15 +10,13 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
 import crunchLogo from "@/assets/crunch-carbon-logo.png.asset.json";
+import { calculateComplete } from "@/services/calculations/carbon/core";
 
 const PROVINCES = [
   "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo",
   "Mpumalanga", "North West", "Northern Cape", "Western Cape",
 ];
 const PROPERTY_TYPES = ["Residential", "Commercial", "Agricultural", "Industrial"];
-
-const DEFAULT_ANNUAL_GENERATION_FACTOR = 1642.5;
-const DEFAULT_CARBON_FACTOR = 1.0334;
 
 interface PartnerInfo {
   valid: boolean;
