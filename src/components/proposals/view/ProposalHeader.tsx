@@ -49,7 +49,7 @@ export function ProposalHeader({
     !isDeleted &&
     !!proposalId &&
     (userRole === "admin" ||
-      (userRole === "agent" && proposal?.agent_id === user?.id));
+      ((userRole === "agent" || userRole === "super_partner") && proposal?.agent_id === user?.id));
 
   // Statuses where editing is blocked (proposal is finalized)
   const NON_EDITABLE_STATUSES = ['approved', 'rejected', 'signed'];
@@ -60,7 +60,7 @@ export function ProposalHeader({
     && !proposal.archived_at
     && (
       userRole === 'admin'
-      || (userRole === 'agent' && proposal.agent_id === user?.id)
+      || ((userRole === 'agent' || userRole === 'super_partner') && proposal.agent_id === user?.id)
     );
 
   const handleBack = () => {
