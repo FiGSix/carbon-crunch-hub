@@ -49,7 +49,7 @@ export function ProposalHeader({
     !isDeleted &&
     !!proposalId &&
     (userRole === "admin" ||
-      (userRole === "agent" && proposal?.agent_id === user?.id));
+      ((userRole === "agent" || userRole === "super_partner") && proposal?.agent_id === user?.id));
 
   // Statuses where editing is blocked (proposal is finalized)
   const NON_EDITABLE_STATUSES = ['approved', 'rejected', 'signed'];
@@ -60,7 +60,7 @@ export function ProposalHeader({
     && !proposal.archived_at
     && (
       userRole === 'admin'
-      || (userRole === 'agent' && proposal.agent_id === user?.id)
+      || ((userRole === 'agent' || userRole === 'super_partner') && proposal.agent_id === user?.id)
     );
 
   const handleBack = () => {
@@ -143,7 +143,7 @@ export function ProposalHeader({
         )}
         
         {/* PDF Download button for agents and admins */}
-        {!isDeleted && (userRole === "agent" || userRole === "admin") && proposalId && (
+        {!isDeleted && (userRole === "agent" || userRole === "admin" || userRole === "super_partner") && proposalId && (
           <ProposalPdfButton 
             proposalId={proposalId} 
             proposalTitle={title}
@@ -171,7 +171,7 @@ export function ProposalHeader({
         )}
 
         {/* Invitation Button - Shown for agents and admins viewing proposals */}
-        {proposal && (userRole === "agent" || userRole === "admin") && !isDeleted && (
+        {proposal && (userRole === "agent" || userRole === "admin" || userRole === "super_partner") && !isDeleted && (
           <ProposalInviteButton 
             proposal={proposal as any} 
             onProposalUpdate={onProposalUpdate}

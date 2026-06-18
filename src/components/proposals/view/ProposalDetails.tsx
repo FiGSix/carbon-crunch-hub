@@ -93,7 +93,7 @@ export function ProposalDetails({
           )}
           
           {/* Email Activity Timeline - Only visible to agents */}
-          {userRole === 'agent' && (
+          {(userRole === 'agent' || userRole === 'super_partner') && (
             <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Email Activity & Automation</h3>
