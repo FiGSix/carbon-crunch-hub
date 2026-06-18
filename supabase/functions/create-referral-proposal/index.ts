@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { renderBrandEmail, brandCard } from "../_shared/brand-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,7 +74,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 2. Find or create client (needed for rate limit + proposal insert)
+    // 2. Find or create client
     const [firstName, ...rest] = client.name.trim().split(/\s+/);
     const lastName = rest.join(" ") || null;
     const { data: clientId, error: clientErr } = await admin.rpc("find_or_create_client_by_email", {
@@ -106,7 +107,6 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-
     // 4. Resolve agent company
     const { data: companyId, error: companyErr } = await admin.rpc("ensure_agent_has_company", {
       p_agent_id: link.owner_id,
@@ -115,9 +115,26 @@ serve(async (req: Request): Promise<Response> => {
       console.error("ensure_agent_has_company failed", companyErr);
     }
 
-    // 5. Compute commission / projections
-    // Portfolio = sum of signed system_size_kwp for this company
-    let portfolioKWp = 0;
+    // 5a. CLIENT share = function of CLIENT's own portfolio (existing + new system).
+    // This mirrors unifiedProposalService.ts. Earlier this used the agent's whole-company
+    // portfolio, which incorrectly leaked a high-tier share to small referral systems.
+    let existingClientKWp = 0;
+    {
+      const { data: clientPortfolio } = await admin
+        .from("proposals")
+        .select("system_size_kwp")
+        .eq("client_reference_id", clientId)
+        .is("deleted_at", null);
+      existingClientKWp = (clientPortfolio ?? []).reduce(
+        (s: number, r: { system_size_kwp: number | null }) => s + (r.system_size_kwp ?? 0),
+        0,
+      );
+    }
+    const totalClientPortfolioKWp = existingClientKWp + system.size_kwp;
+    const clientShare = calcClientShare(totalClientPortfolioKWp);
+
+    // 5b. AGENT commission = function of company portfolio (unchanged behaviour).
+    let companyPortfolioKWp = 0;
     if (companyId) {
       const { data: portfolio } = await admin
         .from("proposals")
@@ -125,15 +142,12 @@ serve(async (req: Request): Promise<Response> => {
         .eq("company_id", companyId)
         .not("signed_at", "is", null)
         .is("deleted_at", null);
-      portfolioKWp = (portfolio ?? []).reduce(
+      companyPortfolioKWp = (portfolio ?? []).reduce(
         (s: number, r: { system_size_kwp: number | null }) => s + (r.system_size_kwp ?? 0),
         0,
       );
     }
-    const clientShare = calcClientShare(portfolioKWp);
-
-    // Company override or MWp-tier
-    let agentCommission = portfolioKWp < 15000 ? 4 : 7;
+    let agentCommission = companyPortfolioKWp < 15000 ? 4 : 7;
     if (companyId) {
       const { data: co } = await admin
         .from("companies")
@@ -190,7 +204,6 @@ serve(async (req: Request): Promise<Response> => {
       .select("id")
       .single();
 
-
     if (proposalErr || !proposal) {
       console.error("proposal insert failed", proposalErr);
       return new Response(
@@ -200,16 +213,6 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // 7. Update counters + events
-    await admin
-      .from("referral_links")
-      .update({
-        signups: (await admin.from("referral_links").select("signups").eq("id", link.id).maybeSingle()).data?.signups != null
-          ? undefined
-          : undefined,
-      })
-      .eq("id", link.id);
-    // Atomic increment via RPC pattern: use raw update with expression isn't supported via PostgREST,
-    // so issue two row updates using existing values
     {
       const { data: cur } = await admin
         .from("referral_links")
@@ -231,7 +234,7 @@ serve(async (req: Request): Promise<Response> => {
       { referral_link_id: link.id, event_type: "conversion" },
     ]);
 
-    // 8. Send proposal email to client (CC partner)
+    // 8. Send on-brand proposal email to client (CC partner)
     if (RESEND_API_KEY) {
       const { data: partnerProfile } = await admin
         .from("profiles")
@@ -243,25 +246,33 @@ serve(async (req: Request): Promise<Response> => {
       const signingLink = `${origin}/proposals/${proposal.id}/accept?token=${invitationToken}`;
       const partnerName = [partnerProfile?.first_name, partnerProfile?.last_name].filter(Boolean).join(" ") || "Crunch Carbon";
 
-      const html = `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0f172a">
-          <h1 style="margin:0 0 16px;font-size:24px">Hi ${(firstName || client.name).replace(/[<>]/g, "")},</h1>
-          <p>Your free Crunch Carbon proposal is ready. ${partnerName} put this together for you and a copy has been sent to them too.</p>
-          <ul style="line-height:1.7">
-            <li><strong>System size:</strong> ${system.size_kwp} kWp</li>
-            <li><strong>Estimated carbon credits:</strong> ${carbonCredits.toFixed(2)} tCO₂ / year</li>
-            <li><strong>Estimated clean energy:</strong> ${(annualEnergy / 1000).toFixed(2)} MWh / year</li>
-          </ul>
-          <p style="margin:24px 0">
-            <a href="${signingLink}" style="background:#16a34a;color:#fff;padding:14px 22px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600">
-              View &amp; sign your proposal
-            </a>
-          </p>
-          <p style="font-size:13px;color:#64748b">This is a conservative estimate. Your actual earnings depend on your real energy meter data — the final figure could be higher or lower.</p>
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
-          <p style="font-size:12px;color:#94a3b8">Crunch Carbon — turning your solar into income.</p>
-        </div>
+      const summaryCard = brandCard([
+        ["System size", `${system.size_kwp.toLocaleString()} kWp`],
+        ["Estimated clean energy", `${(annualEnergy / 1000).toFixed(2)} MWh / year`],
+        ["Estimated carbon credits", `${carbonCredits.toFixed(2)} tCO₂ / year`],
+        ["Your share", `${clientShare}%`],
+      ]);
+
+      const bodyHtml = `
+        <p>Hi ${(firstName || client.name).replace(/[<>]/g, "")},</p>
+        <p>Your free Crunch Carbon proposal is ready. ${partnerName.replace(/[<>]/g, "")} put this together for you, and a copy has been sent to them as well.</p>
+        ${summaryCard}
+        <p>Tap below to review the full proposal, confirm a few project details, and sign your Cession Agreement so we can start earning carbon credits from your solar system.</p>
+        <p style="font-size:13px;color:#5C6B63;margin-top:18px">
+          This is a conservative estimate based on standard yield and emission factors.
+          Your actual earnings depend on real meter data and may be higher or lower.
+          The proposal link is valid for 10 days.
+        </p>
       `;
+
+      const html = renderBrandEmail({
+        preheader: `Your solar carbon proposal — ${carbonCredits.toFixed(2)} tCO₂ / year`,
+        heading: `Your Crunch Carbon proposal is ready`,
+        bodyHtml,
+        ctaLabel: "Review & sign your proposal",
+        ctaHref: signingLink,
+        signOff: "The Crunch Carbon Team",
+      });
 
       try {
         const r = await fetch("https://api.resend.com/emails", {
@@ -290,6 +301,7 @@ serve(async (req: Request): Promise<Response> => {
         proposal_id: proposal.id,
         annual_energy: annualEnergy,
         carbon_credits: carbonCredits,
+        client_share_percentage: clientShare,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
