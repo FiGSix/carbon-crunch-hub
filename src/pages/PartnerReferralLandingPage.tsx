@@ -110,16 +110,47 @@ export default function PartnerReferralLandingPage() {
     ? `${window.location.origin}/ref/${token ?? ""}`
     : `https://crunchcarbon.com/ref/${token ?? ""}`;
 
-  const carbonProjection = useMemo(() => {
+  const [carbonProjection, setCarbonProjection] = useState({
+    kwp: 0,
+    annualEnergyMWh: 0,
+    carbonTonnes: 0,
+    clientRevenuePerYear: 0,
+  });
+  const [calcLoading, setCalcLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
     const kwp = parseFloat(form.sizeKwp) || 0;
-    const annualEnergyKwh = kwp * DEFAULT_ANNUAL_GENERATION_FACTOR;
-    const carbon = (annualEnergyKwh / 1000) * DEFAULT_CARBON_FACTOR;
-    return {
-      kwp,
-      annualEnergyMWh: annualEnergyKwh / 1000,
-      carbonTonnes: carbon,
+    if (!kwp || kwp <= 0) {
+      setCarbonProjection({ kwp: 0, annualEnergyMWh: 0, carbonTonnes: 0, clientRevenuePerYear: 0 });
+      return;
+    }
+    setCalcLoading(true);
+    (async () => {
+      try {
+        const result = await calculateComplete({
+          sizeKwp: kwp,
+          province: form.province || undefined,
+          commissionDate: new Date().toISOString(),
+        });
+        if (cancelled) return;
+        setCarbonProjection({
+          kwp,
+          annualEnergyMWh: result.annualEnergyKwh / 1000,
+          carbonTonnes: result.carbonCreditsPerYear,
+          clientRevenuePerYear: result.clientRevenuePerYear,
+        });
+      } catch {
+        if (cancelled) return;
+        setCarbonProjection({ kwp, annualEnergyMWh: 0, carbonTonnes: 0, clientRevenuePerYear: 0 });
+      } finally {
+        if (!cancelled) setCalcLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
-  }, [form.sizeKwp]);
+  }, [form.sizeKwp, form.province]);
 
   const progress = ((step + 1) / 4) * 100;
 
