@@ -483,6 +483,13 @@ export default function ProposalAcceptance() {
             proposal={proposal}
           />
 
+          {isReferralProposal && (
+            <ProjectDetailsStep
+              value={projectDetails}
+              onChange={setProjectDetails}
+            />
+          )}
+
           <div id="review-and-sign">
             <SignatureSection
               hasScrolledToBottom={hasScrolledToBottom}
