@@ -178,7 +178,6 @@ serve(async (req: Request): Promise<Response> => {
         title: `Referral proposal – ${client.name}`,
         agent_id: link.owner_id,
         company_id: companyId ?? null,
-        client_id: clientId,
         client_reference_id: clientId,
         system_size_kwp: system.size_kwp,
         status: "sent",
