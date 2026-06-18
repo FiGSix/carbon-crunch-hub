@@ -10,15 +10,13 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
 import crunchLogo from "@/assets/crunch-carbon-logo.png.asset.json";
+import { calculateComplete } from "@/services/calculations/carbon/core";
 
 const PROVINCES = [
   "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo",
   "Mpumalanga", "North West", "Northern Cape", "Western Cape",
 ];
 const PROPERTY_TYPES = ["Residential", "Commercial", "Agricultural", "Industrial"];
-
-const DEFAULT_ANNUAL_GENERATION_FACTOR = 1642.5;
-const DEFAULT_CARBON_FACTOR = 1.0334;
 
 interface PartnerInfo {
   valid: boolean;
@@ -112,16 +110,47 @@ export default function PartnerReferralLandingPage() {
     ? `${window.location.origin}/ref/${token ?? ""}`
     : `https://crunchcarbon.com/ref/${token ?? ""}`;
 
-  const carbonProjection = useMemo(() => {
+  const [carbonProjection, setCarbonProjection] = useState({
+    kwp: 0,
+    annualEnergyMWh: 0,
+    carbonTonnes: 0,
+    clientRevenuePerYear: 0,
+  });
+  const [calcLoading, setCalcLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
     const kwp = parseFloat(form.sizeKwp) || 0;
-    const annualEnergyKwh = kwp * DEFAULT_ANNUAL_GENERATION_FACTOR;
-    const carbon = (annualEnergyKwh / 1000) * DEFAULT_CARBON_FACTOR;
-    return {
-      kwp,
-      annualEnergyMWh: annualEnergyKwh / 1000,
-      carbonTonnes: carbon,
+    if (!kwp || kwp <= 0) {
+      setCarbonProjection({ kwp: 0, annualEnergyMWh: 0, carbonTonnes: 0, clientRevenuePerYear: 0 });
+      return;
+    }
+    setCalcLoading(true);
+    (async () => {
+      try {
+        const result = await calculateComplete({
+          sizeKwp: kwp,
+          province: form.province || undefined,
+          commissionDate: new Date().toISOString(),
+        });
+        if (cancelled) return;
+        setCarbonProjection({
+          kwp,
+          annualEnergyMWh: result.annualEnergyKwh / 1000,
+          carbonTonnes: result.carbonCreditsPerYear,
+          clientRevenuePerYear: result.clientRevenuePerYear,
+        });
+      } catch {
+        if (cancelled) return;
+        setCarbonProjection({ kwp, annualEnergyMWh: 0, carbonTonnes: 0, clientRevenuePerYear: 0 });
+      } finally {
+        if (!cancelled) setCalcLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
-  }, [form.sizeKwp]);
+  }, [form.sizeKwp, form.province]);
 
   const progress = ((step + 1) / 4) * 100;
 
@@ -417,12 +446,18 @@ export default function PartnerReferralLandingPage() {
                 <div className="text-xs uppercase tracking-[0.2em] text-[#F5C518]/80">
                   You could earn approximately
                 </div>
-                <CountUp
-                  value={carbonProjection.carbonTonnes * 1250}
-                  prefix="R "
-                  suffix=" / year"
-                  reducedMotion={prefersReducedMotion}
-                />
+                {calcLoading ? (
+                  <div className="flex items-center justify-center h-[72px] md:h-[80px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#F5C518]" aria-hidden="true" />
+                  </div>
+                ) : (
+                  <CountUp
+                    value={carbonProjection.clientRevenuePerYear}
+                    prefix="R "
+                    suffix=" / year"
+                    reducedMotion={prefersReducedMotion}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3">
                     <div className="text-2xl font-semibold text-white">

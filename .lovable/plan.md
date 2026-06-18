@@ -1,63 +1,57 @@
-## Sync Super Partner Commission with Linked Companies
+## Align Referral Landing Page Calculation with Platform Standard
 
-Make `companies.super_partner_id` the single source of truth, and clean up orphaned backfilled commission rows.
+Replace the referral page's hardcoded `1642.5 kWh/kWp` and flat `R1,250/tonne` math with the platform's canonical pipeline. The platform already has a single entry point that does everything we need.
 
-### 1. Migration — update RPC to scope by active company link
+### File touched
+`src/pages/PartnerReferralLandingPage.tsx` — calculation block (lines ~20, 115–124) and the display block (lines ~420–438, 495–497).
 
-Replace `get_super_partner_commission_by_company()` so the join filters to companies currently linked to the calling super partner (admins still see everything):
+No platform-side files are changed. No new services.
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_super_partner_commission_by_company()
-RETURNS TABLE(company text, mwp numeric, rate numeric, amount numeric)
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $$
-DECLARE
-  v_caller uuid := auth.uid();
-  v_is_admin boolean := public.is_current_user_admin();
-  v_rate numeric;
-BEGIN
-  IF NOT (v_is_admin OR public.is_super_partner(v_caller)) THEN RETURN; END IF;
+### What the page will now compute
 
-  SELECT p.super_partner_commission_rate INTO v_rate
-  FROM public.profiles p WHERE p.id = v_caller;
+Drop the local `useMemo` + constants and call the canonical pipeline:
 
-  RETURN QUERY
-  SELECT
-    COALESCE(NULLIF(c.company_name, ''), '—') AS company,
-    COALESCE(SUM(pr.system_size_kwp), 0) / 1000.0 AS mwp,
-    COALESCE(v_rate, 0) AS rate,
-    COALESCE(SUM(spc.commission_amount), 0) AS amount
-  FROM public.super_partner_commissions spc
-  LEFT JOIN public.proposals pr ON pr.id = spc.proposal_id
-  JOIN public.company_members cm ON cm.user_id = spc.agent_id
-  JOIN public.companies c ON c.id = cm.company_id
-  WHERE (v_is_admin OR spc.super_partner_id = v_caller)
-    AND (v_is_admin OR c.super_partner_id = v_caller)
-  GROUP BY COALESCE(NULLIF(c.company_name, ''), '—')
-  ORDER BY company;
-END;
-$$;
+```ts
+import { calculateComplete } from "@/services/calculations/carbon/core";
+
+const kwp = parseFloat(form.sizeKwp) || 0;
+const result = await calculateComplete({
+  sizeKwp: kwp,
+  province: form.province,
+  commissionDate: new Date().toISOString(),
+});
 ```
 
-This guarantees the Commission section can only surface companies that also appear under "My Companies".
+`result` provides:
+- `result.annualEnergyKwh` — province-specific yield × kWp
+- `result.carbonCreditsPerYear` — tCO₂/yr
+- `result.clientSharePercentage` — from the tier table (e.g. 60.20% for systems < 5 MWp)
+- `result.clientRevenuePerYear` — current-year rand value after client share
+- `result.revenueByYear` — full vintage breakdown (one entry per vintage year through programme end)
 
-### 2. Data cleanup — delete orphaned backfilled rows
+### UI changes (Step 2 reveal)
 
-Run a DELETE (via the insert tool) removing `super_partner_commissions` rows where no active link exists between the super partner and the agent's company:
+Keep the existing layout exactly as-is:
 
-```sql
-DELETE FROM public.super_partner_commissions spc
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM public.company_members cm
-  JOIN public.companies c ON c.id = cm.company_id
-  WHERE cm.user_id = spc.agent_id
-    AND c.super_partner_id = spc.super_partner_id
-);
-```
+- Big headline number switches from gross `tCO₂ × R1,250` to the **client's actual current-year earnings** (`result.clientRevenuePerYear`), labelled "You could earn approximately".
+- The two stat tiles stay (tonnes CO₂/yr and MWh clean energy/yr), now driven by `result`.
+- No extra copy, no programme lifetime total, no client share disclosure line.
 
-For Shaun this clears the 7+ stranded rows for PV Solution / Deo Solar; if those companies later get linked to him, fresh commissions will be calculated as new proposals progress.
+The amber "conservative estimate" disclaimer and the eligibility list are left untouched.
 
-### 3. No frontend changes
+The success-screen recap (line 497) reuses `result.carbonCreditsPerYear` and `result.clientRevenuePerYear`.
 
-`SuperPartnerCommission.tsx` already calls the RPC and renders per-company rollups — it will simply show an empty state once orphans are removed.
+### Async handling
+
+`calculateComplete` is async (yield + vintage prices come from Supabase with cache). Convert `carbonProjection` from `useMemo` to a `useState` populated by a `useEffect` keyed on `[form.sizeKwp, form.province]`, with a lightweight loading state in the Step 2 figures (small spinner where the number renders). Defaults to zero while loading. Errors fall back to the platform's own fallbacks (1642.5 yield, `CARBON_PRICES` constants) — already handled inside `calculateComplete`.
+
+### Decisions baked in (matching the explore findings)
+
+- **Commission date**: defaults to "today". The referral form doesn't ask for it, and that matches how the proposal pipeline behaves for new installs.
+- **Property type**: not used in calc anywhere in the platform — left as form metadata only.
+- **Client share**: comes from the tiered function; no override (proposal-level overrides apply only after a proposal exists).
+
+### Out of scope
+
+- The proposal created by `create-referral-proposal` (edge function) already runs the platform calc server-side, so no edge-function change is needed.
+- No changes to `CARBON_PRICES`, `regional_solar_yields`, `getClientSharePercentage`, or any other shared module.
