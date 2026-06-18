@@ -31,8 +31,8 @@ const Profile = () => {
             isSuperPartner={isSuperPartner}
           />
 
-          {/* Referral system - for agents and super partners */}
-          {isAgent && <ReferralLinkWidget linkType="client" />}
+          {/* Referral system - for agents, admins, and super partners */}
+          {(isAgent || isAdmin) && <ReferralLinkWidget linkType="client" />}
 
           {isSuperPartner && (
             <>
