@@ -73,22 +73,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 2. Rate limit: 3 / 24h per email
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: existing, count } = await admin
-      .from("proposals")
-      .select("id", { count: "exact", head: true })
-      .ilike("client_email", normalizedEmail)
-      .gte("created_at", since);
-    void existing;
-    if ((count ?? 0) >= 3) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Too many proposals for this email in the last 24 hours." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 3. Find or create client
+    // 2. Find or create client (needed for rate limit + proposal insert)
     const [firstName, ...rest] = client.name.trim().split(/\s+/);
     const lastName = rest.join(" ") || null;
     const { data: clientId, error: clientErr } = await admin.rpc("find_or_create_client_by_email", {
@@ -106,6 +91,21 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    // 3. Rate limit: 3 / 24h per client
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await admin
+      .from("proposals")
+      .select("id", { count: "exact", head: true })
+      .eq("client_reference_id", clientId)
+      .gte("created_at", since);
+    if ((count ?? 0) >= 3) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Too many proposals for this email in the last 24 hours." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
 
     // 4. Resolve agent company
     const { data: companyId, error: companyErr } = await admin.rpc("ensure_agent_has_company", {
@@ -175,12 +175,11 @@ serve(async (req: Request): Promise<Response> => {
     const { data: proposal, error: proposalErr } = await admin
       .from("proposals")
       .insert({
+        title: `Referral proposal – ${client.name}`,
         agent_id: link.owner_id,
         company_id: companyId ?? null,
+        client_id: clientId,
         client_reference_id: clientId,
-        client_name: client.name,
-        client_email: normalizedEmail,
-        client_phone: client.phone || null,
         system_size_kwp: system.size_kwp,
         status: "sent",
         client_share_percentage: clientShare,
@@ -191,6 +190,7 @@ serve(async (req: Request): Promise<Response> => {
       })
       .select("id")
       .single();
+
 
     if (proposalErr || !proposal) {
       console.error("proposal insert failed", proposalErr);
