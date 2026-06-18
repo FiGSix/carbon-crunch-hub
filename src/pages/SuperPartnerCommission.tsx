@@ -2,32 +2,15 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Row {
-  id: string;
-  proposal_id: string | null;
-  proposal_title: string | null;
-  client_name: string | null;
-  agent_name: string | null;
-  agent_email: string | null;
-  system_size_kwp: number | null;
-  signed_at: string | null;
-  commission_rate: number;
-  commission_amount: number;
-  commission_status: string;
-  calculated_at: string;
-  paid_at: string | null;
-  notes: string | null;
+  company: string;
+  mwp: number;
+  rate: number;
+  amount: number;
 }
-
-const statusVariant = (s: string): "default" | "secondary" | "outline" => {
-  if (s === "paid") return "default";
-  if (s === "approved") return "secondary";
-  return "outline";
-};
 
 const fmtZar = (n: number) =>
   new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 2 }).format(n || 0);
@@ -38,7 +21,7 @@ export default function SuperPartnerCommission() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.rpc("get_super_partner_commission_ledger");
+      const { data } = await supabase.rpc("get_super_partner_commission_by_company");
       setRows((data as Row[]) || []);
       setLoading(false);
     })();
@@ -46,9 +29,9 @@ export default function SuperPartnerCommission() {
 
   return (
     <DashboardLayout requiredRole="super_partner">
-      <DashboardHeader title="Commission" description="Per-proposal commission ledger." />
+      <DashboardHeader title="Commission" description="Commission rolled up per linked partner company." />
       <Card>
-        <CardHeader><CardTitle className="text-base">All commissions</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Commission by company</CardTitle></CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-muted-foreground">Loading…</div>
@@ -58,30 +41,19 @@ export default function SuperPartnerCommission() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Signed</TableHead>
-                  <TableHead>Proposal</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Agent</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead className="text-right">MWp</TableHead>
                   <TableHead className="text-right">Rate</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{r.signed_at ? new Date(r.signed_at).toLocaleDateString() : "—"}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">{r.proposal_title || r.proposal_id?.slice(0, 8) || "—"}</TableCell>
-                    <TableCell>{r.client_name || "—"}</TableCell>
-                    <TableCell>
-                      <div>{r.agent_name?.trim() || r.agent_email || "—"}</div>
-                      {r.agent_email && <div className="text-xs text-muted-foreground">{r.agent_email}</div>}
-                    </TableCell>
-                    <TableCell className="text-right">{((Number(r.system_size_kwp) || 0) / 1000).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{Number(r.commission_rate).toFixed(2)}%</TableCell>
-                    <TableCell className="text-right">{fmtZar(Number(r.commission_amount))}</TableCell>
-                    <TableCell><Badge variant={statusVariant(r.commission_status)}>{r.commission_status}</Badge></TableCell>
+                  <TableRow key={r.company}>
+                    <TableCell>{r.company}</TableCell>
+                    <TableCell className="text-right">{Number(r.mwp).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{Number(r.rate).toFixed(2)}%</TableCell>
+                    <TableCell className="text-right">{fmtZar(Number(r.amount))}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
