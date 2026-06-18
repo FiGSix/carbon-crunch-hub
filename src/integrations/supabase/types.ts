@@ -3919,6 +3919,15 @@ export type Database = {
         }[]
       }
       get_referral_partner_info: { Args: { p_token: string }; Returns: Json }
+      get_super_partner_commission_by_company: {
+        Args: never
+        Returns: {
+          amount: number
+          company: string
+          mwp: number
+          rate: number
+        }[]
+      }
       get_super_partner_commission_ledger: {
         Args: never
         Returns: {
