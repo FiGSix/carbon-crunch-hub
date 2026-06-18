@@ -407,6 +407,68 @@ serve(async (req) => {
       await supabase.rpc('mark_invitation_viewed', { token_param: token });
     }
 
+    // 10b. Persist project details collected pre-signature + trigger installer invitation
+    //      (referral-sourced proposals only). Fire-and-forget so signing stays fast.
+    if (isReferral && projectDetails) {
+      (async () => {
+        try {
+          // Ensure a project_onboarding row exists
+          let { data: po } = await supabase
+            .from('project_onboarding')
+            .select('id')
+            .eq('proposal_id', proposal.id)
+            .maybeSingle();
+          if (!po) {
+            const { data: created, error: poErr } = await supabase
+              .from('project_onboarding')
+              .insert({ proposal_id: proposal.id })
+              .select('id')
+              .single();
+            if (poErr) {
+              console.error('[accept-proposal] create project_onboarding failed', poErr);
+              return;
+            }
+            po = created;
+          }
+
+          // Upsert onboarding_fields with the four required pieces.
+          const { data: existingFields } = await supabase
+            .from('onboarding_fields')
+            .select('id')
+            .eq('project_id', po!.id)
+            .maybeSingle();
+
+          const payload = {
+            project_id: po!.id,
+            system_address: projectDetails.systemAddress!.trim(),
+            system_gps_lat: projectDetails.systemLat ?? null,
+            system_gps_lng: projectDetails.systemLng ?? null,
+            commissioning_date: projectDetails.commissioningDate!,
+            installer_company_name: projectDetails.installerCompanyName!.trim(),
+            installer_email: projectDetails.installerEmail!.trim().toLowerCase(),
+          };
+
+          if (existingFields) {
+            await supabase
+              .from('onboarding_fields')
+              .update(payload)
+              .eq('id', existingFields.id);
+          } else {
+            await supabase.from('onboarding_fields').insert(payload);
+          }
+
+          // Trigger installer invitation (or notification if already on platform).
+          const { error: invErr } = await supabase.functions.invoke('send-installer-invitation', {
+            body: { proposalId: proposal.id },
+          });
+          if (invErr) console.error('[accept-proposal] installer invite failed', invErr);
+        } catch (e) {
+          console.error('[accept-proposal] project details / installer invite error', e);
+        }
+      })();
+    }
+
+
     // 11. Send cession agreement confirmation email in background
     // Fetch client email asynchronously without blocking response
     (async () => {
