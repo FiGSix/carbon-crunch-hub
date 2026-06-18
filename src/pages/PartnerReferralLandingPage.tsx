@@ -450,9 +450,12 @@ export default function PartnerReferralLandingPage() {
               <div className="rounded-lg bg-zinc-900 border border-zinc-700 p-4 text-left">
                 <div className="font-semibold text-zinc-200">For your system to qualify:</div>
                 <ul className="text-sm mt-2 space-y-1 list-disc pl-5 text-zinc-400">
-                  <li>Grid-tied (connected to Eskom or municipal supply)</li>
-                  <li>Minimum installed capacity as per current programme requirements</li>
-                  <li>Separately metered and compliant with local bylaws</li>
+                  <li>The solar system must be located in South Africa.</li>
+                  <li>Not registered with another Greenhouse Gas Emissions program.</li>
+                  <li>Has a valid Certificate of Compliance (CoC) issued by a Registered Electrician (i.e. legally installed).</li>
+                  <li>Switched on or commissioned after 15 September 2022.</li>
+                  <li>I am the legal owner of the solar system or green attributes.</li>
+                  <li>Not funded by or through South African Government Funded Initiative.</li>
                 </ul>
                 <p className="text-xs mt-2 text-zinc-500">Your proposal will confirm eligibility once submitted.</p>
               </div>
