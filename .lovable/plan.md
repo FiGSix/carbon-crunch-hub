@@ -1,91 +1,79 @@
 
-## What's going wrong
+# Referral Proposal Flow — Fixes & Enhancements (v2)
 
-Two separate bugs are colliding for `projects@energygurus.co.za` (Elize Vuyk).
+## 1. Fix client share % bug (60.20% vs 68.25%)
 
-### Bug 1 — She was promoted to Super Partner by accident
+**Root cause:** `supabase/functions/create-referral-proposal/index.ts` calculates `clientShare` from the agent's **company portfolio** (sum of all signed proposals by the company), so a small 10 kWp referral inherits the agent's full-company tier (20–30 MWp → 68.25%).
 
-She signed up as a normal **agent** (her `auth.users.raw_user_meta_data.role = 'agent'`, and `handle_new_user` correctly inserted `role = 'agent'`).
+The standard proposal flow (`src/services/proposals/unifiedProposalService.ts`) correctly uses the **client's own portfolio** for the client share %, and uses the company portfolio only for agent commission tier.
 
-She became a Super Partner because of the `sync_super_partner_status` trigger on `public.profiles`:
+**Fix:**
+- Sum `system_size_kwp` from existing non-deleted proposals for the same `client_reference_id`.
+- `totalClientPortfolio = existingClientKWp + system.size_kwp`
+- `clientShare = calcClientShare(totalClientPortfolio)` → 10 kWp → **60.20%** ✓
+- Keep `agentCommission` based on company portfolio (current behaviour).
+- Backfill: recompute `client_share_percentage` on any unsigned referral-created proposals (e.g. `ad5dc895…`).
 
-```sql
-ELSIF NEW.super_partner_status = 'active' THEN
-  IF NEW.role IS DISTINCT FROM 'super_partner' THEN
-    UPDATE public.profiles SET role = 'super_partner' WHERE id = NEW.id;
-    NEW.role := 'super_partner';
-  END IF;
-  INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'super_partner') ...;
-END IF;
-```
+## 2. Rebrand the invitation email
 
-Two problems with that trigger:
+`supabase/functions/create-referral-proposal/index.ts` currently sends a plain inline-HTML email that doesn't match the Crunch Carbon brand. (The legacy `send-proposal-invitation/email-service.ts` uses a golden-gradient template that also drifts from brand.)
 
-1. It **auto-promotes any user** whose `super_partner_status` is flipped to `'active'`, even an agent or client. The status field was never meant to be a back-door promotion switch — only `upgrade_agent_to_super_partner` should promote.
-2. When it does promote, it **never removes the old `agent` role** from `user_roles`. Her row in `user_roles` now contains BOTH `agent` and `super_partner` (confirmed in DB), which breaks role-based UI and policy checks.
+**Fix:** Build one shared on-brand email template (`supabase/functions/_shared/brand-email.ts`) and use it from the referral function:
+- Brand colours from `src/index.css` tokens (deep green primary, off-white surface, gold sparingly).
+- Header with Crunch Carbon wordmark on solid brand band — no rainbow gradient.
+- Clean system-font typography, 600px max width, table-based layout, inline styles, `#ffffff` body bg.
+- Sections: greeting → project summary card → primary CTA → what-happens-next → why-am-I-receiving-this → 10-day validity → signature → dark footer with support email.
+- Same template wrapper will be reused for the installer emails in #4.
 
-Combined with the fact that an admin (or some code path) set `super_partner_status='active'` on her profile, the trigger silently turned her into a Super Partner.
+## 3. Pre-signature data capture (reuse existing onboarding fields)
 
-### Bug 2 — Her company was not linked on signup
+We are NOT adding new columns. The four required pieces already live in `public.onboarding_fields`:
+- `system_address` (+ `system_gps_lat`/`system_gps_lng`)
+- `commissioning_date`
+- `installer_company_name`
+- `installer_email` (and `installer_id` linking to `public.solar_installers`)
 
-She was invited via the **team-invitation** flow:
+Today these are filled during the post-signature onboarding step (`PostSignatureOnboardingModal` → `/onboarding`). For referral-sourced proposals we shift these four into a **pre-signature step** so the signature panel is gated on them.
 
-- `team_invitations` row exists for her, with `company_id = 76d9fed6` (The Energy Gurus), `status = 'pending'`, `accepted_at = NULL`.
-- `agent_invitations` has nothing for her.
+**Fix:**
+- New `ProjectDetailsStep` component inserted into `src/pages/ProposalAcceptance` between the summary/terms and the signature panel.
+- On submit it **upserts a `project_onboarding` row** for the proposal (if not already present) and **upserts the matching `onboarding_fields` row** with `system_address`, `system_gps_lat`, `system_gps_lng`, `commissioning_date`, `installer_company_name`, `installer_email` (using existing `google-places-autocomplete` for address).
+- Autosave on blur so partial fills survive reload.
+- "Sign & Accept" stays disabled until all four validate (Zod client-side).
+- `accept-proposal` re-validates server-side that those four fields exist on `onboarding_fields` for the proposal; reject the sign if missing.
+- The post-signature onboarding flow stays untouched — those fields will simply already be filled and the remaining technical fields (panels, inverters, costs, etc.) still get collected from the installer/agent later.
 
-But `handle_new_user` only looks at `agent_invitations` when deciding which company to link, and `mark_invitation_accepted_on_profile_creation` only marks `agent_invitations` as accepted. So after her signup:
+## 4. Post-signature installer invitation & notification
 
-- her `team_invitations` row stayed `pending` forever,
-- no `company_members` row was created automatically,
-- an admin had to manually link her to The Energy Gurus 30 minutes later (which is where the Super Partner promotion probably also happened, by whichever admin action flipped `super_partner_status`).
+When a referral proposal is signed (in `accept-proposal` or as a follow-up step in `post-signature-automation`), use `onboarding_fields.installer_email` (collected in step 3) to:
 
-## Fix
+1. Look up the installer in `public.solar_installers` (case-insensitive on `email`).
+2. **If not found:** insert a new `solar_installers` row (`company_name = installer_company_name`, `created_by = agent_id`), set `onboarding_fields.installer_id` to it, then send an **invitation email** that:
+   - Invites them to join the Crunch Carbon installer programme.
+   - Explains the **annuity commission** (default 4%, pulled from `system_settings` so admins can tune without redeploy).
+   - Shows worked examples computed server-side at send time using current carbon price + emission factor + 4% share — e.g. "A typical 100 kWp system earns you ~R X,XXX per year for the life of the project" and "A 1 MWp portfolio ~R XX,XXX per year".
+   - Mentions earning more by referring/onboarding clients themselves.
+   - CTA: "Accept your installer invitation" with a one-time token.
+3. **If already on platform:** send a lighter notification — "Your client {clientName} has just signed up for carbon credits. Help complete onboarding (system size, panels, inverter serials, costs) here → {link}".
+4. Both emails use the shared on-brand template from #2.
+5. Log the send in `proposal_automation_log` (`installer_invitation` / `installer_notification`).
 
-### 1. Stop `sync_super_partner_status` from silently promoting agents/clients
+## 5. Verification
 
-Rewrite the trigger so it only **enforces** Super Partner status changes for users who are already Super Partners; it must not promote anyone. Promotion stays the exclusive job of `upgrade_agent_to_super_partner` (which correctly deletes the `agent` role).
+- Trigger referral flow with a 10 kWp system → confirm `client_share_percentage = 60.20`.
+- Send a test invitation email → visually verify brand match in Gmail + Outlook.
+- Walk a test client through acceptance → Sign disabled until project details + installer details supplied; confirm `onboarding_fields` row is written.
+- Sign with (a) new installer email and (b) existing installer email → two different emails, new `solar_installers` row created in (a), `installer_id` linked in both, `proposal_automation_log` rows present.
 
-New behaviour:
-- `super_partner_status = 'suspended'` on a user whose role is `super_partner` → demote to `agent` (existing behaviour).
-- `super_partner_status = 'active'` → **only** re-insert `super_partner` into `user_roles` if `profiles.role` is already `super_partner`. Do **not** flip `role` from `agent`/`client` to `super_partner`. If the field is flipped on a non-SP, do nothing (and log a warning via `RAISE NOTICE`).
-- Also: when promotion does happen through the correct path, ensure no leftover `agent` row remains in `user_roles` (defensive `DELETE`).
+## Technical Details
 
-### 2. Repair Elize's account (one-off data fix in the same migration)
-
-- Set `profiles.role = 'agent'`, `super_partner_status = NULL`, `can_create_proposals = false` for `e4762177-cd64-46ce-a745-adebec47e621`.
-- Delete the stray `user_roles` row `(user_id, role='super_partner')` for her.
-- Keep her `company_members` row in The Energy Gurus (that part is correct — she's an agent in the company).
-- Mark her `team_invitations` row as `accepted`.
-
-### 3. Make team invitations auto-link the company on signup
-
-Extend `handle_new_user` so that, after the existing `agent_invitations` lookup, it also:
-
-1. Looks up the most recent **pending, non-expired** row in `team_invitations` for `NEW.email`.
-2. If found and `user_role = 'agent'`:
-   - Inserts a `company_members` row `(company_id, NEW.id, 'agent', 'active', invited_by=invited_by, approved_by=invited_by, now(), now())` `ON CONFLICT DO NOTHING`.
-   - Marks the `team_invitations` row `status='accepted', accepted_at = NEW.created_at`.
-
-Also extend `mark_invitation_accepted_on_profile_creation` to update `team_invitations` (same `LOWER(TRIM(email))` + pending + not-expired filter) so the invitations list stops showing perpetual "pending" rows.
-
-### 4. Audit existing accidentally-promoted accounts (read-only check, no auto-fix)
-
-Run a one-time query in the same migration to log (via `RAISE NOTICE`) any other profiles where `role='super_partner'` AND `user_roles` still contains an `agent` row — these were promoted by the same buggy trigger. We surface the list so the admin can review/repair manually; we do not auto-demote them (could be legitimate Super Partners created by `create-super-partner` plus a stale audit row).
-
-## Out of scope
-
-- No changes to the carbon calculation, referral landing page, edge functions other than what's described, or to `upgrade_agent_to_super_partner` (already correct).
-- No frontend UI changes (admin Super Partner page stays as-is).
-- No new tables or columns. Only trigger/function rewrites and one data repair.
-
-## Technical details
-
-Files touched:
-- New migration:
-  - `CREATE OR REPLACE FUNCTION public.sync_super_partner_status()` — non-promoting version.
-  - `CREATE OR REPLACE FUNCTION public.handle_new_user()` — adds `team_invitations` lookup + company_members insert.
-  - `CREATE OR REPLACE FUNCTION public.mark_invitation_accepted_on_profile_creation()` — also marks `team_invitations`.
-  - Data repair `UPDATE`/`DELETE` for Elize's profile/user_roles/team_invitations.
-  - `DO $$ ... RAISE NOTICE ... $$` block listing other profiles with dual `agent`+`super_partner` roles.
-
-No `GRANT` changes needed (no new tables).
+- **Files to edit:**
+  - `supabase/functions/create-referral-proposal/index.ts` (share calc + new email template)
+  - `src/pages/ProposalAcceptance/index.tsx` (+ new `components/ProjectDetailsStep.tsx`)
+  - `supabase/functions/accept-proposal/index.ts` (server-side required-field check; trigger installer flow)
+  - `supabase/functions/post-signature-automation/index.ts` (alternative trigger point)
+- **New files:**
+  - `supabase/functions/send-installer-invitation/index.ts`
+  - `supabase/functions/_shared/brand-email.ts` (shared on-brand HTML wrapper)
+- **DB migration:** none required — `onboarding_fields` and `solar_installers` already have everything. Optional one-off `UPDATE` (via insert tool) to backfill `client_share_percentage` on unsigned referral proposals.
+- **Config:** installer annuity % stored in `system_settings` (`installer_commission_percentage`, default 4).
