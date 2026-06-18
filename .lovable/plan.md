@@ -1,22 +1,63 @@
-## Update Client Link Page Eligibility Text
+## Sync Super Partner Commission with Linked Companies
 
-Update the eligibility criteria text on the Client link page (`PartnerReferralLandingPage.tsx`) to match the new requirements.
+Make `companies.super_partner_id` the single source of truth, and clean up orphaned backfilled commission rows.
 
-### Change
-File: `src/pages/PartnerReferralLandingPage.tsx` (~line 451-458)
+### 1. Migration — update RPC to scope by active company link
 
-Replace the existing "For your system to qualify" section with:
+Replace `get_super_partner_commission_by_company()` so the join filters to companies currently linked to the calling super partner (admins still see everything):
 
-```text
-For your system to qualify:
-- The solar system must be located in South Africa.
-- Not registered with another Greenhouse Gas Emissions program.
-- Has a valid Certificate of Compliance (CoC) issued by a Registered Electrician (i.e. legally installed).
-- Switched on or commissioned after 15 September 2022.
-- I am the legal owner of the solar system or green attributes.
-- Not funded by or through South African Government Funded Initiative.
+```sql
+CREATE OR REPLACE FUNCTION public.get_super_partner_commission_by_company()
+RETURNS TABLE(company text, mwp numeric, rate numeric, amount numeric)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $$
+DECLARE
+  v_caller uuid := auth.uid();
+  v_is_admin boolean := public.is_current_user_admin();
+  v_rate numeric;
+BEGIN
+  IF NOT (v_is_admin OR public.is_super_partner(v_caller)) THEN RETURN; END IF;
 
-Your proposal will confirm eligibility once submitted.
+  SELECT p.super_partner_commission_rate INTO v_rate
+  FROM public.profiles p WHERE p.id = v_caller;
+
+  RETURN QUERY
+  SELECT
+    COALESCE(NULLIF(c.company_name, ''), '—') AS company,
+    COALESCE(SUM(pr.system_size_kwp), 0) / 1000.0 AS mwp,
+    COALESCE(v_rate, 0) AS rate,
+    COALESCE(SUM(spc.commission_amount), 0) AS amount
+  FROM public.super_partner_commissions spc
+  LEFT JOIN public.proposals pr ON pr.id = spc.proposal_id
+  JOIN public.company_members cm ON cm.user_id = spc.agent_id
+  JOIN public.companies c ON c.id = cm.company_id
+  WHERE (v_is_admin OR spc.super_partner_id = v_caller)
+    AND (v_is_admin OR c.super_partner_id = v_caller)
+  GROUP BY COALESCE(NULLIF(c.company_name, ''), '—')
+  ORDER BY company;
+END;
+$$;
 ```
 
-This is a single-file text replacement. No other files are affected.
+This guarantees the Commission section can only surface companies that also appear under "My Companies".
+
+### 2. Data cleanup — delete orphaned backfilled rows
+
+Run a DELETE (via the insert tool) removing `super_partner_commissions` rows where no active link exists between the super partner and the agent's company:
+
+```sql
+DELETE FROM public.super_partner_commissions spc
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.company_members cm
+  JOIN public.companies c ON c.id = cm.company_id
+  WHERE cm.user_id = spc.agent_id
+    AND c.super_partner_id = spc.super_partner_id
+);
+```
+
+For Shaun this clears the 7+ stranded rows for PV Solution / Deo Solar; if those companies later get linked to him, fresh commissions will be calculated as new proposals progress.
+
+### 3. No frontend changes
+
+`SuperPartnerCommission.tsx` already calls the RPC and renders per-company rollups — it will simply show an empty state once orphans are removed.
