@@ -8,6 +8,11 @@ import { ProposalSummarySection } from "./components/ProposalSummarySection";
 import { ThirtySecondSummary } from "./components/ThirtySecondSummary";
 import { TermsAndConditionsSection } from "./components/TermsAndConditionsSection";
 import { SignatureSection } from "./components/SignatureSection";
+import {
+  ProjectDetailsStep,
+  ProjectDetailsValue,
+  projectDetailsValid,
+} from "./components/ProjectDetailsStep";
 import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
 import { useToast } from "@/hooks/use-toast";
 import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
@@ -33,6 +38,14 @@ export default function ProposalAcceptance() {
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [tokenExpired, setTokenExpired] = useState(false);
   const [clientRecord, setClientRecord] = useState<LiveClientRecord | null>(null);
+  const [projectDetails, setProjectDetails] = useState<ProjectDetailsValue>({
+    systemAddress: "",
+    systemLat: null,
+    systemLng: null,
+    commissioningDate: "",
+    installerCompanyName: "",
+    installerEmail: "",
+  });
 
   useEffect(() => {
     if (token) {
@@ -247,7 +260,17 @@ export default function ProposalAcceptance() {
       .every((word) => typed.includes(word));
   };
 
-  const canSubmit = hasScrolledToBottom && hasAgreed && (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
+  // Referral-sourced proposals require pre-signature project details capture.
+  const isReferralProposal = Boolean(
+    (proposal?.content as { referral_created?: boolean } | undefined)?.referral_created,
+  );
+  const projectDetailsOk = !isReferralProposal || projectDetailsValid(projectDetails);
+
+  const canSubmit =
+    hasScrolledToBottom &&
+    hasAgreed &&
+    projectDetailsOk &&
+    (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
 
   const handleSubmit = async () => {
     if (!canSubmit || !proposal) return;
@@ -276,7 +299,8 @@ export default function ProposalAcceptance() {
           signatureImage: signatureImage || undefined,
           signatureType: signatureImage ? 'canvas' : 'typed_name',
           ipAddress,
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
+          projectDetails: isReferralProposal ? projectDetails : undefined,
         }
       });
 
@@ -458,6 +482,13 @@ export default function ProposalAcceptance() {
             onScrolledToBottom={() => setHasScrolledToBottom(true)}
             proposal={proposal}
           />
+
+          {isReferralProposal && (
+            <ProjectDetailsStep
+              value={projectDetails}
+              onChange={setProjectDetails}
+            />
+          )}
 
           <div id="review-and-sign">
             <SignatureSection
