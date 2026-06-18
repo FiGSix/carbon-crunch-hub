@@ -1,57 +1,21 @@
-## Align Referral Landing Page Calculation with Platform Standard
+## Goal
+Make the referral landing page show a **full-year** earnings estimate instead of a partial-year amount based on today's commission date.
 
-Replace the referral page's hardcoded `1642.5 kWh/kWp` and flat `R1,250/tonne` math with the platform's canonical pipeline. The platform already has a single entry point that does everything we need.
+## Problem
+Currently `PartnerReferralLandingPage` passes `commissionDate: new Date().toISOString()` to `calculateComplete()`. The platform's revenue engine then pro-rates the first vintage year from the commission date to year-end, so a system "commissioned today" only earns a fraction of a full year's revenue in the headline figure (`clientRevenuePerYear` = current-year bucket from `revenueByYear`).
 
-### File touched
-`src/pages/PartnerReferralLandingPage.tsx` — calculation block (lines ~20, 115–124) and the display block (lines ~420–438, 495–497).
+That makes the headline R/year look artificially low and inconsistent with how prospects intuitively read "per year".
 
-No platform-side files are changed. No new services.
-
-### What the page will now compute
-
-Drop the local `useMemo` + constants and call the canonical pipeline:
+## Change
+In `src/pages/PartnerReferralLandingPage.tsx`, set the commission date to **1 January of the current year** so the first vintage bucket represents a full 12 months at the current vintage price.
 
 ```ts
-import { calculateComplete } from "@/services/calculations/carbon/core";
-
-const kwp = parseFloat(form.sizeKwp) || 0;
-const result = await calculateComplete({
-  sizeKwp: kwp,
-  province: form.province,
-  commissionDate: new Date().toISOString(),
-});
+const commissionDate = new Date(new Date().getFullYear(), 0, 1).toISOString();
 ```
 
-`result` provides:
-- `result.annualEnergyKwh` — province-specific yield × kWp
-- `result.carbonCreditsPerYear` — tCO₂/yr
-- `result.clientSharePercentage` — from the tier table (e.g. 60.20% for systems < 5 MWp)
-- `result.clientRevenuePerYear` — current-year rand value after client share
-- `result.revenueByYear` — full vintage breakdown (one entry per vintage year through programme end)
+Everything else (province yield, emission factor, client share tier, current vintage price) keeps flowing through `calculateComplete()` unchanged. The two stat tiles (tCO₂/yr, MWh/yr) are already annualised and remain correct.
 
-### UI changes (Step 2 reveal)
-
-Keep the existing layout exactly as-is:
-
-- Big headline number switches from gross `tCO₂ × R1,250` to the **client's actual current-year earnings** (`result.clientRevenuePerYear`), labelled "You could earn approximately".
-- The two stat tiles stay (tonnes CO₂/yr and MWh clean energy/yr), now driven by `result`.
-- No extra copy, no programme lifetime total, no client share disclosure line.
-
-The amber "conservative estimate" disclaimer and the eligibility list are left untouched.
-
-The success-screen recap (line 497) reuses `result.carbonCreditsPerYear` and `result.clientRevenuePerYear`.
-
-### Async handling
-
-`calculateComplete` is async (yield + vintage prices come from Supabase with cache). Convert `carbonProjection` from `useMemo` to a `useState` populated by a `useEffect` keyed on `[form.sizeKwp, form.province]`, with a lightweight loading state in the Step 2 figures (small spinner where the number renders). Defaults to zero while loading. Errors fall back to the platform's own fallbacks (1642.5 yield, `CARBON_PRICES` constants) — already handled inside `calculateComplete`.
-
-### Decisions baked in (matching the explore findings)
-
-- **Commission date**: defaults to "today". The referral form doesn't ask for it, and that matches how the proposal pipeline behaves for new installs.
-- **Property type**: not used in calc anywhere in the platform — left as form metadata only.
-- **Client share**: comes from the tiered function; no override (proposal-level overrides apply only after a proposal exists).
-
-### Out of scope
-
-- The proposal created by `create-referral-proposal` (edge function) already runs the platform calc server-side, so no edge-function change is needed.
-- No changes to `CARBON_PRICES`, `regional_solar_yields`, `getClientSharePercentage`, or any other shared module.
+## Out of scope
+- No change to `calculateComplete`, `calculateRevenueByYear`, `CARBON_PRICES`, or any shared service.
+- No change to the `create-referral-proposal` edge function (proposal projections there are separate from the landing-page headline; can be revisited in a follow-up if you want them aligned too).
+- No UI/layout changes — same headline + two tiles.
