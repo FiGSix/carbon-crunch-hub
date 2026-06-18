@@ -143,7 +143,7 @@ export function ProposalHeader({
         )}
         
         {/* PDF Download button for agents and admins */}
-        {!isDeleted && (userRole === "agent" || userRole === "admin") && proposalId && (
+        {!isDeleted && (userRole === "agent" || userRole === "admin" || userRole === "super_partner") && proposalId && (
           <ProposalPdfButton 
             proposalId={proposalId} 
             proposalTitle={title}
