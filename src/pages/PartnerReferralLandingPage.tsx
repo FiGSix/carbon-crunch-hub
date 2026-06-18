@@ -131,7 +131,9 @@ export default function PartnerReferralLandingPage() {
         const result = await calculateComplete({
           sizeKwp: kwp,
           province: form.province || undefined,
-          commissionDate: new Date().toISOString(),
+          // Use Jan 1 of current year so the headline reflects a full 12 months
+          // of revenue at the current vintage price (not pro-rated from today).
+          commissionDate: new Date(new Date().getFullYear(), 0, 1).toISOString(),
         });
         if (cancelled) return;
         setCarbonProjection({
