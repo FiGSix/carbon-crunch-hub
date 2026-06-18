@@ -197,6 +197,28 @@ serve(async (req) => {
     // For canvas signatures, typed name is optional
     console.log(`✅ Signature validation passed for ${signatureType} signature`);
 
+    // 4b. Referral-sourced proposals must include project details collected pre-signature.
+    const isReferral = Boolean(proposal?.content?.referral_created);
+    if (isReferral) {
+      const pd = projectDetails || {};
+      const missing: string[] = [];
+      if (!pd.systemAddress || pd.systemAddress.trim().length < 5) missing.push('systemAddress');
+      if (!pd.commissioningDate) missing.push('commissioningDate');
+      if (!pd.installerCompanyName || pd.installerCompanyName.trim().length < 2) missing.push('installerCompanyName');
+      if (!pd.installerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pd.installerEmail)) missing.push('installerEmail');
+      if (pd.commissioningDate) {
+        const d = new Date(pd.commissioningDate);
+        if (isNaN(d.getTime()) || d > new Date()) missing.push('commissioningDate');
+      }
+      if (missing.length > 0) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required project details', missing }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
+
     // Get signed_by from proposal or from authenticated user
     console.log('🔍 Finding signedBy:', { 
       client_reference_id: proposal.client_reference_id,
