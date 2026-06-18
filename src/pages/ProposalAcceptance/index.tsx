@@ -299,7 +299,8 @@ export default function ProposalAcceptance() {
           signatureImage: signatureImage || undefined,
           signatureType: signatureImage ? 'canvas' : 'typed_name',
           ipAddress,
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
+          projectDetails: isReferralProposal ? projectDetails : undefined,
         }
       });
 
