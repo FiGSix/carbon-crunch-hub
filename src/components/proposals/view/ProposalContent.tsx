@@ -74,7 +74,7 @@ export function ProposalContent({
       </div>
 
       {/* Delete Dialog - Only for agents and admins */}
-      {!isClient && (userRole === 'agent' || userRole === 'admin') && (
+      {!isClient && (userRole === 'agent' || userRole === 'admin' || userRole === 'super_partner') && (
         <ProposalDeleteDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
