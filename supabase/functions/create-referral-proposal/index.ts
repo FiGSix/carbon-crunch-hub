@@ -175,12 +175,11 @@ serve(async (req: Request): Promise<Response> => {
     const { data: proposal, error: proposalErr } = await admin
       .from("proposals")
       .insert({
+        title: `Referral proposal – ${client.name}`,
         agent_id: link.owner_id,
         company_id: companyId ?? null,
+        client_id: clientId,
         client_reference_id: clientId,
-        client_name: client.name,
-        client_email: normalizedEmail,
-        client_phone: client.phone || null,
         system_size_kwp: system.size_kwp,
         status: "sent",
         client_share_percentage: clientShare,
@@ -191,6 +190,7 @@ serve(async (req: Request): Promise<Response> => {
       })
       .select("id")
       .single();
+
 
     if (proposalErr || !proposal) {
       console.error("proposal insert failed", proposalErr);
