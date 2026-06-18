@@ -446,12 +446,18 @@ export default function PartnerReferralLandingPage() {
                 <div className="text-xs uppercase tracking-[0.2em] text-[#F5C518]/80">
                   You could earn approximately
                 </div>
-                <CountUp
-                  value={carbonProjection.carbonTonnes * 1250}
-                  prefix="R "
-                  suffix=" / year"
-                  reducedMotion={prefersReducedMotion}
-                />
+                {calcLoading ? (
+                  <div className="flex items-center justify-center h-[72px] md:h-[80px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#F5C518]" aria-hidden="true" />
+                  </div>
+                ) : (
+                  <CountUp
+                    value={carbonProjection.clientRevenuePerYear}
+                    prefix="R "
+                    suffix=" / year"
+                    reducedMotion={prefersReducedMotion}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3">
                     <div className="text-2xl font-semibold text-white">
