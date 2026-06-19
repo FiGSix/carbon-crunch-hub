@@ -198,7 +198,17 @@ serve(async (req) => {
     console.log(`✅ Signature validation passed for ${signatureType} signature`);
 
     // 4b. Referral-sourced proposals must include project details collected pre-signature.
-    const isReferral = Boolean(proposal?.content?.referral_created);
+    // NB: The RPC `get_proposal_by_token_direct` rewrites `content` and strips top-level
+    // keys like `referral_created`, so we re-read it straight from the table.
+    let isReferral = Boolean(proposal?.content?.referral_created);
+    if (!isReferral && proposal?.id) {
+      const { data: rawProposal } = await supabase
+        .from('proposals')
+        .select('content')
+        .eq('id', proposal.id)
+        .maybeSingle();
+      isReferral = Boolean(rawProposal?.content?.referral_created);
+    }
     if (isReferral) {
       const pd = projectDetails || {};
       const missing: string[] = [];
@@ -408,38 +418,39 @@ serve(async (req) => {
     }
 
     // 10b. Persist project details collected pre-signature + trigger installer invitation
-    //      (referral-sourced proposals only). Fire-and-forget so signing stays fast.
+    //      (referral-sourced proposals only). Awaited so DB writes complete before response —
+    //      previously fire-and-forget tasks were killed by edge runtime after response.
     if (isReferral && projectDetails) {
-      (async () => {
-        try {
-          // Ensure a project_onboarding row exists
-          let { data: po } = await supabase
+      try {
+        // Ensure a project_onboarding row exists
+        let { data: po } = await supabase
+          .from('project_onboarding')
+          .select('id')
+          .eq('proposal_id', proposal.id)
+          .maybeSingle();
+        if (!po) {
+          const { data: created, error: poErr } = await supabase
             .from('project_onboarding')
+            .insert({ proposal_id: proposal.id })
             .select('id')
-            .eq('proposal_id', proposal.id)
-            .maybeSingle();
-          if (!po) {
-            const { data: created, error: poErr } = await supabase
-              .from('project_onboarding')
-              .insert({ proposal_id: proposal.id })
-              .select('id')
-              .single();
-            if (poErr) {
-              console.error('[accept-proposal] create project_onboarding failed', poErr);
-              return;
-            }
+            .single();
+          if (poErr) {
+            console.error('[accept-proposal] create project_onboarding failed', poErr);
+          } else {
             po = created;
           }
+        }
 
+        if (po) {
           // Upsert onboarding_fields with the four required pieces.
           const { data: existingFields } = await supabase
             .from('onboarding_fields')
             .select('id')
-            .eq('project_id', po!.id)
+            .eq('project_id', po.id)
             .maybeSingle();
 
           const payload = {
-            project_id: po!.id,
+            project_id: po.id,
             system_address: projectDetails.systemAddress!.trim(),
             system_gps_lat: projectDetails.systemLat ?? null,
             system_gps_lng: projectDetails.systemLng ?? null,
@@ -458,14 +469,15 @@ serve(async (req) => {
           }
 
           // Trigger installer invitation (or notification if already on platform).
+          // Awaited so the function actually runs before the edge worker shuts down.
           const { error: invErr } = await supabase.functions.invoke('send-installer-invitation', {
             body: { proposalId: proposal.id },
           });
           if (invErr) console.error('[accept-proposal] installer invite failed', invErr);
-        } catch (e) {
-          console.error('[accept-proposal] project details / installer invite error', e);
         }
-      })();
+      } catch (e) {
+        console.error('[accept-proposal] project details / installer invite error', e);
+      }
     }
 
 
