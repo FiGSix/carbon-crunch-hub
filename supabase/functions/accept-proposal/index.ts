@@ -198,7 +198,17 @@ serve(async (req) => {
     console.log(`✅ Signature validation passed for ${signatureType} signature`);
 
     // 4b. Referral-sourced proposals must include project details collected pre-signature.
-    const isReferral = Boolean(proposal?.content?.referral_created);
+    // NB: The RPC `get_proposal_by_token_direct` rewrites `content` and strips top-level
+    // keys like `referral_created`, so we re-read it straight from the table.
+    let isReferral = Boolean(proposal?.content?.referral_created);
+    if (!isReferral && proposal?.id) {
+      const { data: rawProposal } = await supabase
+        .from('proposals')
+        .select('content')
+        .eq('id', proposal.id)
+        .maybeSingle();
+      isReferral = Boolean(rawProposal?.content?.referral_created);
+    }
     if (isReferral) {
       const pd = projectDetails || {};
       const missing: string[] = [];
