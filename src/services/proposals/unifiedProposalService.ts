@@ -348,7 +348,14 @@ export async function createProposal(
       carbon_credits: carbonCredits,
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
-      agent_portfolio_kwp: totalCompanyPortfolio
+      agent_portfolio_kwp: totalCompanyPortfolio,
+      ...(portfolioClientShareOverride != null
+        ? {
+            client_share_override_enabled: true,
+            client_share_override_set_at: new Date().toISOString(),
+            client_share_override_set_by: agentId,
+          }
+        : {}),
     } as unknown as ProposalInsert;
 
     const { data: insertedProposal, error: insertError } = await supabase
