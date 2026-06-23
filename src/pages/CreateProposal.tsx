@@ -61,6 +61,8 @@ const CreateProposal = () => {
     gpsLat: undefined,
     gpsLng: undefined,
     addressSource: undefined,
+    generationInputMode: "kwp",
+    annualKwhByYear: undefined,
   });
   
   const isEligible = Object.values(eligibility).every(value => value === true);
