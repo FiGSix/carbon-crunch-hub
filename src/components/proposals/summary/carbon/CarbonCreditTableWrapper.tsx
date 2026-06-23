@@ -22,6 +22,10 @@ interface CarbonCreditTableWrapperProps {
   totalCarbonCredits: number;
   totalClientSpecificRevenue: number;
   clientShareOverride?: number;
+  preCalculatedYearlyMWh?: Record<string, number>;
+  preCalculatedYearlyCredits?: Record<string, number>;
+  preCalculatedYearlyRevenue?: Record<string, number>;
+  isKwhMode?: boolean;
 }
 
 export function CarbonCreditTableWrapper({
@@ -34,7 +38,11 @@ export function CarbonCreditTableWrapper({
   totalMWhGenerated,
   totalCarbonCredits,
   totalClientSpecificRevenue,
-  clientShareOverride
+  clientShareOverride,
+  preCalculatedYearlyMWh,
+  preCalculatedYearlyCredits,
+  preCalculatedYearlyRevenue,
+  isKwhMode
 }: CarbonCreditTableWrapperProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -51,6 +59,9 @@ export function CarbonCreditTableWrapper({
         totalClientSpecificRevenue={totalClientSpecificRevenue}
         isPhaseTable={false}
         clientShareOverride={clientShareOverride}
+        preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+        preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+        preCalculatedYearlyRevenue={preCalculatedYearlyRevenue}
       />
     );
   }
