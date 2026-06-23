@@ -55,6 +55,8 @@ export function SummaryStep({
             proposalId={proposalId}
             phases={projectInfo.phases}
             isMultiPhase={projectInfo.isMultiPhase}
+            annualKwhByYear={projectInfo.annualKwhByYear}
+            generationInputMode={projectInfo.generationInputMode}
           />
           <RevenueDistributionSection 
             systemSize={projectInfo.size}
@@ -64,6 +66,8 @@ export function SummaryStep({
             commissionDate={projectInfo.commissionDate}
             phases={projectInfo.phases}
             isMultiPhase={projectInfo.isMultiPhase}
+            annualKwhByYear={projectInfo.annualKwhByYear}
+            generationInputMode={projectInfo.generationInputMode}
           />
         </div>
       </CardContent>
