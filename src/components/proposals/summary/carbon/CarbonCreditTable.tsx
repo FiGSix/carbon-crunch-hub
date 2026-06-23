@@ -25,6 +25,8 @@ interface CarbonCreditTableProps {
   isPhaseTable?: boolean;
   preCalculatedYearlyMWh?: Record<string, number>;
   preCalculatedYearlyCredits?: Record<string, number>;
+  /** When provided, skip per-row revenue recalculation and use these values directly (kWh mode). */
+  preCalculatedYearlyRevenue?: Record<string, number>;
   clientShareOverride?: number;
 }
 
