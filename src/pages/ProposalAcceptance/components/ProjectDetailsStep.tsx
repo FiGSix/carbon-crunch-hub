@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MapboxAddressAutocomplete } from "@/components/common/MapboxAddressAutocomplete";
 import { CheckCircle2, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface ProjectDetailsValue {
   systemAddress: string;
