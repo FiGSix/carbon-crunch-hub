@@ -115,11 +115,78 @@ export function ProjectInfoForm({
         </RadioGroup>
       </div>
 
+      <div className="space-y-3 p-4 border rounded-lg bg-card">
+        <Label className="text-base font-semibold">Generation Input Method</Label>
+        <p className="text-xs text-muted-foreground">
+          Choose how the system's energy generation is captured. kWp uses our standard yield factor;
+          kWh lets you enter measured/estimated production directly per year.
+        </p>
+        <RadioGroup
+          value={projectInfo.generationInputMode === "kwh" ? "kwh" : "kwp"}
+          onValueChange={(value) => {
+            const mode = (value as GenerationInputMode) || "kwp";
+            if (setProjectInfo) {
+              setProjectInfo({
+                ...projectInfo,
+                generationInputMode: mode,
+                // Reset opposite mode's fields so stale data doesn't leak into calcs.
+                ...(mode === "kwp"
+                  ? { annualKwhByYear: undefined, phases: projectInfo.phases?.map(p => ({ ...p, annualKwhByYear: undefined })) }
+                  : {}),
+              });
+            }
+          }}
+          className="flex flex-col sm:flex-row gap-3"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="kwp" id="gen-kwp" />
+            <Label htmlFor="gen-kwp" className="font-normal cursor-pointer">
+              System Size (kWp) — default
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="kwh" id="gen-kwh" />
+            <Label htmlFor="gen-kwh" className="font-normal cursor-pointer">
+              Estimated kWh per year (2025–2030)
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
       {projectInfo.isMultiPhase ? (
         <ProjectPhasesInput
           phases={projectInfo.phases || [{ phaseNumber: 1, sizeKWp: 0, commissionDate: "" }]}
           onChange={onPhasesChange || (() => {})}
+          generationInputMode={projectInfo.generationInputMode === "kwh" ? "kwh" : "kwp"}
         />
+      ) : projectInfo.generationInputMode === "kwh" ? (
+        <div className="space-y-6">
+          <AnnualKwhGrid
+            value={projectInfo.annualKwhByYear}
+            onChange={(next: AnnualKwhByYear) => {
+              if (setProjectInfo) {
+                setProjectInfo({ ...projectInfo, annualKwhByYear: next });
+              }
+            }}
+          />
+          <div className="space-y-2 md:max-w-sm">
+            <Label htmlFor="commissionDate">Commission Date</Label>
+            <div className="relative">
+              <Input
+                id="commissionDate"
+                name="commissionDate"
+                type="date"
+                value={projectInfo.commissionDate}
+                onChange={updateProjectInfo}
+                className="retro-input"
+                required
+                min={getMinimumDateString()}
+              />
+              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-carbon-gray-400 pointer-events-none" />
+            </div>
+            <p className="text-xs text-carbon-gray-500">Must be on or after September 15, 2022</p>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
