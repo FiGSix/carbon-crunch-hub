@@ -139,6 +139,13 @@ export async function submitClientProject(
       agent_commission_percentage: agentCommissionPercentage,
       agent_portfolio_kwp: 0,
       system_size_kwp: systemSizeKWp,
+      ...(portfolioClientShareOverride != null
+        ? {
+            client_share_override_enabled: true,
+            client_share_override_set_at: new Date().toISOString(),
+            client_share_override_set_by: userId,
+          }
+        : {}),
     } as any;
 
     const { data: proposal, error: insertError } = await supabase
