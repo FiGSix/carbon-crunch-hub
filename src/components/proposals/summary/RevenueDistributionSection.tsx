@@ -60,7 +60,7 @@ export function RevenueDistributionSection({
   const clientSharePercentage = proposalData?.client_share_percentage 
     ?? getClientSharePercentage(clientPortfolioSize);
 
-  const agentCommissionPercentage = proposalData?.agent_commission_percentage ?? 4;
+  const agentCommissionPercentage = proposalData?.agent_commission_percentage ?? 0;
   const agentPortfolioSize = proposalData?.agent_portfolio_kwp || 0;
   const crunchCarbonSharePercentage = 100 - clientSharePercentage - agentCommissionPercentage;
 
