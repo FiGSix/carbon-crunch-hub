@@ -1,5 +1,5 @@
 import { UserRole } from '@/contexts/auth/types';
-import { ProjectPhase } from '@/types/proposals';
+import { ProjectPhase, AnnualKwhByYear } from '@/types/proposals';
 
 export interface SystemSpecs {
   sizeKwp: number;
@@ -9,6 +9,11 @@ export interface SystemSpecs {
   phases?: ProjectPhase[];
   province?: string;
   clientShareOverride?: number;
+  /**
+   * When provided (single-phase), per-year user-supplied kWh override yield-factor calculation.
+   * For multi-phase, populate `phases[].annualKwhByYear` instead.
+   */
+  annualKwhByYear?: AnnualKwhByYear;
 }
 
 export interface PhaseRevenue {
@@ -19,6 +24,7 @@ export interface PhaseRevenue {
   revenueByYear: Record<string, number>;
   carbonCreditsPerYear: number;
   annualEnergyKwh: number;
+  annualKwhByYear?: AnnualKwhByYear;
 }
 
 export interface CarbonCalculationResult {
