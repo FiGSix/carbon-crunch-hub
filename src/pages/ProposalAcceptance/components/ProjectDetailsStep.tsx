@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MapboxAddressAutocomplete } from "@/components/common/MapboxAddressAutocomplete";
 import { CheckCircle2, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface ProjectDetailsValue {
   systemAddress: string;
@@ -41,6 +42,7 @@ interface Props {
 export function ProjectDetailsStep({ value, onChange }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [manualAddress, setManualAddress] = useState(false);
 
   useEffect(() => {
     const result = schema.safeParse(value);
@@ -81,22 +83,50 @@ export function ProjectDetailsStep({ value, onChange }: Props) {
 
       <div className="grid gap-5">
         <div>
-          <Label htmlFor="systemAddress">Solar system physical address *</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="systemAddress">Solar system physical address *</Label>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              onClick={() => setManualAddress((m) => !m)}
+            >
+              {manualAddress ? "Use address search" : "Enter address manually"}
+            </Button>
+          </div>
           <div className="mt-1.5">
-            <MapboxAddressAutocomplete
-              value={value.systemAddress}
-              onChange={(address, coords) => {
-                onChange({
-                  ...value,
-                  systemAddress: address,
-                  systemLat: coords?.lat ?? null,
-                  systemLng: coords?.lng ?? null,
-                });
-                setTouched((t) => ({ ...t, systemAddress: true }));
-              }}
-              placeholder="Start typing the site address…"
-              required
-            />
+            {manualAddress ? (
+              <Input
+                id="systemAddress"
+                value={value.systemAddress}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    systemAddress: e.target.value,
+                    systemLat: null,
+                    systemLng: null,
+                  })
+                }
+                onBlur={() => setTouched((t) => ({ ...t, systemAddress: true }))}
+                placeholder="Street, suburb, city, postal code"
+              />
+            ) : (
+              <MapboxAddressAutocomplete
+                value={value.systemAddress}
+                onChange={(address, coords) => {
+                  onChange({
+                    ...value,
+                    systemAddress: address,
+                    systemLat: coords?.lat ?? null,
+                    systemLng: coords?.lng ?? null,
+                  });
+                  setTouched((t) => ({ ...t, systemAddress: true }));
+                }}
+                placeholder="Start typing the site address…"
+                required
+              />
+            )}
           </div>
           {showErr("systemAddress") && (
             <p className="text-sm text-destructive mt-1">{errors.systemAddress}</p>

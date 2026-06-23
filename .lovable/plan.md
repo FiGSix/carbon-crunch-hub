@@ -1,79 +1,68 @@
+## What's happening
 
-# Referral Proposal Flow — Fixes & Enhancements (v2)
+**1. "Missing required project details" error**
 
-## 1. Fix client share % bug (60.20% vs 68.25%)
+The referral-acceptance page (`src/pages/ProposalAcceptance/index.tsx`) *does* render a `ProjectDetailsStep` block (system address, commissioning date, installer company, installer email) — but it's tucked **between Terms & Conditions and the Signature panel**, inside a long scrolling page. On the live proposal (`86d8a8da…`, `referral_created: true`), there is no:
 
-**Root cause:** `supabase/functions/create-referral-proposal/index.ts` calculates `clientShare` from the agent's **company portfolio** (sum of all signed proposals by the company), so a small 10 kWp referral inherits the agent's full-company tier (20–30 MWp → 68.25%).
+- visible heading anchor or in-page nav pointing the client at it,
+- "next step" banner after they scroll the T&Cs,
+- visible blocker on the signature panel itself explaining *why* "Sign & Accept" is disabled.
 
-The standard proposal flow (`src/services/proposals/unifiedProposalService.ts`) correctly uses the **client's own portfolio** for the client share %, and uses the company portfolio only for agent commission tier.
+So the client scrolls T&Cs → reaches the signature box → types name → clicks Sign → server rejects with "Missing required project details" with no idea what to fill in. The fields exist; the UX hides them.
 
-**Fix:**
-- Sum `system_size_kwp` from existing non-deleted proposals for the same `client_reference_id`.
-- `totalClientPortfolio = existingClientKWp + system.size_kwp`
-- `clientShare = calcClientShare(totalClientPortfolio)` → 10 kWp → **60.20%** ✓
-- Keep `agentCommission` based on company portfolio (current behaviour).
-- Backfill: recompute `client_share_percentage` on any unsigned referral-created proposals (e.g. `ad5dc895…`).
+**2. Emails are green, brand is yellow/black**
 
-## 2. Rebrand the invitation email
+`supabase/functions/_shared/brand-email.ts` hard-codes a deep-green palette (`#0E5A3A` / `#0A4A30` / `#C8A24B` gold). The actual brand tokens in `src/styles/base.css` are **Crunch Yellow `hsl(45 100% 50%)` (`#FFC400`) on Crunch Black `hsl(0 0% 10%)` (`#1A1A1A`)**, white surface, light-grey borders. Every email sent through `renderBrandEmail` (referral invite + installer invite/notification) is off-brand.
 
-`supabase/functions/create-referral-proposal/index.ts` currently sends a plain inline-HTML email that doesn't match the Crunch Carbon brand. (The legacy `send-proposal-invitation/email-service.ts` uses a golden-gradient template that also drifts from brand.)
+## Fix
 
-**Fix:** Build one shared on-brand email template (`supabase/functions/_shared/brand-email.ts`) and use it from the referral function:
-- Brand colours from `src/index.css` tokens (deep green primary, off-white surface, gold sparingly).
-- Header with Crunch Carbon wordmark on solid brand band — no rainbow gradient.
-- Clean system-font typography, 600px max width, table-based layout, inline styles, `#ffffff` body bg.
-- Sections: greeting → project summary card → primary CTA → what-happens-next → why-am-I-receiving-this → 10-day validity → signature → dark footer with support email.
-- Same template wrapper will be reused for the installer emails in #4.
+### A. Make the project-details step impossible to miss
 
-## 3. Pre-signature data capture (reuse existing onboarding fields)
+In `src/pages/ProposalAcceptance/index.tsx`:
 
-We are NOT adding new columns. The four required pieces already live in `public.onboarding_fields`:
-- `system_address` (+ `system_gps_lat`/`system_gps_lng`)
-- `commissioning_date`
-- `installer_company_name`
-- `installer_email` (and `installer_id` linking to `public.solar_installers`)
+1. **Promote it above the Signature panel as a numbered step** with a clear heading: *"Step 1 of 2 — Confirm your project details"* / *"Step 2 of 2 — Review & sign"*. Render only for `isReferralProposal`.
+2. **Add a sticky callout above the Signature panel** when `isReferralProposal && !projectDetailsValid(projectDetails)`:
+   > "Before you can sign, please complete your project details above." with a "Jump to project details" button that scrolls to a new `#project-details` anchor.
+3. **Disable the Sign button with an inline reason list** (already partly there) — explicitly list "Project details incomplete" alongside the existing "Scroll T&Cs / Tick agree / Type name" reasons, each as a checkable item, so the client sees exactly what's missing.
+4. **Auto-scroll on click**: if the client presses Sign while project details are invalid, scroll to `#project-details` and flash the card border instead of silently no-op'ing.
+5. **Fallback for clients on broken Mapbox**: `ProjectDetailsStep` currently relies on `MapboxAddressAutocomplete` (calls `mapbox-geocode` edge function). If that function errors, the autocomplete shows nothing and the client can't enter an address. Add a plain "Enter address manually" toggle inside `ProjectDetailsStep` that swaps in a regular `<Input>` and leaves lat/lng `null` (server already allows null coords).
 
-Today these are filled during the post-signature onboarding step (`PostSignatureOnboardingModal` → `/onboarding`). For referral-sourced proposals we shift these four into a **pre-signature step** so the signature panel is gated on them.
+### B. Rebrand the shared email wrapper to Crunch Yellow + Black
 
-**Fix:**
-- New `ProjectDetailsStep` component inserted into `src/pages/ProposalAcceptance` between the summary/terms and the signature panel.
-- On submit it **upserts a `project_onboarding` row** for the proposal (if not already present) and **upserts the matching `onboarding_fields` row** with `system_address`, `system_gps_lat`, `system_gps_lng`, `commissioning_date`, `installer_company_name`, `installer_email` (using existing `google-places-autocomplete` for address).
-- Autosave on blur so partial fills survive reload.
-- "Sign & Accept" stays disabled until all four validate (Zod client-side).
-- `accept-proposal` re-validates server-side that those four fields exist on `onboarding_fields` for the proposal; reject the sign if missing.
-- The post-signature onboarding flow stays untouched — those fields will simply already be filled and the remaining technical fields (panels, inverters, costs, etc.) still get collected from the installer/agent later.
+Rewrite `supabase/functions/_shared/brand-email.ts` palette and layout to mirror the app:
 
-## 4. Post-signature installer invitation & notification
+```text
+primary       #FFC400  (Crunch Yellow, 45 100% 50%)
+primaryInk    #1A1A1A  (Crunch Black, body text on yellow)
+ink           #1A1A1A
+inkMuted      #5C5C5C
+surface       #FFFFFF
+surfaceAlt    #FAFAFA  (card rows)
+border        #E6E6E6
+accent        #1A1A1A  (footer bar)
+```
 
-When a referral proposal is signed (in `accept-proposal` or as a follow-up step in `post-signature-automation`), use `onboarding_fields.installer_email` (collected in step 3) to:
+- Brand band: solid Crunch Yellow with black "Crunch Carbon" wordmark + black "Solar Carbon Credits" eyebrow (no green).
+- CTA button: yellow bg, black text, black 1px border, 8px radius (matches in-app primary button).
+- `brandCard` rows: white card on `#FAFAFA`, `#E6E6E6` border, black labels/values.
+- Footer: black bar with white text and yellow link colour for the support email.
+- Keep inline-CSS, 600px max, white body bg, Gmail/Outlook safe — no other structural changes, so `create-referral-proposal`, `send-installer-invitation`, and any other caller keep working with no signature change.
+- Update `BRAND_COLORS` export so any caller reading it stays in sync.
 
-1. Look up the installer in `public.solar_installers` (case-insensitive on `email`).
-2. **If not found:** insert a new `solar_installers` row (`company_name = installer_company_name`, `created_by = agent_id`), set `onboarding_fields.installer_id` to it, then send an **invitation email** that:
-   - Invites them to join the Crunch Carbon installer programme.
-   - Explains the **annuity commission** (default 4%, pulled from `system_settings` so admins can tune without redeploy).
-   - Shows worked examples computed server-side at send time using current carbon price + emission factor + 4% share — e.g. "A typical 100 kWp system earns you ~R X,XXX per year for the life of the project" and "A 1 MWp portfolio ~R XX,XXX per year".
-   - Mentions earning more by referring/onboarding clients themselves.
-   - CTA: "Accept your installer invitation" with a one-time token.
-3. **If already on platform:** send a lighter notification — "Your client {clientName} has just signed up for carbon credits. Help complete onboarding (system size, panels, inverter serials, costs) here → {link}".
-4. Both emails use the shared on-brand template from #2.
-5. Log the send in `proposal_automation_log` (`installer_invitation` / `installer_notification`).
+### C. Verify
 
-## 5. Verification
+1. Open the live referral proposal `/proposals/86d8a8da…/accept?token=…` and confirm:
+   - Step 1 (project details) is visible above the signature with the new heading and anchor.
+   - Signature submit reason list shows "Project details incomplete" until filled.
+   - Filling all four fields enables Sign, server accepts, no "Missing required project details" error.
+   - Manual-address fallback works if Mapbox is unavailable.
+2. Trigger a fresh referral invite (`create-referral-proposal`) and a fresh installer invite (`send-installer-invitation`) on a test address; visually confirm yellow/black brand in Gmail + Apple Mail. No green anywhere.
 
-- Trigger referral flow with a 10 kWp system → confirm `client_share_percentage = 60.20`.
-- Send a test invitation email → visually verify brand match in Gmail + Outlook.
-- Walk a test client through acceptance → Sign disabled until project details + installer details supplied; confirm `onboarding_fields` row is written.
-- Sign with (a) new installer email and (b) existing installer email → two different emails, new `solar_installers` row created in (a), `installer_id` linked in both, `proposal_automation_log` rows present.
+## Files
 
-## Technical Details
+- **Edit** `src/pages/ProposalAcceptance/index.tsx` — reorder + numbered steps, sticky callout, scroll-to-anchor on disabled-submit, expanded reason list.
+- **Edit** `src/pages/ProposalAcceptance/components/ProjectDetailsStep.tsx` — add `#project-details` anchor + "Enter address manually" fallback toggle.
+- **Edit** `supabase/functions/_shared/brand-email.ts` — full palette + band + CTA + footer rebrand to Crunch Yellow/Black; export updated `BRAND_COLORS`.
+- **Deploy** `create-referral-proposal`, `send-installer-invitation`, `accept-proposal` (only the shared module changes, but they must be redeployed to pick it up).
 
-- **Files to edit:**
-  - `supabase/functions/create-referral-proposal/index.ts` (share calc + new email template)
-  - `src/pages/ProposalAcceptance/index.tsx` (+ new `components/ProjectDetailsStep.tsx`)
-  - `supabase/functions/accept-proposal/index.ts` (server-side required-field check; trigger installer flow)
-  - `supabase/functions/post-signature-automation/index.ts` (alternative trigger point)
-- **New files:**
-  - `supabase/functions/send-installer-invitation/index.ts`
-  - `supabase/functions/_shared/brand-email.ts` (shared on-brand HTML wrapper)
-- **DB migration:** none required — `onboarding_fields` and `solar_installers` already have everything. Optional one-off `UPDATE` (via insert tool) to backfill `client_share_percentage` on unsigned referral proposals.
-- **Config:** installer annuity % stored in `system_settings` (`installer_commission_percentage`, default 4).
+No DB migrations. No new dependencies. No business-logic changes — purely UX placement + email palette.
