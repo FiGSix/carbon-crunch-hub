@@ -119,27 +119,47 @@ export function CarbonCreditTableWrapper({
         
         <CollapsibleContent>
           <div className="space-y-6 mb-6">
-            {phases.map((phase) => (
-              <div key={phase.phaseNumber} className="border border-border rounded-lg p-4 bg-muted/30">
-                <h5 className="font-semibold mb-3 text-foreground">
-                  Phase {phase.phaseNumber}{phase.phaseName ? `: ${phase.phaseName}` : ''}
-                  <span className="text-sm font-normal text-muted-foreground ml-2">
-                    ({phase.sizeKWp.toFixed(2)} kWp)
-                  </span>
-                </h5>
-                <CarbonCreditTable
-                  revenue={phase.revenueByYear}
-                  systemSizeKWp={phase.sizeKWp}
-                  commissionDate={phase.commissionDate}
-                  portfolioSize={portfolioSize}
-                  totalMWhGenerated={calculatePhaseTotalMWh(phase)}
-                  totalCarbonCredits={calculatePhaseTotalCredits(phase)}
-                  totalClientSpecificRevenue={calculatePhaseTotalRevenue(phase)}
-                  isPhaseTable={true}
-                  clientShareOverride={clientShareOverride}
-                />
-              </div>
-            ))}
+            {phases.map((phase) => {
+              const phaseKwhGrid = (phase as any).annualKwhByYear as Record<string, number> | undefined;
+              const phaseKwhMode = isKwhMode && phaseKwhGrid && Object.values(phaseKwhGrid).some((v) => (Number(v) || 0) > 0);
+              const phasePreMWh = phaseKwhMode
+                ? Object.fromEntries(Object.entries(phaseKwhGrid!).map(([y, kwh]) => [y, (Number(kwh) || 0) / 1000]))
+                : undefined;
+              const phasePreCredits = phaseKwhMode
+                ? Object.fromEntries(Object.entries(phaseKwhGrid!).map(([y, kwh]) => [y, ((Number(kwh) || 0) / 1000) * 1.0334]))
+                : undefined;
+              const phasePreRevenue = phaseKwhMode ? phase.revenueByYear : undefined;
+              const phaseTotalMWh = phasePreMWh
+                ? Object.values(phasePreMWh).reduce((s, v) => s + v, 0)
+                : calculatePhaseTotalMWh(phase);
+              const phaseTotalCredits = phasePreCredits
+                ? Object.values(phasePreCredits).reduce((s, v) => s + v, 0)
+                : calculatePhaseTotalCredits(phase);
+              return (
+                <div key={phase.phaseNumber} className="border border-border rounded-lg p-4 bg-muted/30">
+                  <h5 className="font-semibold mb-3 text-foreground">
+                    Phase {phase.phaseNumber}{phase.phaseName ? `: ${phase.phaseName}` : ''}
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      ({phase.sizeKWp.toFixed(2)} kWp)
+                    </span>
+                  </h5>
+                  <CarbonCreditTable
+                    revenue={phase.revenueByYear}
+                    systemSizeKWp={phase.sizeKWp}
+                    commissionDate={phase.commissionDate}
+                    portfolioSize={portfolioSize}
+                    totalMWhGenerated={phaseTotalMWh}
+                    totalCarbonCredits={phaseTotalCredits}
+                    totalClientSpecificRevenue={calculatePhaseTotalRevenue(phase)}
+                    isPhaseTable={true}
+                    clientShareOverride={clientShareOverride}
+                    preCalculatedYearlyMWh={phasePreMWh}
+                    preCalculatedYearlyCredits={phasePreCredits}
+                    preCalculatedYearlyRevenue={phasePreRevenue}
+                  />
+                </div>
+              );
+            })}
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -156,8 +176,9 @@ export function CarbonCreditTableWrapper({
           totalMWhGenerated={totalMWhGenerated}
           totalCarbonCredits={totalCarbonCredits}
           totalClientSpecificRevenue={totalClientSpecificRevenue}
-          preCalculatedYearlyMWh={aggregateYearlyMWhFromPhases(phases, Object.keys(consolidatedRevenue))}
-          preCalculatedYearlyCredits={aggregateYearlyCarbonCreditsFromPhases(phases, Object.keys(consolidatedRevenue))}
+          preCalculatedYearlyMWh={preCalculatedYearlyMWh ?? aggregateYearlyMWhFromPhases(phases, Object.keys(consolidatedRevenue))}
+          preCalculatedYearlyCredits={preCalculatedYearlyCredits ?? aggregateYearlyCarbonCreditsFromPhases(phases, Object.keys(consolidatedRevenue))}
+          preCalculatedYearlyRevenue={preCalculatedYearlyRevenue}
           isPhaseTable={false}
           clientShareOverride={clientShareOverride}
         />
