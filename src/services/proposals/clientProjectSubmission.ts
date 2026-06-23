@@ -79,7 +79,19 @@ export async function submitClientProject(
       0
     );
 
-    const clientSharePercentage = getClientSharePercentage(portfolioKWp);
+    // Respect admin-applied portfolio override when present
+    const { data: clientPortfolioRow } = await supabase
+      .from("clients")
+      .select("portfolio_client_share_override")
+      .eq("id", clientRecord.id)
+      .maybeSingle();
+    const portfolioClientShareOverride: number | null =
+      (clientPortfolioRow as any)?.portfolio_client_share_override ?? null;
+
+    const clientSharePercentage =
+      portfolioClientShareOverride != null
+        ? portfolioClientShareOverride
+        : getClientSharePercentage(portfolioKWp);
     const agentCommissionPercentage = 0; // No agent
 
     // 5. Calculate revenue projections
