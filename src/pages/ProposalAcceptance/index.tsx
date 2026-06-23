@@ -484,13 +484,44 @@ export default function ProposalAcceptance() {
           />
 
           {isReferralProposal && (
-            <ProjectDetailsStep
-              value={projectDetails}
-              onChange={setProjectDetails}
-            />
+            <div id="project-details" className="scroll-mt-24">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold">1</span>
+                <h2 className="text-lg font-semibold">Step 1 of 2 — Confirm your project details</h2>
+              </div>
+              <ProjectDetailsStep
+                value={projectDetails}
+                onChange={setProjectDetails}
+              />
+            </div>
           )}
 
-          <div id="review-and-sign">
+          <div id="review-and-sign" className="scroll-mt-24">
+            {isReferralProposal && (
+              <div className="mb-3 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold">2</span>
+                <h2 className="text-lg font-semibold">Step 2 of 2 — Review &amp; sign</h2>
+              </div>
+            )}
+            {isReferralProposal && !projectDetailsOk && (
+              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-amber-900 font-medium">Before you can sign, please complete your project details above.</p>
+                  <p className="text-amber-800 text-sm mt-0.5">We need your system address, commissioning date and installer contact to register the project.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    document.getElementById("project-details")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
+                  Jump to project details
+                </Button>
+              </div>
+            )}
             <SignatureSection
               hasScrolledToBottom={hasScrolledToBottom}
               hasAgreed={hasAgreed}
