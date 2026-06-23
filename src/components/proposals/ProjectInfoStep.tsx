@@ -185,21 +185,30 @@ export function ProjectInfoStep({
   };
 
   // Form validation checks
+  const isKwhMode = projectInfo.generationInputMode === "kwh";
   const isFormValid = projectInfo.isMultiPhase
     ? Boolean(
         projectInfo.name &&
         projectInfo.address &&
         projectInfo.phases &&
         projectInfo.phases.length > 0 &&
-        projectInfo.phases.every(p => p.sizeKWp > 0 && p.commissionDate) &&
-        (projectInfo.totalSystemSize || 0) < 15000 &&
+        projectInfo.phases.every(p =>
+          (isKwhMode
+            ? p.annualKwhByYear && Object.values(p.annualKwhByYear).some(v => (v || 0) > 0)
+            : p.sizeKWp > 0
+          ) && p.commissionDate
+        ) &&
+        (isKwhMode || (projectInfo.totalSystemSize || 0) < 15000) &&
         !addressInputError &&
         !dateValidationError
       )
     : Boolean(
         projectInfo.name &&
         projectInfo.address &&
-        projectInfo.size &&
+        (isKwhMode
+          ? projectInfo.annualKwhByYear && Object.values(projectInfo.annualKwhByYear).some(v => (v || 0) > 0)
+          : projectInfo.size
+        ) &&
         projectInfo.commissionDate &&
         !addressInputError &&
         !dateValidationError
