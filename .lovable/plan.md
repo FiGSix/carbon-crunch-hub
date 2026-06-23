@@ -1,48 +1,97 @@
-## Problem
+## Issue 1 — Saved portfolio Client % override is ignored on new proposals
 
-On the Proposal Summary page, when a proposal uses the new **kWh input mode** (per-year 2025–2030 values), the "Carbon Credit Projection" block renders empty:
+The admin "Portfolio Client Share" dialog **does** persist the value:
 
-- **Estimated Annual Energy** shows `0 kWh`
-- **Estimated Annual Carbon Credits** shows `0.00 tCO₂`
-- Each yearly row shows `0.00 MWh / 0.00 tCO₂e / R 0`, even though the **Total Client Revenue** at the bottom is correct (R 486,719).
+- `clients.portfolio_client_share_override` rows are being written correctly (verified in DB for Rhino Energy, Green Gables, Plumari, etc.).
+- The "Apply to All" edge function bulk-updates existing proposals.
 
-## Root cause
+What is broken is the **forward application** of that saved override:
 
-`CarbonCreditSection.tsx` and `CarbonCreditTable.tsx` both still derive the displayed per-year MWh and tCO₂e from `systemSizeKWp` using the kWp × yield-factor formula:
+- `src/services/proposals/unifiedProposalService.ts` (Step 4b/4c, lines ~235-262) calculates `clientSharePercentage` purely from the tier helper `calculateClientSharePercentage(totalClientPortfolio)`.
+- It never reads `clients.portfolio_client_share_override`, so every newly created proposal for an overridden client snaps back to the tier value (e.g. 60.20%) until an admin opens the dialog again and clicks "Apply to All".
 
-- `systemSizeKWp` comes from `UnifiedCarbonService.normalizeToKWp(systemSize)`. In kWh mode the size field is empty, so `systemSizeKWp = 0`.
-- Summary tiles call `calculateAnnualEnergy(systemSizeKWp)` → 0.
-- `CarbonCreditTable` ignores the per-year revenue map and re-runs `calculateYearlyEnergy(systemSizeKWp, year, commissionDate)` + `calculateClientSpecificRevenue(...)` per row → all zeros.
+That is almost certainly what the user is experiencing as "not being saved" — the value disappears from new proposals immediately after creation.
 
-Only the bottom **Total** row uses the kWh-mode totals already computed by `calculateFromAnnualKwh` in `services/calculations/carbon/core.ts`, which is why the total is correct but rows are not.
+### Fix
 
-## Fix
+In `unifiedProposalService.ts`, after resolving `clientId` and before computing `clientSharePercentage`:
 
-Wire the kWh-mode results from `calculationResult` (already returned by `useRevenueCalculations`) through to the table and the summary tiles. No calculation-engine changes — the engine is already correct.
+1. Fetch the client's portfolio override:
+   ```ts
+   const { data: clientRow } = await supabase
+     .from('clients')
+     .select('portfolio_client_share_override')
+     .eq('id', clientId)
+     .maybeSingle();
+   const portfolioClientShareOverride: number | null =
+     clientRow?.portfolio_client_share_override ?? null;
+   ```
+2. Use it when present:
+   ```ts
+   const tierClientShare = calculateClientSharePercentage(totalClientPortfolio);
+   const clientSharePercentage =
+     portfolioClientShareOverride != null
+       ? portfolioClientShareOverride
+       : tierClientShare;
+   ```
+3. When the override is applied, also persist the audit columns on the new proposal so the lock icon and history are consistent with bulk-applied proposals:
+   ```ts
+   client_share_override_enabled: portfolioClientShareOverride != null,
+   client_share_override_set_at: portfolioClientShareOverride != null
+     ? new Date().toISOString() : null,
+   client_share_override_set_by: portfolioClientShareOverride != null
+     ? agentId : null,
+   ```
+4. Mirror the same lookup in `src/services/proposals/clientProjectSubmission.ts` (partner submit flow) so partner-created proposals for an overridden client also inherit the saved percentage.
 
-### 1. `src/components/proposals/summary/CarbonCreditSection.tsx`
-- Detect kWh mode: `generationInputMode === 'kwh'` OR any value in `annualKwhByYear` / `phases[].annualKwhByYear` > 0.
-- In kWh mode:
-  - Use `calculationResult.systemSizeKwp` (the derived kWp) instead of the empty form value when passing `systemSizeKWp` down.
-  - Build `preCalculatedYearlyMWh` from the per-year kWh (kWh ÷ 1000). Single-phase: from `annualKwhByYear`. Multi-phase: sum across `phases[].annualKwhByYear`.
-  - Build `preCalculatedYearlyCredits` = MWh × `EMISSION_FACTOR` (1.0334).
-  - Pass `preCalculatedYearlyRevenue = calculationResult.revenueByYear` so the table stops calling `calculateClientSpecificRevenue` and just renders the engine's revenue.
-  - Replace the summary tiles' `calculateAnnualEnergy` / `calculateCarbonCredits` calls with `calculationResult.annualEnergyKwh` and `calculationResult.carbonCreditsPerYear`.
-  - Hide the "pro-rated commissioning year" footnote in kWh mode (kWh values are used as-is).
+No DB or UI changes required; the dialog and `PortfolioClientShareDialog` continue to work as-is.
 
-### 2. `src/components/proposals/summary/carbon/CarbonCreditTableWrapper.tsx`
-- Forward the new `preCalculatedYearlyMWh / Credits / Revenue` props in the single-phase branch (today only the multi-phase consolidated branch passes pre-calculated MWh/credits).
-- For multi-phase kWh-mode phase cards: build per-phase pre-calculated maps from `phase.annualKwhByYear` and pass them to each phase's `CarbonCreditTable`.
+## Issue 2 — Admin-created proposals show a partner fee
 
-### 3. `src/components/proposals/summary/carbon/CarbonCreditTable.tsx`
-- Add optional `preCalculatedYearlyRevenue?: Record<string, number>` prop. When provided, skip the async `getFormattedClientSpecificCarbonPrice` + `calculateClientSpecificRevenue` calls and use the supplied revenue. The carbon-price column shows `—` (or the static published price) since pricing is already baked into the supplied revenue.
-- Existing kWp-mode behaviour unchanged when the new prop is omitted.
+When an admin uses **Create Proposal**, `unifiedProposalService.ts` treats the admin as if they were a partner:
 
-### 4. Backwards compatibility
-- All new props are optional. Existing kWp-mode proposals render exactly as before.
-- No DB / edge-function changes.
+- `agentId = currentUser.id` (the admin).
+- `ensure_agent_has_company` provisions/returns a "company" for the admin.
+- The admin's own past proposals contribute to `companyPortfolioKWp`, then `calculateAgentCommissionPercentage(totalCompanyPortfolio)` returns 4% (<15 MWp) or 7% (≥15 MWp).
+- Result: a partner-style fee appears on a proposal that has no actual partner.
 
-## Out of scope
+`getAgentCommissionPercentage` in `src/services/calculations/carbon/pricing.ts` already documents the intended behaviour: *"If no agent involved (added by Crunch Carbon), returns 0%"* — but `hasAgent` is never passed `false` anywhere.
 
-- Recomputing the historical persisted `totalClientRevenue` on proposals already saved with wrong row-level zeros (the total was correct; only display rows were wrong).
-- Acceptance page / PDF — same pattern is already handled in those surfaces by earlier work; if the same symptom appears there, it will be addressed in a follow-up.
+### Fix
+
+In `unifiedProposalService.ts`, detect "no partner involved" and force the commission to 0:
+
+1. Look up the creator's role once:
+   ```ts
+   const { data: creatorProfile } = await supabase
+     .from('profiles')
+     .select('role')
+     .eq('id', agentId)
+     .maybeSingle();
+   const isAdminCreator = creatorProfile?.role === 'admin';
+   ```
+2. When `isAdminCreator` is true, treat the proposal as having no partner:
+   ```ts
+   const agentCommissionPercentage = isAdminCreator
+     ? 0
+     : (companyCommissionOverride != null
+         ? companyCommissionOverride
+         : calculateAgentCommissionPercentage(totalCompanyPortfolio));
+   ```
+3. Persist the intent on the proposal so downstream code (Revenue Distribution, PDF, acceptance page) stays consistent:
+   - `agent_commission_percentage: 0`
+   - Continue storing `agent_id = adminId` for ownership/audit, but the 0% rate means Crunch Carbon keeps the full 100% − client share.
+4. In `RevenueDistributionSection.tsx`, the default fallback `?? 4` (line 63) should fall back to the proposal's saved `agent_commission_percentage` only; remove the hardcoded 4% so an admin-only proposal renders 0% instead of defaulting to 4%.
+5. Leave the **Submit Project** (partner) flow untouched — partners continue to receive the tier/override commission.
+
+### Out of scope
+
+- No backfill of historical proposals; only newly created proposals are affected by both fixes.
+- No changes to the bulk "Apply to All" edge function — it already works.
+- No DB migrations.
+
+## Files to edit
+
+- `src/services/proposals/unifiedProposalService.ts` (both fixes)
+- `src/services/proposals/clientProjectSubmission.ts` (Issue 1 only — partner submit flow)
+- `src/components/proposals/summary/RevenueDistributionSection.tsx` (Issue 2 — remove hardcoded 4% fallback)
