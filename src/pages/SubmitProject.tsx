@@ -24,6 +24,7 @@ const initialProjectInfo: ProjectInformation = {
   size: "",
   commissionDate: "",
   additionalNotes: "",
+  generationInputMode: "kwp",
 };
 
 export default function SubmitProject() {
