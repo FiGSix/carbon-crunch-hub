@@ -100,19 +100,29 @@ export function ProjectInfoStep({
   // Validate form before proceeding to next step
   const validateAndProceed = () => {
     const missingFields: string[] = [];
-    
+    const isKwhMode = projectInfo.generationInputMode === "kwh";
+
     if (!projectInfo.name) missingFields.push("Project Name");
     if (!projectInfo.address) missingFields.push("Project Address");
-    
+
     if (projectInfo.isMultiPhase) {
       if (!projectInfo.phases?.length) {
         missingFields.push("Project Phases");
+      } else if (isKwhMode) {
+        const badPhase = projectInfo.phases.find(
+          (p) => !p.commissionDate || !p.annualKwhByYear || Object.values(p.annualKwhByYear).every((v) => !v || v <= 0)
+        );
+        if (badPhase) missingFields.push("Per-phase commission date and at least one year of kWh");
       }
+    } else if (isKwhMode) {
+      if (!projectInfo.commissionDate) missingFields.push("Commission Date");
+      const anyKwh = projectInfo.annualKwhByYear && Object.values(projectInfo.annualKwhByYear).some((v) => (v || 0) > 0);
+      if (!anyKwh) missingFields.push("At least one year of estimated kWh");
     } else {
       if (!projectInfo.size) missingFields.push("System Size");
       if (!projectInfo.commissionDate) missingFields.push("Commission Date");
     }
-    
+
     if (missingFields.length > 0) {
       toast({
         title: "Missing Required Fields",
@@ -175,21 +185,30 @@ export function ProjectInfoStep({
   };
 
   // Form validation checks
+  const isKwhMode = projectInfo.generationInputMode === "kwh";
   const isFormValid = projectInfo.isMultiPhase
     ? Boolean(
         projectInfo.name &&
         projectInfo.address &&
         projectInfo.phases &&
         projectInfo.phases.length > 0 &&
-        projectInfo.phases.every(p => p.sizeKWp > 0 && p.commissionDate) &&
-        (projectInfo.totalSystemSize || 0) < 15000 &&
+        projectInfo.phases.every(p =>
+          (isKwhMode
+            ? p.annualKwhByYear && Object.values(p.annualKwhByYear).some(v => (v || 0) > 0)
+            : p.sizeKWp > 0
+          ) && p.commissionDate
+        ) &&
+        (isKwhMode || (projectInfo.totalSystemSize || 0) < 15000) &&
         !addressInputError &&
         !dateValidationError
       )
     : Boolean(
         projectInfo.name &&
         projectInfo.address &&
-        projectInfo.size &&
+        (isKwhMode
+          ? projectInfo.annualKwhByYear && Object.values(projectInfo.annualKwhByYear).some(v => (v || 0) > 0)
+          : projectInfo.size
+        ) &&
         projectInfo.commissionDate &&
         !addressInputError &&
         !dateValidationError

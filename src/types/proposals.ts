@@ -55,11 +55,20 @@ export interface AdditionalClient {
   clientId?: string; // If selected from existing clients
 }
 
+export type GenerationInputMode = 'kwp' | 'kwh';
+
+/** Map of vintage year -> estimated annual kWh generation. */
+export type AnnualKwhByYear = Partial<Record<'2025' | '2026' | '2027' | '2028' | '2029' | '2030', number>>;
+
+export const GENERATION_YEARS = ['2025', '2026', '2027', '2028', '2029', '2030'] as const;
+
 export interface ProjectPhase {
   phaseNumber: number;
   phaseName?: string;
   sizeKWp: number;
   commissionDate: string;
+  /** When parent project uses 'kwh' mode, each phase carries its own per-year kWh grid. */
+  annualKwhByYear?: AnnualKwhByYear;
 }
 
 export interface ProjectInformation {
@@ -76,6 +85,10 @@ export interface ProjectInformation {
   phases?: ProjectPhase[];
   totalSystemSize?: number;
   additionalNotes: string;
+  /** Generation input mode. Defaults to 'kwp' for backwards compatibility. */
+  generationInputMode?: GenerationInputMode;
+  /** When generationInputMode === 'kwh' (single-phase), user-supplied annual kWh per vintage year. */
+  annualKwhByYear?: AnnualKwhByYear;
 }
 
 export interface EligibilityCriteria {

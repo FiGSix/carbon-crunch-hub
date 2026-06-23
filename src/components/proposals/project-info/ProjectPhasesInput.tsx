@@ -2,15 +2,19 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar, Plus, Trash2 } from "lucide-react";
-import { ProjectPhase } from "@/types/proposals";
+import { ProjectPhase, GenerationInputMode, AnnualKwhByYear } from "@/types/proposals";
 import { getMinimumDateString } from "@/utils/dateValidation";
+import { AnnualKwhGrid } from "./AnnualKwhGrid";
 
 interface ProjectPhasesInputProps {
   phases: ProjectPhase[];
   onChange: (phases: ProjectPhase[]) => void;
+  generationInputMode?: GenerationInputMode;
 }
 
-export function ProjectPhasesInput({ phases, onChange }: ProjectPhasesInputProps) {
+export function ProjectPhasesInput({ phases, onChange, generationInputMode = "kwp" }: ProjectPhasesInputProps) {
+  const isKwhMode = generationInputMode === "kwh";
+
   const addPhase = () => {
     const newPhase: ProjectPhase = {
       phaseNumber: phases.length + 1,
@@ -30,13 +34,23 @@ export function ProjectPhasesInput({ phases, onChange }: ProjectPhasesInputProps
     onChange(updated);
   };
 
-  const updatePhase = (index: number, field: keyof ProjectPhase, value: string | number) => {
+  const updatePhase = (index: number, field: keyof ProjectPhase, value: string | number | AnnualKwhByYear | undefined) => {
     const updated = [...phases];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], [field]: value } as ProjectPhase;
     onChange(updated);
   };
 
   const totalSize = phases.reduce((sum, p) => sum + (p.sizeKWp || 0), 0);
+
+  // Project-level kWh totals per year (sum across phases) for the kWh-mode footer.
+  const totalKwhByYear: Record<string, number> = {};
+  if (isKwhMode) {
+    phases.forEach((p) => {
+      Object.entries(p.annualKwhByYear || {}).forEach(([y, v]) => {
+        totalKwhByYear[y] = (totalKwhByYear[y] || 0) + (Number(v) || 0);
+      });
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -71,7 +85,7 @@ export function ProjectPhasesInput({ phases, onChange }: ProjectPhasesInputProps
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${isKwhMode ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
             <div className="space-y-2">
               <Label htmlFor={`phase-name-${index}`}>Phase Name (Optional)</Label>
               <Input
@@ -83,20 +97,22 @@ export function ProjectPhasesInput({ phases, onChange }: ProjectPhasesInputProps
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor={`phase-size-${index}`}>System Size (kWp) *</Label>
-              <Input
-                id={`phase-size-${index}`}
-                type="number"
-                step="0.01"
-                min="0"
-                max="15000"
-                value={phase.sizeKWp || ""}
-                onChange={(e) => updatePhase(index, "sizeKWp", parseFloat(e.target.value) || 0)}
-                className="retro-input"
-                required
-              />
-            </div>
+            {!isKwhMode && (
+              <div className="space-y-2">
+                <Label htmlFor={`phase-size-${index}`}>System Size (kWp) *</Label>
+                <Input
+                  id={`phase-size-${index}`}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="15000"
+                  value={phase.sizeKWp || ""}
+                  onChange={(e) => updatePhase(index, "sizeKWp", parseFloat(e.target.value) || 0)}
+                  className="retro-input"
+                  required
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor={`phase-date-${index}`}>Commission Date *</Label>
@@ -114,18 +130,45 @@ export function ProjectPhasesInput({ phases, onChange }: ProjectPhasesInputProps
               </div>
             </div>
           </div>
+
+          {isKwhMode && (
+            <AnnualKwhGrid
+              idPrefix={`phase-${index}-kwh`}
+              value={phase.annualKwhByYear}
+              onChange={(next) => updatePhase(index, "annualKwhByYear", next)}
+              compact
+            />
+          )}
         </div>
       ))}
 
-      <div className="p-4 bg-muted rounded-lg">
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Total System Size:</span>
-          <span className="text-lg font-bold">{parseFloat(totalSize.toFixed(3))} kWp</span>
-        </div>
-        {totalSize >= 15000 && (
-          <p className="text-xs text-destructive mt-2">
-            Total system size must be less than 15,000 kWp
-          </p>
+      <div className="p-4 bg-muted rounded-lg space-y-2">
+        {isKwhMode ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Project Total — Estimated kWh by Year</span>
+            </div>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
+              {["2025","2026","2027","2028","2029","2030"].map((y) => (
+                <div key={y} className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">{y}</span>
+                  <span className="font-medium">{(totalKwhByYear[y] || 0).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Total System Size:</span>
+              <span className="text-lg font-bold">{parseFloat(totalSize.toFixed(3))} kWp</span>
+            </div>
+            {totalSize >= 15000 && (
+              <p className="text-xs text-destructive mt-2">
+                Total system size must be less than 15,000 kWp
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -177,13 +177,42 @@ export async function createProposal(
     }
     
     // Step 3: Calculate system values
-    const systemSizeKWp = projectInfo.isMultiPhase && projectInfo.phases
-      ? projectInfo.phases.reduce((sum, p) => sum + p.sizeKWp, 0)
-      : normalizeToKWp(projectInfo.size) || 0;
-    
-    const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
-    const carbonCredits = calculateCarbonCredits(systemSizeKWp);
-    
+    const isKwhMode = projectInfo.generationInputMode === 'kwh';
+    const DEFAULT_YIELD = 1642.50; // matches DEFAULT_ANNUAL_GENERATION_FACTOR
+    const EMISSION_FACTOR = 1.0334; // matches DEFAULT_CARBON_FACTOR
+
+    let systemSizeKWp: number;
+    let annualEnergy: number;
+    let carbonCredits: number;
+
+    if (isKwhMode) {
+      // Aggregate per-year kWh across phases (multi-phase) or use single grid.
+      const aggregateKwh: Record<string, number> = {};
+      if (projectInfo.isMultiPhase && projectInfo.phases) {
+        projectInfo.phases.forEach((p) => {
+          Object.entries(p.annualKwhByYear || {}).forEach(([y, v]) => {
+            aggregateKwh[y] = (aggregateKwh[y] || 0) + (Number(v) || 0);
+          });
+        });
+      } else {
+        Object.entries(projectInfo.annualKwhByYear || {}).forEach(([y, v]) => {
+          aggregateKwh[y] = Number(v) || 0;
+        });
+      }
+      const peakKwh = Math.max(0, ...Object.values(aggregateKwh));
+      const nonZero = Object.values(aggregateKwh).filter((v) => v > 0);
+      const avgKwh = nonZero.length ? nonZero.reduce((s, v) => s + v, 0) / nonZero.length : 0;
+      systemSizeKWp = peakKwh > 0 ? peakKwh / DEFAULT_YIELD : 0;
+      annualEnergy = avgKwh;
+      carbonCredits = (avgKwh / 1000) * EMISSION_FACTOR;
+    } else {
+      systemSizeKWp = projectInfo.isMultiPhase && projectInfo.phases
+        ? projectInfo.phases.reduce((sum, p) => sum + p.sizeKWp, 0)
+        : normalizeToKWp(projectInfo.size) || 0;
+      annualEnergy = calculateAnnualEnergy(systemSizeKWp);
+      carbonCredits = calculateCarbonCredits(systemSizeKWp);
+    }
+
     // Step 4a: Resolve agent's company (auto-creates solo company if needed)
     const { data: companyIdResolved, error: companyErr } = await supabase
       .rpc('ensure_agent_has_company', { p_agent_id: agentId });
@@ -243,6 +272,7 @@ export async function createProposal(
       clientSharePercentage,
       agentCommissionPercentage,
       companyCommissionOverride,
+      generationInputMode: projectInfo.generationInputMode || 'kwp',
     });
 
     // Step 5: Calculate total client revenue using UnifiedCarbonService
@@ -251,12 +281,13 @@ export async function createProposal(
           sizeKwp: systemSizeKWp,
           phases: projectInfo.phases,
           commissionDate: projectInfo.phases[0]?.commissionDate,
-          clientShareOverride: clientSharePercentage
+          clientShareOverride: clientSharePercentage,
         }
       : {
           sizeKwp: systemSizeKWp,
           commissionDate: projectInfo.commissionDate,
-          clientShareOverride: clientSharePercentage
+          clientShareOverride: clientSharePercentage,
+          annualKwhByYear: isKwhMode ? projectInfo.annualKwhByYear : undefined,
         };
 
     const { revenueByYear } = await UnifiedCarbonService.calculateComplete(

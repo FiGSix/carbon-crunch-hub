@@ -87,3 +87,25 @@ export async function calculateRevenueByYear(
   const carbonPrices = await dynamicCarbonPricingService.getCarbonPrices();
   return calculateRevenueByYearSync(carbonCreditsPerYear, clientSharePercentage, carbonPrices, commissionDate);
 }
+
+/**
+ * kWh-mode: revenue per year derived directly from user-supplied annual kWh
+ * (no yield factor, no pro-rating — values are taken as entered).
+ */
+export function calculateRevenueByYearFromKwhSync(
+  annualKwhByYear: Record<string, number>,
+  emissionFactor: number,
+  clientSharePercentage: number,
+  carbonPrices: Record<string, number>
+): { revenueByYear: Record<string, number>; creditsByYear: Record<string, number> } {
+  const revenueByYear: Record<string, number> = {};
+  const creditsByYear: Record<string, number> = {};
+  Object.entries(carbonPrices).forEach(([year, price]) => {
+    const kwh = Number(annualKwhByYear[year]) || 0;
+    if (kwh <= 0) return;
+    const credits = (kwh / 1000) * emissionFactor;
+    creditsByYear[year] = credits;
+    revenueByYear[year] = Math.round(credits * price * (clientSharePercentage / 100));
+  });
+  return { revenueByYear, creditsByYear };
+}

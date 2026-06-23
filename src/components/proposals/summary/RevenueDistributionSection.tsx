@@ -24,6 +24,8 @@ interface RevenueDistributionSectionProps {
   commissionDate?: string;
   phases?: ProjectPhase[];
   isMultiPhase?: boolean;
+  annualKwhByYear?: import("@/types/proposals").AnnualKwhByYear;
+  generationInputMode?: import("@/types/proposals").GenerationInputMode;
 }
 
 const formatRand = (value: number) =>
@@ -39,6 +41,8 @@ export function RevenueDistributionSection({
   commissionDate,
   phases,
   isMultiPhase,
+  annualKwhByYear,
+  generationInputMode,
 }: RevenueDistributionSectionProps) {
   const { profile, user } = useAuth();
   
@@ -68,6 +72,7 @@ export function RevenueDistributionSection({
     phases,
     isMultiPhase,
     clientShareOverride: proposalData?.client_share_percentage ?? null,
+    annualKwhByYear,
   });
 
   const loading = portfolioLoading || revenueLoading;
