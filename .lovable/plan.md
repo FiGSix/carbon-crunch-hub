@@ -1,95 +1,48 @@
-## Goal
+## Problem
 
-Let users choose, per project (or per phase), how the system's energy generation is sourced for carbon-credit calculations:
+On the Proposal Summary page, when a proposal uses the new **kWh input mode** (per-year 2025–2030 values), the "Carbon Credit Projection" block renders empty:
 
-- **Mode A — System Size (kWp)** (default, current behaviour): platform multiplies kWp × yield factor to estimate annual kWh.
-- **Mode B — Estimated kWh per year**: user enters actual/estimated generation for each vintage year 2025, 2026, 2027, 2028, 2029, 2030. Platform uses those numbers as-is, no pro-rating.
+- **Estimated Annual Energy** shows `0 kWh`
+- **Estimated Annual Carbon Credits** shows `0.00 tCO₂`
+- Each yearly row shows `0.00 MWh / 0.00 tCO₂e / R 0`, even though the **Total Client Revenue** at the bottom is correct (R 486,719).
 
-Available in Admin/Partner **Create Proposal** and the **Client Submit Project** flow. Supported for both single-phase and multi-phase projects (multi-phase: each phase gets its own 6-year grid).
+## Root cause
 
----
+`CarbonCreditSection.tsx` and `CarbonCreditTable.tsx` both still derive the displayed per-year MWh and tCO₂e from `systemSizeKWp` using the kWp × yield-factor formula:
 
-## UX
+- `systemSizeKWp` comes from `UnifiedCarbonService.normalizeToKWp(systemSize)`. In kWh mode the size field is empty, so `systemSizeKWp = 0`.
+- Summary tiles call `calculateAnnualEnergy(systemSizeKWp)` → 0.
+- `CarbonCreditTable` ignores the per-year revenue map and re-runs `calculateYearlyEnergy(systemSizeKWp, year, commissionDate)` + `calculateClientSpecificRevenue(...)` per row → all zeros.
 
-In the Project Information step, add a segmented toggle at the top of the size section:
+Only the bottom **Total** row uses the kWh-mode totals already computed by `calculateFromAnnualKwh` in `services/calculations/carbon/core.ts`, which is why the total is correct but rows are not.
 
-```
-Generation input method:  [ System Size (kWp) ]  [ Estimated kWh per year ]
-```
+## Fix
 
-**kWp mode** — unchanged from today (size + commission date, or per-phase size + date for multi-phase).
+Wire the kWh-mode results from `calculationResult` (already returned by `useRevenueCalculations`) through to the table and the summary tiles. No calculation-engine changes — the engine is already correct.
 
-**kWh mode (single-phase)** — replace the size field with a 6-row grid:
+### 1. `src/components/proposals/summary/CarbonCreditSection.tsx`
+- Detect kWh mode: `generationInputMode === 'kwh'` OR any value in `annualKwhByYear` / `phases[].annualKwhByYear` > 0.
+- In kWh mode:
+  - Use `calculationResult.systemSizeKwp` (the derived kWp) instead of the empty form value when passing `systemSizeKWp` down.
+  - Build `preCalculatedYearlyMWh` from the per-year kWh (kWh ÷ 1000). Single-phase: from `annualKwhByYear`. Multi-phase: sum across `phases[].annualKwhByYear`.
+  - Build `preCalculatedYearlyCredits` = MWh × `EMISSION_FACTOR` (1.0334).
+  - Pass `preCalculatedYearlyRevenue = calculationResult.revenueByYear` so the table stops calling `calculateClientSpecificRevenue` and just renders the engine's revenue.
+  - Replace the summary tiles' `calculateAnnualEnergy` / `calculateCarbonCredits` calls with `calculationResult.annualEnergyKwh` and `calculationResult.carbonCreditsPerYear`.
+  - Hide the "pro-rated commissioning year" footnote in kWh mode (kWh values are used as-is).
 
-```
-Estimated annual generation (kWh)
-  2025  [__________]
-  2026  [__________]
-  2027  [__________]
-  2028  [__________]
-  2029  [__________]
-  2030  [__________]
-```
+### 2. `src/components/proposals/summary/carbon/CarbonCreditTableWrapper.tsx`
+- Forward the new `preCalculatedYearlyMWh / Credits / Revenue` props in the single-phase branch (today only the multi-phase consolidated branch passes pre-calculated MWh/credits).
+- For multi-phase kWh-mode phase cards: build per-phase pre-calculated maps from `phase.annualKwhByYear` and pass them to each phase's `CarbonCreditTable`.
 
-Commission date remains required (used for vintage/eligibility, not pro-rating).
+### 3. `src/components/proposals/summary/carbon/CarbonCreditTable.tsx`
+- Add optional `preCalculatedYearlyRevenue?: Record<string, number>` prop. When provided, skip the async `getFormattedClientSpecificCarbonPrice` + `calculateClientSpecificRevenue` calls and use the supplied revenue. The carbon-price column shows `—` (or the static published price) since pricing is already baked into the supplied revenue.
+- Existing kWp-mode behaviour unchanged when the new prop is omitted.
 
-**kWh mode (multi-phase)** — each phase card shows its own 2025–2030 grid plus its commission date. Project total kWh per year = sum across phases.
-
-Validation:
-- At least one year > 0.
-- Each entry numeric, ≥ 0, ≤ 50 GWh sanity cap.
-- "Use entered values as-is — no pro-rating" helper text under the grid.
-
-Summary step shows a clear badge: *"Generation source: User-supplied kWh"* vs *"Generation source: Calculated from kWp"* so admins can tell them apart at review.
-
----
-
-## Calculation logic
-
-Carbon credits per year = `annualKwh / 1000 × emissionFactor` (existing formula, just sourced differently).
-
-- **kWp mode**: `annualKwh = sizeKwp × yieldFactor` (existing path, untouched).
-- **kWh mode**: `annualKwh[year] = userInput[year]` directly.
-
-Revenue per year = `credits[year] × carbonPrice[year] × sharePercent` — same pipeline, only the per-year kWh source changes.
-
-System-size displays (e.g. portfolio MWp totals) for kWh-mode projects: store a `derived_system_size_kwp` back-calculated from the highest annual kWh ÷ yieldFactor so dashboards keep working, flagged as derived.
-
----
-
-## Technical notes
-
-**Types (`src/types/proposals.ts`)** — extend `ProjectInformation` and `ProjectPhase`:
-```
-generationInputMode: 'kwp' | 'kwh'   // default 'kwp'
-annualKwhByYear?: { '2025': number; ... '2030': number }
-```
-
-**Form layer**
-- New `GenerationInputToggle` + `AnnualKwhGrid` components under `src/components/proposals/project-info/`.
-- `ProjectInfoStep.tsx` validation extended for kWh mode (single + multi-phase).
-- Wire through `CreateProposal.tsx` and `SubmitProject.tsx` (no behavioural change when mode = 'kwp').
-
-**Calculation layer (`src/services/calculations/carbon/`)**
-- `SystemSpecs` gains optional `annualKwhByYear` and `phases[].annualKwhByYear`.
-- `core.ts` / `calculations.ts`: when `annualKwhByYear` present, skip yield-factor step and feed those numbers straight into the per-year credit/revenue loop.
-- `portfolio.ts`: aggregate using derived kWp for kWh-mode projects.
-
-**Persistence**
-- Store the two new fields inside the existing `proposals.content` JSON (no schema migration needed — `content` is already untyped JSON used for project info).
-- Edge functions that recompute revenue (`accept-proposal`, any nightly recalc) read `content.generationInputMode` and branch identically.
-
-**PDF / summary / acceptance page**
-- `proposalPdfTemplate.ts` and the acceptance ProjectDetailsStep render the per-year kWh grid read-only when mode = 'kwh'.
-- Email summary numbers unchanged in structure — only the source label differs.
-
-**Backwards compatibility**
-- Missing `generationInputMode` → treat as `'kwp'`. Every existing proposal keeps working unchanged.
-
----
+### 4. Backwards compatibility
+- All new props are optional. Existing kWp-mode proposals render exactly as before.
+- No DB / edge-function changes.
 
 ## Out of scope
 
-- Importing kWh from inverter portals (separate feature).
-- Editing generation mode after a proposal is signed.
-- Changing emission factor, carbon prices, or share percentages.
+- Recomputing the historical persisted `totalClientRevenue` on proposals already saved with wrong row-level zeros (the total was correct; only display rows were wrong).
+- Acceptance page / PDF — same pattern is already handled in those surfaces by earlier work; if the same symptom appears there, it will be addressed in a follow-up.
