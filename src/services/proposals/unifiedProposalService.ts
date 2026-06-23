@@ -222,15 +222,30 @@ export async function createProposal(
     }
     const companyId = companyIdResolved as string;
 
-    // Step 4a-ii: Fetch company-level commission override.
-    // When set, all partners in this company earn this fixed rate regardless of tier.
-    const { data: companyRow } = await (supabase as any)
-      .from('companies')
-      .select('commission_override')
-      .eq('id', companyId)
-      .maybeSingle();
+    // Step 4a-ii: Fetch company-level commission override, client portfolio override,
+    // and creator role in parallel.
+    const [{ data: companyRow }, { data: clientRow }, { data: creatorProfile }] = await Promise.all([
+      (supabase as any)
+        .from('companies')
+        .select('commission_override')
+        .eq('id', companyId)
+        .maybeSingle(),
+      supabase
+        .from('clients')
+        .select('portfolio_client_share_override')
+        .eq('id', clientId)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', agentId)
+        .maybeSingle(),
+    ]);
     const companyCommissionOverride: number | null =
       companyRow?.commission_override ?? null;
+    const portfolioClientShareOverride: number | null =
+      (clientRow as any)?.portfolio_client_share_override ?? null;
+    const isAdminCreator = (creatorProfile as any)?.role === 'admin';
 
     // Step 4b: Portfolio sizes — client portfolio (per client) + company portfolio (per company)
     const [clientPortfolioKWp, companyPortfolioKWp] = await Promise.all([
@@ -255,11 +270,19 @@ export async function createProposal(
     const totalClientPortfolio = clientPortfolioKWp + systemSizeKWp;
     const totalCompanyPortfolio = companyPortfolioKWp + systemSizeKWp;
 
-    const clientSharePercentage = calculateClientSharePercentage(totalClientPortfolio);
-    const agentCommissionPercentage =
-      companyCommissionOverride != null
-        ? companyCommissionOverride
-        : calculateAgentCommissionPercentage(totalCompanyPortfolio);
+    const tierClientShare = calculateClientSharePercentage(totalClientPortfolio);
+    const clientSharePercentage =
+      portfolioClientShareOverride != null
+        ? portfolioClientShareOverride
+        : tierClientShare;
+
+    // Admin-created proposals have no partner: commission is 0%.
+    // Partner-created proposals use the company override if set, otherwise the MWp tier.
+    const agentCommissionPercentage = isAdminCreator
+      ? 0
+      : (companyCommissionOverride != null
+          ? companyCommissionOverride
+          : calculateAgentCommissionPercentage(totalCompanyPortfolio));
 
     proposalLogger.info("Portfolio tier calculations (company-based)", {
       clientId,
@@ -269,9 +292,12 @@ export async function createProposal(
       companyPortfolioKWp,
       totalClientPortfolio,
       totalCompanyPortfolio,
+      tierClientShare,
       clientSharePercentage,
+      portfolioClientShareOverride,
       agentCommissionPercentage,
       companyCommissionOverride,
+      isAdminCreator,
       generationInputMode: projectInfo.generationInputMode || 'kwp',
     });
 
