@@ -36,7 +36,7 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     calculationResult,
     clientSpecificRevenue, 
     loading: revenueLoading, 
-    systemSizeKWp 
+    systemSizeKWp: formSystemSizeKWp
   } = useRevenueCalculations({
     systemSize,
     commissionDate,
@@ -50,6 +50,17 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
 
   const loading = portfolioLoading || revenueLoading;
 
+  // Detect kWh mode
+  const hasKwhGrid =
+    (annualKwhByYear && Object.values(annualKwhByYear).some((v) => (Number(v) || 0) > 0)) ||
+    (phases && phases.some((p) => p.annualKwhByYear && Object.values(p.annualKwhByYear).some((v) => (Number(v) || 0) > 0)));
+  const isKwhMode = generationInputMode === 'kwh' || !!hasKwhGrid;
+
+  // In kWh mode, use the derived kWp from the engine so downstream displays don't get 0.
+  const systemSizeKWp = isKwhMode && calculationResult?.systemSizeKwp
+    ? calculationResult.systemSizeKwp
+    : formSystemSizeKWp;
+
   // Extract multi-phase data from calculation result (for display in table)
   const calculatedPhases = calculationResult?.phases || [];
   const calculatedIsMultiPhase = calculationResult?.isMultiPhase || false;
@@ -57,15 +68,48 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
   // Use client-specific revenue for display (this is what the client actually gets)
   const displayRevenue = clientSpecificRevenue;
 
+  // Build pre-calculated per-year MWh / credits / revenue for kWh mode (single & multi-phase).
+  const EMISSION_FACTOR = 1.0334;
+  let preCalculatedYearlyMWh: Record<string, number> | undefined;
+  let preCalculatedYearlyCredits: Record<string, number> | undefined;
+  let preCalculatedYearlyRevenue: Record<string, number> | undefined;
+
+  if (isKwhMode) {
+    const aggregatedKwh: Record<string, number> = {};
+    if (phases && phases.length > 0) {
+      phases.forEach((p) => {
+        const grid = (p.annualKwhByYear || {}) as Record<string, number | undefined>;
+        Object.entries(grid).forEach(([y, v]) => {
+          aggregatedKwh[y] = (aggregatedKwh[y] || 0) + (Number(v) || 0);
+        });
+      });
+    } else if (annualKwhByYear) {
+      Object.entries(annualKwhByYear).forEach(([y, v]) => {
+        aggregatedKwh[y] = Number(v) || 0;
+      });
+    }
+    preCalculatedYearlyMWh = Object.fromEntries(
+      Object.entries(aggregatedKwh).map(([y, kwh]) => [y, kwh / 1000])
+    );
+    preCalculatedYearlyCredits = Object.fromEntries(
+      Object.entries(aggregatedKwh).map(([y, kwh]) => [y, (kwh / 1000) * EMISSION_FACTOR])
+    );
+    preCalculatedYearlyRevenue = calculationResult?.revenueByYear;
+  }
+
   // Calculate totals using helper functions
   // For multi-phase, aggregate from phases to respect individual commission dates
-  const totalMWhGenerated = calculatedIsMultiPhase && calculatedPhases.length > 0
-    ? Object.values(aggregateYearlyMWhFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
-    : calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
-  
-  const totalCarbonCredits = calculatedIsMultiPhase && calculatedPhases.length > 0
-    ? Object.values(aggregateYearlyCarbonCreditsFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
-    : calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
+  const totalMWhGenerated = isKwhMode && preCalculatedYearlyMWh
+    ? Object.values(preCalculatedYearlyMWh).reduce((s, v) => s + v, 0)
+    : calculatedIsMultiPhase && calculatedPhases.length > 0
+      ? Object.values(aggregateYearlyMWhFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
+      : calculateTotalMWhGenerated(systemSizeKWp, displayRevenue, commissionDate);
+
+  const totalCarbonCredits = isKwhMode && preCalculatedYearlyCredits
+    ? Object.values(preCalculatedYearlyCredits).reduce((s, v) => s + v, 0)
+    : calculatedIsMultiPhase && calculatedPhases.length > 0
+      ? Object.values(aggregateYearlyCarbonCreditsFromPhases(calculatedPhases, Object.keys(displayRevenue))).reduce((sum, val) => sum + val, 0)
+      : calculateTotalCarbonCredits(systemSizeKWp, displayRevenue, commissionDate);
   
   const totalClientSpecificRevenue = Object.values(clientSpecificRevenue).reduce((sum: number, val: number) => sum + val, 0);
 
@@ -135,9 +179,13 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     );
   }
 
-  // Calculate inline summary data  
-  const annualEnergy = calculateAnnualEnergy(systemSizeKWp);
-  const carbonCredits = calculateCarbonCredits(systemSizeKWp);
+  // Summary tiles: prefer engine values in kWh mode; otherwise the legacy kWp x yield computation.
+  const annualEnergy = isKwhMode && calculationResult
+    ? Math.round(calculationResult.annualEnergyKwh)
+    : calculateAnnualEnergy(systemSizeKWp);
+  const carbonCredits = isKwhMode && calculationResult
+    ? calculationResult.carbonCreditsPerYear
+    : calculateCarbonCredits(systemSizeKWp);
 
   return (
     <div>
@@ -167,11 +215,20 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
         totalCarbonCredits={totalCarbonCredits}
         totalClientSpecificRevenue={totalClientSpecificRevenue}
         clientShareOverride={clientShareOverride ?? undefined}
+        preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+        preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+        preCalculatedYearlyRevenue={preCalculatedYearlyRevenue}
+        isKwhMode={isKwhMode}
       />
       
-      {commissionDate && (
+      {commissionDate && !isKwhMode && (
         <p className="text-xs text-carbon-gray-500 mt-2">
           * Values for commissioning year are pro-rated based on the commission date
+        </p>
+      )}
+      {isKwhMode && (
+        <p className="text-xs text-carbon-gray-500 mt-2">
+          * Generation source: user-supplied kWh per year (no pro-rating applied)
         </p>
       )}
     </div>
