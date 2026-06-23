@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "lucide-react";
 import { MapAddressPicker } from "@/components/common/MapAddressPicker";
-import { ProjectInformation } from "@/types/proposals";
+import { ProjectInformation, GenerationInputMode, AnnualKwhByYear } from "@/types/proposals";
 import { getMinimumDateString } from "@/utils/dateValidation";
 import { ProjectPhasesInput } from "./ProjectPhasesInput";
+import { AnnualKwhGrid } from "./AnnualKwhGrid";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProjectInfoFormProps {
