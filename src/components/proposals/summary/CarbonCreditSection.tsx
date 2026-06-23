@@ -21,9 +21,11 @@ interface CarbonCreditSectionProps {
   phases?: any[];
   isMultiPhase?: boolean;
   clientShareOverride?: number | null;
+  annualKwhByYear?: import("@/types/proposals").AnnualKwhByYear;
+  generationInputMode?: import("@/types/proposals").GenerationInputMode;
 }
 
-export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId, phases, isMultiPhase, clientShareOverride }: CarbonCreditSectionProps) {
+export function CarbonCreditSection({ systemSize, commissionDate, selectedClientId, proposalId, phases, isMultiPhase, clientShareOverride, annualKwhByYear, generationInputMode }: CarbonCreditSectionProps) {
   const { portfolioData, loading: portfolioLoading } = usePortfolioData({
     selectedClientId,
     systemSize,
@@ -42,7 +44,8 @@ export function CarbonCreditSection({ systemSize, commissionDate, selectedClient
     proposalId,
     phases,
     isMultiPhase,
-    clientShareOverride
+    clientShareOverride,
+    annualKwhByYear,
   });
 
   const loading = portfolioLoading || revenueLoading;
