@@ -110,31 +110,50 @@ export function ProposalDetails({
           <ClientInfoSection clientInfo={resolvedClientInfo} />
           <ProjectInfoSection projectInfo={projectInfo} />
           
-          {/* Show carbon credit section for both single-phase and multi-phase projects */}
-          {(projectInfo.size || (projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0)) && (
-            <>
-              <CarbonCreditSection 
-                systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}
-                commissionDate={projectInfo.commissionDate}
-                selectedClientId={clientId}
-                proposalId={proposal.id}
-                phases={projectInfo.phases}
-                isMultiPhase={projectInfo.isMultiPhase}
-                clientShareOverride={proposal.client_share_percentage}
-              />
-              <RevenueDistributionSection 
-                systemSize={projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '')}
-                selectedClientId={clientId}
-                proposalId={proposal.id}
-                proposalData={proposalData}
-                isClient={isClient}
-                token={token}
-                commissionDate={projectInfo.commissionDate}
-                phases={projectInfo.phases}
-                isMultiPhase={projectInfo.isMultiPhase}
-              />
-            </>
-          )}
+          {/* Show carbon credit section for kWp-mode, multi-phase, or kWh-mode projects */}
+          {(() => {
+            const hasSingleKwh = projectInfo.generationInputMode === 'kwh'
+              && projectInfo.annualKwhByYear
+              && Object.values(projectInfo.annualKwhByYear).some((v) => (Number(v) || 0) > 0);
+            const hasPhaseKwh = projectInfo.isMultiPhase
+              && projectInfo.phases
+              && projectInfo.phases.some((p: any) => p?.annualKwhByYear
+                && Object.values(p.annualKwhByYear).some((v: any) => (Number(v) || 0) > 0));
+            const shouldShow = projectInfo.size
+              || (projectInfo.isMultiPhase && projectInfo.phases && projectInfo.phases.length > 0)
+              || hasSingleKwh
+              || hasPhaseKwh;
+            if (!shouldShow) return null;
+            const sizeProp = projectInfo.size || (projectInfo.totalSystemSize ? String(projectInfo.totalSystemSize) : '');
+            return (
+              <>
+                <CarbonCreditSection 
+                  systemSize={sizeProp}
+                  commissionDate={projectInfo.commissionDate}
+                  selectedClientId={clientId}
+                  proposalId={proposal.id}
+                  phases={projectInfo.phases}
+                  isMultiPhase={projectInfo.isMultiPhase}
+                  clientShareOverride={proposal.client_share_percentage}
+                  annualKwhByYear={projectInfo.annualKwhByYear}
+                  generationInputMode={projectInfo.generationInputMode}
+                />
+                <RevenueDistributionSection 
+                  systemSize={sizeProp}
+                  selectedClientId={clientId}
+                  proposalId={proposal.id}
+                  proposalData={proposalData}
+                  isClient={isClient}
+                  token={token}
+                  commissionDate={projectInfo.commissionDate}
+                  phases={projectInfo.phases}
+                  isMultiPhase={projectInfo.isMultiPhase}
+                  annualKwhByYear={projectInfo.annualKwhByYear}
+                  generationInputMode={projectInfo.generationInputMode}
+                />
+              </>
+            );
+          })()}
         </div>
       </CardContent>
       
