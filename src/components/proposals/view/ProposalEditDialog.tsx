@@ -5,10 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Loader2, UserPlus } from 'lucide-react';
-import { ProposalData } from '@/types/proposals';
+import { ProposalData, GenerationInputMode } from '@/types/proposals';
 import { useProposalEdit } from '@/hooks/proposals/view/useProposalEdit';
 import { AdditionalClientForm } from '@/components/proposals/client-info/AdditionalClientForm';
+import { AnnualKwhGrid } from '@/components/proposals/project-info/AnnualKwhGrid';
 
 interface ProposalEditDialogProps {
   open: boolean;
@@ -18,10 +20,28 @@ interface ProposalEditDialogProps {
 }
 
 export function ProposalEditDialog({ open, onOpenChange, proposal, onSaved }: ProposalEditDialogProps) {
-  const { formData, errors, saving, updateField, updatePhase, addAdditionalClient, updateAdditionalClient, removeAdditionalClient, makePrimary, computedTotalSize, save, resetForm } = useProposalEdit(proposal, () => {
+  const {
+    formData,
+    errors,
+    saving,
+    updateField,
+    updateMode,
+    updateAnnualKwh,
+    updatePhase,
+    updatePhaseAnnualKwh,
+    addAdditionalClient,
+    updateAdditionalClient,
+    removeAdditionalClient,
+    makePrimary,
+    computedTotalSize,
+    save,
+    resetForm,
+  } = useProposalEdit(proposal, () => {
     onSaved();
     onOpenChange(false);
   });
+
+  const isKwh = formData.generationInputMode === 'kwh';
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) resetForm();
