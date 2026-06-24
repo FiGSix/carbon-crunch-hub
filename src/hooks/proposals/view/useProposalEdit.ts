@@ -1,14 +1,24 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ProposalData, ClientInformation, ProjectInformation, AdditionalClient } from '@/types/proposals';
+import {
+  ProposalData,
+  ClientInformation,
+  ProjectInformation,
+  AdditionalClient,
+  AnnualKwhByYear,
+  GenerationInputMode,
+  GENERATION_YEARS,
+} from '@/types/proposals';
 import { calculateAnnualEnergy, calculateCarbonCredits } from '@/services/calculations/carbon/calculations';
+import { EMISSION_FACTOR } from '@/lib/calculations/carbon/constants';
 import { toast } from 'sonner';
 
 export interface PhaseFormData {
   phaseName: string;
   sizeKWp: string;
   commissionDate: string;
+  annualKwhByYear?: AnnualKwhByYear;
 }
 
 export interface ProposalEditFormData {
@@ -29,6 +39,9 @@ export interface ProposalEditFormData {
   // Multi-phase
   phases: PhaseFormData[];
   isMultiPhase: boolean;
+  // Generation mode
+  generationInputMode: GenerationInputMode;
+  annualKwhByYear: AnnualKwhByYear;
 }
 
 function extractPhases(projectInfo: any): PhaseFormData[] {
@@ -38,6 +51,7 @@ function extractPhases(projectInfo: any): PhaseFormData[] {
     phaseName: p.phaseName || p.name || `Phase ${i + 1}`,
     sizeKWp: p.sizeKWp != null ? String(p.sizeKWp) : '',
     commissionDate: p.commissionDate || '',
+    annualKwhByYear: p.annualKwhByYear || {},
   }));
 }
 
@@ -48,7 +62,6 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
   const isMultiPhase = phases.length > 1;
   const liveClient = proposal.client;
 
-  // Prioritize live client data (from client_reference_id join) over snapshot
   let clientName = snapshotClientInfo.name
     || [(snapshotClientInfo as any).firstName, (snapshotClientInfo as any).lastName]
         .filter((n: any) => n && n !== 'null')
@@ -85,11 +98,18 @@ function extractFormData(proposal: ProposalData): ProposalEditFormData {
     additionalNotes: projectInfo.additionalNotes || '',
     phases,
     isMultiPhase,
+    generationInputMode: (projectInfo.generationInputMode as GenerationInputMode) || 'kwp',
+    annualKwhByYear: projectInfo.annualKwhByYear || {},
   };
 }
 
 interface ValidationErrors {
   [key: string]: string;
+}
+
+function hasAnyKwh(grid: AnnualKwhByYear | undefined): boolean {
+  if (!grid) return false;
+  return Object.values(grid).some((v) => (v || 0) > 0);
 }
 
 function validate(data: ProposalEditFormData): ValidationErrors {
@@ -102,7 +122,6 @@ function validate(data: ProposalEditFormData): ValidationErrors {
   }
   if (!data.projectName.trim()) errors.projectName = 'Project name is required';
 
-  // Validate additional clients
   data.additionalClients.forEach((client, i) => {
     if (!client.name.trim()) errors[`addClient_${i}_name`] = 'Name is required';
     if (!client.email.trim()) {
@@ -112,14 +131,32 @@ function validate(data: ProposalEditFormData): ValidationErrors {
     }
   });
 
+  const isKwh = data.generationInputMode === 'kwh';
+
   if (data.isMultiPhase) {
     data.phases.forEach((phase, i) => {
-      if (!phase.sizeKWp.trim()) {
-        errors[`phase_${i}_size`] = `${phase.phaseName} size is required`;
-      } else if (parseFloat(phase.sizeKWp) <= 0 || isNaN(parseFloat(phase.sizeKWp))) {
-        errors[`phase_${i}_size`] = `${phase.phaseName} size must be a positive number`;
+      if (isKwh) {
+        if (!hasAnyKwh(phase.annualKwhByYear)) {
+          errors[`phase_${i}_kwh`] = `${phase.phaseName} needs at least one year of kWh`;
+        }
+        if (!phase.commissionDate) {
+          errors[`phase_${i}_date`] = `${phase.phaseName} commission date is required`;
+        }
+      } else {
+        if (!phase.sizeKWp.trim()) {
+          errors[`phase_${i}_size`] = `${phase.phaseName} size is required`;
+        } else if (parseFloat(phase.sizeKWp) <= 0 || isNaN(parseFloat(phase.sizeKWp))) {
+          errors[`phase_${i}_size`] = `${phase.phaseName} size must be a positive number`;
+        }
       }
     });
+  } else if (isKwh) {
+    if (!hasAnyKwh(data.annualKwhByYear)) {
+      errors.annualKwh = 'Enter at least one year of estimated kWh';
+    }
+    if (!data.commissionDate) {
+      errors.commissionDate = 'Commission date is required';
+    }
   } else {
     const sizeStr = String(data.systemSize || '');
     if (!sizeStr.trim()) {
@@ -130,13 +167,12 @@ function validate(data: ProposalEditFormData): ValidationErrors {
   }
   return errors;
 }
+
 async function syncAdditionalClientsJunction(proposalId: string, additionalClients: AdditionalClient[]) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Delete existing non-primary proposal_clients rows
-    // We keep the primary client (from proposals.client_reference_id) and replace additional ones
     await supabase
       .from('proposal_clients')
       .delete()
@@ -144,13 +180,11 @@ async function syncAdditionalClientsJunction(proposalId: string, additionalClien
 
     if (additionalClients.length === 0) return;
 
-    // Resolve or create client records for each additional client
     const rows = [];
     for (const client of additionalClients) {
       let clientId = client.clientId;
 
       if (!clientId) {
-        // Search by email first
         const { data: existing } = await supabase
           .from('clients')
           .select('id')
@@ -160,7 +194,6 @@ async function syncAdditionalClientsJunction(proposalId: string, additionalClien
         if (existing) {
           clientId = existing.id;
         } else {
-          // Create new client record
           const nameParts = client.name.trim().split(/\s+/);
           const lastName = nameParts.length > 1 ? nameParts.pop()! : '';
           const firstName = nameParts.join(' ');
@@ -200,6 +233,11 @@ async function syncAdditionalClientsJunction(proposalId: string, additionalClien
   }
 }
 
+function sumGridKwh(grid: AnnualKwhByYear | undefined): number {
+  if (!grid) return 0;
+  return Object.values(grid).reduce((s: number, v) => s + (Number(v) || 0), 0);
+}
+
 export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) {
   const [formData, setFormData] = useState<ProposalEditFormData>(() => extractFormData(proposal));
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -210,31 +248,50 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     setErrors({});
   };
 
-  const updateField = (field: keyof ProposalEditFormData, value: string) => {
+  const updateField = (field: keyof ProposalEditFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (errors[field as string]) {
       setErrors(prev => {
         const next = { ...prev };
-        delete next[field];
+        delete next[field as string];
         return next;
       });
     }
   };
 
-  const updatePhase = (index: number, field: keyof PhaseFormData, value: string) => {
+  const updateMode = (mode: GenerationInputMode) => {
+    setFormData(prev => ({ ...prev, generationInputMode: mode }));
+    setErrors({});
+  };
+
+  const updateAnnualKwh = (next: AnnualKwhByYear) => {
+    setFormData(prev => ({ ...prev, annualKwhByYear: next }));
+    if (errors.annualKwh) {
+      setErrors(prev => {
+        const n = { ...prev };
+        delete n.annualKwh;
+        return n;
+      });
+    }
+  };
+
+  const updatePhase = (index: number, field: keyof PhaseFormData, value: any) => {
     setFormData(prev => {
       const newPhases = [...prev.phases];
       newPhases[index] = { ...newPhases[index], [field]: value };
       return { ...prev, phases: newPhases };
     });
-    const errorKey = `phase_${index}_size`;
-    if (errors[errorKey]) {
-      setErrors(prev => {
-        const next = { ...prev };
-        delete next[errorKey];
-        return next;
-      });
-    }
+    setErrors(prev => {
+      const next = { ...prev };
+      delete next[`phase_${index}_size`];
+      delete next[`phase_${index}_kwh`];
+      delete next[`phase_${index}_date`];
+      return next;
+    });
+  };
+
+  const updatePhaseAnnualKwh = (index: number, next: AnnualKwhByYear) => {
+    updatePhase(index, 'annualKwhByYear', next);
   };
 
   const addAdditionalClient = () => {
@@ -269,7 +326,6 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     const target = formData.additionalClients[index];
     if (!target) return;
 
-    // If the target has a linked clientId, fetch live data to avoid stale snapshot corruption
     let liveTarget = target;
     if (target.clientId) {
       try {
@@ -295,7 +351,6 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     }
 
     setFormData(prev => {
-      // Move current primary into additional clients list
       const demotedPrimary: AdditionalClient = {
         name: prev.clientName,
         email: prev.clientEmail,
@@ -334,6 +389,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
 
     setSaving(true);
     try {
+      const isKwh = formData.generationInputMode === 'kwh';
       const newSystemSize = computedTotalSize();
       const oldContent = proposal.content || {} as any;
       const oldProjectInfo = oldContent.projectInfo || {};
@@ -344,13 +400,54 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         updatedPhases = oldProjectInfo.phases.map((p: any, i: number) => {
           const edited = formData.phases[i];
           if (!edited) return p;
-          return {
+          const base = {
             ...p,
-            sizeKWp: parseFloat(edited.sizeKWp),
-            commissionDate: edited.commissionDate,
             phaseName: edited.phaseName,
+            commissionDate: edited.commissionDate,
+          };
+          if (isKwh) {
+            return {
+              ...base,
+              annualKwhByYear: edited.annualKwhByYear || {},
+              // preserve existing sizeKWp so user can switch back to kWp mode without data loss
+            };
+          }
+          return {
+            ...base,
+            sizeKWp: parseFloat(edited.sizeKWp) || 0,
+            annualKwhByYear: undefined,
           };
         });
+      }
+
+      const updatedProjectInfoContent: any = {
+        ...oldProjectInfo,
+        name: formData.projectName.trim(),
+        address: formData.projectAddress.trim(),
+        additionalNotes: formData.additionalNotes.trim(),
+        generationInputMode: formData.generationInputMode,
+        ...(updatedPhases ? { phases: updatedPhases } : {}),
+      };
+
+      if (isKwh) {
+        if (formData.isMultiPhase) {
+          updatedProjectInfoContent.annualKwhByYear = undefined;
+          updatedProjectInfoContent.size = '';
+        } else {
+          updatedProjectInfoContent.annualKwhByYear = formData.annualKwhByYear;
+          updatedProjectInfoContent.size = '';
+          updatedProjectInfoContent.totalSystemSize = undefined;
+          updatedProjectInfoContent.commissionDate = formData.commissionDate;
+        }
+      } else {
+        updatedProjectInfoContent.annualKwhByYear = undefined;
+        if (formData.isMultiPhase) {
+          updatedProjectInfoContent.size = '';
+          updatedProjectInfoContent.totalSystemSize = newSystemSize;
+        } else {
+          updatedProjectInfoContent.size = String(formData.systemSize || '').trim();
+          updatedProjectInfoContent.commissionDate = formData.commissionDate;
+        }
       }
 
       const updatedContent = {
@@ -371,16 +468,7 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
           companyName: c.companyName?.trim() || '',
           clientId: c.clientId,
         })),
-        projectInfo: {
-          ...oldProjectInfo,
-          name: formData.projectName.trim(),
-          address: formData.projectAddress.trim(),
-          size: formData.isMultiPhase ? '' : String(formData.systemSize || '').trim(),
-          totalSystemSize: formData.isMultiPhase ? newSystemSize : undefined,
-          commissionDate: formData.isMultiPhase ? oldProjectInfo.commissionDate : formData.commissionDate,
-          additionalNotes: formData.additionalNotes.trim(),
-          ...(updatedPhases ? { phases: updatedPhases } : {}),
-        },
+        projectInfo: updatedProjectInfoContent,
       };
 
       const existingProjectInfo = (proposal as any).project_info;
@@ -388,19 +476,40 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         ...(typeof existingProjectInfo === 'object' && existingProjectInfo !== null ? existingProjectInfo : {}),
         name: formData.projectName.trim(),
         address: formData.projectAddress.trim(),
-        size: formData.isMultiPhase ? String(newSystemSize) : String(formData.systemSize || '').trim(),
-        commissionDate: formData.isMultiPhase ? '' : formData.commissionDate,
+        size: isKwh ? '' : (formData.isMultiPhase ? String(newSystemSize) : String(formData.systemSize || '').trim()),
+        commissionDate: formData.isMultiPhase || isKwh && !formData.commissionDate ? '' : formData.commissionDate,
+        generationInputMode: formData.generationInputMode,
       };
 
-      const annualEnergy = calculateAnnualEnergy(newSystemSize);
-      const carbonCredits = calculateCarbonCredits(newSystemSize);
+      // Compute summary metrics
+      let annualEnergy: number;
+      let carbonCredits: number;
+      if (isKwh) {
+        let totalKwh = 0;
+        let yearCount = 0;
+        if (formData.isMultiPhase) {
+          for (const p of formData.phases) {
+            const sum = sumGridKwh(p.annualKwhByYear);
+            totalKwh += sum;
+            const yrs = Object.values(p.annualKwhByYear || {}).filter((v) => (v || 0) > 0).length;
+            if (yrs > yearCount) yearCount = yrs;
+          }
+        } else {
+          totalKwh = sumGridKwh(formData.annualKwhByYear);
+          yearCount = Object.values(formData.annualKwhByYear || {}).filter((v) => (v || 0) > 0).length;
+        }
+        const denom = yearCount > 0 ? yearCount : GENERATION_YEARS.length;
+        annualEnergy = totalKwh / denom;
+        carbonCredits = (annualEnergy / 1000) * EMISSION_FACTOR;
+      } else {
+        annualEnergy = calculateAnnualEnergy(newSystemSize);
+        carbonCredits = calculateCarbonCredits(newSystemSize);
+      }
 
-      // Resolve primary client BEFORE the proposal update so we can include client_reference_id atomically
       const primaryChanged = formData.primaryClientId !== proposal.client_reference_id;
       let resolvedPrimaryClientId = formData.primaryClientId;
 
       if (primaryChanged && !resolvedPrimaryClientId) {
-        // Use RPC that bypasses RLS to find or create client atomically
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           toast.error('You must be logged in to save changes.');
@@ -431,18 +540,20 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         resolvedPrimaryClientId = clientId;
       }
 
-      // Build the single atomic update payload
       const updatePayload: Record<string, any> = {
         title: formData.projectName.trim(),
         content: updatedContent as any,
         project_info: updatedProjectInfo as any,
-        system_size_kwp: newSystemSize,
         annual_energy: annualEnergy,
         carbon_credits: carbonCredits,
         updated_at: new Date().toISOString(),
       };
 
-      // Include client_reference_id in the same update if primary changed
+      // Only overwrite system_size_kwp in kWp mode; preserve existing value in kWh mode
+      if (!isKwh) {
+        updatePayload.system_size_kwp = newSystemSize;
+      }
+
       if (primaryChanged && resolvedPrimaryClientId) {
         updatePayload.client_reference_id = resolvedPrimaryClientId;
       }
@@ -458,7 +569,6 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         return false;
       }
 
-      // Sync primary client's record in the clients table
       const clientIdToUpdate = resolvedPrimaryClientId || proposal.client_reference_id;
       if (clientIdToUpdate) {
         try {
@@ -507,7 +617,6 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         }
       }
 
-      // Sync additional clients to proposal_clients junction table
       await syncAdditionalClientsJunction(proposal.id, formData.additionalClients);
 
       toast.success('Proposal updated successfully');
@@ -527,7 +636,10 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
     errors,
     saving,
     updateField,
+    updateMode,
+    updateAnnualKwh,
     updatePhase,
+    updatePhaseAnnualKwh,
     addAdditionalClient,
     updateAdditionalClient,
     removeAdditionalClient,
