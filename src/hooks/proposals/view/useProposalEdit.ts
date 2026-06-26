@@ -477,7 +477,8 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         name: formData.projectName.trim(),
         address: formData.projectAddress.trim(),
         size: isKwh ? '' : (formData.isMultiPhase ? String(newSystemSize) : String(formData.systemSize || '').trim()),
-        commissionDate: formData.isMultiPhase || isKwh && !formData.commissionDate ? '' : formData.commissionDate,
+        commission_date: isKwh && !formData.isMultiPhase ? (formData.commissionDate || null) : (formData.isMultiPhase ? null : formData.commissionDate),
+        commissionDate: formData.isMultiPhase || (isKwh && !formData.commissionDate) ? '' : formData.commissionDate,
         generationInputMode: formData.generationInputMode,
       };
 
