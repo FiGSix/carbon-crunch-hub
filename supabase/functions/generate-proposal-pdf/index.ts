@@ -1197,7 +1197,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal
   });
   
-  const totalKwpText = fmtNum(totalKwp, ' kWp');
+  const totalKwpText = _generationMode === 'kwh'
+    ? `${fmtNum(totalKwhAllPhases)} kWh`
+    : fmtNum(totalKwp, ' kWp');
   const totalKwpWidth = bold.widthOfTextAtSize(totalKwpText, 10);
   page3.drawText(totalKwpText, { 
     x: col3Center - (totalKwpWidth / 2), 
