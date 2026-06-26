@@ -1328,9 +1328,10 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   for (const actualYear of availableYears) {
     // Use real calculation functions
-    const yearlyEnergyKWh = calculateYearlyEnergy(systemSizeKWp, actualYear);
+    // Use normalised generation model (handles kWh mode + multi-phase)
+    const yearlyEnergyKWh = totalKwhForYear(actualYear);
     const yearlyEnergyMWh = yearlyEnergyKWh / 1000;
-    const yearlyCarbonCredits = calculateYearlyCarbonCredits(yearlyEnergyKWh);
+    const yearlyCarbonCredits = (yearlyEnergyKWh / 1000) * PDF_EMISSION_FACTOR;
     
     // Get dynamic market price for this year
     const marketPrice = carbonPrices[actualYear.toString()] || 0;
