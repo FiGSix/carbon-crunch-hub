@@ -477,7 +477,8 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
         name: formData.projectName.trim(),
         address: formData.projectAddress.trim(),
         size: isKwh ? '' : (formData.isMultiPhase ? String(newSystemSize) : String(formData.systemSize || '').trim()),
-        commissionDate: formData.isMultiPhase || isKwh && !formData.commissionDate ? '' : formData.commissionDate,
+        commission_date: isKwh && !formData.isMultiPhase ? (formData.commissionDate || null) : (formData.isMultiPhase ? null : formData.commissionDate),
+        commissionDate: formData.isMultiPhase || (isKwh && !formData.commissionDate) ? '' : formData.commissionDate,
         generationInputMode: formData.generationInputMode,
       };
 
@@ -618,6 +619,12 @@ export function useProposalEdit(proposal: ProposalData, onSuccess?: () => void) 
       }
 
       await syncAdditionalClientsJunction(proposal.id, formData.additionalClients);
+
+      // Fire-and-forget PDF regeneration so the cached PDF reflects the edit
+      // on the next download (including agent share links). Don't block UX.
+      supabase.functions
+        .invoke('generate-proposal-pdf', { body: { proposalId: proposal.id, forceRegenerate: true } })
+        .catch((e) => console.warn('Background PDF regeneration failed:', e));
 
       toast.success('Proposal updated successfully');
       onSuccess?.();

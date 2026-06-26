@@ -269,6 +269,71 @@ async function generatePdfContent(proposal: ProposalData): Promise<Uint8Array> {
   const agentEmail = agent.email || '';
   const logoUrl = agent.company_logo_url || null;
 
+  // ===== Generation model: normalise kWp / kWh / multi-phase =====
+  const PDF_ANNUAL_GEN_FACTOR = 1642.50; // kWh per kWp per year
+  const PDF_EMISSION_FACTOR = 1.0334;    // tCO2e per MWh
+  const _projectInfo = (anyProposal.content?.projectInfo || {}) as any;
+  const _generationMode: 'kwp' | 'kwh' =
+    _projectInfo.generationInputMode === 'kwh' ? 'kwh' : 'kwp';
+  const _topAddress =
+    anyProposal.project_info?.address || _projectInfo.address || 'To be confirmed';
+  const _topCommission =
+    anyProposal.project_info?.commission_date || _projectInfo.commissionDate || null;
+
+  interface NormalisedPhase {
+    name: string;
+    address: string;
+    sizeKWp: number;
+    commissionDate: string | null;
+    annualKwhByYear: Record<string, number>;
+  }
+
+  const _rawPhases = Array.isArray(_projectInfo.phases) ? _projectInfo.phases : [];
+  const normalisedPhases: NormalisedPhase[] = (_rawPhases.length > 1)
+    ? _rawPhases.map((p: any, i: number) => ({
+        name: p.phaseName || p.name || `Phase ${i + 1}`,
+        address: p.address || _topAddress,
+        sizeKWp: Number(p.sizeKWp) || 0,
+        commissionDate: p.commissionDate || _topCommission || null,
+        annualKwhByYear: p.annualKwhByYear || {},
+      }))
+    : [{
+        name: 'Project',
+        address: _topAddress,
+        sizeKWp: Number(_projectInfo.size) || Number(anyProposal.system_size_kwp) || 0,
+        commissionDate: _topCommission || null,
+        annualKwhByYear: _projectInfo.annualKwhByYear || {},
+      }];
+
+  const phaseKwhForYear = (phase: NormalisedPhase, year: number): number => {
+    if (_generationMode === 'kwh') {
+      return Number(phase.annualKwhByYear?.[String(year)]) || 0;
+    }
+    const annual = phase.sizeKWp * PDF_ANNUAL_GEN_FACTOR;
+    const cd = phase.commissionDate ? new Date(phase.commissionDate) : null;
+    if (cd && year < cd.getFullYear()) return 0;
+    if (cd && year === cd.getFullYear()) {
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd = new Date(year, 11, 31);
+      const remainingDays = Math.max(
+        0,
+        Math.floor((yearEnd.getTime() - cd.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+      );
+      const totalDays = Math.floor((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return annual * (remainingDays / totalDays);
+    }
+    return annual;
+  };
+
+  const totalKwhForYear = (year: number): number =>
+    normalisedPhases.reduce((s, p) => s + phaseKwhForYear(p, year), 0);
+
+  const phaseTotalKwh = (phase: NormalisedPhase): number =>
+    Object.values(phase.annualKwhByYear || {}).reduce(
+      (s: number, v: any) => s + (Number(v) || 0),
+      0,
+    );
+
   // Helpers
   const mm = (n: number) => (n / 25.4) * 72; // convert mm to points
 
@@ -903,12 +968,20 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     borderWidth: 1.5,
   });
 
-  // Extract project data
-  const projects = [{
-    address: anyProposal.project_info?.address || anyProposal.content?.projectInfo?.address || 'To be confirmed',
-    commissionDate: anyProposal.project_info?.commission_date || anyProposal.content?.projectInfo?.commissionDate || 'To be confirmed',
-    sizeKwp: anyProposal.system_size_kwp || 0
-  }];
+  // Extract project data — one row per phase, kWp or kWh-total depending on mode
+  const projects = normalisedPhases.map((p) => {
+    const sizeLabel = _generationMode === 'kwh'
+      ? `${fmtNum(phaseTotalKwh(p))} kWh total`
+      : fmtNum(p.sizeKWp, ' kWp');
+    return {
+      address: p.address || 'To be confirmed',
+      commissionDate: p.commissionDate
+        ? new Date(p.commissionDate).toLocaleDateString()
+        : 'To be confirmed',
+      sizeKwp: p.sizeKWp,
+      sizeLabel,
+    };
+  });
 
   // Calculate column widths and positions
   const col1Width = scheduleTableWidth * 0.50; // Project Address
@@ -967,7 +1040,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
   });
   
   // Header 3: Project Size (kWp)
-  const header3Text = 'Project Size (kWp)';
+  const header3Text = _generationMode === 'kwh' ? 'Project Size (kWh)' : 'Project Size (kWp)';
   const header3Width = col3Width - mm(4);
   const header3Lines = wrapText(header3Text, header3Width, 11, bold);
   const header3StartY = headerY + (headerRowHeight / 2) + ((header3Lines.length - 1) * headerLineHeight / 2);
@@ -1020,7 +1093,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     }
     
     // Column 3: Project Size (with line limit)
-    const kwpText = fmtNum(project.sizeKwp, ' kWp');
+    const kwpText = (project as any).sizeLabel || fmtNum(project.sizeKwp, ' kWp');
     let kwpLines = wrapText(kwpText, col3AvailWidth, 10, font);
     if (kwpLines.length > maxLinesPerCell) {
       kwpLines = kwpLines.slice(0, maxLinesPerCell);
@@ -1102,6 +1175,7 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   // Draw totals row at the bottom
   const totalKwp = projects.reduce((sum, p) => sum + (p.sizeKwp || 0), 0);
+  const totalKwhAllPhases = normalisedPhases.reduce((s, p) => s + phaseTotalKwh(p), 0);
   const totalsY = scheduleTableY - scheduleTableHeight + scheduleRowHeight;
   
   // Draw thicker line above totals
@@ -1123,7 +1197,9 @@ Do good. Get rewarded. Join Crunch Carbon.`;
     color: crunchCharcoal
   });
   
-  const totalKwpText = fmtNum(totalKwp, ' kWp');
+  const totalKwpText = _generationMode === 'kwh'
+    ? `${fmtNum(totalKwhAllPhases)} kWh`
+    : fmtNum(totalKwp, ' kWp');
   const totalKwpWidth = bold.widthOfTextAtSize(totalKwpText, 10);
   page3.drawText(totalKwpText, { 
     x: col3Center - (totalKwpWidth / 2), 
@@ -1252,9 +1328,10 @@ Do good. Get rewarded. Join Crunch Carbon.`;
 
   for (const actualYear of availableYears) {
     // Use real calculation functions
-    const yearlyEnergyKWh = calculateYearlyEnergy(systemSizeKWp, actualYear);
+    // Use normalised generation model (handles kWh mode + multi-phase)
+    const yearlyEnergyKWh = totalKwhForYear(actualYear);
     const yearlyEnergyMWh = yearlyEnergyKWh / 1000;
-    const yearlyCarbonCredits = calculateYearlyCarbonCredits(yearlyEnergyKWh);
+    const yearlyCarbonCredits = (yearlyEnergyKWh / 1000) * PDF_EMISSION_FACTOR;
     
     // Get dynamic market price for this year
     const marketPrice = carbonPrices[actualYear.toString()] || 0;
