@@ -449,20 +449,28 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         }
       }
       
-      // Apply referral attribution if a referral token was stored
+      // Fallback: if handle_new_user didn't apply attribution (older tokens,
+      // client-only path), call the RPC explicitly and log the outcome.
       if (data?.user?.id) {
         try {
           const stored = localStorage.getItem('crunchcarbon_ref');
           if (stored) {
             const parsed = JSON.parse(stored) as { token?: string };
             if (parsed?.token) {
-              await supabase.rpc('apply_referral_on_signup', {
+              const { error: refError } = await supabase.rpc('apply_referral_on_signup', {
                 p_token: parsed.token,
                 p_new_user_id: data.user.id,
               });
-              authLogger.info('Applied referral attribution on signup', {
-                userId: data.user.id,
-              });
+              if (refError) {
+                authLogger.warn('apply_referral_on_signup fallback returned error', {
+                  userId: data.user.id,
+                  error: refError,
+                });
+              } else {
+                authLogger.info('Applied referral attribution (fallback)', {
+                  userId: data.user.id,
+                });
+              }
             }
             localStorage.removeItem('crunchcarbon_ref');
           }
