@@ -185,6 +185,19 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         role: formData.role 
       });
       
+      // Read stored referral token (set by /ref/:token landing page) so
+      // handle_new_user can attribute the signup server-side.
+      let refToken: string | null = null;
+      try {
+        const stored = localStorage.getItem('crunchcarbon_ref');
+        if (stored) {
+          const parsed = JSON.parse(stored) as { token?: string };
+          refToken = parsed?.token ?? null;
+        }
+      } catch {
+        refToken = null;
+      }
+
       const { data, error } = await signUp(
         formData.email,
         formData.password,
@@ -195,6 +208,7 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
           company_name: formData.companyName || null,
           terms_accepted: formData.role === 'agent' ? termsAccepted : null,
           terms_accepted_at: formData.role === 'agent' && termsAccepted ? new Date().toISOString() : null,
+          ...(refToken ? { ref_token: refToken } : {}),
         }
       );
       
