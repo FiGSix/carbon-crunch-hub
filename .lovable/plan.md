@@ -1,45 +1,40 @@
-# Verify AREP Referral Attribution
+# Harden Referral Attribution: Idempotent RPC + Remove Client Fallback
 
-Goal: confirm the migration + `useRegisterForm` changes actually attribute new signups from AREP's agent link (`/ref/3e72eefe73d2d0ce5f237bfd`) to AREP, and that AREP's dashboard counters (signups/conversions) reflect the new signup.
+## Why
 
-## Steps
+The server-side `handle_new_user` trigger now reliably attributes signups. The client-side fallback RPC in `useRegisterForm` runs a second time on success and double-increments `referral_links.signups`, inserts a duplicate `referral_events` row, and inserts a duplicate `super_partner_link_requests` row (that table has no unique key). This makes AREP's dashboard counters unreliable.
 
-### 1. Baseline snapshot (before test signup)
-Query current state of AREP's referral link so we can diff after:
-- `referral_links` row for token `3e72eefe73d2d0ce5f237bfd`: `clicks`, `signups`, `conversions`, `is_active`, `owner_id`.
-- Count of `referral_events` rows for that `link_id`.
-- Count of `super_partner_link_requests` for AREP (`super_partner_id = owner_id`).
+Best fix is defense in depth: make the RPC safe to call more than once, then remove the now-unnecessary client fallback.
 
-### 2. Perform a live test signup through the link
-Using Playwright against the preview:
-1. Open `/ref/3e72eefe73d2d0ce5f237bfd` — confirm `localStorage.crunchcarbon_ref` is set and `referral_links.clicks` increments.
-2. Navigate to the agent registration page and complete signup with a fresh disposable email (e.g. `arep-verify-<timestamp>@example.com`).
-3. Capture console logs from `useRegisterForm` (the new `authLogger.info/warn` around `apply_referral_on_signup`) and any network errors.
+## Changes
 
-### 3. Post-signup DB verification
-For the new user, confirm in Postgres:
-- `auth.users.raw_user_meta_data->>'ref_token'` equals AREP's token (proves metadata reached the trigger).
-- `profiles` row: `referred_by_link_id` = AREP link id, `referred_by_agent_id` = AREP's `owner_id`, `referred_at` populated.
-- `referral_links.signups` incremented by 1; `conversions` unchanged (conversion is a separate later event).
-- `referral_events` has a new `signup` row for this user + link.
-- `super_partner_link_requests` has a new pending row for AREP linked to the new agent.
+### 1. Make `apply_referral_on_signup` idempotent (migration)
+Rewrite the function so calling it twice for the same `(link, user)` is a no-op:
+- Guard the counter bump and the `referral_events` insert with `NOT EXISTS (SELECT 1 FROM referral_events WHERE referral_link_id = v_link.id AND user_id = p_new_user_id AND event_type = 'signup')`.
+- Guard the `super_partner_link_requests` insert with `NOT EXISTS` on `(super_partner_id, company_id, request_type, status='pending')` so a repeat call doesn't create a second pending row.
+- Keep the `profiles` update as-is (already idempotent — same values written).
 
-### 4. Dashboard verification
-- Log in as AREP (or as admin viewing AREP).
-- Open the referral widget / `AdminReferralLinks` page and confirm the signups counter increased by 1 for AREP's link.
-- Confirm the new agent appears in AREP's pending super-partner requests list (if that UI surface exists — otherwise verify via DB only and note the gap).
+### 2. Add a partial unique index on `super_partner_link_requests` (same migration)
+`CREATE UNIQUE INDEX ... ON super_partner_link_requests (super_partner_id, company_id, request_type) WHERE status = 'pending';`
+Belt-and-braces so any future insert path (admin UI, edge function, manual SQL) can't produce duplicate pending requests.
 
-### 5. Cleanup
-- Delete the test `auth.users` row (cascades to `profiles`, `referral_events`, `super_partner_link_requests`).
-- Decrement `referral_links.signups` back if it doesn't auto-adjust, so counters stay accurate.
+### 3. Remove the client-side fallback in `useRegisterForm.ts`
+Delete the `apply_referral_on_signup` RPC call block (lines ~452–480). Keep the `localStorage.removeItem('crunchcarbon_ref')` cleanup and the `ref_token` metadata pass in the `signUp` call — that metadata is what the trigger reads.
 
-## Technical notes
-- Trigger path (server-side) is now the source of truth; the client-side RPC in `useRegisterForm` is a logged fallback. Both should succeed — if only the fallback fires, that indicates `handle_new_user` isn't seeing `ref_token` in metadata.
-- If email confirmation is required, the `profiles` row/trigger still runs at `auth.users` insert time, so attribution should not depend on the user confirming email.
-- No code changes in this plan — verification only. If a check fails, we'll diagnose and propose a follow-up fix plan.
+## Verification
+
+1. Fresh signup through `/ref/3e72eefe73d2d0ce5f237bfd`. Expect `referral_links.signups` = 1, one `referral_events` signup row, one pending `super_partner_link_requests` row, profile attributed.
+2. Manually call `apply_referral_on_signup` a second time on the same user. Expect no counter change, no duplicate event, no duplicate request.
+3. Clean up the test user.
 
 ## Out of scope
-- Backfilling historical signups (including the deleted `test@test.com`).
-- Client-type referral links.
-- Super-partner approval UX changes.
-- Conversion-event wiring (only signup attribution is being verified; conversions increment on a separate downstream event).
+
+- Backfilling historical signups.
+- Conversion-event wiring.
+- Client-type referral link flows.
+- Any other pre-existing linter warnings.
+
+## Files touched
+
+- New migration under `supabase/migrations/` (function rewrite + unique index).
+- `src/hooks/useRegisterForm.ts` (delete fallback block).
