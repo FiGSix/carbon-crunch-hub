@@ -1,41 +1,45 @@
-# Fix referral attribution for AREP (and all partner links)
+# Verify AREP Referral Attribution
 
-Two migrations plus a small client tweak. `test@test.com` has already been deleted from auth + profiles, so the backfill step (c) is now a no-op and removed.
+Goal: confirm the migration + `useRegisterForm` changes actually attribute new signups from AREP's agent link (`/ref/3e72eefe73d2d0ce5f237bfd`) to AREP, and that AREP's dashboard counters (signups/conversions) reflect the new signup.
 
-## 1. Fix `apply_referral_on_signup` RPC
+## Steps
 
-Change one line so `referred_by_agent_id` is set for **both** `client` and `agent` link types (currently only set when `link_type='client'`, which is why agent-recruitment signups never got attributed to the super partner).
+### 1. Baseline snapshot (before test signup)
+Query current state of AREP's referral link so we can diff after:
+- `referral_links` row for token `3e72eefe73d2d0ce5f237bfd`: `clicks`, `signups`, `conversions`, `is_active`, `owner_id`.
+- Count of `referral_events` rows for that `link_id`.
+- Count of `super_partner_link_requests` for AREP (`super_partner_id = owner_id`).
 
-```sql
-referred_by_agent_id = v_link.owner_id   -- always, regardless of link_type
-```
+### 2. Perform a live test signup through the link
+Using Playwright against the preview:
+1. Open `/ref/3e72eefe73d2d0ce5f237bfd` — confirm `localStorage.crunchcarbon_ref` is set and `referral_links.clicks` increments.
+2. Navigate to the agent registration page and complete signup with a fresh disposable email (e.g. `arep-verify-<timestamp>@example.com`).
+3. Capture console logs from `useRegisterForm` (the new `authLogger.info/warn` around `apply_referral_on_signup`) and any network errors.
 
-Everything else in the RPC stays as-is (still creates the pending `super_partner_link_requests` row for agent links, still increments `signups`, still writes a `referral_events` row).
+### 3. Post-signup DB verification
+For the new user, confirm in Postgres:
+- `auth.users.raw_user_meta_data->>'ref_token'` equals AREP's token (proves metadata reached the trigger).
+- `profiles` row: `referred_by_link_id` = AREP link id, `referred_by_agent_id` = AREP's `owner_id`, `referred_at` populated.
+- `referral_links.signups` incremented by 1; `conversions` unchanged (conversion is a separate later event).
+- `referral_events` has a new `signup` row for this user + link.
+- `super_partner_link_requests` has a new pending row for AREP linked to the new agent.
 
-## 2. Move attribution into `handle_new_user` (server-side, reliable)
+### 4. Dashboard verification
+- Log in as AREP (or as admin viewing AREP).
+- Open the referral widget / `AdminReferralLinks` page and confirm the signups counter increased by 1 for AREP's link.
+- Confirm the new agent appears in AREP's pending super-partner requests list (if that UI surface exists — otherwise verify via DB only and note the gap).
 
-Extend the existing `handle_new_user` trigger so that when the new auth user's `raw_user_meta_data` contains a `ref_token`, it calls `apply_referral_on_signup(ref_token, NEW.id)` at the end of the function (inside a `BEGIN…EXCEPTION WHEN OTHERS THEN` block so a bad token can never break signup).
+### 5. Cleanup
+- Delete the test `auth.users` row (cascades to `profiles`, `referral_events`, `super_partner_link_requests`).
+- Decrement `referral_links.signups` back if it doesn't auto-adjust, so counters stay accurate.
 
-This removes the dependency on the client-side RPC call in `useRegisterForm.ts`, which is fire-and-forget and has been silently failing.
-
-## 3. Pass `ref_token` in signup metadata (client)
-
-**`src/hooks/useRegisterForm.ts`** — when calling `supabase.auth.signUp`, read the referral token from `localStorage.crunchcarbon_ref` (already persisted by `Register.tsx` and `PartnerReferralLandingPage.tsx`) and include it in `options.data.ref_token`. Keep the existing post-signup RPC call as a belt-and-braces fallback, but log its return value/error explicitly instead of swallowing it.
-
-No change needed to `PartnerReferralLandingPage.tsx` — it already writes the token to localStorage before redirecting to `/register`.
+## Technical notes
+- Trigger path (server-side) is now the source of truth; the client-side RPC in `useRegisterForm` is a logged fallback. Both should succeed — if only the fallback fires, that indicates `handle_new_user` isn't seeing `ref_token` in metadata.
+- If email confirmation is required, the `profiles` row/trigger still runs at `auth.users` insert time, so attribution should not depend on the user confirming email.
+- No code changes in this plan — verification only. If a check fails, we'll diagnose and propose a follow-up fix plan.
 
 ## Out of scope
-
-- Backfilling test@test.com (user deleted).
-- Super-partner approval UI, `super_partner_status` logic, email/auth-hook changes, client-type link flows.
-
-## Files touched
-
-- New migration under `supabase/migrations/` (RPC + trigger)
-- `src/hooks/useRegisterForm.ts`
-
-## Verification after deploy
-
-1. Open AREP's agent link `/ref/3e72eefe73d2d0ce5f237bfd` in a fresh browser.
-2. Register a new agent.
-3. Confirm in DB: new profile has `referred_by_link_id` and `referred_by_agent_id` set to AREP's link/user, `referral_links.signups` incremented, `referral_events` has a `signup` row, and `super_partner_link_requests` has a pending row for AREP.
+- Backfilling historical signups (including the deleted `test@test.com`).
+- Client-type referral links.
+- Super-partner approval UX changes.
+- Conversion-event wiring (only signup attribution is being verified; conversions increment on a separate downstream event).
