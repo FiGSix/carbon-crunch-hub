@@ -449,33 +449,13 @@ export function useRegisterForm(initialRole: "client" | "agent", invitationToken
         }
       }
       
-      // Fallback: if handle_new_user didn't apply attribution (older tokens,
-      // client-only path), call the RPC explicitly and log the outcome.
+      // Referral attribution is handled server-side by the handle_new_user trigger
+      // (reads ref_token from user metadata). Just clear the stored token.
       if (data?.user?.id) {
         try {
-          const stored = localStorage.getItem('crunchcarbon_ref');
-          if (stored) {
-            const parsed = JSON.parse(stored) as { token?: string };
-            if (parsed?.token) {
-              const { error: refError } = await supabase.rpc('apply_referral_on_signup', {
-                p_token: parsed.token,
-                p_new_user_id: data.user.id,
-              });
-              if (refError) {
-                authLogger.warn('apply_referral_on_signup fallback returned error', {
-                  userId: data.user.id,
-                  error: refError,
-                });
-              } else {
-                authLogger.info('Applied referral attribution (fallback)', {
-                  userId: data.user.id,
-                });
-              }
-            }
-            localStorage.removeItem('crunchcarbon_ref');
-          }
+          localStorage.removeItem('crunchcarbon_ref');
         } catch (refErr) {
-          authLogger.error('Failed to apply referral attribution', { error: refErr });
+          authLogger.error('Failed to clear stored referral token', { error: refErr });
         }
       }
 
