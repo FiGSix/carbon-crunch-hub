@@ -38,6 +38,10 @@ export const CalculationResults = ({
 }: CalculationResultsProps) => {
   const [revenueData, setRevenueData] = useState<Record<string, number>>({});
   const [isLoadingRevenue, setIsLoadingRevenue] = useState(true);
+  const [emailName, setEmailName] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const sendResultsMutation = useSendCalculatorResults();
   
   // First-time client pricing configuration
   const portfolioSize = 0; // No existing portfolio
