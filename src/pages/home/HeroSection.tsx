@@ -12,7 +12,7 @@ export const HeroSection = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="inline-block px-4 py-2 bg-card/60 backdrop-blur-md rounded-full shadow-md border border-border/40">
-              <span className="text-sm font-medium text-muted-foreground">1,500+ Solar Systems Already Earning</span>
+              <span className="text-sm font-medium text-muted-foreground">Verified Verra-grade carbon credits</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
@@ -21,7 +21,7 @@ export const HeroSection = () => {
             </h1>
             
             <p className="text-xl text-muted-foreground max-w-xl">
-              South African homeowners earn <span className="font-bold text-foreground">R600-R1,000+ per year</span> from verified carbon credits. Free to join.
+              South African homeowners earn <span className="font-bold text-foreground">R600–R1,000+ per year from a typical 5kWp system</span> through verified carbon credits. Free to join.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
