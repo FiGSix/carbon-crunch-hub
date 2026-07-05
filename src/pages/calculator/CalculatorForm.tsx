@@ -20,15 +20,12 @@ interface CalculatorFormProps {
 }
 
 export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => {
-  const today = new Date();
   const [inputMode, setInputMode] = useState<'simple' | 'advanced'>('simple');
   const [systemSize, setSystemSize] = useState<string>("");
   const [numberOfPanels, setNumberOfPanels] = useState<string>("");
   const [panelWattage, setPanelWattage] = useState<string>("450");
   const [customWattage, setCustomWattage] = useState<string>("");
-  const [commissioningDate, setCommissioningDate] = useState<string>(
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
-  );
+  const [commissioningDate, setCommissioningDate] = useState<Date>();
 
   // Calculate system size from panels and wattage
   const calculateSystemSize = (panels: string, wattage: string): number => {
