@@ -26,6 +26,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
   const [panelWattage, setPanelWattage] = useState<string>("450");
   const [customWattage, setCustomWattage] = useState<string>("");
   const [commissioningDate, setCommissioningDate] = useState<Date>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Calculate system size from panels and wattage
   const calculateSystemSize = (panels: string, wattage: string): number => {
