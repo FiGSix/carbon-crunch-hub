@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calculator as CalculatorIcon, ArrowRight, Info, Zap } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calculator as CalculatorIcon, ArrowRight, CalendarIcon, Info, Zap } from "lucide-react";
 import { IconCard } from "./IconCard";
 import { BarChart3, TreePine, CircleDollarSign } from "lucide-react";
 import { CalculationResults, calculateResults } from "@/lib/calculations/carbon";
@@ -10,6 +13,7 @@ import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface CalculatorFormProps {
   onResultsCalculated: (results: CalculationResults, systemSize: number, commissioningDate: Date) => void;
