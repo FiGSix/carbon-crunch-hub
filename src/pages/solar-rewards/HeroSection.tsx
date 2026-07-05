@@ -59,7 +59,9 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
              transition={{ duration: 0.4, ease: "easeOut" }}
              className="flex justify-center mb-8"
            >
-             <AvatarStack count={1247} />
+             {stats?.homeownerCount != null && (
+               <AvatarStack count={stats.homeownerCount} />
+             )}
            </motion.div>
            
           <motion.div
@@ -88,17 +90,6 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
           >
             Takes 30 seconds. No costs. No commitments.
           </motion.p>
-           
-           <motion.p 
-             variants={{
-               initial: { opacity: 0, y: 20 },
-               animate: { opacity: 1, y: 0 }
-             }}
-             transition={{ duration: 0.4, ease: "easeOut" }}
-             className="text-sm text-crunch-yellow font-medium mt-2"
-           >
-             🔥 47 homeowners joined this week
-           </motion.p>
         </motion.div>
       </div>
     </section>
