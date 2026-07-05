@@ -115,6 +115,9 @@ function RecoveryRedirectShim() {
     }
   }, [location.pathname]);
   
+  return null;
+}
+
 function SignupRedirect() {
   const location = useLocation();
   return <Navigate to={`/register${location.search}`} replace />;
