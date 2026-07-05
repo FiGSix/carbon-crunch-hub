@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -16,6 +17,8 @@ import { ResultCard } from "./ResultCard";
 import { CalculationResults as ICalculationResults, YearData, formatNumber } from "@/lib/calculations/carbon";
 import { CarbonCreditTable } from "@/components/proposals/summary/carbon/CarbonCreditTable";
 import { calculateRevenueByYear } from "@/services/calculations/carbon/pricing";
+import { useSendCalculatorResults } from "@/hooks/calculator/useCalculatorResults";
+import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 interface CalculationResultsProps {
