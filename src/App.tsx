@@ -115,8 +115,11 @@ function RecoveryRedirectShim() {
     }
   }, [location.pathname]);
   
-  return null;
+function SignupRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/register${location.search}`} replace />;
 }
+
 
 function App() {
   // Diagnostic logging in development only
