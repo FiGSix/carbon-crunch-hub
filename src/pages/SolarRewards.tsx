@@ -14,7 +14,7 @@ import { EligibilityModal } from "./solar-rewards/EligibilityModal";
 import { ImpactStats } from "./solar-rewards/ImpactStats";
 import { StickyCtaBar } from "@/components/solar-rewards/StickyCtaBar";
 import { FAQSection } from "./solar-rewards/FAQSection";
-import { LiveActivityNotification } from "@/components/solar-rewards/LiveActivityNotification";
+
 import { TestimonialsSection } from "./solar-rewards/TestimonialsSection";
 import { Helmet } from "react-helmet-async";
 
@@ -100,8 +100,6 @@ const SolarRewards = () => {
       />
        
        <StickyCtaBar onCTAClick={() => setShowCalculator(true)} />
-       
-       <LiveActivityNotification />
     </div>
   );
 };
