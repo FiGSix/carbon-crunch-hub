@@ -37,7 +37,7 @@ const SolarRewards = () => {
           "@type": "Service",
           "name": "Solar Carbon Credit Monetization",
           "provider": { "@type": "Organization", "name": "Crunch Carbon" },
-          "description": "Convert your solar energy generation into verified carbon credits and earn R600-R1,000+ annually",
+          "description": "Convert your solar energy generation into verified carbon credits and earn R600–R1,000+ annually from a typical 5kWp system",
           "areaServed": { "@type": "Country", "name": "South Africa" },
           "serviceType": "Carbon Credit Generation",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "ZAR", "description": "Free registration - earn from your solar panels" }
