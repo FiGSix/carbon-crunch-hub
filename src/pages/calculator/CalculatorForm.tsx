@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calculator as CalculatorIcon, ArrowRight, Info, Zap } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calculator as CalculatorIcon, ArrowRight, CalendarIcon, Info, Zap } from "lucide-react";
 import { IconCard } from "./IconCard";
 import { BarChart3, TreePine, CircleDollarSign } from "lucide-react";
 import { CalculationResults, calculateResults } from "@/lib/calculations/carbon";
@@ -10,21 +13,20 @@ import { normalizeToKWp } from "@/lib/calculations/carbon/core";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface CalculatorFormProps {
   onResultsCalculated: (results: CalculationResults, systemSize: number, commissioningDate: Date) => void;
 }
 
 export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => {
-  const today = new Date();
   const [inputMode, setInputMode] = useState<'simple' | 'advanced'>('simple');
   const [systemSize, setSystemSize] = useState<string>("");
   const [numberOfPanels, setNumberOfPanels] = useState<string>("");
   const [panelWattage, setPanelWattage] = useState<string>("450");
   const [customWattage, setCustomWattage] = useState<string>("");
-  const [commissioningDate, setCommissioningDate] = useState<string>(
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
-  );
+  const [commissioningDate, setCommissioningDate] = useState<Date>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Calculate system size from panels and wattage
   const calculateSystemSize = (panels: string, wattage: string): number => {
@@ -116,8 +118,9 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
   };
 
   const canCalculate =
-    (inputMode === 'simple' && numberOfPanels !== "" && calculatedSystemSize > 0) ||
-    (inputMode === 'advanced' && systemSize !== "" && normalizeToKWp(systemSize) > 0);
+    ((inputMode === 'simple' && numberOfPanels !== "" && calculatedSystemSize > 0) ||
+    (inputMode === 'advanced' && systemSize !== "" && normalizeToKWp(systemSize) > 0)) &&
+    !!commissioningDate;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -265,7 +268,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
 
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label htmlFor="commissioningDate" className="block text-sm font-medium text-crunch-black/70">
+                <label className="block text-sm font-medium text-crunch-black/70">
                   Commissioning Date <span className="text-red-500">*</span>
                 </label>
                 <TooltipProvider>
@@ -281,14 +284,36 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Input
-                id="commissioningDate"
-                type="date"
-                value={commissioningDate}
-                min="2022-09-15"
-                onChange={(e) => setCommissioningDate(e.target.value)}
-                className="retro-input text-base md:text-lg"
-              />
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "retro-input w-full justify-start text-left font-normal h-auto px-4 py-3 rounded-lg border text-base md:text-lg",
+                      !commissioningDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {commissioningDate ? (
+                      format(commissioningDate, "dd MMM yyyy")
+                    ) : (
+                      <span>Select the date your system was installed</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={commissioningDate}
+                    onSelect={(date) => {
+                      setCommissioningDate(date);
+                      if (date) setCalendarOpen(false);
+                    }}
+                    initialFocus
+                    disabled={(date) => date < new Date(2022, 8, 15)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button
