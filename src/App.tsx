@@ -238,6 +238,7 @@ function App() {
                       <Suspense fallback={<PageLoader />}><Login /></Suspense>
                     </PageErrorBoundary>
                   } />
+                  <Route path="/signup" element={<SignupRedirect />} />
                   <Route path="/register" element={
                     <PageErrorBoundary pageName="Register">
                       <Suspense fallback={<PageLoader />}><Register /></Suspense>
