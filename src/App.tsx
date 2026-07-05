@@ -2,7 +2,7 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { AuthNavigationHandler } from "@/components/auth/AuthNavigationHandler";
 import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
@@ -118,6 +118,12 @@ function RecoveryRedirectShim() {
   return null;
 }
 
+function SignupRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/register${location.search}`} replace />;
+}
+
+
 function App() {
   // Diagnostic logging in development only
   logger.info("Application initializing");
@@ -232,6 +238,7 @@ function App() {
                       <Suspense fallback={<PageLoader />}><Login /></Suspense>
                     </PageErrorBoundary>
                   } />
+                  <Route path="/signup" element={<SignupRedirect />} />
                   <Route path="/register" element={
                     <PageErrorBoundary pageName="Register">
                       <Suspense fallback={<PageLoader />}><Register /></Suspense>
