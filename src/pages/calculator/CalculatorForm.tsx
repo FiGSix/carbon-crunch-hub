@@ -131,8 +131,8 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
         className="order-2 lg:order-1"
       >
         <div className="meta-card pt-8 px-4 pb-4 md:p-6 lg:p-8 relative">
-          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-crunch-yellow/90 text-crunch-black font-medium px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md">
-            <span className="flex items-center justify-center text-sm md:text-base">
+          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-crunch-yellow/90 text-crunch-black font-medium px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md whitespace-nowrap">
+            <span className="flex items-center justify-center text-sm md:text-base whitespace-nowrap">
               <CalculatorIcon className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
               Crunch the Numbers
             </span>
@@ -293,12 +293,17 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                       !commissioningDate && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {commissioningDate ? (
-                      format(commissioningDate, "dd MMM yyyy")
-                    ) : (
-                      <span>Select the date your system was installed</span>
-                    )}
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">
+                      {commissioningDate ? (
+                        format(commissioningDate, "dd MMM yyyy")
+                      ) : (
+                        <>
+                          <span className="sm:hidden">Pick installation date</span>
+                          <span className="hidden sm:inline">Select the date your system was installed</span>
+                        </>
+                      )}
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
