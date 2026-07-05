@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
- import { AvatarStack } from "@/components/solar-rewards/AvatarStack";
+import { AvatarStack } from "@/components/solar-rewards/AvatarStack";
+import { useHomeownerStats } from "@/hooks/useHomeownerStats";
 
 interface HeroSectionProps {
   onCTAClick: () => void;
