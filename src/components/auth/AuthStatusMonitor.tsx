@@ -28,7 +28,7 @@ export function AuthStatusMonitor() {
   const sessionValid = session && session.expires_at && new Date(session.expires_at * 1000) > new Date();
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm hidden sm:block">
       {authError && (
         <Alert variant="destructive" className="mb-2">
           <AlertTriangle className="h-4 w-4" />
