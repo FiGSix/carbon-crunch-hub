@@ -145,6 +145,7 @@ function App() {
                 <AuthStatusMonitor />
                 <InactivityMonitor />
                 <Sonner />
+                <FloatingShareButton />
                 <Routes>
                   {/* Public routes - wrapped with page error boundaries */}
                   <Route path="/" element={

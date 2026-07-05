@@ -20,6 +20,7 @@ import { calculateRevenueByYear } from "@/services/calculations/carbon/pricing";
 import { useSendCalculatorResults } from "@/hooks/calculator/useCalculatorResults";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { ResultsShareCTA } from "@/components/referral/ResultsShareCTA";
 
 interface CalculationResultsProps {
   results: ICalculationResults;
@@ -123,6 +124,8 @@ export const CalculationResults = ({
         />
       </div>
       
+      <ResultsShareCTA />
+
       <div className="mb-8 overflow-hidden rounded-xl border border-crunch-black/10">
         <div className="bg-white/50 backdrop-blur-sm p-4">
           <h3 className="text-sm font-medium text-crunch-black/70 mb-4">Carbon Credit Revenue Projection</h3>
