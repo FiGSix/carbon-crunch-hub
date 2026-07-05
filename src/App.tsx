@@ -10,6 +10,7 @@ import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AgentApprovalGuard } from "@/components/auth/AgentApprovalGuard";
 import { AuthStatusMonitor } from "@/components/auth/AuthStatusMonitor";
 import { InactivityMonitor } from "@/components/auth/InactivityMonitor";
+import { FloatingShareButton } from "@/components/referral/FloatingShareButton";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
 import { Suspense, lazy, useEffect } from "react";
@@ -145,6 +146,7 @@ function App() {
                 <AuthStatusMonitor />
                 <InactivityMonitor />
                 <Sonner />
+                <FloatingShareButton />
                 <Routes>
                   {/* Public routes - wrapped with page error boundaries */}
                   <Route path="/" element={
