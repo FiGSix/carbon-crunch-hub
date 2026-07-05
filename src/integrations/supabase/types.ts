@@ -3918,6 +3918,15 @@ export type Database = {
           title: string
         }[]
       }
+      get_public_homeowner_stats: {
+        Args: never
+        Returns: {
+          co2_offset_tons: number
+          homeowner_count: number
+          signed_proposal_count: number
+          total_system_kwp: number
+        }[]
+      }
       get_referral_partner_info: { Args: { p_token: string }; Returns: Json }
       get_super_partner_commission_by_company: {
         Args: never
