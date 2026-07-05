@@ -1,60 +1,46 @@
-# Reconcile homeowner stats across / and /home-owners
-
-## Problem
-Three contradictory numbers currently live on the same journey:
-
-| Location | Value | Source |
-|---|---|---|
-| `/home-owners` hero (`AvatarStack`) | `1,247+ homeowners earning` | hardcoded |
-| `/home-owners` ImpactStats | `1,500+ Homeowners Registered`, `R800/yr Average Annual Payout` | hardcoded |
-| `/` (SocialProofSection) | `1,500+ Solar systems`, `R1.2M+ Revenue`, `28,000+ Tons CO₂` | hardcoded |
-| `/` HeroSection + FAQ/JSON-LD copy | `R600–R1,000+ per year` | hardcoded prose |
-| Actual DB (`user_roles` role='client') | **132 homeowners** | truth |
-
 ## Goal
-1. One source of truth for the homeowner count and payout stats — pulled from the DB.
-2. Keep the "R600–R1,000/yr" earnings range copy, but disambiguate it as **"typical 5kWp system"** so it doesn't read as a contradiction to the platform average.
+
+Make `/calculator` show the Rand earnings estimate on the page immediately after the user fills in system size + commissioning date. Demote name/email to optional fields for those who also want a full report emailed.
+
+## Current behavior
+
+- `CalculatorForm.handleCalculate` requires `name` + `email`, then calls the `send-calculator-results` edge function which emails a link. `onResultsCalculated` is never called from this flow, so `CalculationResults` (the Rand table) never renders inline.
+- Only the live "Your System Size: X kWp" preview shows on the page.
+- Homepage marketing promises: "Free • Takes 30 seconds • No signup required."
 
 ## Changes
 
-### 1. New hook: `src/hooks/useHomeownerStats.ts`
-- React Query hook (`queryKey: ['homeowner-stats']`, `staleTime: 5 min`).
-- Returns `{ homeownerCount, totalEarningsPaidZAR, co2OffsetTons, avgAnnualPayoutZAR, isLoading }`.
-- Queries via the anon-safe supabase client:
-  - `homeownerCount` → `user_roles` count where `role='client'`.
-  - `totalEarningsPaidZAR`, `co2OffsetTons`, `avgAnnualPayoutZAR` → derived from `proposals` (signed only) using existing `UnifiedCarbonService.calculatePortfolioTotals` where a public read policy already allows it; if the anon key can't read `proposals`, add a `SECURITY DEFINER` RPC `get_public_homeowner_stats()` that returns the four aggregates (single migration, GRANT EXECUTE to anon + authenticated).
-- Graceful fallback: while loading or if a value is `null`, render a skeleton — never a hardcoded default.
+### 1. `src/pages/calculator/CalculatorForm.tsx`
 
-### 2. `src/pages/solar-rewards/ImpactStats.tsx`
-- Drop the hardcoded `stats` array; build it from `useHomeownerStats()`.
-- Keep the same 4 tiles/labels/icons. `Average Annual Payout` sub-label stays **"Per typical 5kWp system"** for the earnings range card, but the tile value uses the real platform average.
-- Hide the tile (not show `0`) if the underlying metric is `null`.
+- Make `name` and `email` optional. Remove the red asterisks and the two `toast.error` guards for name/email. Keep an email-format check only when the user actually typed something.
+- Split the single "Calculate + email" action into two stages:
+  - **Primary CTA "Calculate My Earnings"** — validates panels/wattage (or kWp) + commissioning date, runs `calculateResults(...)` locally, then calls `onResultsCalculated(...)` so `Calculator.tsx` swaps in `<CalculationResults />` with the full Rand-per-year table. No email required, no network call.
+  - **Secondary CTA "Email me the full report"** — enabled only when name + valid email are filled. Calls the existing `sendResultsMutation`. On success show the existing success state (or an inline "Report sent to X" confirmation) without hiding the on-page results.
+- Reframe the name/email block with a heading like "Want the full report emailed to you too? (optional)" and helper copy. Move it below the calculate button, or keep it in place but visually de-emphasized.
+- `emailSent` full-screen takeover: keep it only for the email path when the user isn't already viewing inline results; otherwise show inline success toast + inline confirmation so the Rand table stays visible.
+- Update the disabled logic on the primary button to depend only on system-size + commissioning date validity.
 
-### 3. `src/pages/solar-rewards/HeroSection.tsx`
-- Replace `<AvatarStack count={1247} />` with `<AvatarStack count={homeownerCount} />` from the same hook.
-- Remove the hardcoded `🔥 47 homeowners joined this week` line (no data source to back it).
+### 2. `src/pages/Calculator.tsx`
 
-### 4. `src/pages/home/SocialProofSection.tsx`
-- Same hook wired into the three homepage stats: `homeowners`, `total earnings`, `CO₂ offset`.
-- Change `Solar systems` label to `Homeowners` so it matches the source metric.
+- No structural change needed; it already renders `<CalculationResults>` when `showResults` is true. Just confirm the reset flow still clears form state.
 
-### 5. Clarify the "R600–R1,000/yr" copy (do NOT delete — it's a legitimate per-system estimate)
-- `src/pages/home/HeroSection.tsx`: change
-  `"R600-R1,000+ per year from verified carbon credits"` →
-  `"R600–R1,000+ per year from a typical 5kWp system"`.
-- `src/pages/SolarRewards.tsx` JSON-LD `Service.description` + FAQ answer: same "typical 5kWp system" qualifier already present in the FAQ — mirror it into the Service description string for consistency.
+### 3. `src/pages/calculator/CalculationResults.tsx`
+
+- Add an optional inline "Email me this report" affordance (reuses `useSendCalculatorResults`) so users who first see results can still request the email without going back. Small form: name + email + send button. Uses the same `systemSize` / `commissioningDate` already in props. Non-blocking.
+
+### 4. Homepage copy sanity check
+
+- The "Free • Takes 30 seconds • No signup required" claim now matches reality, so no copy change needed. (If we want, we can also update the promo blurb to mention the optional email report — flag only, not required.)
 
 ## Out of scope
-- Live "47 joined this week" ticker (would need a weekly-signup query + design decision).
-- The `LiveActivityNotification` component's fake activity feed.
-- Changing the homeowner sign-up copy anywhere else.
+
+- Changing the underlying carbon math, pricing tiers, or edge function.
+- Removing the email edge function or its rate-limiting.
+- Advanced-mode UX beyond the required/optional relabeling.
+- Auth, storage, or DB changes.
 
 ## Technical notes
-- Only a migration is needed **if** `proposals` isn't readable by `anon` for aggregation — in that case, one migration adds:
-  ```sql
-  CREATE OR REPLACE FUNCTION public.get_public_homeowner_stats()
-  RETURNS TABLE(homeowner_count int, total_earnings_zar numeric, co2_offset_tons numeric, avg_annual_payout_zar numeric)
-  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$ ... $$;
-  GRANT EXECUTE ON FUNCTION public.get_public_homeowner_stats() TO anon, authenticated;
-  ```
-- No new dependencies. React Query is already in the project.
+
+- `calculateResults` is already a pure client-side function in `@/lib/calculations/carbon` — no server round-trip needed for the inline result.
+- Referral code capture (`localStorage.getItem('referralCode')`) stays wired to the email path only, since it's used server-side for attribution.
+- Keep existing validation for commissioning date min (`2022-09-15`) and system size max (15,000 kWp).
