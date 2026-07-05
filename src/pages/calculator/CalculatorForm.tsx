@@ -293,12 +293,17 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                       !commissioningDate && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {commissioningDate ? (
-                      format(commissioningDate, "dd MMM yyyy")
-                    ) : (
-                      <span>Select the date your system was installed</span>
-                    )}
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">
+                      {commissioningDate ? (
+                        format(commissioningDate, "dd MMM yyyy")
+                      ) : (
+                        <>
+                          <span className="sm:hidden">Pick installation date</span>
+                          <span className="hidden sm:inline">Select the date your system was installed</span>
+                        </>
+                      )}
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
