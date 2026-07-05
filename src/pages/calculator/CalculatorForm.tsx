@@ -117,8 +117,9 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
   };
 
   const canCalculate =
-    (inputMode === 'simple' && numberOfPanels !== "" && calculatedSystemSize > 0) ||
-    (inputMode === 'advanced' && systemSize !== "" && normalizeToKWp(systemSize) > 0);
+    ((inputMode === 'simple' && numberOfPanels !== "" && calculatedSystemSize > 0) ||
+    (inputMode === 'advanced' && systemSize !== "" && normalizeToKWp(systemSize) > 0)) &&
+    !!commissioningDate;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
