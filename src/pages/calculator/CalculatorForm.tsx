@@ -266,7 +266,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
 
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label htmlFor="commissioningDate" className="block text-sm font-medium text-crunch-black/70">
+                <label className="block text-sm font-medium text-crunch-black/70">
                   Commissioning Date <span className="text-red-500">*</span>
                 </label>
                 <TooltipProvider>
@@ -282,14 +282,33 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Input
-                id="commissioningDate"
-                type="date"
-                value={commissioningDate}
-                min="2022-09-15"
-                onChange={(e) => setCommissioningDate(e.target.value)}
-                className="retro-input text-base md:text-lg"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "retro-input w-full justify-start text-left font-normal h-auto px-4 py-3 rounded-lg border text-base md:text-lg",
+                      !commissioningDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {commissioningDate ? (
+                      format(commissioningDate, "dd MMM yyyy")
+                    ) : (
+                      <span>Select the date your system was installed</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={commissioningDate}
+                    onSelect={setCommissioningDate}
+                    initialFocus
+                    disabled={(date) => date < new Date(2022, 8, 15)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button
