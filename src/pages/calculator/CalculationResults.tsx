@@ -151,57 +151,148 @@ export const CalculationResults = ({
       </div>
       
       {!hideActions && (
-        <div className="flex justify-center">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="text-crunch-black/70">
-                See Full Forecast (2025-2030)
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px]">
-              <DialogHeader>
-                <DialogTitle>Your Full Carbon Credit Revenue Forecast</DialogTitle>
-                <DialogDescription>
-                  Complete revenue projection from {format(commissioningDate, "dd MMM yyyy")} to 2030
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="max-h-[500px] overflow-auto">
-                {isLoadingRevenue ? (
-                  <div className="flex justify-center items-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
-                  </div>
-                ) : (
-                  <CarbonCreditTable
-                    revenue={revenueData}
-                    systemSizeKWp={systemSize}
-                    commissionDate={format(commissioningDate, "yyyy-MM-dd")}
-                    portfolioSize={portfolioSize}
-                    totalMWhGenerated={totalMWhGenerated}
-                    totalCarbonCredits={totalCarbonCredits}
-                    totalClientSpecificRevenue={totalClientSpecificRevenue}
-                    preCalculatedYearlyMWh={preCalculatedYearlyMWh}
-                    preCalculatedYearlyCredits={preCalculatedYearlyCredits}
-                  />
-                )}
+        <>
+          {/* Optional email report */}
+          <div className="mb-6 p-4 md:p-5 bg-white/50 rounded-xl border border-crunch-black/10">
+            {emailSent ? (
+              <div className="flex items-center gap-3 text-crunch-black">
+                <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />
+                <div>
+                  <p className="font-medium">Report sent to {emailAddress}</p>
+                  <p className="text-xs text-crunch-black/60">
+                    The link is valid for 10 days. Check your spam folder if you don't see it.
+                  </p>
+                </div>
               </div>
-              
-              <DialogFooter className="pt-4 border-t border-crunch-black/10">
-                <p className="text-xs text-crunch-black/60 italic">
-                  * Revenue projections based on first-time client pricing ({clientSharePercentage}% share). Carbon prices are dynamic and may vary.
-                </p>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          <Button 
-            variant="ghost" 
-            onClick={onReset}
-            className="ml-2 text-crunch-black/70"
-          >
-            Reset Calculator
-          </Button>
-        </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-2 mb-3">
+                  <Mail className="h-5 w-5 text-crunch-black/70 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-crunch-black">
+                      Want the full report emailed to you too?
+                    </p>
+                    <p className="text-xs text-crunch-black/60">
+                      Optional — your Rand estimate above is complete already.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                  <Input
+                    type="text"
+                    placeholder="Your name"
+                    value={emailName}
+                    onChange={(e) => setEmailName(e.target.value)}
+                    className="retro-input"
+                  />
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    className="retro-input"
+                  />
+                </div>
+                <Button
+                  onClick={async () => {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailAddress || !emailRegex.test(emailAddress)) {
+                      toast.error("Please enter a valid email address");
+                      return;
+                    }
+                    if (!emailName.trim()) {
+                      toast.error("Please enter your name");
+                      return;
+                    }
+                    try {
+                      const referralCode = localStorage.getItem("referralCode");
+                      await sendResultsMutation.mutateAsync({
+                        email: emailAddress.trim(),
+                        name: emailName.trim(),
+                        systemSizeKwp: systemSize,
+                        commissioningDate: format(commissioningDate, "yyyy-MM-dd"),
+                        referralCode: referralCode || undefined,
+                      });
+                      setEmailSent(true);
+                      toast.success("Report sent — check your inbox!");
+                    } catch (error) {
+                      logger.error("Failed to send calculator email", { error });
+                      toast.error("Failed to send report. Please try again.");
+                    }
+                  }}
+                  disabled={sendResultsMutation.isPending}
+                  variant="outline"
+                  size="sm"
+                  className="border-crunch-black/30 text-crunch-black hover:bg-crunch-black/5"
+                >
+                  {sendResultsMutation.isPending ? (
+                    <span className="flex items-center">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <Mail className="mr-2 h-4 w-4" />
+                      Email me the full report
+                    </span>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-center flex-wrap gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="text-crunch-black/70">
+                  See Full Forecast (2025-2030)
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[800px]">
+                <DialogHeader>
+                  <DialogTitle>Your Full Carbon Credit Revenue Forecast</DialogTitle>
+                  <DialogDescription>
+                    Complete revenue projection from {format(commissioningDate, "dd MMM yyyy")} to 2030
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="max-h-[500px] overflow-auto">
+                  {isLoadingRevenue ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crunch-black"></div>
+                    </div>
+                  ) : (
+                    <CarbonCreditTable
+                      revenue={revenueData}
+                      systemSizeKWp={systemSize}
+                      commissionDate={format(commissioningDate, "yyyy-MM-dd")}
+                      portfolioSize={portfolioSize}
+                      totalMWhGenerated={totalMWhGenerated}
+                      totalCarbonCredits={totalCarbonCredits}
+                      totalClientSpecificRevenue={totalClientSpecificRevenue}
+                      preCalculatedYearlyMWh={preCalculatedYearlyMWh}
+                      preCalculatedYearlyCredits={preCalculatedYearlyCredits}
+                    />
+                  )}
+                </div>
+
+                <DialogFooter className="pt-4 border-t border-crunch-black/10">
+                  <p className="text-xs text-crunch-black/60 italic">
+                    * Revenue projections based on first-time client pricing ({clientSharePercentage}% share). Carbon prices are dynamic and may vary.
+                  </p>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="ghost"
+              onClick={onReset}
+              className="text-crunch-black/70"
+            >
+              Reset Calculator
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
