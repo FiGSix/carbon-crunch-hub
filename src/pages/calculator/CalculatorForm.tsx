@@ -284,7 +284,7 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Popover>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -305,7 +305,10 @@ export const CalculatorForm = ({ onResultsCalculated }: CalculatorFormProps) => 
                   <Calendar
                     mode="single"
                     selected={commissioningDate}
-                    onSelect={setCommissioningDate}
+                    onSelect={(date) => {
+                      setCommissioningDate(date);
+                      if (date) setCalendarOpen(false);
+                    }}
                     initialFocus
                     disabled={(date) => date < new Date(2022, 8, 15)}
                   />
