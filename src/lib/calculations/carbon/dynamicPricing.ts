@@ -117,6 +117,61 @@ class DynamicCarbonPricingService {
   }
 
   /**
+   * Get carbon prices for a specific client. If the client has an
+   * assigned carbon_rate_set_id, use those; otherwise fall back to the
+   * default rate set / system settings. Result is filtered by minimum
+   * vintage year, same as getCarbonPrices().
+   */
+  async getCarbonPricesForClient(clientId?: string | null): Promise<Record<string, number>> {
+    try {
+      const minimumYear = await vintageConfigService.getMinimumVintageYear();
+
+      let overridePrices: Record<string, number> | null = null;
+
+      if (clientId) {
+        const { data: client } = await supabase
+          .from("clients")
+          .select("carbon_rate_set_id")
+          .eq("id", clientId)
+          .maybeSingle();
+
+        const rateSetId = (client as { carbon_rate_set_id?: string | null } | null)?.carbon_rate_set_id;
+        if (rateSetId) {
+          const { data: set } = await supabase
+            .from("carbon_rate_sets")
+            .select("prices")
+            .eq("id", rateSetId)
+            .maybeSingle();
+          if (set?.prices && Object.keys(set.prices as object).length > 0) {
+            overridePrices = set.prices as Record<string, number>;
+          }
+        }
+      }
+
+      if (!overridePrices) {
+        // Try the default rate set first, then fall back to legacy system_settings, then constants.
+        const { data: def } = await supabase
+          .from("carbon_rate_sets")
+          .select("prices")
+          .eq("is_default", true)
+          .maybeSingle();
+        if (def?.prices && Object.keys(def.prices as object).length > 0) {
+          overridePrices = def.prices as Record<string, number>;
+        }
+      }
+
+      if (!overridePrices) {
+        return this.getCarbonPrices();
+      }
+
+      return filterPricesFromYear(overridePrices, minimumYear);
+    } catch (error) {
+      this.logger.warn("getCarbonPricesForClient failed, falling back to default", { error });
+      return this.getCarbonPrices();
+    }
+  }
+
+  /**
    * Clear the cache to force reload
    */
   clearCache(): void {
