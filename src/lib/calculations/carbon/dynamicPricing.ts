@@ -2,6 +2,7 @@ import { systemSettingsService } from "@/services/systemSettingsService";
 import { vintageConfigService } from "@/services/vintageConfigService";
 import { CARBON_PRICES } from "./constants";
 import { logger } from "@/lib/logger";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Filter carbon prices to exclude years before the minimum vintage year
