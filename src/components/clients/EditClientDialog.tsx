@@ -214,6 +214,31 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
             />
           </div>
 
+          {isAdmin && (
+            <div>
+              <Label htmlFor="carbonRateSet">Carbon rate set</Label>
+              <Select value={rateSetId} onValueChange={setRateSetId} disabled={isSubmitting}>
+                <SelectTrigger id="carbonRateSet">
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__default__">Default (system-wide)</SelectItem>
+                  {rateSets
+                    .filter((s) => !s.is_default)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Overrides the default carbon prices for this client's revenue calculations.
+              </p>
+            </div>
+          )}
+
+
           <DialogFooter>
             <Button
               type="button"
