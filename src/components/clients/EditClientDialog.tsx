@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnifiedClientService } from '@/services/unified/clients/UnifiedClientService';
 import { useToast } from '@/hooks/use-toast';
 import { ClientData } from '@/hooks/clients/types';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth';
+import { carbonRateSetsService, CarbonRateSet } from '@/services/carbonRateSetsService';
+import { supabase } from '@/integrations/supabase/client';
+import { dynamicCarbonPricingService } from '@/lib/calculations/carbon/dynamicPricing';
 
 interface EditClientDialogProps {
   open: boolean;
@@ -18,6 +23,8 @@ interface EditClientDialogProps {
 
 export function EditClientDialog({ open, onOpenChange, client, onSuccess }: EditClientDialogProps) {
   const { toast } = useToast();
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -27,6 +34,9 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
     companyName: '',
     notes: '',
   });
+  const [rateSets, setRateSets] = useState<CarbonRateSet[]>([]);
+  const [rateSetId, setRateSetId] = useState<string>('__default__');
+  const [initialRateSetId, setInitialRateSetId] = useState<string>('__default__');
 
   useEffect(() => {
     if (client) {
@@ -45,6 +55,34 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
     }
   }, [client]);
 
+  // Load rate sets and current assignment (admin only)
+  useEffect(() => {
+    if (!open || !isAdmin || !client) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [sets, { data }] = await Promise.all([
+          carbonRateSetsService.list(),
+          supabase
+            .from('clients')
+            .select('carbon_rate_set_id')
+            .eq('id', client.client_id)
+            .maybeSingle(),
+        ]);
+        if (cancelled) return;
+        setRateSets(sets);
+        const current = (data as { carbon_rate_set_id?: string | null } | null)?.carbon_rate_set_id ?? '__default__';
+        setRateSetId(current);
+        setInitialRateSetId(current);
+      } catch (e) {
+        console.error('Failed to load rate sets', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isAdmin, client]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return;
@@ -59,6 +97,24 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
       companyName: formData.companyName || undefined,
       notes: formData.notes || undefined,
     });
+
+    // Update rate set assignment separately (admin only, if changed)
+    if (isAdmin && rateSetId !== initialRateSetId) {
+      const newValue = rateSetId === '__default__' ? null : rateSetId;
+      const { error: rsErr } = await supabase
+        .from('clients')
+        .update({ carbon_rate_set_id: newValue })
+        .eq('id', client.client_id);
+      if (rsErr) {
+        toast({
+          title: 'Rate set update failed',
+          description: rsErr.message,
+          variant: 'destructive',
+        });
+      } else {
+        dynamicCarbonPricingService.clearCache();
+      }
+    }
 
     if (result.success) {
       toast({
@@ -77,6 +133,7 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
 
     setIsSubmitting(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -156,6 +213,31 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
               placeholder="Internal notes about this client..."
             />
           </div>
+
+          {isAdmin && (
+            <div>
+              <Label htmlFor="carbonRateSet">Carbon rate set</Label>
+              <Select value={rateSetId} onValueChange={setRateSetId} disabled={isSubmitting}>
+                <SelectTrigger id="carbonRateSet">
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__default__">Default (system-wide)</SelectItem>
+                  {rateSets
+                    .filter((s) => !s.is_default)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Overrides the default carbon prices for this client's revenue calculations.
+              </p>
+            </div>
+          )}
+
 
           <DialogFooter>
             <Button

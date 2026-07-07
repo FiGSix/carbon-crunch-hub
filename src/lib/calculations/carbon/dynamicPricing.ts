@@ -2,6 +2,7 @@ import { systemSettingsService } from "@/services/systemSettingsService";
 import { vintageConfigService } from "@/services/vintageConfigService";
 import { CARBON_PRICES } from "./constants";
 import { logger } from "@/lib/logger";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Filter carbon prices to exclude years before the minimum vintage year
@@ -61,18 +62,35 @@ class DynamicCarbonPricingService {
       // Get minimum vintage year first
       const minimumYear = await vintageConfigService.getMinimumVintageYear();
 
-      // Try to load from system settings
-      const dynamicPrices = await systemSettingsService.getCarbonPrices();
-      
+      // Prefer the new default rate set
+      let dynamicPrices: Record<string, number> | null = null;
+      try {
+        const { data: def } = await supabase
+          .from("carbon_rate_sets")
+          .select("prices")
+          .eq("is_default", true)
+          .maybeSingle();
+        if (def?.prices && Object.keys(def.prices as object).length > 0) {
+          dynamicPrices = def.prices as Record<string, number>;
+        }
+      } catch (e) {
+        this.logger.warn("Failed to read default rate set, falling back to system_settings", { error: e });
+      }
+
+      // Fallback to legacy system_settings.carbon_prices
+      if (!dynamicPrices) {
+        dynamicPrices = await systemSettingsService.getCarbonPrices();
+      }
+
       if (dynamicPrices && Object.keys(dynamicPrices).length > 0) {
         // Filter prices based on minimum vintage year
         const filteredDynamicPrices = filterPricesFromYear(dynamicPrices, minimumYear);
         this.cachedPrices = filteredDynamicPrices;
         this.lastCacheTime = now;
-        this.logger.info("Loaded dynamic carbon prices (filtered from vintage year)", { 
+        this.logger.info("Loaded dynamic carbon prices (filtered from vintage year)", {
           minimumYear,
           total: Object.keys(dynamicPrices).length,
-          filtered: Object.keys(filteredDynamicPrices).length
+          filtered: Object.keys(filteredDynamicPrices).length,
         });
         return filteredDynamicPrices;
       }
@@ -113,6 +131,61 @@ class DynamicCarbonPricingService {
     const prices = await this.getCarbonPrices();
     const yearStr = year.toString();
     return prices[yearStr] || 0;
+  }
+
+  /**
+   * Get carbon prices for a specific client. If the client has an
+   * assigned carbon_rate_set_id, use those; otherwise fall back to the
+   * default rate set / system settings. Result is filtered by minimum
+   * vintage year, same as getCarbonPrices().
+   */
+  async getCarbonPricesForClient(clientId?: string | null): Promise<Record<string, number>> {
+    try {
+      const minimumYear = await vintageConfigService.getMinimumVintageYear();
+
+      let overridePrices: Record<string, number> | null = null;
+
+      if (clientId) {
+        const { data: client } = await supabase
+          .from("clients")
+          .select("carbon_rate_set_id")
+          .eq("id", clientId)
+          .maybeSingle();
+
+        const rateSetId = (client as { carbon_rate_set_id?: string | null } | null)?.carbon_rate_set_id;
+        if (rateSetId) {
+          const { data: set } = await supabase
+            .from("carbon_rate_sets")
+            .select("prices")
+            .eq("id", rateSetId)
+            .maybeSingle();
+          if (set?.prices && Object.keys(set.prices as object).length > 0) {
+            overridePrices = set.prices as Record<string, number>;
+          }
+        }
+      }
+
+      if (!overridePrices) {
+        // Try the default rate set first, then fall back to legacy system_settings, then constants.
+        const { data: def } = await supabase
+          .from("carbon_rate_sets")
+          .select("prices")
+          .eq("is_default", true)
+          .maybeSingle();
+        if (def?.prices && Object.keys(def.prices as object).length > 0) {
+          overridePrices = def.prices as Record<string, number>;
+        }
+      }
+
+      if (!overridePrices) {
+        return this.getCarbonPrices();
+      }
+
+      return filterPricesFromYear(overridePrices, minimumYear);
+    } catch (error) {
+      this.logger.warn("getCarbonPricesForClient failed, falling back to default", { error });
+      return this.getCarbonPrices();
+    }
   }
 
   /**

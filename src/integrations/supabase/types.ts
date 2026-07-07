@@ -351,6 +351,36 @@ export type Database = {
         }
         Relationships: []
       }
+      carbon_rate_sets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          name: string
+          prices: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          prices?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          prices?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_access_audit: {
         Row: {
           accessed_at: string
@@ -656,6 +686,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          carbon_rate_set_id: string | null
           cession_signed_at: string | null
           client_company_id: string | null
           company_name: string | null
@@ -677,6 +708,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          carbon_rate_set_id?: string | null
           cession_signed_at?: string | null
           client_company_id?: string | null
           company_name?: string | null
@@ -698,6 +730,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          carbon_rate_set_id?: string | null
           cession_signed_at?: string | null
           client_company_id?: string | null
           company_name?: string | null
@@ -719,6 +752,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_carbon_rate_set_id_fkey"
+            columns: ["carbon_rate_set_id"]
+            isOneToOne: false
+            referencedRelation: "carbon_rate_sets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_client_company_id_fkey"
             columns: ["client_company_id"]
