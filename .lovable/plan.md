@@ -1,29 +1,79 @@
-## Scope
 
-Frontend/presentation-only fixes for mobile viewports (375px & 414px). No business logic changes. The register and home pages review cleanly at both widths; all fixes below target the calculator page.
+## Goal
 
-## Findings from mobile screenshots
+Allow admins to define multiple named carbon price sets (full year → price maps) and assign one to any client. All revenue calculations (frontend, dashboards, edge functions, PDFs) will use the client's assigned set when present, otherwise fall back to the current default `system_settings.carbon_prices`.
 
-1. **"Crunch the Numbers" pill badge wraps to two lines** on 375px — the absolutely‑positioned badge sits over a container with `px-4` padding, and the pill's text lacks `whitespace-nowrap`, so it wraps awkwardly.
-2. **Commissioning Date button truncates** — placeholder "Select the date your system was installed" gets clipped ("installe…") on 375px. Text is too long for the trigger at mobile width.
-3. **Dev-only `AuthStatusMonitor` widget overlaps the bottom of every page** in the mobile preview (fixed bottom‑right). It's gated to `import.meta.env.DEV` so it won't reach production, but it covers CTAs during mobile development/review. It should be hidden on small screens in dev too.
-4. All primary CTAs (`Calculate My Earnings`, `Create Account`, `Start Earning`, `Calculate My Earnings` on home) already meet the 44px tap-target minimum — no changes needed there.
-5. Register form's stacked full-width fields are fine on mobile; no cramping.
+## Database
 
-## Fixes
+New table `public.carbon_rate_sets`:
+- `name` (text, unique) — e.g. "Default", "Premium Tier A"
+- `prices` (jsonb) — `{ "2024": 78.36, "2025": 97.34, ... }`
+- `is_default` (boolean) — exactly one row true; used when a client has no assignment
+- standard `id`, `created_at`, `updated_at`, `created_by`
 
-### `src/pages/calculator/CalculatorForm.tsx`
-- Add `whitespace-nowrap` to the "Crunch the Numbers" pill's inner `<span>` (line ~135) so it stays on one line.
-- Shorten the Commissioning Date placeholder on mobile: use a shorter label like `Pick installation date` (or split with `sm:` classes to keep the longer copy on larger screens). Also ensure the trigger's inner text has `truncate` so it never overflows if a locale renders long.
+Add column to `public.clients`:
+- `carbon_rate_set_id` (uuid, nullable, FK → carbon_rate_sets.id, ON DELETE SET NULL)
 
-### `src/components/auth/AuthStatusMonitor.tsx`
-- Add a `hidden sm:block` (or `md:block`) wrapper on the outer fixed container so the dev debug widget doesn't cover mobile content during preview/review. Production behavior is unchanged (still hidden entirely).
+Migration also:
+- Seeds one row named "Default" from the current `system_settings.carbon_prices` value with `is_default = true`
+- Adds GRANTs (`authenticated` read; admin write via RLS + `service_role` ALL)
+- RLS: any authenticated user can `SELECT` (needed for calc lookups); only admins (`has_role(auth.uid(),'admin')`) can `INSERT/UPDATE/DELETE`
+- Trigger to keep exactly one `is_default = true`
 
-## Verification
-- Re-run Playwright screenshots at 375 and 414 for `/`, `/calculator`, `/register`.
-- Confirm the pill sits on one line, the date button shows the full placeholder, and no floating widget covers CTAs at mobile widths.
-- Typecheck.
+The legacy `system_settings.carbon_prices` row stays as a read-through fallback so nothing breaks mid-deploy, but the app reads from `carbon_rate_sets` going forward.
+
+## Backend / services
+
+`src/services/carbonRateSetsService.ts` (new):
+- `listRateSets()`, `getRateSet(id)`, `getDefaultRateSet()`
+- `createRateSet(name, prices)`, `updateRateSet(id, {name?, prices?})`, `deleteRateSet(id)` (blocked if default or in use)
+- `setDefault(id)`
+
+`src/lib/calculations/carbon/dynamicPricing.ts`:
+- Extend `dynamicCarbonPricingService` with `getCarbonPricesForClient(clientId?)` which:
+  1. If `clientId` and client has `carbon_rate_set_id` → load that set
+  2. Else → load `is_default = true` set
+  3. Fallback to current constants if neither found
+- Keep the existing `getCarbonPrices()` returning the default set so untouched call-sites keep working.
+
+`supabase/functions/_shared/carbonPricing.ts`:
+- Add `getCarbonPricesForClient(supabase, clientId?)` mirroring the frontend behavior.
+- Update the edge functions that currently call `getCarbonPrices` and know a client context (proposals, dashboards, PDFs) to pass the client id.
+
+## Calculation call-sites
+
+Thread an optional `clientId` (or `carbonPrices` map) through the calculation entry points so the correct set is used everywhere:
+- `src/services/calculations/carbon/pricing.ts` (`calculateRevenueByYear`, `calculateRevenueByYearFromKwhSync` callers)
+- `src/services/calculations/carbon/UnifiedCarbonService` / `src/services/unified/*`
+- `src/utils/proposals/revenueCalculators.ts`
+- `src/lib/calculations/carbon/clientPricing.ts`
+- Dashboard hooks that compute revenue (`useAdminVintageRevenueBreakdown`, `useAgentVintageRevenueBreakdown`, `useVintageRevenueBreakdown`, etc.)
+- PDF generation (`src/utils/pdf/proposalPdfTemplate.ts`) and any proposal server functions
+
+Where a `clientId` is available in context, pass it; sync paths receive the pre-fetched `carbonPrices` map for the client.
+
+## Admin UI
+
+Replace `CarbonPriceManager` with `CarbonRateSetsManager` under `System Settings`:
+- List of rate sets (cards or table)
+- Per set: name, "Default" badge, year/price rows, Add year, Save, Rename, "Set as default", Delete (disabled if default or referenced by any client)
+- "New rate set" button (optionally clone from an existing set)
+- Uses the existing look and feel
+
+Assignment UI on the client edit/detail page:
+- New "Carbon rate set" select showing all sets, defaulting to "Default"
+- Admin-only field; writes `clients.carbon_rate_set_id`
 
 ## Out of scope
-- Any change to form logic, field set, validation, or the referral/share button (already positioned correctly, not overlapping form CTAs).
-- Register and home page layouts (verified clean at both widths).
+
+- Percentage/multiplier overrides
+- Per-year (partial) overrides
+- Bulk assignment of many clients at once
+- Snapshotting historical proposals (they'll use the client's current set on recompute; if we later want frozen values we'll add a separate `proposals.carbon_prices_snapshot` column)
+
+## Technical notes
+
+- Reuse `has_role(auth.uid(),'admin')` for write policies (keeps `user_roles` pattern intact).
+- The default-uniqueness trigger flips any other row to `false` when a new default is set, in one statement, to avoid race conditions.
+- Add `carbonRateSets` query keys to `src/lib/queryKeys.ts` and invalidate after mutations.
+- Existing `system_settings.carbon_prices` row is kept but no longer written to by the UI; a follow-up cleanup migration can drop it once we're confident nothing reads it.
