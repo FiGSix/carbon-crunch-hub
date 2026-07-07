@@ -23,6 +23,8 @@ interface EditClientDialogProps {
 
 export function EditClientDialog({ open, onOpenChange, client, onSuccess }: EditClientDialogProps) {
   const { toast } = useToast();
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -32,6 +34,9 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
     companyName: '',
     notes: '',
   });
+  const [rateSets, setRateSets] = useState<CarbonRateSet[]>([]);
+  const [rateSetId, setRateSetId] = useState<string>('__default__');
+  const [initialRateSetId, setInitialRateSetId] = useState<string>('__default__');
 
   useEffect(() => {
     if (client) {
@@ -50,6 +55,34 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
     }
   }, [client]);
 
+  // Load rate sets and current assignment (admin only)
+  useEffect(() => {
+    if (!open || !isAdmin || !client) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [sets, { data }] = await Promise.all([
+          carbonRateSetsService.list(),
+          supabase
+            .from('clients')
+            .select('carbon_rate_set_id')
+            .eq('id', client.client_id)
+            .maybeSingle(),
+        ]);
+        if (cancelled) return;
+        setRateSets(sets);
+        const current = (data as { carbon_rate_set_id?: string | null } | null)?.carbon_rate_set_id ?? '__default__';
+        setRateSetId(current);
+        setInitialRateSetId(current);
+      } catch (e) {
+        console.error('Failed to load rate sets', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isAdmin, client]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return;
@@ -64,6 +97,24 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
       companyName: formData.companyName || undefined,
       notes: formData.notes || undefined,
     });
+
+    // Update rate set assignment separately (admin only, if changed)
+    if (isAdmin && rateSetId !== initialRateSetId) {
+      const newValue = rateSetId === '__default__' ? null : rateSetId;
+      const { error: rsErr } = await supabase
+        .from('clients')
+        .update({ carbon_rate_set_id: newValue })
+        .eq('id', client.client_id);
+      if (rsErr) {
+        toast({
+          title: 'Rate set update failed',
+          description: rsErr.message,
+          variant: 'destructive',
+        });
+      } else {
+        dynamicCarbonPricingService.clearCache();
+      }
+    }
 
     if (result.success) {
       toast({
@@ -82,6 +133,7 @@ export function EditClientDialog({ open, onOpenChange, client, onSuccess }: Edit
 
     setIsSubmitting(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
