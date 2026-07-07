@@ -62,18 +62,35 @@ class DynamicCarbonPricingService {
       // Get minimum vintage year first
       const minimumYear = await vintageConfigService.getMinimumVintageYear();
 
-      // Try to load from system settings
-      const dynamicPrices = await systemSettingsService.getCarbonPrices();
-      
+      // Prefer the new default rate set
+      let dynamicPrices: Record<string, number> | null = null;
+      try {
+        const { data: def } = await supabase
+          .from("carbon_rate_sets")
+          .select("prices")
+          .eq("is_default", true)
+          .maybeSingle();
+        if (def?.prices && Object.keys(def.prices as object).length > 0) {
+          dynamicPrices = def.prices as Record<string, number>;
+        }
+      } catch (e) {
+        this.logger.warn("Failed to read default rate set, falling back to system_settings", { error: e });
+      }
+
+      // Fallback to legacy system_settings.carbon_prices
+      if (!dynamicPrices) {
+        dynamicPrices = await systemSettingsService.getCarbonPrices();
+      }
+
       if (dynamicPrices && Object.keys(dynamicPrices).length > 0) {
         // Filter prices based on minimum vintage year
         const filteredDynamicPrices = filterPricesFromYear(dynamicPrices, minimumYear);
         this.cachedPrices = filteredDynamicPrices;
         this.lastCacheTime = now;
-        this.logger.info("Loaded dynamic carbon prices (filtered from vintage year)", { 
+        this.logger.info("Loaded dynamic carbon prices (filtered from vintage year)", {
           minimumYear,
           total: Object.keys(dynamicPrices).length,
-          filtered: Object.keys(filteredDynamicPrices).length
+          filtered: Object.keys(filteredDynamicPrices).length,
         });
         return filteredDynamicPrices;
       }
