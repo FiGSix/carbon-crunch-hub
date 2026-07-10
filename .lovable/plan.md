@@ -1,79 +1,46 @@
+## Root cause
 
-## Goal
+The weekly roundup shows Audit Ready projects (e.g. "48 Neptune (Goodall Group)") under "Needs client documents / cession" because `audit_ready` is never actually loaded onto the proposal objects passed into the blocker builder.
 
-Allow admins to define multiple named carbon price sets (full year → price maps) and assign one to any client. All revenue calculations (frontend, dashboards, edge functions, PDFs) will use the client's assigned set when present, otherwise fall back to the current default `system_settings.carbon_prices`.
+In `supabase/functions/send-weekly-roundup/index.ts`:
 
-## Database
+- `fetchAllProposals()` selects from `proposals` without any `audit_ready` value — the real flag lives on `project_onboarding.audit_ready`, joined via `proposal_id`.
+- `ProposalData.audit_ready` is declared optional and is never populated.
+- Aggregate metrics happen to work because they look up `onboardingMap.get(p.id)?.audit_ready`.
+- But `buildAgentEmail()` passes `p.audit_ready` (always `undefined`) into `buildAgentBlockers()` and `calculateAgentRevenueLens()`.
+- `buildAgentBlockers()` filters `signedProposalsForAgent.filter(p => !p.audit_ready)`; with `undefined`, every signed project is kept and re-classified against docs/cession, producing false blockers.
 
-New table `public.carbon_rate_sets`:
-- `name` (text, unique) — e.g. "Default", "Premium Tier A"
-- `prices` (jsonb) — `{ "2024": 78.36, "2025": 97.34, ... }`
-- `is_default` (boolean) — exactly one row true; used when a client has no assignment
-- standard `id`, `created_at`, `updated_at`, `created_by`
+## Fix (two parts)
 
-Add column to `public.clients`:
-- `carbon_rate_set_id` (uuid, nullable, FK → carbon_rate_sets.id, ON DELETE SET NULL)
+### 1. Denormalize `audit_ready` onto `proposals` (source of truth stays on `project_onboarding`)
 
-Migration also:
-- Seeds one row named "Default" from the current `system_settings.carbon_prices` value with `is_default = true`
-- Adds GRANTs (`authenticated` read; admin write via RLS + `service_role` ALL)
-- RLS: any authenticated user can `SELECT` (needed for calc lookups); only admins (`has_role(auth.uid(),'admin')`) can `INSERT/UPDATE/DELETE`
-- Trigger to keep exactly one `is_default = true`
+Schema migration:
 
-The legacy `system_settings.carbon_prices` row stays as a read-through fallback so nothing breaks mid-deploy, but the app reads from `carbon_rate_sets` going forward.
+- Add column `proposals.audit_ready boolean NOT NULL DEFAULT false`.
+- Add index `idx_proposals_audit_ready` on `(audit_ready)` (partial `WHERE audit_ready = true` if we want it lean).
+- Backfill: `UPDATE proposals p SET audit_ready = COALESCE(po.audit_ready, false) FROM project_onboarding po WHERE po.proposal_id = p.id;`
+- Trigger on `project_onboarding`:
+  - `AFTER INSERT OR UPDATE OF audit_ready ON project_onboarding`
+  - Function `sync_proposal_audit_ready()` (SECURITY DEFINER, `SET search_path = public`) that does `UPDATE proposals SET audit_ready = NEW.audit_ready WHERE id = NEW.proposal_id AND audit_ready IS DISTINCT FROM NEW.audit_ready;`
+  - Also handle `AFTER DELETE` → reset to `false`.
+- No RLS changes needed (existing proposals policies already cover the column).
 
-## Backend / services
+### 2. Fix the weekly roundup to use the denormalized flag
 
-`src/services/carbonRateSetsService.ts` (new):
-- `listRateSets()`, `getRateSet(id)`, `getDefaultRateSet()`
-- `createRateSet(name, prices)`, `updateRateSet(id, {name?, prices?})`, `deleteRateSet(id)` (blocked if default or in use)
-- `setDefault(id)`
+In `supabase/functions/send-weekly-roundup/index.ts`:
 
-`src/lib/calculations/carbon/dynamicPricing.ts`:
-- Extend `dynamicCarbonPricingService` with `getCarbonPricesForClient(clientId?)` which:
-  1. If `clientId` and client has `carbon_rate_set_id` → load that set
-  2. Else → load `is_default = true` set
-  3. Fallback to current constants if neither found
-- Keep the existing `getCarbonPrices()` returning the default set so untouched call-sites keep working.
+- `fetchAllProposals()`: add `audit_ready` to the `.select(...)` list so every downstream consumer receives the real value.
+- Optionally simplify the existing `onboardingMap.get(p.id)?.audit_ready` lookups in the metric functions to just read `p.audit_ready` (kept as follow-up cleanup — not required for the bug fix).
+- `ProposalData.audit_ready` becomes `boolean` (non-optional).
+- No changes needed in `blockers.ts` — its logic is correct once the input is truthful.
 
-`supabase/functions/_shared/carbonPricing.ts`:
-- Add `getCarbonPricesForClient(supabase, clientId?)` mirroring the frontend behavior.
-- Update the edge functions that currently call `getCarbonPrices` and know a client context (proposals, dashboards, PDFs) to pass the client id.
+### 3. Regenerate Supabase types
 
-## Calculation call-sites
+After the migration runs, `src/integrations/supabase/types.ts` will regenerate automatically; frontend TypeScript will pick up the new `audit_ready` column without extra edits.
 
-Thread an optional `clientId` (or `carbonPrices` map) through the calculation entry points so the correct set is used everywhere:
-- `src/services/calculations/carbon/pricing.ts` (`calculateRevenueByYear`, `calculateRevenueByYearFromKwhSync` callers)
-- `src/services/calculations/carbon/UnifiedCarbonService` / `src/services/unified/*`
-- `src/utils/proposals/revenueCalculators.ts`
-- `src/lib/calculations/carbon/clientPricing.ts`
-- Dashboard hooks that compute revenue (`useAdminVintageRevenueBreakdown`, `useAgentVintageRevenueBreakdown`, `useVintageRevenueBreakdown`, etc.)
-- PDF generation (`src/utils/pdf/proposalPdfTemplate.ts`) and any proposal server functions
+## Verification
 
-Where a `clientId` is available in context, pass it; sync paths receive the pre-fetched `carbonPrices` map for the client.
-
-## Admin UI
-
-Replace `CarbonPriceManager` with `CarbonRateSetsManager` under `System Settings`:
-- List of rate sets (cards or table)
-- Per set: name, "Default" badge, year/price rows, Add year, Save, Rename, "Set as default", Delete (disabled if default or referenced by any client)
-- "New rate set" button (optionally clone from an existing set)
-- Uses the existing look and feel
-
-Assignment UI on the client edit/detail page:
-- New "Carbon rate set" select showing all sets, defaulting to "Default"
-- Admin-only field; writes `clients.carbon_rate_set_id`
-
-## Out of scope
-
-- Percentage/multiplier overrides
-- Per-year (partial) overrides
-- Bulk assignment of many clients at once
-- Snapshotting historical proposals (they'll use the client's current set on recompute; if we later want frozen values we'll add a separate `proposals.carbon_prices_snapshot` column)
-
-## Technical notes
-
-- Reuse `has_role(auth.uid(),'admin')` for write policies (keeps `user_roles` pattern intact).
-- The default-uniqueness trigger flips any other row to `false` when a new default is set, in one statement, to avoid race conditions.
-- Add `carbonRateSets` query keys to `src/lib/queryKeys.ts` and invalidate after mutations.
-- Existing `system_settings.carbon_prices` row is kept but no longer written to by the UI; a follow-up cleanup migration can drop it once we're confident nothing reads it.
+- Backfill query result: spot-check "48 Neptune" — `proposals.audit_ready` should be `true`.
+- Toggle `project_onboarding.audit_ready` on a test row and confirm the trigger mirrors the value onto `proposals`.
+- Re-run the `send-weekly-roundup` edge function for the affected agent: "48 Neptune (Goodall Group)" should no longer appear under "Needs client documents / cession".
+- Audit-ready totals and revenue-lens numbers should be unchanged or now correctly higher.
