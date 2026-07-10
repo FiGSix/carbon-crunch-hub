@@ -2711,6 +2711,7 @@ export type Database = {
           annual_energy: number | null
           archived_at: string | null
           archived_by: string | null
+          audit_ready: boolean
           automation_pause_reason: string | null
           automation_paused: boolean | null
           carbon_credits: number | null
@@ -2766,6 +2767,7 @@ export type Database = {
           annual_energy?: number | null
           archived_at?: string | null
           archived_by?: string | null
+          audit_ready?: boolean
           automation_pause_reason?: string | null
           automation_paused?: boolean | null
           carbon_credits?: number | null
@@ -2821,6 +2823,7 @@ export type Database = {
           annual_energy?: number | null
           archived_at?: string | null
           archived_by?: string | null
+          audit_ready?: boolean
           automation_pause_reason?: string | null
           automation_paused?: boolean | null
           carbon_credits?: number | null
