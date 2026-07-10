@@ -71,7 +71,7 @@ interface ProposalData {
   signed_at: string | null;
   created_at: string;
   updated_at: string | null;
-  audit_ready?: boolean;
+  audit_ready: boolean;
 }
 
 interface ProjectOnboardingData {
