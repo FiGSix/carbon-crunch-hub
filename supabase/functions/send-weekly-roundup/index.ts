@@ -329,7 +329,7 @@ async function fetchAllProposals(): Promise<ProposalData[]> {
   
   const { data, error } = await supabase
     .from("proposals")
-    .select("id, title, status, system_size_kwp, carbon_credits, client_share_percentage, agent_commission_percentage, agent_id, client_reference_id, signed_at, created_at, updated_at")
+    .select("id, title, status, system_size_kwp, carbon_credits, client_share_percentage, agent_commission_percentage, agent_id, client_reference_id, signed_at, created_at, updated_at, audit_ready")
     .is("deleted_at", null)
     .is("archived_at", null);
   
