@@ -13,6 +13,43 @@ interface OptimizedLoaderProps {
   timeout?: number;
 }
 
+// Detect a dynamic-import / chunk load failure (stale bundle after deploy)
+function isChunkLoadError(error: unknown): boolean {
+  if (!error) return false;
+  const err = error as { name?: string; message?: string };
+  const name = err.name || '';
+  const message = err.message || '';
+  return (
+    name === 'ChunkLoadError' ||
+    /Loading chunk [\d]+ failed/i.test(message) ||
+    /Failed to fetch dynamically imported module/i.test(message) ||
+    /Importing a module script failed/i.test(message) ||
+    /error loading dynamically imported module/i.test(message) ||
+    /dynamically imported module/i.test(message)
+  );
+}
+
+// Reload with a cache-busting query param so the CDN/browser fetches
+// a fresh index.html (which references current chunk hashes).
+async function hardReloadWithCacheBust(): Promise<void> {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
+    }
+    if (typeof caches !== 'undefined') {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k).catch(() => undefined)));
+    }
+  } catch {
+    // best-effort
+  }
+  const { pathname, search, hash } = window.location;
+  const sep = search ? '&' : '?';
+  const busted = `${pathname}${search}${sep}v=${Date.now()}${hash}`;
+  window.location.replace(busted);
+}
+
 // Enhanced loading component with better UX
 const DefaultLoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[200px]">
@@ -27,12 +64,12 @@ const DefaultErrorFallback = () => (
   <div className="flex items-center justify-center min-h-[200px]">
     <div className="text-center">
       <div className="text-destructive text-lg mb-2">⚠️</div>
-      <p className="text-sm text-muted-foreground">Failed to load component</p>
-      <button 
-        onClick={() => window.location.reload()} 
+      <p className="text-sm text-muted-foreground">The app was updated. Reloading the latest version...</p>
+      <button
+        onClick={() => { void hardReloadWithCacheBust(); }}
         className="mt-2 text-xs text-primary hover:underline"
       >
-        Refresh page
+        Reload now
       </button>
     </div>
   </div>
@@ -71,38 +108,69 @@ export const OptimizedLoader: React.FC<OptimizedLoaderProps> = ({
 };
 
 /**
- * Create an optimized lazy component with built-in error handling
+ * Create an optimized lazy component with built-in error handling.
+ * On a chunk-load failure (stale bundle after deploy), auto-recover ONCE
+ * with a cache-busting hard reload; if that already happened this session,
+ * render a manual reload UI to avoid an infinite loop.
  */
 export function createOptimizedLazyComponent<T extends ComponentType<any>>(
   importFunc: () => Promise<{ default: T }>,
   componentName?: string
 ): React.LazyExoticComponent<T> {
+  const reloadFlagKey = `chunk-reload:${componentName || 'unknown'}`;
+
   const LazyComponent = lazy(async () => {
     try {
       const startTime = performance.now();
       const module = await importFunc();
       const loadTime = performance.now() - startTime;
-      
+
       if (import.meta.env.DEV && componentName) {
         console.log(`📦 Loaded ${componentName} in ${loadTime.toFixed(1)}ms`);
       }
-      
+
+      // Successful load — clear the retry flag so a future stale-cache event can auto-recover again
+      try { sessionStorage.removeItem(reloadFlagKey); } catch { /* ignore */ }
+
       return module;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error(`❌ Failed to load ${componentName || 'component'}:`, error);
       }
-      
-      // Return a fallback component instead of throwing
+
+      // Auto-recover from stale chunk errors exactly once per session per component
+      if (isChunkLoadError(error)) {
+        let alreadyReloaded = false;
+        try { alreadyReloaded = sessionStorage.getItem(reloadFlagKey) === '1'; } catch { /* ignore */ }
+
+        if (!alreadyReloaded) {
+          try { sessionStorage.setItem(reloadFlagKey, '1'); } catch { /* ignore */ }
+          // Fire-and-forget; the page will navigate away
+          void hardReloadWithCacheBust();
+          // Return a minimal placeholder while the reload happens
+          return {
+            default: (() => (
+              <div className="flex items-center justify-center min-h-[200px]">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground">Updating to the latest version...</p>
+                </div>
+              </div>
+            )) as unknown as T
+          };
+        }
+      }
+
+      // Fallback UI with a real cache-busting reload
       return {
         default: (() => (
           <div className="p-4 text-center text-muted-foreground">
-            <p>Component failed to load</p>
-            <button 
-              onClick={() => window.location.reload()}
+            <p>The app was updated. Reload to get the latest version.</p>
+            <button
+              onClick={() => { void hardReloadWithCacheBust(); }}
               className="mt-2 text-primary hover:underline text-sm"
             >
-              Retry
+              Reload now
             </button>
           </div>
         )) as unknown as T
@@ -114,7 +182,7 @@ export function createOptimizedLazyComponent<T extends ComponentType<any>>(
   if (LazyComponent as any) {
     (LazyComponent as any).displayName = `OptimizedLazy(${componentName || 'Unknown'})`;
   }
-  
+
   return LazyComponent;
 }
 
@@ -157,15 +225,15 @@ export function withOptimizedRouteLoading<T extends object>(
         errorFallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center max-w-md">
-              <h2 className="text-xl font-semibold text-destructive mb-2">Page failed to load</h2>
+              <h2 className="text-xl font-semibold text-destructive mb-2">Updating to the latest version</h2>
               <p className="text-muted-foreground mb-4">
-                There was an error loading {routeName || 'this page'}.
+                {routeName ? `${routeName} was updated.` : 'This page was updated.'} Reload to continue.
               </p>
-              <button 
-                onClick={() => window.location.reload()}
+              <button
+                onClick={() => { void hardReloadWithCacheBust(); }}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
               >
-                Reload Page
+                Reload now
               </button>
             </div>
           </div>
