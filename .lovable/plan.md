@@ -1,46 +1,59 @@
-## Root cause
+## Why shaun sees "Component failed to load. Retry" on password reset
 
-The weekly roundup shows Audit Ready projects (e.g. "48 Neptune (Goodall Group)") under "Needs client documents / cession" because `audit_ready` is never actually loaded onto the proposal objects passed into the blocker builder.
+Supabase auth logs show his reset actually worked end-to-end:
 
-In `supabase/functions/send-weekly-roundup/index.ts`:
+- 16:29:06 — `/recover` hook ran successfully (reset email sent, referer `https://crunchcarbon.com/auth/callback?type=recovery`)
+- 16:29:23 — `login` via `otp` succeeded for `shaun.slabber.africa@gmail.com`
 
-- `fetchAllProposals()` selects from `proposals` without any `audit_ready` value — the real flag lives on `project_onboarding.audit_ready`, joined via `proposal_id`.
-- `ProposalData.audit_ready` is declared optional and is never populated.
-- Aggregate metrics happen to work because they look up `onboardingMap.get(p.id)?.audit_ready`.
-- But `buildAgentEmail()` passes `p.audit_ready` (always `undefined`) into `buildAgentBlockers()` and `calculateAgentRevenueLens()`.
-- `buildAgentBlockers()` filters `signedProposalsForAgent.filter(p => !p.audit_ready)`; with `undefined`, every signed project is kept and re-classified against docs/cession, producing false blockers.
+So the recovery token was valid and the session was created. The failure is purely a **frontend chunk load error**, not an auth error.
 
-## Fix (two parts)
+### Root cause
 
-### 1. Denormalize `audit_ready` onto `proposals` (source of truth stays on `project_onboarding`)
+`src/App.tsx` loads `ResetPassword` and `AuthCallback` through `createOptimizedLazyComponent` (`src/lib/performance/OptimizedLoader.tsx`). When the dynamic `import()` throws (typically a stale `index.html` or SW cache referencing a hashed chunk from a previous deploy that no longer exists on the CDN), the helper swallows the error and renders:
 
-Schema migration:
+```
+Component failed to load
+[Retry]  → window.location.reload()
+```
 
-- Add column `proposals.audit_ready boolean NOT NULL DEFAULT false`.
-- Add index `idx_proposals_audit_ready` on `(audit_ready)` (partial `WHERE audit_ready = true` if we want it lean).
-- Backfill: `UPDATE proposals p SET audit_ready = COALESCE(po.audit_ready, false) FROM project_onboarding po WHERE po.proposal_id = p.id;`
-- Trigger on `project_onboarding`:
-  - `AFTER INSERT OR UPDATE OF audit_ready ON project_onboarding`
-  - Function `sync_proposal_audit_ready()` (SECURITY DEFINER, `SET search_path = public`) that does `UPDATE proposals SET audit_ready = NEW.audit_ready WHERE id = NEW.proposal_id AND audit_ready IS DISTINCT FROM NEW.audit_ready;`
-  - Also handle `AFTER DELETE` → reset to `false`.
-- No RLS changes needed (existing proposals policies already cover the column).
+`location.reload()` frequently re-serves the same cached HTML, so the user stays trapped on the message. Nothing tells the browser to bypass its cache or unregister the old service worker.
 
-### 2. Fix the weekly roundup to use the denormalized flag
+This is exactly what shaun is seeing: he clicks the reset link → `/auth/callback?type=recovery` on `crunchcarbon.com` verifies the token, calls `navigate('/reset-password')` → the `ResetPassword` chunk 404s from stale cache → error UI.
 
-In `supabase/functions/send-weekly-roundup/index.ts`:
+### Fix plan (frontend only)
 
-- `fetchAllProposals()`: add `audit_ready` to the `.select(...)` list so every downstream consumer receives the real value.
-- Optionally simplify the existing `onboardingMap.get(p.id)?.audit_ready` lookups in the metric functions to just read `p.audit_ready` (kept as follow-up cleanup — not required for the bug fix).
-- `ProposalData.audit_ready` becomes `boolean` (non-optional).
-- No changes needed in `blockers.ts` — its logic is correct once the input is truthful.
+1. **Detect chunk load failures explicitly** in `createOptimizedLazyComponent`.
+   - Match error name/message: `ChunkLoadError`, `Failed to fetch dynamically imported module`, `Importing a module script failed`, `error loading dynamically imported module`.
 
-### 3. Regenerate Supabase types
+2. **Auto-recover once, then hard-refresh with cache bust.**
+   - On first chunk failure per session, set a `sessionStorage` flag (`chunk-reload-<name>`) and force a bypassing reload:
+     - `location.replace(location.pathname + location.search + (search has '?' ? '&' : '?') + 'v=' + Date.now() + location.hash)`
+     - This changes the URL so the CDN/browser fetches a fresh `index.html` (which references current chunk hashes).
+   - If the flag is already set (meaning we already retried and still failed), fall through to the manual error UI so we don't infinite-loop.
 
-After the migration runs, `src/integrations/supabase/types.ts` will regenerate automatically; frontend TypeScript will pick up the new `audit_ready` column without extra edits.
+3. **Make the "Retry" button do a real cache-busting reload** instead of `window.location.reload()`:
+   - Unregister any active service workers (`navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()))`).
+   - Clear `caches.keys()` and delete each.
+   - Then navigate with the same cache-bust query string as above.
 
-## Verification
+4. **Improve the fallback copy** so the user knows what's happening: "The app was updated. Reloading the latest version..." instead of a generic "Component failed to load".
 
-- Backfill query result: spot-check "48 Neptune" — `proposals.audit_ready` should be `true`.
-- Toggle `project_onboarding.audit_ready` on a test row and confirm the trigger mirrors the value onto `proposals`.
-- Re-run the `send-weekly-roundup` edge function for the affected agent: "48 Neptune (Goodall Group)" should no longer appear under "Needs client documents / cession".
-- Audit-ready totals and revenue-lens numbers should be unchanged or now correctly higher.
+5. **No changes needed to routing, auth code, `AuthCallback`, `ResetPassword`, or `_headers`** — the auth pipeline is working; this is purely how the app recovers from a stale bundle.
+
+### Files to change
+
+- `src/lib/performance/OptimizedLoader.tsx` — add chunk-error detection, one-shot auto-reload with cache-bust, and upgrade the manual Retry button to clear SW/caches before reloading. Also apply the same handling to the timeout fallback and the default `errorFallback` in `withOptimizedRouteLoading` so any lazy route benefits (not just `ResetPassword`).
+
+### Verification
+
+- Ask shaun to hard-refresh once (Cmd/Ctrl+Shift+R) on `https://crunchcarbon.com/reset-password` — that alone should let him complete the reset today, since his session is already established.
+- After the code fix ships: simulate by renaming a built chunk locally or by keeping an old tab open across a deploy; confirm the app auto-reloads once and lands on `/reset-password` instead of showing the error UI.
+- Re-check auth logs after his next attempt to confirm `/token?grant_type=recovery` / password update returns 200.
+
+### Immediate workaround for shaun
+
+Send him a fresh reset link and tell him to:
+1. Open the link in a **private/incognito window**, or
+2. Hard-refresh (Cmd+Shift+R / Ctrl+F5) once the "Component failed to load" screen appears.
+
+Either bypasses the stale cached bundle so the `ResetPassword` chunk downloads correctly.
