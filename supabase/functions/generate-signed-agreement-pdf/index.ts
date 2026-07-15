@@ -324,8 +324,12 @@ async function generateSignedPdf(
   if (signatureImageUrl && agreement.signature_type === 'electronic_signature') {
     try {
       const sigUrl: string = signatureImageUrl;
+      // signature_image_url may be either a full URL (public/signed) or a raw storage path
+      // like "signatures/signature_<id>_<ts>.png" inside the signed-agreements bucket.
       const m = sigUrl.match(/\/object\/(?:public|sign)\/signed-agreements\/([^?]+)/);
-      const sigPath = m ? decodeURIComponent(m[1]) : null;
+      const sigPath = m
+        ? decodeURIComponent(m[1])
+        : (sigUrl.startsWith('http') ? null : sigUrl.replace(/^\/+/, ''));
       const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey2 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const adminLocal = (await import("https://esm.sh/@supabase/supabase-js@2.38.4")).createClient(
@@ -335,13 +339,21 @@ async function generateSignedPdf(
       if (sigPath) {
         console.log('[Signed PDF] Downloading signature image from storage:', sigPath);
         const { data: blob, error: dlErr } = await adminLocal.storage.from('signed-agreements').download(sigPath);
-        if (!dlErr && blob) sigBytes = await blob.arrayBuffer();
+        if (!dlErr && blob) {
+          sigBytes = await blob.arrayBuffer();
+        } else if (dlErr) {
+          console.warn('[Signed PDF] signed-agreements download failed, trying signatures bucket:', dlErr.message);
+          const { data: blob2, error: dlErr2 } = await adminLocal.storage.from('signatures').download(sigPath.replace(/^signatures\//, ''));
+          if (!dlErr2 && blob2) sigBytes = await blob2.arrayBuffer();
+          else console.error('[Signed PDF] signatures bucket download also failed:', dlErr2?.message);
+        }
       }
-      if (!sigBytes) {
+      if (!sigBytes && sigUrl.startsWith('http')) {
         // Fallback: try direct fetch (works while bucket public)
         const r = await fetch(sigUrl);
         if (r.ok) sigBytes = await r.arrayBuffer();
       }
+
       if (sigBytes) {
         signatureImage = await pdfDoc.embedPng(new Uint8Array(sigBytes));
         console.log('[Signed PDF] Signature image embedded successfully');
