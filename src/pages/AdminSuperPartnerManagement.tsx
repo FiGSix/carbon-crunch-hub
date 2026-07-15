@@ -75,6 +75,8 @@ export default function AdminSuperPartnerManagement() {
   const [spCompanies, setSpCompanies] = useState<Record<string, SpCompanyRow[]>>({});
   const [linkCompanyId, setLinkCompanyId] = useState<string>("");
   const [expandedCompany, setExpandedCompany] = useState<Record<string, boolean>>({});
+  const [overrideDraft, setOverrideDraft] = useState<Record<string, { sp: string; recruit: string }>>({});
+  const [savingOverride, setSavingOverride] = useState<Record<string, boolean>>({});
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
