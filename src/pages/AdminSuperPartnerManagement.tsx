@@ -292,7 +292,27 @@ export default function AdminSuperPartnerManagement() {
     // Refresh SP rate + historical rows
     const { data: recalcCount, error: recErr } = await supabase.rpc("recalc_super_partner_rates", { p_super_partner_id: sp.id });
     if (recErr) toast({ title: "Rates saved (recalc warning)", description: recErr.message });
-    else toast({ title: "Overrides saved", description: `Updated ${recalcCount ?? 0} historical commission rows.` });
+
+    // Auto-cascade recruit default to existing linked companies whenever it changed
+    let cascadeCount: number | null = null;
+    const recruitChanged = recruit_val !== (sp.recruit_default_commission ?? null);
+    if (recruit_val !== null && recruitChanged) {
+      const { data: applied, error: applyErr } = await (supabase as any).rpc(
+        "apply_sp_default_to_recruits",
+        { p_super_partner_id: sp.id },
+      );
+      if (applyErr) {
+        toast({ title: "Recruit default not cascaded", description: applyErr.message, variant: "destructive" });
+      } else {
+        cascadeCount = (applied as number) ?? 0;
+      }
+    }
+
+    if (!recErr) {
+      const parts = [`Updated ${recalcCount ?? 0} historical commission rows.`];
+      if (cascadeCount !== null) parts.push(`Applied ${recruit_val}% to ${cascadeCount} linked partner companies.`);
+      toast({ title: "Overrides saved", description: parts.join(" ") });
+    }
     setSavingOverride((p) => ({ ...p, [sp.id]: false }));
     await loadAll();
   };
