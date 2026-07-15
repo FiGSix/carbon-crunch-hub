@@ -159,6 +159,12 @@ export function ProposalHeader({
             proposalTitle={title}
           />
         )}
+
+        {/* Regenerate signed PDF + resend client email - Admin only, signed proposals */}
+        {!isDeleted && userRole === "admin" && proposalId && proposal?.status === 'approved' && (
+          <RegenerateSignedAgreementButton proposalId={proposalId} />
+        )}
+
         
         {/* Edit button - agents/admins on editable proposals */}
         {canEdit && proposalData && (
