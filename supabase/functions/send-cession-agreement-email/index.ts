@@ -61,23 +61,37 @@ serve(async (req) => {
 
     console.log(`[Cession Email] Fetching signed agreement PDF for proposal: ${proposalId}`);
 
-    // Fetch the signed PDF URL from proposal_agreements
-    const { data: agreement, error: agreementError } = await supabase
-      .from('proposal_agreements')
-      .select('signed_pdf_url')
-      .eq('proposal_id', proposalId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Fetch the signed PDF URL from proposal_agreements, retrying briefly in case the
+    // upstream generate-signed-agreement-pdf write hasn't propagated yet.
+    let agreement: { signed_pdf_url: string | null } | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { data, error } = await supabase
+        .from('proposal_agreements')
+        .select('signed_pdf_url')
+        .eq('proposal_id', proposalId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error(`[Cession Email] Attempt ${attempt} - error fetching agreement:`, error);
+      }
+      agreement = data ?? null;
+      if (agreement?.signed_pdf_url) break;
+      if (attempt < 3) {
+        console.log(`[Cession Email] signed_pdf_url not present on attempt ${attempt}, waiting 1500ms...`);
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
 
     // Use signed PDF if available, otherwise fall back to unsigned proposal PDF
     const pdfUrl = agreement?.signed_pdf_url || proposal.pdf_url;
 
     if (!agreement?.signed_pdf_url) {
-      console.warn('[Cession Email] Signed PDF not found, using unsigned proposal PDF as fallback');
+      console.warn('[Cession Email] ⚠️ Signed PDF still not available after retries — attaching UNSIGNED proposal PDF as fallback. Investigate generate-signed-agreement-pdf logs for this proposal.');
     } else {
       console.log('[Cession Email] Using signed agreement PDF:', pdfUrl);
     }
+
 
     let pdfAttachment = null;
 

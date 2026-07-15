@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ProposalPdfButton } from "./ProposalPdfButton";
 import { CessionAgreementPdfButton } from "./CessionAgreementPdfButton";
 import { SignedAgreementDownloadButton } from "./SignedAgreementDownloadButton";
+import { RegenerateSignedAgreementButton } from "./RegenerateSignedAgreementButton";
+
 import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
 import { ProposalEditDialog } from "./ProposalEditDialog";
 import { useNavigate } from "react-router-dom";
@@ -157,6 +159,12 @@ export function ProposalHeader({
             proposalTitle={title}
           />
         )}
+
+        {/* Regenerate signed PDF + resend client email - Admin only, signed proposals */}
+        {!isDeleted && userRole === "admin" && proposalId && proposal?.status === 'approved' && (
+          <RegenerateSignedAgreementButton proposalId={proposalId} />
+        )}
+
         
         {/* Edit button - agents/admins on editable proposals */}
         {canEdit && proposalData && (

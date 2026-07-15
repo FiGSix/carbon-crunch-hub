@@ -387,42 +387,15 @@ serve(async (req) => {
     //    propagate_master_agreement() DB trigger on INSERT into proposal_agreements.
 
 
-    // 9. Generate signed agreement PDF in background
-    (async () => {
-      try {
-        console.log('🖊️ Generating signed agreement PDF...');
-        
-        const { data: signedPdfResult, error: pdfError } = await supabase.functions.invoke(
-          'generate-signed-agreement-pdf',
-          {
-            body: { 
-              proposalId: proposal.id,
-              agreementId: newAgreement.id
-            }
-          }
-        );
-
-        if (pdfError) {
-          console.error('❌ Failed to generate signed PDF:', pdfError);
-        } else {
-          console.log('✅ Signed agreement PDF generated:', signedPdfResult?.signed_pdf_url);
-        }
-      } catch (error) {
-        console.error('❌ Error in signed PDF generation:', error);
-      }
-    })();
-
-    // 10. Mark invitation as viewed (for analytics) - only if token was used
+    // 9. Mark invitation as viewed (for analytics) - only if token was used
     if (token) {
       await supabase.rpc('mark_invitation_viewed', { token_param: token });
     }
 
-    // 10b. Persist project details collected pre-signature + trigger installer invitation
-    //      (referral-sourced proposals only). Awaited so DB writes complete before response —
-    //      previously fire-and-forget tasks were killed by edge runtime after response.
+    // 10. Persist project details collected pre-signature + trigger installer invitation
+    //     (referral-sourced proposals only).
     if (isReferral && projectDetails) {
       try {
-        // Ensure a project_onboarding row exists
         let { data: po } = await supabase
           .from('project_onboarding')
           .select('id')
@@ -442,7 +415,6 @@ serve(async (req) => {
         }
 
         if (po) {
-          // Upsert onboarding_fields with the four required pieces.
           const { data: existingFields } = await supabase
             .from('onboarding_fields')
             .select('id')
@@ -468,8 +440,6 @@ serve(async (req) => {
             await supabase.from('onboarding_fields').insert(payload);
           }
 
-          // Trigger installer invitation (or notification if already on platform).
-          // Awaited so the function actually runs before the edge worker shuts down.
           const { error: invErr } = await supabase.functions.invoke('send-installer-invitation', {
             body: { proposalId: proposal.id },
           });
@@ -480,58 +450,73 @@ serve(async (req) => {
       }
     }
 
+    // 11. Resolve client email BEFORE launching the background chain, so it's captured.
+    let clientEmail: string | null = null;
+    try {
+      if (proposal.content?.clientInfo?.email) {
+        clientEmail = proposal.content.clientInfo.email;
+      } else if (proposal.client_id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', proposal.client_id)
+          .single();
+        clientEmail = data?.email || null;
+      } else {
+        const { data } = await supabase
+          .from('clients')
+          .select('email')
+          .eq('id', signedBy)
+          .single();
+        clientEmail = data?.email || null;
+      }
+    } catch (e) {
+      console.error('[accept-proposal] failed to resolve client email', e);
+    }
 
-    // 11. Send cession agreement confirmation email in background
-    // Fetch client email asynchronously without blocking response
-    (async () => {
+    // 12. Post-signature chain: generate signed PDF FIRST, then email the client with it.
+    //     Wrapped in EdgeRuntime.waitUntil so it survives past the HTTP response
+    //     (fire-and-forget IIFEs get killed by the edge runtime after Response returns).
+    const postSign = (async () => {
       try {
-        let clientEmail: string | null = null;
+        console.log('🖊️ [post-sign] Generating signed agreement PDF...');
+        const { data: signedPdfResult, error: pdfError } = await supabase.functions.invoke(
+          'generate-signed-agreement-pdf',
+          { body: { proposalId: proposal.id, agreementId: newAgreement.id } }
+        );
 
-        // Try to get email from proposal content first
-        if (proposal.content?.clientInfo?.email) {
-          clientEmail = proposal.content.clientInfo.email;
-        } 
-        // If client_id exists, try profiles table
-        else if (proposal.client_id) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', proposal.client_id)
-            .single();
-          clientEmail = data?.email || null;
-        }
-        // Fallback to clients table using signedBy
-        else {
-          const { data } = await supabase
-            .from('clients')
-            .select('email')
-            .eq('id', signedBy)
-            .single();
-          clientEmail = data?.email || null;
+        if (pdfError) {
+          console.error('❌ [post-sign] Failed to generate signed PDF:', pdfError);
+        } else {
+          console.log('✅ [post-sign] Signed agreement PDF generated:', signedPdfResult?.signed_pdf_url);
         }
 
         if (clientEmail) {
-          console.log(`📧 Sending cession agreement email to ${clientEmail}`);
-          
-          const { data, error } = await supabase.functions.invoke('send-cession-agreement-email', {
-            body: { 
-              proposalId: proposal.id, 
-              clientEmail: clientEmail 
-            }
-          });
-
-          if (error) {
-            console.error('❌ Background email send failed:', error);
+          console.log(`📧 [post-sign] Sending cession agreement email to ${clientEmail}`);
+          const { data: emailData, error: emailError } = await supabase.functions.invoke(
+            'send-cession-agreement-email',
+            { body: { proposalId: proposal.id, clientEmail } }
+          );
+          if (emailError) {
+            console.error('❌ [post-sign] Cession email send failed:', emailError);
           } else {
-            console.log('✅ Background email sent successfully:', data);
+            console.log('✅ [post-sign] Cession email sent:', emailData);
           }
         } else {
-          console.warn('⚠️ No client email found, skipping confirmation email');
+          console.warn('⚠️ [post-sign] No client email found, skipping confirmation email');
         }
-      } catch (bgError) {
-        console.error('❌ Error in background email task:', bgError);
+      } catch (err) {
+        console.error('❌ [post-sign] Chain error:', err);
       }
-    })(); // Immediately invoked async function - fire and forget
+    })();
+
+    // @ts-ignore — EdgeRuntime is available in Supabase / Deno Deploy
+    if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(postSign);
+    }
+
+
 
     return new Response(
       JSON.stringify({ 
