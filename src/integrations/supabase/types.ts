@@ -2286,10 +2286,12 @@ export type Database = {
           notes: string | null
           onboarding_completed: boolean | null
           phone: string | null
+          recruit_default_commission: number | null
           referral_bio: string | null
           referred_by_agent_id: string | null
           referred_by_link_id: string | null
           role: string
+          sp_commission_override: number | null
           status_changed_at: string | null
           status_changed_by: string | null
           super_partner_commission_rate: number | null
@@ -2320,10 +2322,12 @@ export type Database = {
           notes?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          recruit_default_commission?: number | null
           referral_bio?: string | null
           referred_by_agent_id?: string | null
           referred_by_link_id?: string | null
           role: string
+          sp_commission_override?: number | null
           status_changed_at?: string | null
           status_changed_by?: string | null
           super_partner_commission_rate?: number | null
@@ -2354,10 +2358,12 @@ export type Database = {
           notes?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          recruit_default_commission?: number | null
           referral_bio?: string | null
           referred_by_agent_id?: string | null
           referred_by_link_id?: string | null
           role?: string
+          sp_commission_override?: number | null
           status_changed_at?: string | null
           status_changed_by?: string | null
           super_partner_commission_rate?: number | null
@@ -3576,6 +3582,10 @@ export type Database = {
       apply_referral_on_signup: {
         Args: { p_new_user_id: string; p_token: string }
         Returns: undefined
+      }
+      apply_sp_default_to_recruits: {
+        Args: { p_super_partner_id: string }
+        Returns: number
       }
       archive_proposal: {
         Args: { proposal_id: string; user_id: string }
