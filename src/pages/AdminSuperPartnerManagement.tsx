@@ -22,7 +22,8 @@ interface SuperPartner {
   phone: string | null;
   super_partner_status: string | null;
   can_create_proposals: boolean | null;
-  
+  sp_commission_override: number | null;
+  recruit_default_commission: number | null;
   created_at: string;
 }
 
@@ -74,6 +75,8 @@ export default function AdminSuperPartnerManagement() {
   const [spCompanies, setSpCompanies] = useState<Record<string, SpCompanyRow[]>>({});
   const [linkCompanyId, setLinkCompanyId] = useState<string>("");
   const [expandedCompany, setExpandedCompany] = useState<Record<string, boolean>>({});
+  const [overrideDraft, setOverrideDraft] = useState<Record<string, { sp: string; recruit: string }>>({});
+  const [savingOverride, setSavingOverride] = useState<Record<string, boolean>>({});
 
   const [newSP, setNewSP] = useState({ email: "", first_name: "", last_name: "", company_name: "", phone: "" });
 
@@ -88,7 +91,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, sp_commission_override, recruit_default_commission, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -253,6 +256,57 @@ export default function AdminSuperPartnerManagement() {
     }
     toast({ title: value ? "Direct proposal creation enabled" : "Direct proposal creation disabled" });
     loadAll();
+  };
+
+  const saveCommissionOverrides = async (sp: SuperPartner) => {
+    const draft = overrideDraft[sp.id] ?? {
+      sp: sp.sp_commission_override != null ? String(sp.sp_commission_override) : "",
+      recruit: sp.recruit_default_commission != null ? String(sp.recruit_default_commission) : "",
+    };
+    const parse = (s: string): number | null => {
+      const t = s.trim();
+      if (t === "") return null;
+      const n = parseFloat(t);
+      return Number.isFinite(n) ? n : null;
+    };
+    const sp_val = parse(draft.sp);
+    const recruit_val = parse(draft.recruit);
+    if (draft.sp.trim() !== "" && sp_val === null) {
+      toast({ title: "Invalid SP rate", variant: "destructive" });
+      return;
+    }
+    if (draft.recruit.trim() !== "" && recruit_val === null) {
+      toast({ title: "Invalid recruit rate", variant: "destructive" });
+      return;
+    }
+    setSavingOverride((p) => ({ ...p, [sp.id]: true }));
+    const { error } = await supabase
+      .from("profiles")
+      .update({ sp_commission_override: sp_val, recruit_default_commission: recruit_val })
+      .eq("id", sp.id);
+    if (error) {
+      setSavingOverride((p) => ({ ...p, [sp.id]: false }));
+      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Refresh SP rate + historical rows
+    const { data: recalcCount, error: recErr } = await supabase.rpc("recalc_super_partner_rates", { p_super_partner_id: sp.id });
+    if (recErr) toast({ title: "Rates saved (recalc warning)", description: recErr.message });
+    else toast({ title: "Overrides saved", description: `Updated ${recalcCount ?? 0} historical commission rows.` });
+    setSavingOverride((p) => ({ ...p, [sp.id]: false }));
+    await loadAll();
+  };
+
+  const applyDefaultToRecruits = async (sp: SuperPartner) => {
+    if (sp.recruit_default_commission == null) {
+      toast({ title: "Set a default recruit rate first", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await (supabase as any).rpc("apply_sp_default_to_recruits", { p_super_partner_id: sp.id });
+    if (error) { toast({ title: "Apply failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Default applied", description: `Updated ${data ?? 0} linked companies.` });
+    loadAll();
+    loadSpCompanies(sp.id);
   };
 
   const reviewRequest = async (req: LinkRequest, approve: boolean) => {
@@ -467,8 +521,67 @@ export default function AdminSuperPartnerManagement() {
                 </span>
               </div>
 
-
-
+              {(() => {
+                const draft = overrideDraft[sp.id] ?? {
+                  sp: sp.sp_commission_override != null ? String(sp.sp_commission_override) : "",
+                  recruit: sp.recruit_default_commission != null ? String(sp.recruit_default_commission) : "",
+                };
+                const setDraft = (patch: Partial<typeof draft>) =>
+                  setOverrideDraft((p) => ({ ...p, [sp.id]: { ...draft, ...patch } }));
+                return (
+                  <div className="rounded-md border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold">Commission overrides</Label>
+                      <span className="text-xs text-muted-foreground">
+                        Current effective SP rate: {(rates[sp.id] ?? 0).toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Super partner rate (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Leave blank to use MWp tier default (3% / 5%)"
+                          value={draft.sp}
+                          onChange={(e) => setDraft({ sp: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Default recruit rate (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Leave blank to use portfolio default (4% / 7%)"
+                          value={draft.recruit}
+                          onChange={(e) => setDraft({ recruit: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Recruits signing up via this SP's referral link (and any linked company without its own override)
+                      automatically get the default recruit rate. Existing company-level overrides are preserved.
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => applyDefaultToRecruits(sp)}
+                        disabled={sp.recruit_default_commission == null}
+                      >
+                        Apply default to existing recruits
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => saveCommissionOverrides(sp)}
+                        disabled={!!savingOverride[sp.id]}
+                      >
+                        {savingOverride[sp.id] ? "Saving…" : "Save overrides"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
 
 
               <div>

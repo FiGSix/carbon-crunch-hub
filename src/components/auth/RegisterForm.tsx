@@ -9,11 +9,14 @@ import { FormErrorBoundary } from '@/components/error/FormErrorBoundary';
 
 interface RegisterFormProps {
   initialRole: "client" | "agent";
+  /** When set, the role picker is hidden and role is forced to this value (e.g. SP recruit links). */
+  lockedRole?: "agent";
   invitationToken?: string;
   prefilledEmail?: string;
 }
 
-export const RegisterForm = ({ initialRole, invitationToken, prefilledEmail }: RegisterFormProps) => {
+export const RegisterForm = ({ initialRole, lockedRole, invitationToken, prefilledEmail }: RegisterFormProps) => {
+  const effectiveInitialRole = lockedRole ?? initialRole;
   const {
     formData,
     termsAccepted,
@@ -28,18 +31,24 @@ export const RegisterForm = ({ initialRole, invitationToken, prefilledEmail }: R
     handleSubmit,
     handleTermsAccept,
     invitedEmail
-  } = useRegisterForm(initialRole, invitationToken, prefilledEmail);
-  
+  } = useRegisterForm(effectiveInitialRole, invitationToken, prefilledEmail);
+
   return (
     <FormErrorBoundary formName="Registration Form">
       <form onSubmit={handleSubmit}>
       <div className="space-y-6">
-        <RegisterRoleSelect 
-          role={formData.role} 
-          onRoleChange={handleRoleChange} 
-          disabled={isLoading} 
-        />
-        
+        {lockedRole ? (
+          <div className="rounded-md border border-carbon-green-200 bg-carbon-green-50 px-4 py-3 text-sm text-carbon-green-900">
+            You're joining as a <span className="font-semibold">Partner</span> via a referral link.
+          </div>
+        ) : (
+          <RegisterRoleSelect
+            role={formData.role}
+            onRoleChange={handleRoleChange}
+            disabled={isLoading}
+          />
+        )}
+
         <RegisterPersonalInfo 
           firstName={formData.firstName}
           lastName={formData.lastName}

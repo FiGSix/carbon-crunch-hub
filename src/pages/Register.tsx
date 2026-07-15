@@ -8,25 +8,34 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 const Register = () => {
   const [searchParams] = useSearchParams();
   const invitationToken = searchParams.get('token');
-  const initialRole = searchParams.get('role') === 'agent' ? 'agent' : 'client';
   const referralToken = searchParams.get('ref');
   const prefilledEmail = searchParams.get('email');
+  const roleParam = searchParams.get('role');
+  const initialRole = roleParam === 'agent' ? 'agent' : 'client';
+
+  // If they arrived via a super-partner recruitment link (ref + role=agent),
+  // lock the role so they cannot switch to Client.
+  const lockedRole: "agent" | undefined =
+    referralToken && roleParam === 'agent' ? 'agent' : undefined;
 
   // Persist referral token for post-signup attribution
   useEffect(() => {
     if (referralToken) {
       try {
-        localStorage.setItem('crunchcarbon_ref', JSON.stringify({ token: referralToken }));
+        localStorage.setItem(
+          'crunchcarbon_ref',
+          JSON.stringify({ token: referralToken, link_type: lockedRole === 'agent' ? 'agent' : undefined }),
+        );
       } catch {
         /* noop */
       }
     }
-  }, [referralToken]);
-  
+  }, [referralToken, lockedRole]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-lg">
           <div className="mb-6">
@@ -35,19 +44,20 @@ const Register = () => {
               Back to home
             </Link>
           </div>
-          
+
           <div className="retro-card">
             <div className="text-center mb-10">
               <h1 className="text-2xl md:text-3xl font-bold text-carbon-gray-900">Create an account</h1>
               <p className="text-carbon-gray-600 mt-3">Join CrunchCarbon and start earning from carbon credits</p>
             </div>
-            
-            <RegisterForm 
-              initialRole={initialRole as "client" | "agent"} 
+
+            <RegisterForm
+              initialRole={initialRole as "client" | "agent"}
+              lockedRole={lockedRole}
               invitationToken={invitationToken || undefined}
               prefilledEmail={prefilledEmail || undefined}
             />
-            
+
             <div className="mt-8 pt-6 border-t border-border text-center">
               <p className="text-carbon-gray-600">
                 Already have an account?{" "}
@@ -59,7 +69,7 @@ const Register = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );
