@@ -521,8 +521,67 @@ export default function AdminSuperPartnerManagement() {
                 </span>
               </div>
 
-
-
+              {(() => {
+                const draft = overrideDraft[sp.id] ?? {
+                  sp: sp.sp_commission_override != null ? String(sp.sp_commission_override) : "",
+                  recruit: sp.recruit_default_commission != null ? String(sp.recruit_default_commission) : "",
+                };
+                const setDraft = (patch: Partial<typeof draft>) =>
+                  setOverrideDraft((p) => ({ ...p, [sp.id]: { ...draft, ...patch } }));
+                return (
+                  <div className="rounded-md border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold">Commission overrides</Label>
+                      <span className="text-xs text-muted-foreground">
+                        Current effective SP rate: {(rates[sp.id] ?? 0).toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Super partner rate (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Leave blank to use MWp tier default (3% / 5%)"
+                          value={draft.sp}
+                          onChange={(e) => setDraft({ sp: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Default recruit rate (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Leave blank to use portfolio default (4% / 7%)"
+                          value={draft.recruit}
+                          onChange={(e) => setDraft({ recruit: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Recruits signing up via this SP's referral link (and any linked company without its own override)
+                      automatically get the default recruit rate. Existing company-level overrides are preserved.
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => applyDefaultToRecruits(sp)}
+                        disabled={sp.recruit_default_commission == null}
+                      >
+                        Apply default to existing recruits
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => saveCommissionOverrides(sp)}
+                        disabled={!!savingOverride[sp.id]}
+                      >
+                        {savingOverride[sp.id] ? "Saving…" : "Save overrides"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
 
 
               <div>
