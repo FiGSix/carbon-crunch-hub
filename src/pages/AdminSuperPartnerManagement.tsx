@@ -22,7 +22,8 @@ interface SuperPartner {
   phone: string | null;
   super_partner_status: string | null;
   can_create_proposals: boolean | null;
-  
+  sp_commission_override: number | null;
+  recruit_default_commission: number | null;
   created_at: string;
 }
 
