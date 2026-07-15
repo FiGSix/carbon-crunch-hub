@@ -213,8 +213,10 @@ export function PartnersTable() {
                 return (
                   <TableRow key={`${a.is_invitation ? 'inv' : 'ag'}-${a.agent_id}`}>
                     <TableCell>
-                      {a.company_name || (
-                        <span className="text-muted-foreground">No company</span>
+                      {a.company_name && a.company_name !== 'Private' ? (
+                        a.company_name
+                      ) : (
+                        <span className="italic text-muted-foreground">Private</span>
                       )}
                     </TableCell>
                     <TableCell>
