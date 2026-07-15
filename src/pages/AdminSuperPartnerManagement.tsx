@@ -89,7 +89,7 @@ export default function AdminSuperPartnerManagement() {
     setLoading(true);
     const { data: sps } = await supabase
       .from("profiles")
-      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, created_at")
+      .select("id, email, first_name, last_name, company_name, phone, super_partner_status, can_create_proposals, sp_commission_override, recruit_default_commission, created_at")
       .eq("role", "super_partner")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
