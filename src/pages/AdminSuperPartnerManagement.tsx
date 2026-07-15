@@ -258,6 +258,57 @@ export default function AdminSuperPartnerManagement() {
     loadAll();
   };
 
+  const saveCommissionOverrides = async (sp: SuperPartner) => {
+    const draft = overrideDraft[sp.id] ?? {
+      sp: sp.sp_commission_override != null ? String(sp.sp_commission_override) : "",
+      recruit: sp.recruit_default_commission != null ? String(sp.recruit_default_commission) : "",
+    };
+    const parse = (s: string): number | null => {
+      const t = s.trim();
+      if (t === "") return null;
+      const n = parseFloat(t);
+      return Number.isFinite(n) ? n : null;
+    };
+    const sp_val = parse(draft.sp);
+    const recruit_val = parse(draft.recruit);
+    if (draft.sp.trim() !== "" && sp_val === null) {
+      toast({ title: "Invalid SP rate", variant: "destructive" });
+      return;
+    }
+    if (draft.recruit.trim() !== "" && recruit_val === null) {
+      toast({ title: "Invalid recruit rate", variant: "destructive" });
+      return;
+    }
+    setSavingOverride((p) => ({ ...p, [sp.id]: true }));
+    const { error } = await supabase
+      .from("profiles")
+      .update({ sp_commission_override: sp_val, recruit_default_commission: recruit_val })
+      .eq("id", sp.id);
+    if (error) {
+      setSavingOverride((p) => ({ ...p, [sp.id]: false }));
+      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Refresh SP rate + historical rows
+    const { data: recalcCount, error: recErr } = await supabase.rpc("recalc_super_partner_rates", { p_super_partner_id: sp.id });
+    if (recErr) toast({ title: "Rates saved (recalc warning)", description: recErr.message });
+    else toast({ title: "Overrides saved", description: `Updated ${recalcCount ?? 0} historical commission rows.` });
+    setSavingOverride((p) => ({ ...p, [sp.id]: false }));
+    await loadAll();
+  };
+
+  const applyDefaultToRecruits = async (sp: SuperPartner) => {
+    if (sp.recruit_default_commission == null) {
+      toast({ title: "Set a default recruit rate first", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await (supabase as any).rpc("apply_sp_default_to_recruits", { p_super_partner_id: sp.id });
+    if (error) { toast({ title: "Apply failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Default applied", description: `Updated ${data ?? 0} linked companies.` });
+    loadAll();
+    loadSpCompanies(sp.id);
+  };
+
   const reviewRequest = async (req: LinkRequest, approve: boolean) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (approve) {
