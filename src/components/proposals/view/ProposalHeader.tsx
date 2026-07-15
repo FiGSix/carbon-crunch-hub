@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ProposalPdfButton } from "./ProposalPdfButton";
 import { CessionAgreementPdfButton } from "./CessionAgreementPdfButton";
 import { SignedAgreementDownloadButton } from "./SignedAgreementDownloadButton";
+import { RegenerateSignedAgreementButton } from "./RegenerateSignedAgreementButton";
+
 import { ProposalInviteButton } from "@/components/proposals/components/ProposalInviteButton";
 import { ProposalEditDialog } from "./ProposalEditDialog";
 import { useNavigate } from "react-router-dom";
