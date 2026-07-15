@@ -1,59 +1,54 @@
-## Why shaun sees "Component failed to load. Retry" on password reset
 
-Supabase auth logs show his reset actually worked end-to-end:
+## Goals
 
-- 16:29:06 — `/recover` hook ran successfully (reset email sent, referer `https://crunchcarbon.com/auth/callback?type=recovery`)
-- 16:29:23 — `login` via `otp` succeeded for `shaun.slabber.africa@gmail.com`
+1. Anyone who arrives via a Super Partner recruitment link is registered as a **Partner (agent)** — never as a client, even if they tamper with the URL or toggle the role picker.
+2. In `Admin → Super Partner Management → Manage`, let admins set two per-SP overrides:
+   - **SP commission %** — overrides the global 3% / 5% tier for this Super Partner.
+   - **Default recruit commission %** — the % every agent recruited by this SP earns (e.g. AREP → 7%), overriding the 4% / 7% MWp default.
 
-So the recovery token was valid and the session was created. The failure is purely a **frontend chunk load error**, not an auth error.
+## 1. Force Partner role on super-partner links
 
-### Root cause
+Today `/ref/:token` already sends agent-recruitment links to `/register?role=agent&ref=…`, but `RegisterForm` still shows `RegisterRoleSelect`, so the user can flip to "Client" and get created as a client.
 
-`src/App.tsx` loads `ResetPassword` and `AuthCallback` through `createOptimizedLazyComponent` (`src/lib/performance/OptimizedLoader.tsx`). When the dynamic `import()` throws (typically a stale `index.html` or SW cache referencing a hashed chunk from a previous deploy that no longer exists on the CDN), the helper swallows the error and renders:
+Frontend:
+- `src/pages/Register.tsx` — when `?role=agent` **and** `?ref=` are both present (or when the stored `crunchcarbon_ref` entry has `link_type === "agent"`), pass a new `lockedRole="agent"` prop to `RegisterForm`.
+- `src/components/auth/RegisterForm.tsx` — when `lockedRole` is set, hide `RegisterRoleSelect` and show a small "You're joining as a Partner via <SP name>" banner instead. Ignore any attempt to change `formData.role`.
+- `src/pages/PartnerReferralLandingPage.tsx` — already stores `{ token, link_type: "agent" }`; keep as-is.
 
-```
-Component failed to load
-[Retry]  → window.location.reload()
-```
+Server-side safety net (authoritative):
+- Extend `public.apply_referral_on_signup` so that when `v_link.link_type = 'agent'` and the new user's profile role is `client`, it promotes the profile to `agent` (updates `profiles.role`, inserts into `user_roles`, clears any client-only fields) before calling `ensure_agent_has_company`. This closes the loophole for any client that was created before this fix or via a tampered URL.
+- One-off backfill in the same migration: find profiles whose `referred_by_link_id` points at a `link_type='agent'` link but whose role is `client`, and promote them to `agent` + attach a company + create a pending `super_partner_link_requests` row.
 
-`location.reload()` frequently re-serves the same cached HTML, so the user stays trapped on the message. Nothing tells the browser to bypass its cache or unregister the old service worker.
+## 2. Per-SP commission overrides
 
-This is exactly what shaun is seeing: he clicks the reset link → `/auth/callback?type=recovery` on `crunchcarbon.com` verifies the token, calls `navigate('/reset-password')` → the `ResetPassword` chunk 404s from stale cache → error UI.
+Data model (single migration):
+- Add two nullable columns to `public.profiles` (only meaningful when `role='super_partner'`):
+  - `sp_commission_override numeric` — overrides `get_super_partner_rate` for this SP.
+  - `recruit_default_commission numeric` — default agent commission % for agents this SP recruits.
+- Update `public.get_super_partner_rate(p_super_partner_id)` to return `sp_commission_override` when non-null; otherwise fall through to the existing tier1/tier2 logic.
+- Update `public.handle_proposal_signing_commissions()` so the agent's base rate resolution becomes:
+  1. `profiles.commission_override` on the agent (existing, highest priority — unchanged), else
+  2. `profiles.recruit_default_commission` on the agent's linked super partner (new), else
+  3. existing MWp-tier default (4% / 7%).
+- Update `public.apply_referral_on_signup` so that when it promotes/attaches a new agent to a super partner, it also stamps `profiles.commission_override = <sp>.recruit_default_commission` on the new agent when the SP has one set. This means "all AREP partners immediately land on 7%".
+- Backfill: for every existing agent linked to an SP with `recruit_default_commission` set and no `commission_override`, set their `commission_override` to the SP default (does not touch already-overridden agents).
+- Existing `recalc_super_partner_rates` RPC continues to work — it already reads through `get_super_partner_rate` and rewrites `super_partner_commissions.commission_rate`.
 
-### Fix plan (frontend only)
+Admin UI (`src/pages/AdminSuperPartnerManagement.tsx`, "Manage" panel):
+- New "Commission overrides" section with two numeric inputs + Save:
+  - "Super partner rate (%)" bound to `sp_commission_override` — placeholder shows the computed tier default.
+  - "Default recruit rate (%)" bound to `recruit_default_commission` — placeholder shows "4% / 7% MWp default".
+- Save flow: update `profiles` row, then call the existing `recalc_super_partner_rates` RPC so historical `super_partner_commissions` rows reflect the new SP rate immediately. Show a toast summarising rows updated.
+- Optional helper button "Apply default to existing recruits" — runs a lightweight RPC that copies `recruit_default_commission` to `commission_override` for all linked agents without an existing override, then triggers a re-sync of `proposals.agent_commission_percentage` for their signed proposals (reuses the same pattern as `20260123163000` migration).
 
-1. **Detect chunk load failures explicitly** in `createOptimizedLazyComponent`.
-   - Match error name/message: `ChunkLoadError`, `Failed to fetch dynamically imported module`, `Importing a module script failed`, `error loading dynamically imported module`.
+## Technical details
 
-2. **Auto-recover once, then hard-refresh with cache bust.**
-   - On first chunk failure per session, set a `sessionStorage` flag (`chunk-reload-<name>`) and force a bypassing reload:
-     - `location.replace(location.pathname + location.search + (search has '?' ? '&' : '?') + 'v=' + Date.now() + location.hash)`
-     - This changes the URL so the CDN/browser fetches a fresh `index.html` (which references current chunk hashes).
-   - If the flag is already set (meaning we already retried and still failed), fall through to the manual error UI so we don't infinite-loop.
+- `get_super_partner_rate` change is backward compatible; all existing callers (`handle_proposal_signing_commissions`, `recalc_super_partner_rates`, Admin UI) automatically pick up the override.
+- No changes needed to `super_partner_commissions` schema — only the rate the trigger writes changes.
+- `RegisterRoleSelect` stays untouched; the parent form just skips rendering it when the role is locked.
+- Add `GRANT` for any new RPC introduced; existing tables already have grants.
 
-3. **Make the "Retry" button do a real cache-busting reload** instead of `window.location.reload()`:
-   - Unregister any active service workers (`navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()))`).
-   - Clear `caches.keys()` and delete each.
-   - Then navigate with the same cache-bust query string as above.
+## Out of scope
 
-4. **Improve the fallback copy** so the user knows what's happening: "The app was updated. Reloading the latest version..." instead of a generic "Component failed to load".
-
-5. **No changes needed to routing, auth code, `AuthCallback`, `ResetPassword`, or `_headers`** — the auth pipeline is working; this is purely how the app recovers from a stale bundle.
-
-### Files to change
-
-- `src/lib/performance/OptimizedLoader.tsx` — add chunk-error detection, one-shot auto-reload with cache-bust, and upgrade the manual Retry button to clear SW/caches before reloading. Also apply the same handling to the timeout fallback and the default `errorFallback` in `withOptimizedRouteLoading` so any lazy route benefits (not just `ResetPassword`).
-
-### Verification
-
-- Ask shaun to hard-refresh once (Cmd/Ctrl+Shift+R) on `https://crunchcarbon.com/reset-password` — that alone should let him complete the reset today, since his session is already established.
-- After the code fix ships: simulate by renaming a built chunk locally or by keeping an old tab open across a deploy; confirm the app auto-reloads once and lands on `/reset-password` instead of showing the error UI.
-- Re-check auth logs after his next attempt to confirm `/token?grant_type=recovery` / password update returns 200.
-
-### Immediate workaround for shaun
-
-Send him a fresh reset link and tell him to:
-1. Open the link in a **private/incognito window**, or
-2. Hard-refresh (Cmd+Shift+R / Ctrl+F5) once the "Component failed to load" screen appears.
-
-Either bypasses the stale cached bundle so the `ResetPassword` chunk downloads correctly.
+- No UI changes for how partners see their own rate (already surfaced via `SuperPartnerCommission` page which reads through `get_super_partner_rate`).
+- No changes to the global tier defaults in `SuperPartnerCommissionTiers` — they remain the fallback.
