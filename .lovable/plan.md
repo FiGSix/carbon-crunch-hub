@@ -1,53 +1,34 @@
-## Why Neo & Siyabonga are still at the default rate
+## Goal
 
-Both partners *are* correctly linked:
+Agents who sign up without completing company info should:
+1. Render as **"Private"** in the Admin → Partners table (instead of "No company")
+2. Still receive the commission override inherited from their inviting super-partner (e.g. 7%), instead of falling back to the MWp-tier default (4%).
 
-- Neo Selwane → company `43a9a787…` → super_partner Anne Nel
-- Siyabonga Mashabane → company `c1f7fbd9…` → super_partner Anne Nel
-- Anne Nel has `recruit_default_commission = 7`
+## Changes
 
-But both companies still have `commission_override = NULL`, so the signing trigger falls back to the MWp tier (4%).
+### 1. Backend — `get_agents_management_data` RPC
+Update the RPC so that when an agent has no `company_members` row:
+- Return `company_name = 'Private'` (instead of NULL / "No company")
+- Resolve `commission_override` by walking up to the **inviting super-partner** and using their configured sub-agent override rate. Lookup order:
+  1. Agent's own `profiles.commission_override` (if set directly)
+  2. Inviting super-partner's default sub-agent override (from `profiles` / super-partner config of the user who invited them via `agent_invitations`)
+  3. Fall back to MWp tier only if neither exists
 
-Reason: the migration's one-shot backfill (`UPDATE companies SET commission_override = sp.recruit_default_commission …`) ran **before** the admin set Anne's `recruit_default_commission` to 7 in the new UI. The current "Save" flow calls `recalc_super_partner_rates` (which only re-rates the *SP's own* commissions), but it does **not** push `recruit_default_commission` down to the SP's already-linked recruit companies. That only happens if the admin also clicks "Apply default to existing recruits" — which was never pressed.
+### 2. Frontend — `AdminSuperPartnerManagement.tsx` (Partners table)
+- Where the row currently shows "No company", show **"Private"** in a muted style so it's visually distinct from a real company name.
+- Commission column already reads from the RPC output, so once the RPC returns the inherited override, the % displays correctly with no additional logic.
 
-Net effect: setting `recruit_default_commission` today only affects *future* recruits, not existing ones, unless the admin remembers the second button.
+### 3. Trigger for future-proofing (optional but recommended)
+Add a lightweight trigger so a new agent invited by a super-partner has their `profiles.invited_by_super_partner_id` (or equivalent existing field) populated at signup — this is what the RPC uses to resolve the inherited rate. If the linkage already exists via `agent_invitations`, skip this and just join through it in the RPC.
 
-## Fix
+## Technical notes
 
-Two small, targeted changes — no schema changes.
-
-### 1. Auto-cascade on save (frontend)
-
-In `src/pages/AdminSuperPartnerManagement.tsx`, `saveCommissionOverrides`:
-- After the `profiles` update, if `recruit_default_commission` was changed (or newly set), automatically call `apply_sp_default_to_recruits` for this SP before `recalc_super_partner_rates`.
-- Keep the manual "Apply default to existing recruits" button for the edge case where an admin wants to re-push without changing the value.
-- Toast: "Applied 7% to N linked partner companies."
-
-### 2. One-off data repair (migration)
-
-New migration that runs the same backfill again, now that `recruit_default_commission` values exist:
-
-```sql
-UPDATE public.companies c
-   SET commission_override = sp.recruit_default_commission
-  FROM public.profiles sp
- WHERE c.super_partner_id = sp.id
-   AND sp.recruit_default_commission IS NOT NULL
-   AND c.commission_override IS NULL;
-
--- Re-sync any already-signed proposals for those companies
-UPDATE public.proposals p
-   SET agent_commission_percentage = c.commission_override
-  FROM public.companies c
-  JOIN public.company_members cm ON cm.company_id = c.id
- WHERE p.agent_id = cm.user_id
-   AND c.commission_override IS NOT NULL
-   AND p.signed_at IS NOT NULL
-   AND p.agent_commission_percentage IS DISTINCT FROM c.commission_override;
-```
-
-This will immediately set both Neo's and Siyabonga's company override to 7%, so their next proposal (and any already-signed ones) reflect 7%.
+- No schema changes required — this is a **read-path fix** in the RPC plus a label change in the UI.
+- The earlier proposed data-repair migration (inserting `company_members` rows for solo companies) is **no longer needed** — we're explicitly modeling "no company = Private" rather than forcing a synthetic membership.
+- Existing agents with real companies are unaffected.
+- Resolution chain for the inherited rate will be implemented as `COALESCE(agent_override, super_partner_sub_agent_default, mwp_tier_rate)`.
 
 ## Out of scope
 
-- No changes to the signing trigger, `get_super_partner_rate`, or the role-lock on `/register` — those are already correct.
+- No changes to signup flow (agents can still complete company info later and the row will switch from "Private" to the real company name automatically).
+- No changes to commission calculation for agents who already belong to a company.
