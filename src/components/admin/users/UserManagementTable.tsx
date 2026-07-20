@@ -512,6 +512,14 @@ export function UserManagementTable() {
         <ExportUsersButton users={users || []} />
       </div>
 
+      {(userTypeFilter === 'potential' || roleFilter === 'potential_client') && (
+        <div className="text-sm text-muted-foreground border-l-2 border-primary/40 pl-3">
+          Portfolio fees and company-level settings for these clients are managed
+          under <strong>My Clients</strong> and <strong>Company Management</strong>.
+        </div>
+      )}
+
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
