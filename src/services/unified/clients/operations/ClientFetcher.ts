@@ -23,11 +23,14 @@ export class ClientFetcher {
     userRole: UserRole, 
     forceRefresh = false,
     limit = 20,
-    offset = 0
+    offset = 0,
+    search?: string
   ): Promise<PaginatedClientsResult> {
+    const normalizedSearch = search?.trim() || undefined;
+
     if (import.meta.env.DEV) {
       devLogger.clients.debug('=== ClientFetcher.getClients ===');
-      devLogger.clients.debug('Params:', { userId, userRole, forceRefresh, limit, offset });
+      devLogger.clients.debug('Params:', { userId, userRole, forceRefresh, limit, offset, search: normalizedSearch });
     }
     
     if (!RoleValidator.canManageClients(userRole)) {
@@ -52,7 +55,8 @@ export class ClientFetcher {
       devLogger.clients.debug('Role validation passed - user can manage clients');
     }
     
-    const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
+    const searchKey = normalizedSearch ? `_s_${normalizedSearch.toLowerCase()}` : '';
+    const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}${searchKey}`;
     
     if (!forceRefresh) {
       const cached = CacheManager.getFromCache<PaginatedClientsResult>(cacheKey);
@@ -60,7 +64,7 @@ export class ClientFetcher {
     }
 
     // Request deduplication - if same request is in flight, wait for it
-    const requestKey = `${userId}_${userRole}_${limit}_${offset}_${forceRefresh}`;
+    const requestKey = `${userId}_${userRole}_${limit}_${offset}_${forceRefresh}${searchKey}`;
     if (this.pendingRequests.has(requestKey)) {
       if (import.meta.env.DEV) {
         devLogger.clients.debug('Deduplicating request - waiting for existing request');
@@ -69,7 +73,7 @@ export class ClientFetcher {
     }
 
     // Start new request
-    const promise = this._fetchClients(userId, userRole, cacheKey, limit, offset);
+    const promise = this._fetchClients(userId, userRole, cacheKey, limit, offset, normalizedSearch);
     this.pendingRequests.set(requestKey, promise);
 
     try {
@@ -87,27 +91,27 @@ export class ClientFetcher {
     userRole: UserRole,
     cacheKey: string,
     limit: number,
-    offset: number
+    offset: number,
+    search?: string
   ): Promise<PaginatedClientsResult> {
 
     try {
-      console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset });
-      
-      // Build RPC calls with correct params (avoid null for admin)
-      const countCall = userRole === 'admin'
-        ? supabase.rpc('get_agent_clients_count', {})
-        : supabase.rpc('get_agent_clients_count', { agent_id_param: userId });
+      console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset, search });
 
+      const countArgs: Record<string, unknown> = { search_param: search ?? null };
+      if (userRole !== 'admin') countArgs.agent_id_param = userId;
+
+      const dataArgs: Record<string, unknown> = {
+        limit_param: limit,
+        offset_param: offset,
+        search_param: search ?? null,
+      };
+      if (userRole !== 'admin') dataArgs.agent_id_param = userId;
+
+      const countCall = supabase.rpc('get_agent_clients_count', countArgs as any);
       const dataCall = userRole === 'admin'
-        ? supabase.rpc('get_agent_clients_paginated_admin', { 
-            limit_param: limit, 
-            offset_param: offset 
-          })
-        : supabase.rpc('get_agent_clients_paginated', { 
-            agent_id_param: userId,
-            limit_param: limit,
-            offset_param: offset
-          });
+        ? supabase.rpc('get_agent_clients_paginated_admin', dataArgs as any)
+        : supabase.rpc('get_agent_clients_paginated', dataArgs as any);
 
       // Wrap with timeout to prevent hanging
       const [countResult, dataResult] = await withTimeout(
@@ -156,6 +160,13 @@ export class ClientFetcher {
           // For agents, filter by their created clients
           if (userRole !== 'admin') {
             fallbackQueryBuilder = fallbackQueryBuilder.eq('created_by', userId);
+          }
+
+          if (search && search.length > 0) {
+            const like = `%${search}%`;
+            fallbackQueryBuilder = fallbackQueryBuilder.or(
+              `first_name.ilike.${like},last_name.ilike.${like},email.ilike.${like},company_name.ilike.${like}`
+            );
           }
 
           // Execute query with timeout
