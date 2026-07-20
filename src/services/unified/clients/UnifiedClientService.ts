@@ -26,9 +26,10 @@ export class UnifiedClientService {
     userRole: UserRole, 
     forceRefresh = false,
     limit = 20,
-    offset = 0
+    offset = 0,
+    search?: string
   ) {
-    return ClientFetcher.getClients(userId, userRole, forceRefresh, limit, offset);
+    return ClientFetcher.getClients(userId, userRole, forceRefresh, limit, offset, search);
   }
 
   /**
