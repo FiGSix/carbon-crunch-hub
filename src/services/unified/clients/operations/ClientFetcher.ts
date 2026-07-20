@@ -226,8 +226,11 @@ export class ClientFetcher {
         isActive: (client as any).is_active ?? true,
         clientType: (client as any).client_type,
         parentCompanyId: (client as any).parent_company_id,
+        clientCompanyId: (client as any).client_company_id ?? null,
+        hasProfile: (client as any).has_profile ?? (client.is_registered || false),
         isTeamMember: (client as any).is_team_member ?? false
       }));
+
 
       const hasMore = totalCount > 0 ? offset + limit < totalCount : clients.length >= limit;
       const nextOffset = hasMore ? offset + limit : (totalCount > 0 ? totalCount : offset + clients.length);
