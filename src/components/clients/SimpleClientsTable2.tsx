@@ -1,4 +1,6 @@
 import { useState, useCallback, memo } from 'react';
+import { Link } from 'react-router-dom';
+
 import { ClientData } from '@/hooks/clients/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
