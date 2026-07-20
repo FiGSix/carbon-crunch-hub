@@ -1,4 +1,6 @@
 import { useState, useCallback, memo } from 'react';
+import { Link } from 'react-router-dom';
+
 import { ClientData } from '@/hooks/clients/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,15 +54,34 @@ const ClientRow2 = memo(function ClientRow2({
     <tr className="border-b hover:bg-muted/30 transition-colors">
       <td className="p-4">
         <div className="flex flex-col">
-          <span className="font-medium">{client.client_name}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{client.client_name}</span>
+            {isAdmin && client.has_profile === false && (
+              <Badge variant="outline" className="text-xs">Prospect</Badge>
+            )}
+          </div>
           <span className="text-sm text-muted-foreground">{client.client_email}</span>
         </div>
       </td>
       <td className="p-4">
         <span className="text-sm">
-          {client.company_name || <span className="text-muted-foreground italic">Private</span>}
+          {client.company_name ? (
+            isAdmin && client.client_company_id ? (
+              <Link
+                to={`/admin/companies/${client.client_company_id}`}
+                className="text-primary hover:underline"
+              >
+                {client.company_name}
+              </Link>
+            ) : (
+              client.company_name
+            )
+          ) : (
+            <span className="text-muted-foreground italic">Private</span>
+          )}
         </span>
       </td>
+
       {isAdmin && (
         <td className="p-4">
           <span className="text-sm">

@@ -131,8 +131,11 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
         created_at: client.createdAt,
         agent_company_name: client.agentCompanyName,
         agent_id: client.agentId,
-        is_active: client.isActive
+        is_active: client.isActive,
+        has_profile: client.hasProfile ?? client.isRegistered,
+        client_company_id: client.clientCompanyId ?? null,
       }));
+
 
       // Update state
       if (isLoadMore) {

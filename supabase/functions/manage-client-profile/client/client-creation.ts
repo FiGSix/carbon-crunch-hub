@@ -55,6 +55,31 @@ export async function createClientContact(
       };
     }
     
+    // Resolve or create a client_companies row when a company name is provided
+    let resolvedCompanyId: string | null = null;
+    const trimmedCompany = companyName?.trim();
+    if (trimmedCompany) {
+      const { data: existingCompany } = await supabase
+        .from('client_companies')
+        .select('id')
+        .ilike('company_name', trimmedCompany)
+        .maybeSingle();
+      if (existingCompany?.id) {
+        resolvedCompanyId = existingCompany.id;
+      } else {
+        const { data: newCompany, error: companyErr } = await supabase
+          .from('client_companies')
+          .insert({ company_name: trimmedCompany, created_by: createdBy })
+          .select('id')
+          .single();
+        if (!companyErr && newCompany?.id) {
+          resolvedCompanyId = newCompany.id;
+        } else if (companyErr) {
+          console.error('Failed to create client_companies row:', companyErr);
+        }
+      }
+    }
+
     // Create a new client contact record with validation
     const { data: newClient, error: insertError } = await supabase
       .from('clients')
@@ -64,11 +89,13 @@ export async function createClientContact(
         email: normalizedEmail,
         phone: phone?.trim() || null,
         company_name: companyName?.trim() || null,
+        client_company_id: resolvedCompanyId,
         created_by: createdBy,
         user_id: null // Not a registered user
       })
       .select()
       .single();
+
     
     if (insertError) {
       console.error("Error creating client contact:", insertError);

@@ -3776,13 +3776,16 @@ export type Database = {
         Returns: {
           agent_company_name: string
           agent_id: string
+          client_company_id: string
           client_email: string
           client_id: string
           client_name: string
           company_name: string
           created_at: string
+          has_profile: boolean
           is_active: boolean
           is_registered: boolean
+          portfolio_client_share_override: number
           project_count: number
           total_mwp: number
         }[]

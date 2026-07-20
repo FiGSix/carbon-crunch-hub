@@ -16,7 +16,31 @@ export class ClientCreator {
    */
   static async createClient(clientData: CreateClientData): Promise<{ success: boolean; client?: ClientRow; error?: string }> {
     try {
-      // Map CreateClientData to ClientInsert with type assertion for new fields
+      // Resolve / create client_companies row when a company name is provided
+      let resolvedCompanyId: string | undefined = clientData.parentCompanyId;
+      const trimmedCompany = clientData.companyName?.trim();
+      if (!resolvedCompanyId && trimmedCompany) {
+        try {
+          const { data: existing } = await supabase
+            .from('client_companies')
+            .select('id')
+            .ilike('company_name', trimmedCompany)
+            .maybeSingle();
+          if (existing?.id) {
+            resolvedCompanyId = existing.id;
+          } else {
+            const { data: created, error: createErr } = await supabase
+              .from('client_companies')
+              .insert({ company_name: trimmedCompany })
+              .select('id')
+              .single();
+            if (!createErr && created?.id) resolvedCompanyId = created.id;
+          }
+        } catch (e) {
+          devLogger.clients.error('client_companies resolve failed:', e);
+        }
+      }
+
       const insertData = {
         first_name: clientData.firstName,
         last_name: clientData.lastName,
@@ -27,7 +51,7 @@ export class ClientCreator {
         notes: clientData.notes,
         created_by: clientData.createdBy,
         is_active: clientData.isActive ?? false,
-        parent_company_id: clientData.parentCompanyId,
+        client_company_id: resolvedCompanyId ?? null,
         is_team_member: clientData.isTeamMember ?? false
       } as ClientInsert;
 
@@ -41,7 +65,6 @@ export class ClientCreator {
         return { success: false, error: error.message };
       }
 
-      // Clear cache to force refresh
       CacheManager.clearCachePattern('unified_clients');
 
       return { success: true, client: data };

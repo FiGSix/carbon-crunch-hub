@@ -11,6 +11,9 @@ export interface ClientData {
   is_active: boolean;
   client_type?: 'registered_user' | 'contact_prospect' | 'contact_active' | 'team_member';
   is_team_member?: boolean;
+  has_profile?: boolean;
+  client_company_id?: string | null;
+
   
   // Portfolio client share override fields
   portfolio_client_share_override?: number | null;
