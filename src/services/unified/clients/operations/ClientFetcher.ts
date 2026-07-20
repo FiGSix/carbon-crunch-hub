@@ -91,27 +91,27 @@ export class ClientFetcher {
     userRole: UserRole,
     cacheKey: string,
     limit: number,
-    offset: number
+    offset: number,
+    search?: string
   ): Promise<PaginatedClientsResult> {
 
     try {
-      console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset });
-      
-      // Build RPC calls with correct params (avoid null for admin)
-      const countCall = userRole === 'admin'
-        ? supabase.rpc('get_agent_clients_count', {})
-        : supabase.rpc('get_agent_clients_count', { agent_id_param: userId });
+      console.info('🚀 ClientFetcher: Starting fetch', { userRole, limit, offset, search });
 
+      const countArgs: Record<string, unknown> = { search_param: search ?? null };
+      if (userRole !== 'admin') countArgs.agent_id_param = userId;
+
+      const dataArgs: Record<string, unknown> = {
+        limit_param: limit,
+        offset_param: offset,
+        search_param: search ?? null,
+      };
+      if (userRole !== 'admin') dataArgs.agent_id_param = userId;
+
+      const countCall = supabase.rpc('get_agent_clients_count', countArgs as any);
       const dataCall = userRole === 'admin'
-        ? supabase.rpc('get_agent_clients_paginated_admin', { 
-            limit_param: limit, 
-            offset_param: offset 
-          })
-        : supabase.rpc('get_agent_clients_paginated', { 
-            agent_id_param: userId,
-            limit_param: limit,
-            offset_param: offset
-          });
+        ? supabase.rpc('get_agent_clients_paginated_admin', dataArgs as any)
+        : supabase.rpc('get_agent_clients_paginated', dataArgs as any);
 
       // Wrap with timeout to prevent hanging
       const [countResult, dataResult] = await withTimeout(
