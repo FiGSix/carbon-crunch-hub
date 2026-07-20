@@ -147,6 +147,9 @@ interface ClientsTableContentProps {
   onRefresh?: () => void;
   onLoadMore?: () => void;
   error?: string | null;
+  /** Controlled search value (server-side). When provided, local filtering is bypassed. */
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 export function ClientsTableContent({ 
@@ -159,8 +162,11 @@ export function ClientsTableContent({
   autoRefreshEnabled = false, 
   onRefresh,
   onLoadMore,
-  error = null
+  error = null,
+  searchQuery: controlledSearchQuery,
+  onSearchChange,
 }: ClientsTableContentProps) {
+  const isServerSearch = typeof onSearchChange === 'function';
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -168,7 +174,12 @@ export function ClientsTableContent({
   const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [clientToReassign, setClientToReassign] = useState<ClientData | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const searchQuery = isServerSearch ? (controlledSearchQuery ?? '') : localSearchQuery;
+  const setSearchQuery = (value: string) => {
+    if (isServerSearch) onSearchChange!(value);
+    else setLocalSearchQuery(value);
+  };
   const [sortColumn, setSortColumn] = useState<keyof ClientData | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [verifyConfirmOpen, setVerifyConfirmOpen] = useState(false);
@@ -194,7 +205,8 @@ export function ClientsTableContent({
 
   const filteredClients = useMemo(() => {
     let filtered = clients;
-    if (deferredQuery.trim()) {
+    // When search is controlled by parent (server-side), rows are already filtered upstream.
+    if (!isServerSearch && deferredQuery.trim()) {
       const lowerSearch = deferredQuery.toLowerCase();
       filtered = clients.filter(client => 
         searchIndex.get(client.client_id)?.includes(lowerSearch)
