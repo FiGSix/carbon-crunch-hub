@@ -16,7 +16,10 @@ export interface UnifiedClient {
   isActive: boolean;
   clientType?: 'registered_user' | 'contact_prospect' | 'contact_active' | 'team_member';
   parentCompanyId?: string;
+  clientCompanyId?: string | null;
   isTeamMember: boolean;
+  hasProfile?: boolean;
+
 }
 
 export interface ClientSearchResult {
