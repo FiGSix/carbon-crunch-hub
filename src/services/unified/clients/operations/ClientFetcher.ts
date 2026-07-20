@@ -23,11 +23,14 @@ export class ClientFetcher {
     userRole: UserRole, 
     forceRefresh = false,
     limit = 20,
-    offset = 0
+    offset = 0,
+    search?: string
   ): Promise<PaginatedClientsResult> {
+    const normalizedSearch = search?.trim() || undefined;
+
     if (import.meta.env.DEV) {
       devLogger.clients.debug('=== ClientFetcher.getClients ===');
-      devLogger.clients.debug('Params:', { userId, userRole, forceRefresh, limit, offset });
+      devLogger.clients.debug('Params:', { userId, userRole, forceRefresh, limit, offset, search: normalizedSearch });
     }
     
     if (!RoleValidator.canManageClients(userRole)) {
@@ -52,7 +55,8 @@ export class ClientFetcher {
       devLogger.clients.debug('Role validation passed - user can manage clients');
     }
     
-    const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}`;
+    const searchKey = normalizedSearch ? `_s_${normalizedSearch.toLowerCase()}` : '';
+    const cacheKey = `unified_clients_paginated_${userId}_${userRole}_${limit}_${offset}${searchKey}`;
     
     if (!forceRefresh) {
       const cached = CacheManager.getFromCache<PaginatedClientsResult>(cacheKey);
@@ -60,7 +64,7 @@ export class ClientFetcher {
     }
 
     // Request deduplication - if same request is in flight, wait for it
-    const requestKey = `${userId}_${userRole}_${limit}_${offset}_${forceRefresh}`;
+    const requestKey = `${userId}_${userRole}_${limit}_${offset}_${forceRefresh}${searchKey}`;
     if (this.pendingRequests.has(requestKey)) {
       if (import.meta.env.DEV) {
         devLogger.clients.debug('Deduplicating request - waiting for existing request');
@@ -69,7 +73,7 @@ export class ClientFetcher {
     }
 
     // Start new request
-    const promise = this._fetchClients(userId, userRole, cacheKey, limit, offset);
+    const promise = this._fetchClients(userId, userRole, cacheKey, limit, offset, normalizedSearch);
     this.pendingRequests.set(requestKey, promise);
 
     try {

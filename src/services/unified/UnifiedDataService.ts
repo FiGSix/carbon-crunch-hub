@@ -66,9 +66,10 @@ export class UnifiedDataService {
     userRole: UserRole, 
     forceRefresh = false,
     limit = 20,
-    offset = 0
+    offset = 0,
+    search?: string
   ) {
-    return UnifiedClientService.getClients(userId, userRole, forceRefresh, limit, offset);
+    return UnifiedClientService.getClients(userId, userRole, forceRefresh, limit, offset, search);
   }
 
   static async createClient(clientData: any) {
