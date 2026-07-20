@@ -236,7 +236,7 @@ export function ClientsTableContent({
     }
 
     return filtered;
-  }, [clients, deferredQuery, sortColumn, sortDirection, searchIndex]);
+  }, [clients, deferredQuery, sortColumn, sortDirection, searchIndex, isServerSearch]);
 
   // Stable callbacks
   const handleDeleteClick = useCallback((client: ClientData) => {
