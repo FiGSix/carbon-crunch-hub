@@ -1,76 +1,53 @@
-
 ## Problem
 
-After a client signs a cession agreement, two things are supposed to happen inside `accept-proposal`:
+When a partner creates a proposal for a new client, the client is inserted into `public.clients` with `user_id = NULL` and only surfaces under **User Management → Potential Clients**. Two admin capabilities are missing for these unregistered clients:
 
-1. `generate-signed-agreement-pdf` runs → produces the PDF **with signatures + witnesses + signed watermark** and writes its URL to `proposal_agreements.signed_pdf_url`.
-2. `send-cession-agreement-email` runs → emails the client (with the signed PDF attached).
+1. The **My Clients** row (and therefore the "% Company Fee for Portfolio" action in `PortfolioClientShareDialog`) only appears once the client signs up and gets a `profiles` row.
+2. If the potential client has a `company_name` typed into the proposal, no `client_companies` row is created, so the admin can't open **Company Management** for it and can't set a company-level fee either.
 
-Both are launched as fire-and-forget async IIFEs *after* the HTTP response is sent. Deno edge runtime terminates async work once the response returns, so:
+Net effect: strategic prospects can't have their portfolio/company fee configured until after they sign a proposal — which is exactly the wrong order.
 
-- The signed PDF is frequently never generated → `signed_pdf_url` stays `NULL` → the "Download Signed Agreement" button is hidden and the user falls back to the "Download Agreement" button, which downloads the **unsigned** cession PDF (no signatures — matches what the user is seeing).
-- The client email either never sends or sends *before* the signed PDF exists, so it falls back to the unsigned proposal PDF (or nothing).
+## Proposed solution
 
-## Fix
+Rather than duplicating the portfolio-share UI into User Management, **make potential clients first-class in My Clients** and **auto-create a `client_companies` row when a proposal names a company**. Same tables, same dialogs, same admin muscle memory — just no longer gated on `profiles.id` existing.
 
-### 1. `supabase/functions/accept-proposal/index.ts`
+### 1. Surface potential clients in My Clients (admin only)
 
-Replace both fire-and-forget IIFEs (sections `// 9.` and `// 11.`) with a single awaited, sequential flow, wrapped in `EdgeRuntime.waitUntil()` so it survives past the response:
+- Extend `UnifiedClientService.getClients` / `ClientFetcher` so that when `userRole === 'admin'`, unlinked `clients` rows (`user_id IS NULL`) are included, tagged `client_type: 'contact_prospect'`.
+- Extend `ClientData` with a `has_profile: boolean` flag so the row can render a subtle "Prospect" badge next to the name.
+- Agents/super-partners keep their current scoped view — no change for them.
 
-```
-const postSign = (async () => {
-  // a) Generate signed PDF and await it
-  const { data: pdfRes, error: pdfErr } = await supabase.functions.invoke(
-    'generate-signed-agreement-pdf',
-    { body: { proposalId: proposal.id, agreementId: newAgreement.id } }
-  );
-  if (pdfErr) console.error(...);
+### 2. Make the portfolio-share action work without a profile
 
-  // b) Only then send the confirmation email so the signed PDF is attached
-  //    (email fn reads proposal_agreements.signed_pdf_url written in step a)
-  if (clientEmail) {
-    await supabase.functions.invoke('send-cession-agreement-email', {
-      body: { proposalId: proposal.id, clientEmail },
-    });
-  }
-})();
+- `PortfolioClientShareDialog` already writes to `clients.portfolio_client_share_override` by `clients.id`, and the `update-portfolio-client-share` edge function keys on `clients.id` too. Both already work for unregistered clients — we just need the row to be reachable, which #1 fixes.
+- Confirm the edge function's proposal update (`.or('client_id.eq...,client_reference_id.eq...')`) matches proposals authored against a `clients.id` that has no profile yet. It does today (proposals link via `client_reference_id`), so no logic change — just verified as part of this work.
 
-// @ts-ignore — EdgeRuntime is a Deno Deploy global
-EdgeRuntime.waitUntil(postSign);
-```
+### 3. Auto-create a company record when a proposal names one
 
-Move the `clientEmail` resolution (proposal.content → profiles → clients) above `EdgeRuntime.waitUntil` so it's captured before the chain starts. The response to the browser is still returned immediately.
+- In `manage-client-profile` / `ClientCreator.createClient`, when `companyName` is provided and no matching `client_companies` row exists, insert one and link `clients.parent_company_id` to it.
+- Match is case-insensitive on trimmed `company_name`; if a company with that name already exists (agent or client type), reuse it rather than duplicating.
+- Backfill migration: for every existing `clients` row where `company_name IS NOT NULL` and `parent_company_id IS NULL`, create/link a `client_companies` row. Idempotent (skip if a match already exists).
 
-### 2. `supabase/functions/send-cession-agreement-email/index.ts`
+### 4. Expose Company Management from client rows
 
-Small hardening (no logic change to email body):
+- In `SimpleClientsTable2`, when a row has a `parent_company_id`, make the company-name cell a link that navigates to `/admin/companies/:companyId` (existing `AdminCompanyDetail` route that opens `CompanyManagementDialog`).
+- Admin-only affordance; agents just see the plain company name as today.
 
-- Add a short retry (up to 3 attempts, 1.5s delay) on the `proposal_agreements.signed_pdf_url` fetch to cover the rare case where the row was updated in another region and not yet visible.
-- Keep the existing fallback to the unsigned proposal PDF, but log a clear warning instead of silently attaching it.
+### 5. Keep User Management honest
 
-### 3. One-time repair for already-signed proposals
-
-Existing proposals that were signed while the bug was live have `proposal_agreements.signed_pdf_url = NULL` and never received the email. Add a small admin-only edge function `backfill-signed-agreements` (invoked manually) that:
-
-- Selects `proposal_agreements` rows where `signed_pdf_url IS NULL` and the proposal is `approved` / `signed`.
-- For each, invokes `generate-signed-agreement-pdf`, then optionally `send-cession-agreement-email` (behind a `sendEmail: true` flag so admins can regenerate the PDF without re-emailing the client).
-
-The UI surface is a single button on the admin proposal detail page ("Regenerate signed PDF & resend"), reusing the existing admin auth check pattern from `upload-signed-agreement`.
-
-## What we are NOT changing
-
-- No changes to the cession PDF template, signature capture flow, or `SignedAgreementDownloadButton`.
-- No schema changes.
-- `generate-signed-agreement-pdf` already embeds the signature image / typed name and witness block correctly — it just wasn't running.
+- Potential Clients tab in User Management stays — it's still the right place to see "not yet signed up" from an identity/auth angle. Add a small helper text: "Portfolio and company fees are managed under **My Clients** and **Company Management**." No functional duplication.
 
 ## Files touched
 
-- `supabase/functions/accept-proposal/index.ts` — swap fire-and-forget for awaited chain inside `EdgeRuntime.waitUntil`.
-- `supabase/functions/send-cession-agreement-email/index.ts` — add short retry on `signed_pdf_url` lookup + clearer warning log.
-- `supabase/functions/backfill-signed-agreements/index.ts` (new) — admin-only repair endpoint.
-- One small admin UI button to invoke the backfill per proposal (location: existing admin proposal actions area — will confirm exact file during build).
+- `src/services/unified/clients/operations/ClientFetcher.ts` — include unlinked clients for admins.
+- `src/services/unified/clients/types.ts`, `src/hooks/clients/types.ts`, `src/hooks/clients/useClients.ts` — add `has_profile`.
+- `src/components/clients/SimpleClientsTable2.tsx` — "Prospect" badge, company-name link to Company Management.
+- `src/services/unified/clients/operations/ClientCreator.ts` and `supabase/functions/manage-client-profile/client/client-creation.ts` — create/link `client_companies` when `companyName` is provided.
+- `src/components/admin/users/UserManagementTable.tsx` — small explanatory line under the Potential Clients filter.
+- One migration: backfill `client_companies` from existing `clients.company_name`, link `clients.parent_company_id`.
 
-## Validation
+## Out of scope
 
-- Sign a test proposal end-to-end; confirm (a) `proposal_agreements.signed_pdf_url` populates within a few seconds, (b) the "Download Signed Agreement" button appears and downloads a PDF whose last page shows the signature, witnesses, IP and timestamp, and (c) the client mailbox receives the email with that same PDF attached.
-- Check edge function logs for `[Signed PDF]` and `[Cession Email]` sequences on a single signing event.
+- Changing how proposals resolve their client (`client_id` vs `client_reference_id`) — untouched.
+- Any change to agent/super-partner visibility of prospects.
+- Merging User Management and My Clients into a single screen.
