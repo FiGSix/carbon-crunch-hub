@@ -13,6 +13,8 @@ export interface UseClientsOptions {
   paginated?: boolean;
   /** Page size for pagination (default: 20) */
   pageSize?: number;
+  /** Optional server-side search term (name, email, company) */
+  search?: string;
 }
 
 export interface UseClientsResult {
@@ -35,7 +37,8 @@ const DEFAULT_PAGE_SIZE = 20;
  * No race conditions, stable dependencies, proper cleanup
  */
 export function useClients(options: UseClientsOptions = {}): UseClientsResult {
-  const { paginated = false, pageSize = DEFAULT_PAGE_SIZE } = options;
+  const { paginated = false, pageSize = DEFAULT_PAGE_SIZE, search } = options;
+  const normalizedSearch = search?.trim() || undefined;
   
   // State
   const [clients, setClients] = useState<ClientData[]>([]);
@@ -111,7 +114,8 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
           userRole, 
           forceRefresh,
           paginated ? pageSize : 1000,
-          currentOffset
+          currentOffset,
+          normalizedSearch
         ),
         12000
       );
@@ -190,7 +194,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
       
       isFetchingRef.current = false;
     }
-  }, [user?.id, userRole, paginated, pageSize]); // handleFetchError removed - accessible via closure
+  }, [user?.id, userRole, paginated, pageSize, normalizedSearch]); // handleFetchError removed - accessible via closure
 
   /**
    * Load next page of clients
@@ -212,10 +216,11 @@ export function useClients(options: UseClientsOptions = {}): UseClientsResult {
     fetchClients(0, false, true);
   }, [fetchClients]);
 
-  // Initial fetch when auth is ready
+  // Initial fetch when auth is ready; refetch on search change (offset resets)
   useEffect(() => {
     if (user?.id && userRole) {
-      devLogger.clients.log('🎬 Initial fetch triggered');
+      devLogger.clients.log('🎬 Fetch triggered (initial or search change)', { search: normalizedSearch });
+      setOffset(0);
       fetchClients(0, false, false);
     } else {
       setIsLoading(false);
