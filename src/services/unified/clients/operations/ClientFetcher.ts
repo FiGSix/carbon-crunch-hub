@@ -162,6 +162,13 @@ export class ClientFetcher {
             fallbackQueryBuilder = fallbackQueryBuilder.eq('created_by', userId);
           }
 
+          if (search && search.length > 0) {
+            const like = `%${search}%`;
+            fallbackQueryBuilder = fallbackQueryBuilder.or(
+              `first_name.ilike.${like},last_name.ilike.${like},email.ilike.${like},company_name.ilike.${like}`
+            );
+          }
+
           // Execute query with timeout
           const fallbackResult = await Promise.race([
             fallbackQueryBuilder,
