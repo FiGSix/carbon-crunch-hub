@@ -21,15 +21,22 @@ import { cn } from "@/lib/utils";
 interface DataAccessTabProps {
   projectId: string;
   onRefresh: () => void;
+  /**
+   * Optional callback so a parent (OnboardingTab page-level footer) can drive
+   * the save-draft / submit-for-audit actions. The in-card buttons were removed
+   * to avoid duplicating the page-level Save Draft and Validate & Mark Complete.
+   */
+  registerActions?: (actions: {
+    saveDraft: () => Promise<boolean>;
+    submitForAudit: () => Promise<boolean>;
+  }) => void;
 }
 
-export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
+export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAccessTabProps) {
   const { toast } = useToast();
   const [config, setConfig] = useState<Partial<DataAccessConfig>>({
     credential_method: 'delegated_account',
   });
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [portalDefaults, setPortalDefaults] = useState<Record<string, string | null>>({});
