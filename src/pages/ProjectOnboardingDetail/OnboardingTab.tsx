@@ -467,6 +467,8 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       const allErrors = getAllErrors(formData, inverterDetails, panelArrayDetails);
       if (Object.keys(allErrors).length > 0) {
         setShowValidationSummary(true);
+        // Mark every errored field as touched so inline red borders/messages appear
+        Object.keys(allErrors).forEach(fieldName => setFieldTouched(fieldName));
         toast({
           title: "Validation Failed",
           description: "Please fix the highlighted errors before submitting",
