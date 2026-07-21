@@ -165,10 +165,8 @@ export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAcc
   }, [config.provider, portalDefaults]);
 
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (opts?: { silent?: boolean }): Promise<boolean> => {
     try {
-      setIsSavingDraft(true);
-
       const { id, created_at, updated_at, data_access_verified, data_access_verified_at, ...configData } = config as any;
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -194,22 +192,26 @@ export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAcc
 
       if (error) throw error;
 
-      toast({
-        title: "Draft saved",
-        description: "Configuration saved as draft successfully",
-      });
+      if (!opts?.silent) {
+        toast({
+          title: "Draft saved",
+          description: "Configuration saved as draft successfully",
+        });
+      }
 
       fetchConfig();
       onRefresh();
+      return true;
     } catch (error) {
       console.error('Error saving draft:', error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error) || "Failed to save draft",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingDraft(false);
+      if (!opts?.silent) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(error) || "Failed to save draft",
+          variant: "destructive",
+        });
+      }
+      return false;
     }
   };
 
