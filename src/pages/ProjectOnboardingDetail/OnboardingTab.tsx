@@ -432,6 +432,13 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         }
       }
 
+      // Also persist Data Access Configuration (embedded card, no longer has own buttons)
+      try {
+        await dataAccessActionsRef.current?.saveDraft();
+      } catch (daErr) {
+        logger.warn('Data Access save-draft failed', { error: daErr, projectId });
+      }
+
       toast({
         title: "Success",
         description: "Draft saved successfully",
