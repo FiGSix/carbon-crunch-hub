@@ -21,10 +21,10 @@ const Index = () => {
     <>
       <Helmet>
         <title>Crunch Carbon — Turn Solar Energy into Cash</title>
-        <meta name="description" content="Monetise your solar panels with verified carbon credits. South African homeowners earn R600-R1,000+ annually. Free setup, Verra-certified." />
+        <meta name="description" content="Monetise your solar panels with verified carbon credits. Homeowners earn R600-R1,000+ annually. Business earn R900,000+ over 5 years per 1MWp. Free setup, Verra-certified." />
         <link rel="canonical" href="https://crunchcarbon.com/" />
         <meta property="og:title" content="Crunch Carbon — Turn Solar Energy into Cash" />
-        <meta property="og:description" content="Monetise your solar panels with verified carbon credits. South African homeowners earn R600-R1,000+ annually. Free setup, Verra-certified." />
+        <meta property="og:description" content="Monetise your solar panels with verified carbon credits. Homeowners earn R600-R1,000+ annually. Business earn R900,000+ over 5 years per 1MWp. Free setup, Verra-certified." />
         <meta property="og:url" content="https://crunchcarbon.com/" />
         <meta property="og:type" content="website" />
       </Helmet>
