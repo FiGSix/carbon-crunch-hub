@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,25 @@ const escapeCsv = (v: unknown) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
+type SortKey = 'company' | 'contact' | 'status' | 'rate' | 'mwp';
+type SortDir = 'asc' | 'desc';
+
+const statusRank = (a: AgentData): number => {
+  if (a.is_invitation) {
+    const expired = a.invitation_expires_at && new Date(a.invitation_expires_at) < new Date();
+    return expired ? 3 : 2;
+  }
+  if (a.agent_status === 'active') return 0;
+  if (a.agent_status === 'inactive') return 4;
+  return 1;
+};
+
+const effectiveRate = (a: AgentData): number | null => {
+  if (a.is_invitation) return null;
+  if (a.company_commission_override != null) return Number(a.company_commission_override);
+  return tierRate(a.company_signed_kwp || 0);
+};
+
 export function PartnersTable() {
   useAgentsRealtime();
 
@@ -44,6 +63,8 @@ export function PartnersTable() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedAgent, setSelectedAgent] = useState<AgentData | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('mwp');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.agents.management.list(
@@ -72,14 +93,69 @@ export function PartnersTable() {
 
   const filteredRows = useMemo(() => {
     if (!data) return [] as AgentData[];
-    if (companyFilter === 'all') return data;
-    return data.filter((a) => a.company_name === companyFilter);
-  }, [data, companyFilter]);
+    const base = companyFilter === 'all' ? data : data.filter((a) => a.company_name === companyFilter);
+
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const cmp = (a: AgentData, b: AgentData): number => {
+      // Push invitations to bottom for numeric columns
+      if (sortBy === 'mwp' || sortBy === 'rate') {
+        if (a.is_invitation && !b.is_invitation) return 1;
+        if (!a.is_invitation && b.is_invitation) return -1;
+      }
+      switch (sortBy) {
+        case 'company': {
+          const av = (a.company_name || '').toLowerCase();
+          const bv = (b.company_name || '').toLowerCase();
+          return av.localeCompare(bv) * dir;
+        }
+        case 'contact': {
+          const av = (a.agent_name || a.agent_email || '').toLowerCase();
+          const bv = (b.agent_name || b.agent_email || '').toLowerCase();
+          return av.localeCompare(bv) * dir;
+        }
+        case 'status':
+          return (statusRank(a) - statusRank(b)) * dir;
+        case 'rate': {
+          const av = effectiveRate(a);
+          const bv = effectiveRate(b);
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          return (av - bv) * dir;
+        }
+        case 'mwp':
+        default: {
+          const av = a.company_signed_kwp || 0;
+          const bv = b.company_signed_kwp || 0;
+          return (av - bv) * dir;
+        }
+      }
+    };
+    return [...base].sort(cmp);
+  }, [data, companyFilter, sortBy, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      setSortDir(key === 'mwp' || key === 'rate' ? 'desc' : 'asc');
+    }
+    setPage(1);
+  };
+
+  const sortIcon = (key: SortKey) => {
+    if (sortBy !== key) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+
+  const ariaSort = (key: SortKey): 'ascending' | 'descending' | 'none' =>
+    sortBy !== key ? 'none' : sortDir === 'asc' ? 'ascending' : 'descending';
 
   const renderRate = (a: AgentData) => {
     if (a.is_invitation) return '';
     if (a.company_commission_override != null) {
-      return `${a.company_commission_override}% (Company rate)`;
+      return `${a.company_commission_override}% SP Rate`;
     }
     return `${tierRate(a.company_signed_kwp || 0)}% (Tier)`;
   };
@@ -114,6 +190,19 @@ export function PartnersTable() {
 
   const totalCount = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const SortHeader = ({ label, k, className }: { label: string; k: SortKey; className?: string }) => (
+    <TableHead className={className} aria-sort={ariaSort(k)}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+      >
+        {label}
+        {sortIcon(k)}
+      </button>
+    </TableHead>
+  );
 
   return (
     <div className="space-y-4">
@@ -180,11 +269,11 @@ export function PartnersTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Company</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Current Rate</TableHead>
-              <TableHead>MWp Signed</TableHead>
+              <SortHeader label="Company" k="company" />
+              <SortHeader label="Contact" k="contact" />
+              <SortHeader label="Status" k="status" />
+              <SortHeader label="Current Rate" k="rate" />
+              <SortHeader label="MWp Signed" k="mwp" />
               <TableHead className="w-[100px]" />
             </TableRow>
           </TableHeader>
@@ -232,7 +321,7 @@ export function PartnersTable() {
                           variant="outline"
                           className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
                         >
-                          {a.company_commission_override}% (Company rate)
+                          {a.company_commission_override}% SP Rate
                         </Badge>
                       ) : (
                         <span className="text-sm">
