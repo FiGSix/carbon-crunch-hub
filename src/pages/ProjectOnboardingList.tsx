@@ -202,23 +202,6 @@ export default function ProjectOnboardingList() {
     }
   };
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch =
-      project.proposal_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'all' || calculateProjectStatus(project).label === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleProjectClick = (projectId: string) => {
-    navigate(`/onboarding/${projectId}`);
-  };
-
-  const handlePillClick = (projectId: string, section: string) => {
-    navigate(`/onboarding/${projectId}?tab=${section}`);
-  };
-
   const calculateProjectStatus = (project: ProjectOnboardingListItem): {
     label: string;
     color: string;
@@ -262,6 +245,23 @@ export default function ProjectOnboardingList() {
       label: 'Not Started',
       color: 'bg-red-100 text-red-800 border-red-300'
     };
+  };
+
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch =
+      project.proposal_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.client_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' || calculateProjectStatus(project).label === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/onboarding/${projectId}`);
+  };
+
+  const handlePillClick = (projectId: string, section: string) => {
+    navigate(`/onboarding/${projectId}?tab=${section}`);
   };
 
   return (
