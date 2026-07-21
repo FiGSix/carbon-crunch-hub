@@ -1,11 +1,6 @@
-Update the hero paragraph in `src/pages/home/HeroSection.tsx` so the words **Homeowners** and **Business** are wrapped in `<span className="text-primary">` — matching the yellow used by "Into Cash" above. No other styling (weight, size) changes.
+Restore bold styling in the hero paragraph in `src/pages/home/HeroSection.tsx` (line 43) while keeping the new yellow color on "Homeowners" and "Business".
 
-Before:
+Result:
 ```
-Homeowners earn R600–R1,000+ per year from a typical 5kWp system.&nbsp;Business earn R900,000+ over 5 years per 1MWp through verified carbon credits. Free to join.
-```
-
-After:
-```
-<span className="text-primary">Homeowners</span> earn R600–R1,000+ per year from a typical 5kWp system.&nbsp;<span className="text-primary">Business</span> earn R900,000+ over 5 years per 1MWp through verified carbon credits. Free to join.
+<span className="text-primary font-bold">Homeowners</span> earn <span className="font-bold text-foreground">R600–R1,000+ per year from a typical 5kWp system</span>.&nbsp;<span className="text-primary font-bold">Business</span> earn <span className="font-bold text-foreground">R900,000+ over 5 years per 1MWp</span> through verified carbon credits. Free to join.
 ```
