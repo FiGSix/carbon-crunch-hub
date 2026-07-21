@@ -695,7 +695,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       }
       case 'inverter': {
         const fields = ['brand', 'model', 'capacity_kw', 'serial'] as const;
-        const total = inverterDetails.length * fields.length;
+        const rowTotal = inverterDetails.length * fields.length;
         let filledCount = 0;
         inverterDetails.forEach(inv => {
           if (inv.brand) filledCount++;
@@ -703,8 +703,15 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           if (inv.capacity_kw !== null) filledCount++;
           if (inv.serial?.trim()) filledCount++;
         });
-        if (inverterDetails.length === 0) return { complete: false, remaining: 4, total: 4 };
-        return { complete: filledCount === total, remaining: total - filledCount, total };
+        // Include the top-level "Number of Inverters" field in the check.
+        const qty = formData.inverter_quantity;
+        const qtyFilled = typeof qty === 'number' && qty >= 1;
+        const total = rowTotal + 1;
+        const filled = filledCount + (qtyFilled ? 1 : 0);
+        if (inverterDetails.length === 0) {
+          return { complete: false, remaining: 4 + (qtyFilled ? 0 : 1), total: 4 + 1 };
+        }
+        return { complete: filled === total, remaining: total - filled, total };
       }
       case 'battery': {
         if (formData.has_battery === null || formData.has_battery === undefined) {
