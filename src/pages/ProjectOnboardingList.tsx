@@ -296,8 +296,8 @@ export default function ProjectOnboardingList() {
           </div>
 
           {/* Search */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="relative flex-1 max-w-md min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search projects..."
@@ -306,7 +306,21 @@ export default function ProjectOnboardingList() {
                 className="pl-9"
               />
             </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Not Started">Not Started</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Awaiting Review">Awaiting Review</SelectItem>
+                <SelectItem value="Under Review">Under Review</SelectItem>
+                <SelectItem value="Audit Ready">Audit Ready</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
 
           {/* Projects Table */}
           {isLoading ? (
