@@ -558,6 +558,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         }
       }
 
+      // Persist Data Access config and mark it verified (replaces removed in-card "Submit for Audit" button)
+      try {
+        const daOk = await dataAccessActionsRef.current?.submitForAudit();
+        if (daOk === false) {
+          // DataAccessTab has already shown a validation toast; abort completion
+          return;
+        }
+      } catch (daErr) {
+        logger.warn('Data Access submit-for-audit failed', { error: daErr, projectId });
+      }
+
 
       const { data: isValid, error: validationError } = await supabase
         .rpc('validate_onboarding_completion', { 
