@@ -202,10 +202,14 @@ export default function ProjectOnboardingList() {
     }
   };
 
-  const filteredProjects = projects.filter(project =>
-    project.proposal_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.client_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch =
+      project.proposal_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.client_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' || calculateProjectStatus(project).label === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleProjectClick = (projectId: string) => {
     navigate(`/onboarding/${projectId}`);
