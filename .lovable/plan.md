@@ -1,45 +1,31 @@
-## Root cause: "Please fix the highlighted errors" with nothing highlighted
+## Add Status Filter to Project Onboarding List
 
-The Onboarding tab's "Number of Inverters" input renders `value={formData.inverter_quantity || ''}` with `placeholder="1"`. On projects like Weylandts Tyger Valley, `inverter_quantity` in `onboarding_fields` is `null`/`undefined`, so the input looks filled (grey "1") but is actually empty.
+Add a Status dropdown next to the search box on `/onboarding` (Project Onboarding landing page) so admins can quickly filter projects by their lifecycle status — matching the pattern used on User Management and My Clients.
 
-On submit, `getAllErrors` runs the schema rule `inverter_quantity: z.number().min(1)`, which fails and blocks the submit with the toast "Please fix the highlighted errors before submitting." However:
+### Scope
+File: `src/pages/ProjectOnboardingList.tsx`
 
-- The **Inverter section badge** (`getSectionCompletionInfo('inverter')`) only counts the row-level fields (brand/model/capacity/serial), not `inverter_quantity`, so the section shows green.
-- The **ValidationSummary** is shown, but `inverter_quantity` isn't in `touched`, and the `SectionBadge` doesn't flag it — the user sees no red highlight anywhere, only the toast.
+### Changes
 
-The overall progress bar reports 100% because it only tallies sections, all of which report complete.
+1. **Add status filter state**
+   - New state: `statusFilter` (default `'all'`).
 
-## Changes
+2. **Add Select dropdown next to search**
+   - Place a shadcn `Select` beside the existing search input in the same flex row.
+   - Options (match the badge labels already produced by `calculateProjectStatus`):
+     - All Statuses
+     - Not Started
+     - In Progress
+     - Awaiting Review
+     - Under Review
+     - Audit Ready
 
-### 1. Fix "Number of Inverters" input (`src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`)
+3. **Apply filter to the list**
+   - Extend `filteredProjects` to also filter by `statusFilter` using the same `calculateProjectStatus(project).label` used to render the badge, so filter and badge stay perfectly in sync (single source of truth — no duplicated status logic).
 
-- Change the placeholder from `"1"` to `"Number of Inverters"` (uses default muted placeholder colour, matching the other inputs).
-- Stop the silent auto-coerce to `1` on empty. When the field is cleared, set `inverter_quantity` to `undefined` so validation can fire.
-- Add red border + `FormError` when the field has an error, even before it's been blurred, once the validation summary has been shown (i.e. use `errors.inverter_quantity` instead of `touched.inverter_quantity && errors.inverter_quantity` after a failed submit — same pattern used elsewhere).
-- Extend `getSectionCompletionInfo('inverter')` to also require `inverter_quantity` (positive integer) so the section badge turns amber and shows "1 field remaining" when it's blank. Update the `total`/`remaining` math accordingly.
-- On failed submit in `handleValidateAndComplete`, mark all fields present in `allErrors` as touched (so the inline red borders/messages appear) in addition to showing the ValidationSummary. This closes the general class of "toast fires but nothing is highlighted".
+4. **Layout**
+   - Search stays as `flex-1 max-w-md`; Select sits to its right at a fixed width (~`w-[200px]`), stacking on mobile via the existing `flex items-center gap-4` container (add `flex-wrap`).
 
-### 2. Remove duplicate buttons in Data Access Configuration card (`src/pages/ProjectOnboardingDetail/DataAccessTab.tsx`)
-
-- Delete the `<div className="flex gap-3 pt-4">…Save Draft…Submit for Audit…</div>` block (lines ~515–532) and the now-unused `handleSaveDraft` / `handleSubmitForAudit` handlers, plus the `isSavingDraft`, `isSubmitting`, `canSubmit` state referenced only by those buttons.
-- Keep the connection-test flow and field validation — the page-level footer (Onboarding tab) already provides "Save Draft" and "Submit for Audit" / "Validate & Mark Complete".
-
-### 3. Green badge on the Onboarding tab when audit-ready (`src/pages/ProjectOnboardingDetail/index.tsx`)
-
-Replace the current single "Incomplete" badge on the Onboarding `TabsTrigger` with a three-state badge, mirroring the Agreement tab styling:
-
-- `project.audit_ready` → green badge "Audit Ready"
-- else `project.onboarding_complete` → neutral badge "Complete"
-- else → amber/orange badge "Incomplete"
-
-## Technical notes
-
-- The schema rule `inverter_quantity: z.number().min(1)` stays as-is; we only change the UI so an empty value round-trips as `undefined` and gets caught + surfaced.
-- The `!canSubmit` gating currently on the Data Access card's Submit button is redundant with the page-level submit's `getAllErrors` check (which already covers Data Access via the `dataAccess` section), so removing the card buttons doesn't loosen validation.
-- No database migration required.
-
-## Files touched
-
-- `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`
-- `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx`
-- `src/pages/ProjectOnboardingDetail/index.tsx`
+### Out of scope
+- No changes to the underlying queries, badge component, StepPill, or status calculation logic.
+- No changes to the legend or other pages.
