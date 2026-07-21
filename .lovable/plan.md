@@ -1,31 +1,27 @@
-## Add Status Filter to Project Onboarding List
+## Partners table tweaks
 
-Add a Status dropdown next to the search box on `/onboarding` (Project Onboarding landing page) so admins can quickly filter projects by their lifecycle status — matching the pattern used on User Management and My Clients.
+**1. Rename "Company rate" label**
+In `src/components/admin/agents/PartnersTable.tsx`:
+- Change the badge label from `{override}% (Company rate)` to `{override}% SP Rate`.
+- Update `renderRate` (used by CSV export) to match: `${override}% SP Rate`.
+- Keep the Tier label unchanged (`4% (Tier)` / `7% (Tier)`).
 
-### Scope
-File: `src/pages/ProjectOnboardingList.tsx`
+**2. Sortable MWp Signed column (+ other columns)**
+Add lightweight client-side sorting on the currently-loaded rows:
+- Add `sortBy` / `sortDir` state (default: `mwp` desc).
+- Make these column headers clickable with an up/down chevron indicator:
+  - **MWp Signed** (numeric, primary ask)
+  - **Company** (alpha)
+  - **Contact** (by agent name)
+  - **Status** (groups Active / Invited / Expired / Inactive together)
+  - **Current Rate** (numeric — Tier rate or SP override)
+- Invitations (no MWp / rate) sort to the bottom regardless of direction.
+- CSV export respects the current sort order.
 
-### Changes
+**3. Nothing else changed**
+Filters, pagination, drawer, realtime, and the underlying RPC stay as-is. No schema or backend work.
 
-1. **Add status filter state**
-   - New state: `statusFilter` (default `'all'`).
-
-2. **Add Select dropdown next to search**
-   - Place a shadcn `Select` beside the existing search input in the same flex row.
-   - Options (match the badge labels already produced by `calculateProjectStatus`):
-     - All Statuses
-     - Not Started
-     - In Progress
-     - Awaiting Review
-     - Under Review
-     - Audit Ready
-
-3. **Apply filter to the list**
-   - Extend `filteredProjects` to also filter by `statusFilter` using the same `calculateProjectStatus(project).label` used to render the badge, so filter and badge stay perfectly in sync (single source of truth — no duplicated status logic).
-
-4. **Layout**
-   - Search stays as `flex-1 max-w-md`; Select sits to its right at a fixed width (~`w-[200px]`), stacking on mobile via the existing `flex items-center gap-4` container (add `flex-wrap`).
-
-### Out of scope
-- No changes to the underlying queries, badge component, StepPill, or status calculation logic.
-- No changes to the legend or other pages.
+### Technical notes
+- Sorting runs on `filteredRows` before pagination slicing (table already renders `filteredRows` directly).
+- Header cells become `<button>`s inside `<TableHead>` for a11y; `aria-sort` set to `ascending` / `descending` / `none`.
+- Sort comparator handles `null`/invitation rows by pushing them last.
