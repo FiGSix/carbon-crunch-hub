@@ -21,7 +21,7 @@ export const HeroSection = () => {
             </h1>
             
             <p className="text-xl text-muted-foreground max-w-xl">
-              Homeowners earn R600–R1,000+ per year from a typical 5kWp system.&nbsp;Business earn R900,000+ over 5 years per 1MWp through verified carbon credits. Free to join.
+              <span className="text-primary">Homeowners</span> earn R600–R1,000+ per year from a typical 5kWp system.&nbsp;<span className="text-primary">Business</span> earn R900,000+ over 5 years per 1MWp through verified carbon credits. Free to join.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
