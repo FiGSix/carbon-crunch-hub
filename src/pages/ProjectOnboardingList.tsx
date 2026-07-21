@@ -30,6 +30,7 @@ export default function ProjectOnboardingList() {
   const [projects, setProjects] = useState<ProjectOnboardingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
 
