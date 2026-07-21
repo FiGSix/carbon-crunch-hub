@@ -215,19 +215,17 @@ export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAcc
     }
   };
 
-  const handleSubmitForAudit = async () => {
+  const handleSubmitForAudit = async (opts?: { silent?: boolean }): Promise<boolean> => {
     try {
-      setIsSubmitting(true);
-
       // Validate all fields
       const validationErrors = validateAll(config);
       if (Object.keys(validationErrors).length > 0) {
         toast({
-          title: "Validation Error",
-          description: "Please fix the highlighted errors before submitting",
+          title: "Data Access — validation error",
+          description: "Please fix the highlighted errors in the Data Access section before submitting",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
       const { id, created_at, updated_at, ...configData } = config as any;
@@ -287,47 +285,62 @@ export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAcc
 
       if (activityError) console.error('Failed to log activity:', activityError);
 
-      const { data: adminProfiles, error: adminError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin');
+      if (!isSubmitted) {
+        const { data: adminProfiles, error: adminError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'admin');
 
-      if (!adminError && adminProfiles) {
-        const notifications = adminProfiles.map(admin => ({
-          user_id: admin.id,
-          type: 'info',
-          title: 'Data Access Config Submitted',
-          message: `Project has submitted data access configuration for audit review`,
-          related_type: 'project_onboarding',
-          related_id: projectId,
-        }));
+        if (!adminError && adminProfiles) {
+          const notifications = adminProfiles.map(admin => ({
+            user_id: admin.id,
+            type: 'info',
+            title: 'Data Access Config Submitted',
+            message: `Project has submitted data access configuration for audit review`,
+            related_type: 'project_onboarding',
+            related_id: projectId,
+          }));
 
-        await supabase.from('notifications').insert(notifications);
+          await supabase.from('notifications').insert(notifications);
+        }
       }
 
       setIsSubmitted(true);
       setSubmittedAt(new Date().toISOString());
 
-      toast({
-        title: "Submitted for audit",
-        description: "Configuration submitted successfully. Admins will review it shortly.",
-      });
+      if (!opts?.silent) {
+        toast({
+          title: "Submitted for audit",
+          description: "Configuration submitted successfully. Admins will review it shortly.",
+        });
+      }
 
       fetchConfig();
       onRefresh();
+      return true;
     } catch (error) {
       console.error('Error submitting for audit:', error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error) || "Failed to submit for audit",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      if (!opts?.silent) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(error) || "Failed to submit for audit",
+          variant: "destructive",
+        });
+      }
+      return false;
     }
   };
 
-  const canSubmit = config.provider && !hasErrors && !isSubmitted;
+  // Register save/submit actions with the parent so the page-level footer
+  // buttons drive the Data Access section (the in-card buttons were removed).
+  useEffect(() => {
+    if (!registerActions) return;
+    registerActions({
+      saveDraft: () => handleSaveDraft({ silent: true }),
+      submitForAudit: () => handleSubmitForAudit({ silent: true }),
+    });
+  }, [registerActions, config, isSubmitted]);
+
 
   return (
     <div className="space-y-6">
