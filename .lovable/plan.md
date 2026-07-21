@@ -1,64 +1,45 @@
-## Diagnosis
+## Root cause: "Please fix the highlighted errors" with nothing highlighted
 
-Clayton McLean (Dipula Income Fund Limited, `clayton@dipula.co.za`) **does exist** in the database:
+The Onboarding tab's "Number of Inverters" input renders `value={formData.inverter_quantity || ''}` with `placeholder="1"`. On projects like Weylandts Tyger Valley, `inverter_quantity` in `onboarding_fields` is `null`/`undefined`, so the input looks filled (grey "1") but is actually empty.
 
-- `clients.id = 22612042-…`, created 2025-12-18 by shaun@crunchcarbon.com
-- `user_id` is `NULL` (prospect — proposal-only, never signed up)
-- `client_company_id` is linked to Dipula Income Fund Limited
+On submit, `getAllErrors` runs the schema rule `inverter_quantity: z.number().min(1)`, which fails and blocks the submit with the toast "Please fix the highlighted errors before submitting." However:
 
-He is returned correctly by `get_agent_clients_paginated_admin` when queried directly. So the RPC and permissions are fine.
+- The **Inverter section badge** (`getSectionCompletionInfo('inverter')`) only counts the row-level fields (brand/model/capacity/serial), not `inverter_quantity`, so the section shows green.
+- The **ValidationSummary** is shown, but `inverter_quantity` isn't in `touched`, and the `SectionBadge` doesn't flag it — the user sees no red highlight anywhere, only the toast.
 
-**Why he's invisible in the UI:**
+The overall progress bar reports 100% because it only tallies sections, all of which report complete.
 
-- My Clients loads clients in pages of 50, ordered by `created_at DESC`.
-- There are **375 clients newer than Clayton** (out of 543 total) — he's roughly on page 8.
-- The search box in `ClientsTableContent` only filters the rows **already loaded on the client**. Typing "Clayton" or "Dipula" matches nothing because his row hasn't been fetched yet.
-- Admin would need to hit "Load more" seven times before search can find him. In practice, no one does.
+## Changes
 
-Same problem affects every not-recently-created client (prospects created via old proposals, dormant companies, etc.), not just Clayton.
+### 1. Fix "Number of Inverters" input (`src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`)
 
-## Fix — server-side search
+- Change the placeholder from `"1"` to `"Number of Inverters"` (uses default muted placeholder colour, matching the other inputs).
+- Stop the silent auto-coerce to `1` on empty. When the field is cleared, set `inverter_quantity` to `undefined` so validation can fire.
+- Add red border + `FormError` when the field has an error, even before it's been blurred, once the validation summary has been shown (i.e. use `errors.inverter_quantity` instead of `touched.inverter_quantity && errors.inverter_quantity` after a failed submit — same pattern used elsewhere).
+- Extend `getSectionCompletionInfo('inverter')` to also require `inverter_quantity` (positive integer) so the section badge turns amber and shows "1 field remaining" when it's blank. Update the `total`/`remaining` math accordingly.
+- On failed submit in `handleValidateAndComplete`, mark all fields present in `allErrors` as touched (so the inline red borders/messages appear) in addition to showing the ValidationSummary. This closes the general class of "toast fires but nothing is highlighted".
 
-Push the search query down to the database so it runs against **all** clients, not just the loaded page.
+### 2. Remove duplicate buttons in Data Access Configuration card (`src/pages/ProjectOnboardingDetail/DataAccessTab.tsx`)
 
-### 1. RPC changes (one migration)
+- Delete the `<div className="flex gap-3 pt-4">…Save Draft…Submit for Audit…</div>` block (lines ~515–532) and the now-unused `handleSaveDraft` / `handleSubmitForAudit` handlers, plus the `isSavingDraft`, `isSubmitting`, `canSubmit` state referenced only by those buttons.
+- Keep the connection-test flow and field validation — the page-level footer (Onboarding tab) already provides "Save Draft" and "Submit for Audit" / "Validate & Mark Complete".
 
-Add an optional `search_param TEXT DEFAULT NULL` to both:
+### 3. Green badge on the Onboarding tab when audit-ready (`src/pages/ProjectOnboardingDetail/index.tsx`)
 
-- `get_agent_clients_paginated_admin(agent_id_param, limit_param, offset_param, search_param)`
-- `get_agent_clients_paginated(agent_id_param, limit_param, offset_param, search_param)`
-- `get_agent_clients_count(agent_id_param, search_param)` — so pagination totals reflect the filter.
+Replace the current single "Incomplete" badge on the Onboarding `TabsTrigger` with a three-state badge, mirroring the Agreement tab styling:
 
-When `search_param` is non-null/non-empty, add a case-insensitive `WHERE` on trimmed match across `first_name`, `last_name`, `email`, and `company_name` (`ILIKE '%…%'`). Preserve existing role/agent scoping and ordering.
+- `project.audit_ready` → green badge "Audit Ready"
+- else `project.onboarding_complete` → neutral badge "Complete"
+- else → amber/orange badge "Incomplete"
 
-### 2. Fetcher + hook
+## Technical notes
 
-- `ClientFetcher.getClients` — accept `search?: string`, pass to both RPCs, include in the cache key and dedup key so different searches don't collide.
-- `UnifiedDataService.getClients` — thread `search` through.
-- `useClients` — accept `search` option, refetch (debounced by caller) when it changes, reset offset to 0 on new search.
-
-### 3. UI wiring
-
-- `MyClients2` — lift `searchQuery` state (or add local state) and pass to `useClients({ paginated: true, pageSize: 50, search: debouncedSearch })`. Debounce ~300ms.
-- `ClientsTableContent` — accept `searchQuery`/`onSearchChange` as props from parent instead of owning the state; keep the input UI and the "Found N clients matching…" line, but stop client-side filtering when a server search is active (the returned rows are already the matches). Keep client-side sort as-is.
-
-### 4. Behaviour
-
-- Empty search: current pagination behaviour, unchanged.
-- Non-empty search: server returns all matches (still paged, but the match set is small), so Clayton / Dipula / any older client shows up immediately.
-- Agent view: same mechanism, scoped to their own clients by the existing `agent_id_param` branch.
+- The schema rule `inverter_quantity: z.number().min(1)` stays as-is; we only change the UI so an empty value round-trips as `undefined` and gets caught + surfaced.
+- The `!canSubmit` gating currently on the Data Access card's Submit button is redundant with the page-level submit's `getAllErrors` check (which already covers Data Access via the `dataAccess` section), so removing the card buttons doesn't loosen validation.
+- No database migration required.
 
 ## Files touched
 
-- `supabase/migrations/<new>.sql` — extend the three RPCs with `search_param`.
-- `src/services/unified/clients/operations/ClientFetcher.ts` — accept + forward `search`, update cache/dedup keys.
-- `src/services/unified/UnifiedDataService.ts` — pass `search` through.
-- `src/hooks/clients/useClients.ts` — new `search` option, refetch on change, reset offset.
-- `src/pages/MyClients2.tsx` — own the debounced search state, pass to hook and table.
-- `src/components/clients/table/ClientsTableContent.tsx` — accept search state as props; skip client-side filter when server search is active; keep the input and result-count line.
-
-## Out of scope
-
-- Changing default page size or auto-loading everything for admins (server search removes the need).
-- Redesigning the prospect/company visibility rules — those already work; the row just wasn't reachable.
-- Search on User Management's Potential Clients tab (separate screen, separate query).
+- `src/pages/ProjectOnboardingDetail/OnboardingTab.tsx`
+- `src/pages/ProjectOnboardingDetail/DataAccessTab.tsx`
+- `src/pages/ProjectOnboardingDetail/index.tsx`

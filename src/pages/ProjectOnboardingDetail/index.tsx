@@ -169,8 +169,16 @@ export default function ProjectOnboardingDetail() {
               </TabsTrigger>
               <TabsTrigger value="onboarding">
                 Onboarding
-                {!project.onboarding_complete && (
-                  <Badge variant="secondary" className="ml-2">
+                {project.audit_ready ? (
+                  <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                    Audit Ready
+                  </Badge>
+                ) : project.onboarding_complete ? (
+                  <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                    Complete
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
                     Incomplete
                   </Badge>
                 )}

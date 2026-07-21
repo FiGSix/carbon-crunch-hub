@@ -21,15 +21,22 @@ import { cn } from "@/lib/utils";
 interface DataAccessTabProps {
   projectId: string;
   onRefresh: () => void;
+  /**
+   * Optional callback so a parent (OnboardingTab page-level footer) can drive
+   * the save-draft / submit-for-audit actions. The in-card buttons were removed
+   * to avoid duplicating the page-level Save Draft and Validate & Mark Complete.
+   */
+  registerActions?: (actions: {
+    saveDraft: () => Promise<boolean>;
+    submitForAudit: () => Promise<boolean>;
+  }) => void;
 }
 
-export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
+export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAccessTabProps) {
   const { toast } = useToast();
   const [config, setConfig] = useState<Partial<DataAccessConfig>>({
     credential_method: 'delegated_account',
   });
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [portalDefaults, setPortalDefaults] = useState<Record<string, string | null>>({});
@@ -158,10 +165,8 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
   }, [config.provider, portalDefaults]);
 
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (opts?: { silent?: boolean }): Promise<boolean> => {
     try {
-      setIsSavingDraft(true);
-
       const { id, created_at, updated_at, data_access_verified, data_access_verified_at, ...configData } = config as any;
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -187,38 +192,40 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
 
       if (error) throw error;
 
-      toast({
-        title: "Draft saved",
-        description: "Configuration saved as draft successfully",
-      });
+      if (!opts?.silent) {
+        toast({
+          title: "Draft saved",
+          description: "Configuration saved as draft successfully",
+        });
+      }
 
       fetchConfig();
       onRefresh();
+      return true;
     } catch (error) {
       console.error('Error saving draft:', error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error) || "Failed to save draft",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingDraft(false);
+      if (!opts?.silent) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(error) || "Failed to save draft",
+          variant: "destructive",
+        });
+      }
+      return false;
     }
   };
 
-  const handleSubmitForAudit = async () => {
+  const handleSubmitForAudit = async (opts?: { silent?: boolean }): Promise<boolean> => {
     try {
-      setIsSubmitting(true);
-
       // Validate all fields
       const validationErrors = validateAll(config);
       if (Object.keys(validationErrors).length > 0) {
         toast({
-          title: "Validation Error",
-          description: "Please fix the highlighted errors before submitting",
+          title: "Data Access — validation error",
+          description: "Please fix the highlighted errors in the Data Access section before submitting",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
       const { id, created_at, updated_at, ...configData } = config as any;
@@ -278,47 +285,62 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
 
       if (activityError) console.error('Failed to log activity:', activityError);
 
-      const { data: adminProfiles, error: adminError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin');
+      if (!isSubmitted) {
+        const { data: adminProfiles, error: adminError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'admin');
 
-      if (!adminError && adminProfiles) {
-        const notifications = adminProfiles.map(admin => ({
-          user_id: admin.id,
-          type: 'info',
-          title: 'Data Access Config Submitted',
-          message: `Project has submitted data access configuration for audit review`,
-          related_type: 'project_onboarding',
-          related_id: projectId,
-        }));
+        if (!adminError && adminProfiles) {
+          const notifications = adminProfiles.map(admin => ({
+            user_id: admin.id,
+            type: 'info',
+            title: 'Data Access Config Submitted',
+            message: `Project has submitted data access configuration for audit review`,
+            related_type: 'project_onboarding',
+            related_id: projectId,
+          }));
 
-        await supabase.from('notifications').insert(notifications);
+          await supabase.from('notifications').insert(notifications);
+        }
       }
 
       setIsSubmitted(true);
       setSubmittedAt(new Date().toISOString());
 
-      toast({
-        title: "Submitted for audit",
-        description: "Configuration submitted successfully. Admins will review it shortly.",
-      });
+      if (!opts?.silent) {
+        toast({
+          title: "Submitted for audit",
+          description: "Configuration submitted successfully. Admins will review it shortly.",
+        });
+      }
 
       fetchConfig();
       onRefresh();
+      return true;
     } catch (error) {
       console.error('Error submitting for audit:', error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error) || "Failed to submit for audit",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      if (!opts?.silent) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(error) || "Failed to submit for audit",
+          variant: "destructive",
+        });
+      }
+      return false;
     }
   };
 
-  const canSubmit = config.provider && !hasErrors && !isSubmitted;
+  // Register save/submit actions with the parent so the page-level footer
+  // buttons drive the Data Access section (the in-card buttons were removed).
+  useEffect(() => {
+    if (!registerActions) return;
+    registerActions({
+      saveDraft: () => handleSaveDraft({ silent: true }),
+      submitForAudit: () => handleSubmitForAudit({ silent: true }),
+    });
+  }, [registerActions, config, isSubmitted]);
+
 
   return (
     <div className="space-y-6">
@@ -512,24 +534,12 @@ export function DataAccessTab({ projectId, onRefresh }: DataAccessTabProps) {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <Button 
-              onClick={handleSaveDraft} 
-              disabled={isSavingDraft || isSubmitting} 
-              variant="outline"
-            >
-              {isSavingDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Draft
-            </Button>
-            <Button 
-              onClick={handleSubmitForAudit} 
-              disabled={isSubmitting || isSavingDraft || !canSubmit}
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit for Audit
-            </Button>
-          </div>
+          {/*
+            In-card "Save Draft" and "Submit for Audit" buttons intentionally removed.
+            The page-level footer ("Save Draft" and "Validate & Mark Complete" /
+            "Mark Complete - Ready for Review") drives this section via
+            registerActions, so we don't duplicate the action here.
+          */}
         </CardContent>
       </Card>
     </div>

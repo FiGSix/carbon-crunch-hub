@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -52,15 +52,22 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const [panelArrayCount, setPanelArrayCount] = useState<number>(1);
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   
-  const { 
-    errors, 
-    touched, 
-    validateFieldOnBlur, 
-    validateInverters, 
-    validatePanelArrays, 
+  const {
+    errors,
+    touched,
+    validateFieldOnBlur,
+    validateInverters,
+    validatePanelArrays,
     getAllErrors,
-    hasErrors 
+    hasErrors,
+    setFieldTouched,
   } = useOnboardingValidation();
+
+  // Ref to expose DataAccessTab save/submit actions to page-level footer buttons
+  const dataAccessActionsRef = useRef<{
+    saveDraft: () => Promise<boolean>;
+    submitForAudit: () => Promise<boolean>;
+  } | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -425,6 +432,13 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         }
       }
 
+      // Also persist Data Access Configuration (embedded card, no longer has own buttons)
+      try {
+        await dataAccessActionsRef.current?.saveDraft();
+      } catch (daErr) {
+        logger.warn('Data Access save-draft failed', { error: daErr, projectId });
+      }
+
       toast({
         title: "Success",
         description: "Draft saved successfully",
@@ -460,6 +474,8 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       const allErrors = getAllErrors(formData, inverterDetails, panelArrayDetails);
       if (Object.keys(allErrors).length > 0) {
         setShowValidationSummary(true);
+        // Mark every errored field as touched so inline red borders/messages appear
+        Object.keys(allErrors).forEach(fieldName => setFieldTouched(fieldName));
         toast({
           title: "Validation Failed",
           description: "Please fix the highlighted errors before submitting",
@@ -540,6 +556,17 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               .eq('id', projectOnboardingData.proposal_id);
           }
         }
+      }
+
+      // Persist Data Access config and mark it verified (replaces removed in-card "Submit for Audit" button)
+      try {
+        const daOk = await dataAccessActionsRef.current?.submitForAudit();
+        if (daOk === false) {
+          // DataAccessTab has already shown a validation toast; abort completion
+          return;
+        }
+      } catch (daErr) {
+        logger.warn('Data Access submit-for-audit failed', { error: daErr, projectId });
       }
 
 
@@ -668,7 +695,7 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       }
       case 'inverter': {
         const fields = ['brand', 'model', 'capacity_kw', 'serial'] as const;
-        const total = inverterDetails.length * fields.length;
+        const rowTotal = inverterDetails.length * fields.length;
         let filledCount = 0;
         inverterDetails.forEach(inv => {
           if (inv.brand) filledCount++;
@@ -676,8 +703,15 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           if (inv.capacity_kw !== null) filledCount++;
           if (inv.serial?.trim()) filledCount++;
         });
-        if (inverterDetails.length === 0) return { complete: false, remaining: 4, total: 4 };
-        return { complete: filledCount === total, remaining: total - filledCount, total };
+        // Include the top-level "Number of Inverters" field in the check.
+        const qty = formData.inverter_quantity;
+        const qtyFilled = typeof qty === 'number' && qty >= 1;
+        const total = rowTotal + 1;
+        const filled = filledCount + (qtyFilled ? 1 : 0);
+        if (inverterDetails.length === 0) {
+          return { complete: false, remaining: 4 + (qtyFilled ? 0 : 1), total: 4 + 1 };
+        }
+        return { complete: filled === total, remaining: total - filled, total };
       }
       case 'battery': {
         if (formData.has_battery === null || formData.has_battery === undefined) {
@@ -1088,20 +1122,39 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 type="number"
                 min="1"
                 max="20"
-                value={formData.inverter_quantity || ''}
+                value={
+                  typeof formData.inverter_quantity === 'number' && formData.inverter_quantity >= 1
+                    ? formData.inverter_quantity
+                    : ''
+                }
                 onChange={(e) => {
-                  const val = parseInt(e.target.value);
+                  const raw = e.target.value;
+                  if (raw === '') {
+                    // Leave empty so validation can flag it — do not silently coerce to 1
+                    handleInputChange('inverter_quantity', undefined as any);
+                    return;
+                  }
+                  const val = parseInt(raw);
                   if (!isNaN(val) && val >= 1 && val <= 20) {
                     handleInputChange('inverter_quantity', val);
-                  } else if (e.target.value === '') {
-                    handleInputChange('inverter_quantity', 1);
                   }
                 }}
                 onBlur={() => handleFieldBlur('inverter_quantity')}
-                placeholder="1"
-                className={cn(touched.inverter_quantity && errors.inverter_quantity && "border-destructive")}
+                placeholder="Number of Inverters"
+                className={cn(
+                  (touched.inverter_quantity || showValidationSummary) &&
+                    errors.inverter_quantity &&
+                    "border-destructive"
+                )}
               />
-              <FormError message={touched.inverter_quantity ? errors.inverter_quantity : undefined} />
+              <FormError
+                message={
+                  (touched.inverter_quantity || showValidationSummary)
+                    ? errors.inverter_quantity
+                    : undefined
+                }
+              />
+
             </div>
           </div>
 
@@ -1541,7 +1594,12 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           </div>
         </CardHeader>
         <CardContent>
-          <DataAccessTab projectId={projectId} onRefresh={onRefresh} />
+          <DataAccessTab
+            projectId={projectId}
+            onRefresh={onRefresh}
+            registerActions={(actions) => { dataAccessActionsRef.current = actions; }}
+          />
+
         </CardContent>
       </Card>
 
