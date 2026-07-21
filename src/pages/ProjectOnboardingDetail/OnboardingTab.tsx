@@ -52,15 +52,22 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
   const [panelArrayCount, setPanelArrayCount] = useState<number>(1);
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   
-  const { 
-    errors, 
-    touched, 
-    validateFieldOnBlur, 
-    validateInverters, 
-    validatePanelArrays, 
+  const {
+    errors,
+    touched,
+    validateFieldOnBlur,
+    validateInverters,
+    validatePanelArrays,
     getAllErrors,
-    hasErrors 
+    hasErrors,
+    setFieldTouched,
   } = useOnboardingValidation();
+
+  // Ref to expose DataAccessTab save/submit actions to page-level footer buttons
+  const dataAccessActionsRef = useRef<{
+    saveDraft: () => Promise<boolean>;
+    submitForAudit: () => Promise<boolean>;
+  } | null>(null);
 
   useEffect(() => {
     fetchDocuments();
