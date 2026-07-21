@@ -1122,20 +1122,39 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                 type="number"
                 min="1"
                 max="20"
-                value={formData.inverter_quantity || ''}
+                value={
+                  typeof formData.inverter_quantity === 'number' && formData.inverter_quantity >= 1
+                    ? formData.inverter_quantity
+                    : ''
+                }
                 onChange={(e) => {
-                  const val = parseInt(e.target.value);
+                  const raw = e.target.value;
+                  if (raw === '') {
+                    // Leave empty so validation can flag it — do not silently coerce to 1
+                    handleInputChange('inverter_quantity', undefined as any);
+                    return;
+                  }
+                  const val = parseInt(raw);
                   if (!isNaN(val) && val >= 1 && val <= 20) {
                     handleInputChange('inverter_quantity', val);
-                  } else if (e.target.value === '') {
-                    handleInputChange('inverter_quantity', 1);
                   }
                 }}
                 onBlur={() => handleFieldBlur('inverter_quantity')}
-                placeholder="1"
-                className={cn(touched.inverter_quantity && errors.inverter_quantity && "border-destructive")}
+                placeholder="Number of Inverters"
+                className={cn(
+                  (touched.inverter_quantity || showValidationSummary) &&
+                    errors.inverter_quantity &&
+                    "border-destructive"
+                )}
               />
-              <FormError message={touched.inverter_quantity ? errors.inverter_quantity : undefined} />
+              <FormError
+                message={
+                  (touched.inverter_quantity || showValidationSummary)
+                    ? errors.inverter_quantity
+                    : undefined
+                }
+              />
+
             </div>
           </div>
 
