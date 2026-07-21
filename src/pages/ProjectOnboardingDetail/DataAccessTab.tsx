@@ -534,24 +534,12 @@ export function DataAccessTab({ projectId, onRefresh, registerActions }: DataAcc
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <Button 
-              onClick={handleSaveDraft} 
-              disabled={isSavingDraft || isSubmitting} 
-              variant="outline"
-            >
-              {isSavingDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Draft
-            </Button>
-            <Button 
-              onClick={handleSubmitForAudit} 
-              disabled={isSubmitting || isSavingDraft || !canSubmit}
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit for Audit
-            </Button>
-          </div>
+          {/*
+            In-card "Save Draft" and "Submit for Audit" buttons intentionally removed.
+            The page-level footer ("Save Draft" and "Validate & Mark Complete" /
+            "Mark Complete - Ready for Review") drives this section via
+            registerActions, so we don't duplicate the action here.
+          */}
         </CardContent>
       </Card>
     </div>
