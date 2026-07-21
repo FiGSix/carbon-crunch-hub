@@ -1594,7 +1594,12 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
           </div>
         </CardHeader>
         <CardContent>
-          <DataAccessTab projectId={projectId} onRefresh={onRefresh} />
+          <DataAccessTab
+            projectId={projectId}
+            onRefresh={onRefresh}
+            registerActions={(actions) => { dataAccessActionsRef.current = actions; }}
+          />
+
         </CardContent>
       </Card>
 
