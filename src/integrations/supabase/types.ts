@@ -3806,6 +3806,15 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_agents_management_counts: {
+        Args: never
+        Returns: {
+          active: number
+          invited: number
+          pending_approval: number
+          total: number
+        }[]
+      }
       get_agents_management_data: {
         Args: {
           limit_param?: number
@@ -3836,6 +3845,7 @@ export type Database = {
           portfolio_size_kwp: number
           signed_proposals: number
           total_commission: number
+          total_count: number
           total_proposals: number
         }[]
       }
