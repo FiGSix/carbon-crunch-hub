@@ -23,4 +23,13 @@ export interface AgentData {
   invitation_token?: string;
   invitation_expires_at?: string;
   invited_by_email?: string;
+  total_count?: number;
 }
+
+export interface AgentCounts {
+  invited: number;
+  pending_approval: number;
+  active: number;
+  total: number;
+}
+
