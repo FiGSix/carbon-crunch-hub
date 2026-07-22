@@ -82,8 +82,9 @@ export function PartnersTable() {
   } = useInfiniteQuery({
     queryKey: queryKeys.agents.management.list(
       { status: statusFilter, search },
-      { size: PAGE_SIZE },
+      { page: 1, size: PAGE_SIZE },
     ),
+
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await supabase.rpc('get_agents_management_data', {
