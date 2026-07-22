@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -23,10 +23,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAgentsRealtime } from './realtime/useAgentsRealtime';
 import { AgentData } from './types';
-import { TablePagination } from './TablePagination';
 import { AgentManageDrawer } from './AgentManageDrawer';
 import { STATUS_OPTIONS, StatusKey, renderStatusBadge } from './statusBadge';
+import { PartnerStatsCards } from './PartnerStatsCards';
 
+const PAGE_SIZE = 50;
 const tierRate = (companyKwp: number) => (companyKwp >= 15000 ? 7 : 4);
 
 const escapeCsv = (v: unknown) => {
@@ -56,48 +57,74 @@ const effectiveRate = (a: AgentData): number | null => {
 export function PartnersTable() {
   useAgentsRealtime();
 
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusKey>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
   const [selectedAgent, setSelectedAgent] = useState<AgentData | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('mwp');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const { data, isLoading, error } = useQuery({
+  // Debounce the search input
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const {
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: queryKeys.agents.management.list(
-      { status: statusFilter, search, company: companyFilter },
-      { page, size: pageSize },
+      { status: statusFilter, search },
+      { size: PAGE_SIZE },
     ),
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await supabase.rpc('get_agents_management_data', {
         status_filter: statusFilter === 'all' ? null : statusFilter,
         search_term: search || null,
-        limit_param: pageSize,
-        offset_param: (page - 1) * pageSize,
+        limit_param: PAGE_SIZE,
+        offset_param: pageParam as number,
       });
       if (error) throw error;
       return (data ?? []) as unknown as AgentData[];
     },
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((n, p) => n + p.length, 0);
+      const total = Number(lastPage?.[0]?.total_count ?? 0);
+      return loaded < total ? loaded : undefined;
+    },
   });
+
+  const rows: AgentData[] = useMemo(
+    () => (data?.pages ?? []).flat(),
+    [data],
+  );
+
+  const totalCount = useMemo(() => {
+    const first = data?.pages?.[0]?.[0];
+    return Number(first?.total_count ?? rows.length);
+  }, [data, rows.length]);
 
   const companyOptions = useMemo(() => {
     const set = new Set<string>();
-    (data ?? []).forEach((a) => {
+    rows.forEach((a) => {
       if (a.company_name) set.add(a.company_name);
     });
     return Array.from(set).sort();
-  }, [data]);
+  }, [rows]);
 
   const filteredRows = useMemo(() => {
-    if (!data) return [] as AgentData[];
-    const base = companyFilter === 'all' ? data : data.filter((a) => a.company_name === companyFilter);
+    const base = companyFilter === 'all' ? rows : rows.filter((a) => a.company_name === companyFilter);
 
     const dir = sortDir === 'asc' ? 1 : -1;
     const cmp = (a: AgentData, b: AgentData): number => {
-      // Push invitations to bottom for numeric columns
       if (sortBy === 'mwp' || sortBy === 'rate') {
         if (a.is_invitation && !b.is_invitation) return 1;
         if (!a.is_invitation && b.is_invitation) return -1;
@@ -132,7 +159,7 @@ export function PartnersTable() {
       }
     };
     return [...base].sort(cmp);
-  }, [data, companyFilter, sortBy, sortDir]);
+  }, [rows, companyFilter, sortBy, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortBy === key) {
@@ -141,7 +168,6 @@ export function PartnersTable() {
       setSortBy(key);
       setSortDir(key === 'mwp' || key === 'rate' ? 'desc' : 'asc');
     }
-    setPage(1);
   };
 
   const sortIcon = (key: SortKey) => {
@@ -188,9 +214,6 @@ export function PartnersTable() {
     setDrawerOpen(true);
   };
 
-  const totalCount = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
   const SortHeader = ({ label, k, className }: { label: string; k: SortKey; className?: string }) => (
     <TableHead className={className} aria-sort={ariaSort(k)}>
       <button
@@ -204,18 +227,26 @@ export function PartnersTable() {
     </TableHead>
   );
 
+  const loadedCount = rows.length;
+  // When companyFilter narrows client-side, show the visible count instead of server total
+  const visibleTotal = companyFilter === 'all' ? totalCount : filteredRows.length;
+  const shownCount = companyFilter === 'all' ? loadedCount : filteredRows.length;
+
   return (
     <div className="space-y-4">
+      {/* Glance cards */}
+      <PartnerStatsCards
+        activeFilter={statusFilter}
+        onSelect={(k) => setStatusFilter(k)}
+      />
+
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-xs flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by name, email or company…"
             className="pl-9"
             aria-label="Search partners"
@@ -224,10 +255,7 @@ export function PartnersTable() {
 
         <Select
           value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v as StatusKey);
-            setPage(1);
-          }}
+          onValueChange={(v) => setStatusFilter(v as StatusKey)}
         >
           <SelectTrigger className="w-[180px]" aria-label="Filter by status">
             <SelectValue />
@@ -354,18 +382,24 @@ export function PartnersTable() {
         </Table>
       </div>
 
-      {totalCount > 0 && (
-        <TablePagination
-          currentPage={page}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          totalItems={totalCount}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
-          }}
-        />
+      {/* Footer: Load more + count */}
+      {filteredRows.length > 0 && (
+        <div className="flex flex-col items-center gap-2 py-4">
+          {companyFilter === 'all' && hasNextPage && (
+            <Button
+              variant="outline"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="w-full max-w-xs"
+            >
+              <ChevronDown className="h-4 w-4 mr-2" />
+              {isFetchingNextPage ? 'Loading…' : 'Load More Partners'}
+            </Button>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Showing {shownCount} of {visibleTotal} partners
+          </p>
+        </div>
       )}
 
       <AgentManageDrawer
