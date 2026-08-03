@@ -90,12 +90,12 @@ export async function getClientCompanyMembers(companyId: string) {
     return { data: null, error: membersError };
   }
 
-  // Get profiles for all user IDs
-  const userIds = members.map(m => m.user_id);
+  // Get profiles via security-definer RPC (profiles RLS only exposes own row)
   const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, email, avatar_url')
-    .in('id', userIds);
+    .rpc('get_client_company_member_profiles', {
+      _company_id: companyId,
+      _requesting_user_id: user.id,
+    });
 
   if (profilesError) {
     console.error('Error fetching member profiles:', profilesError);
@@ -103,10 +103,16 @@ export async function getClientCompanyMembers(companyId: string) {
   }
 
   // Combine the data
-  const combined = members.map(member => ({
-    ...member,
-    profile: profiles?.find(p => p.id === member.user_id) || null
-  })) as ClientCompanyMemberWithProfile[];
+  const combined = members.map(member => {
+    const p = profiles?.find((x: any) => x.user_id === member.user_id);
+    return {
+      ...member,
+      profile: p
+        ? { id: p.user_id, first_name: p.first_name, last_name: p.last_name, email: p.email, avatar_url: p.avatar_url }
+        : null,
+    };
+  }) as ClientCompanyMemberWithProfile[];
+
 
   return { data: combined, error: null };
 }
