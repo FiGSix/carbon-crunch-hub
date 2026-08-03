@@ -11,6 +11,14 @@ import { useCreateResource, RESOURCE_CATEGORIES } from '@/hooks/useKnowledgeHub'
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
+import {
+  KNOWLEDGE_HUB_ACCEPT_ATTRIBUTE,
+  KNOWLEDGE_HUB_ACCEPTED_FORMATS_LABEL,
+  KNOWLEDGE_HUB_MAX_FILE_BYTES,
+  describeUploadError,
+  formatFileSize,
+  validateKnowledgeHubFile,
+} from './uploadLimits';
 
 export function ResourceUploadForm() {
   const [open, setOpen] = useState(false);
