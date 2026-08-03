@@ -1,28 +1,44 @@
-## Diagnosis (confirmed)
+# Knowledge Hub upload limits
 
-Grahame's team data is fine in the database — New Planet Energy (Pty) Ltd has 4 active members (Grahame and Perfect as account admins, Lutendo and Tumelo as members).
+## Current state (verified)
 
-The problem is permissions on the `profiles` table. Its read rule is: **you can only read your own profile, unless you are an admin**. The client team page loads the member rows (which works), then does a second lookup of names/emails from `profiles` — that lookup returns nothing for everyone except Grahame himself, so the UI falls back to blank names and "?" initials.
+- Uploads go to the private `knowledge-hub` storage bucket from the admin upload form.
+- The bucket has no size limit and no allowed file-type list configured — both are unset.
+- The upload form has no size or type validation, and the file picker accepts anything.
+- The only cap in effect is the Supabase project's global upload limit (50 MB by default), which surfaces as an opaque storage error rather than a helpful message.
 
-The agent/partner side of the app already solved this with a secure server-side helper (`get_company_member_profiles`). The client side never got the equivalent, so it queries `profiles` directly and hits the wall.
+## What to build
 
-## Fix
+### 1. Bucket limits
 
-1. **Add a secure server-side function** `get_client_company_member_profiles(company_id, requesting_user_id)`:
-   - Verifies the caller is an active member of that client company (or an admin); otherwise it errors.
-   - Returns only safe fields for that company's members: id, first name, last name, email, avatar.
-   - Mirrors the existing agent-side function exactly, so behaviour and security posture stay consistent.
+Set the `knowledge-hub` bucket to a 100 MB per-file limit and restrict the accepted file types to:
 
-2. **Update the client team data layer** (`src/lib/supabase/clientCompany/clientCompanyOperations.ts`) to call this function instead of selecting from `profiles` directly — in both the member list and the pending-approvals list. Also fix the invitations lookup that resolves inviter names the same way.
+- Documents: PDF, Word (doc/docx), Excel (xls/xlsx), PowerPoint (ppt/pptx), CSV, plain text
+- Images: JPEG, PNG, WEBP, GIF, SVG
+- Video: MP4, WEBM, QuickTime (mov)
 
-3. No changes to the `profiles` access rules themselves — nothing is widened, the function is the only new read path and it is scoped to one company.
+### 2. Matching validation in the upload form
 
-## Verification
+Add shared constants for the limit and the allowed types, then in the admin upload form:
 
-- Sign in as a New Planet Energy member and confirm the Team Management page shows all four names, initials, emails and role badges.
-- Confirm a user from another client company still cannot read New Planet's members.
+- Set the file picker's `accept` list so only supported types are offered.
+- On file selection, reject anything over the limit with a clear toast: file name, its size, and the maximum allowed.
+- Reject unsupported types with a toast naming the accepted formats.
+- Show a small helper line under the file field: accepted formats and "Max 100 MB per file".
+- Document files use a 50 MB guidance limit in the message copy; video is the only category needing the full 100 MB.
+
+### 3. Better failure messaging
+
+If storage still rejects an upload (for example because the project-level limit is lower than the bucket limit), translate the raw error into a plain-English message telling the admin the file exceeded the server upload limit.
+
+## Action required from you
+
+Bucket limits cannot exceed the project's **global upload limit**. That is currently at the 50 MB default, so videos between 50 MB and 100 MB will still be rejected until it is raised.
+
+After this ships, go to the Supabase dashboard → Settings → Storage → "Upload file size limit" and set it to 100 MB. Files under 50 MB work immediately either way.
 
 ## Technical notes
 
-- New function is `SECURITY DEFINER`, `STABLE`, `SET search_path = public`, with an explicit membership check plus `is_current_user_admin()` fallback, and skips soft-deleted profiles.
-- Requires one database migration; the rest is frontend data-layer changes only.
+- Bucket settings updated via a storage bucket configuration change (size limit + allowed MIME types).
+- New shared constants file for the Knowledge Hub limits so the form and any future upload surface stay in sync.
+- Validation added in `ResourceUploadForm.tsx` on file change and on submit; no changes to the resource table or its access rules.
