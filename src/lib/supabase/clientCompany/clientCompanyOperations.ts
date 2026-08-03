@@ -269,16 +269,24 @@ export async function getPendingClientTeamInvitations(companyId: string) {
     return { data: null, error };
   }
 
-  // Get inviter names
+  // Get inviter names via the security-definer RPC (profiles RLS hides other users)
   const inviterIds = invitations?.map(i => i.invited_by).filter(Boolean) || [];
   let profiles: any[] = [];
-  
+
   if (inviterIds.length > 0) {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .in('id', inviterIds);
-    profiles = profileData || [];
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profileData } = await supabase
+        .rpc('get_client_company_member_profiles', {
+          _company_id: companyId,
+          _requesting_user_id: user.id,
+        });
+      profiles = (profileData || []).map((p: any) => ({
+        id: p.user_id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+      }));
+    }
   }
 
   const invitationsWithNames = invitations?.map(inv => ({
@@ -287,6 +295,7 @@ export async function getPendingClientTeamInvitations(companyId: string) {
       ? `${profiles.find(p => p.id === inv.invited_by)?.first_name || ''} ${profiles.find(p => p.id === inv.invited_by)?.last_name || ''}`.trim()
       : 'Unknown'
   })) || [];
+
 
   return { data: invitationsWithNames, error: null };
 }
