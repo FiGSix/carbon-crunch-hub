@@ -141,8 +141,23 @@ export function ResourceUploadForm() {
           </div>
           <div>
             <Label htmlFor="file">File *</Label>
-            <Input id="file" type="file" onChange={e => setFile(e.target.files?.[0] || null)} required />
+            <Input
+              id="file"
+              type="file"
+              accept={KNOWLEDGE_HUB_ACCEPT_ATTRIBUTE}
+              onChange={e => handleFileChange(e.target.files?.[0] || null)}
+              required
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Accepted: {KNOWLEDGE_HUB_ACCEPTED_FORMATS_LABEL}. Max {formatFileSize(KNOWLEDGE_HUB_MAX_FILE_BYTES)} per file (documents and images: 50 MB).
+            </p>
+            {file && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Selected: {file.name} ({formatFileSize(file.size)})
+              </p>
+            )}
           </div>
+
           <Button type="submit" disabled={uploading || !file || !title} className="w-full">
             <Upload className="h-4 w-4 mr-2" />
             {uploading ? 'Uploading...' : 'Upload'}
