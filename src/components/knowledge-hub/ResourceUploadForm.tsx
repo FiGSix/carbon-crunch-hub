@@ -11,6 +11,14 @@ import { useCreateResource, RESOURCE_CATEGORIES } from '@/hooks/useKnowledgeHub'
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
+import {
+  KNOWLEDGE_HUB_ACCEPT_ATTRIBUTE,
+  KNOWLEDGE_HUB_ACCEPTED_FORMATS_LABEL,
+  KNOWLEDGE_HUB_MAX_FILE_BYTES,
+  describeUploadError,
+  formatFileSize,
+  validateKnowledgeHubFile,
+} from './uploadLimits';
 
 export function ResourceUploadForm() {
   const [open, setOpen] = useState(false);
@@ -32,13 +40,34 @@ export function ResourceUploadForm() {
     setFile(null);
   };
 
+  const handleFileChange = (selected: File | null) => {
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+
+    const result = validateKnowledgeHubFile(selected);
+    if (!result.valid) {
+      toast({ title: result.title, description: result.message, variant: 'destructive' });
+      setFile(null);
+      return;
+    }
+
+    setFile(selected);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !user) return;
 
+    const result = validateKnowledgeHubFile(file);
+    if (!result.valid) {
+      toast({ title: result.title, description: result.message, variant: 'destructive' });
+      return;
+    }
+
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
       const storagePath = `${category}/${Date.now()}_${file.name}`;
 
       const { error: uploadError } = await supabase.storage
@@ -64,12 +93,13 @@ export function ResourceUploadForm() {
 
       resetForm();
       setOpen(false);
-    } catch (error: any) {
-      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Upload failed', description: describeUploadError(error), variant: 'destructive' });
     } finally {
       setUploading(false);
     }
   };
+
 
   const categories = RESOURCE_CATEGORIES.filter(c => c.value !== 'all');
 
@@ -111,8 +141,23 @@ export function ResourceUploadForm() {
           </div>
           <div>
             <Label htmlFor="file">File *</Label>
-            <Input id="file" type="file" onChange={e => setFile(e.target.files?.[0] || null)} required />
+            <Input
+              id="file"
+              type="file"
+              accept={KNOWLEDGE_HUB_ACCEPT_ATTRIBUTE}
+              onChange={e => handleFileChange(e.target.files?.[0] || null)}
+              required
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Accepted: {KNOWLEDGE_HUB_ACCEPTED_FORMATS_LABEL}. Max {formatFileSize(KNOWLEDGE_HUB_MAX_FILE_BYTES)} per file (documents and images: 50 MB).
+            </p>
+            {file && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Selected: {file.name} ({formatFileSize(file.size)})
+              </p>
+            )}
           </div>
+
           <Button type="submit" disabled={uploading || !file || !title} className="w-full">
             <Upload className="h-4 w-4 mr-2" />
             {uploading ? 'Uploading...' : 'Upload'}
