@@ -3849,6 +3849,16 @@ export type Database = {
           total_proposals: number
         }[]
       }
+      get_client_company_member_profiles: {
+        Args: { _company_id: string; _requesting_user_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          first_name: string
+          last_name: string
+          user_id: string
+        }[]
+      }
       get_client_email: { Args: never; Returns: string }
       get_client_user_company_id: {
         Args: { user_id_param: string }

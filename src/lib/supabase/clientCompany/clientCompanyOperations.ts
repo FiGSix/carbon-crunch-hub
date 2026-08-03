@@ -90,12 +90,12 @@ export async function getClientCompanyMembers(companyId: string) {
     return { data: null, error: membersError };
   }
 
-  // Get profiles for all user IDs
-  const userIds = members.map(m => m.user_id);
+  // Get profiles via security-definer RPC (profiles RLS only exposes own row)
   const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, email, avatar_url')
-    .in('id', userIds);
+    .rpc('get_client_company_member_profiles', {
+      _company_id: companyId,
+      _requesting_user_id: user.id,
+    });
 
   if (profilesError) {
     console.error('Error fetching member profiles:', profilesError);
@@ -103,10 +103,16 @@ export async function getClientCompanyMembers(companyId: string) {
   }
 
   // Combine the data
-  const combined = members.map(member => ({
-    ...member,
-    profile: profiles?.find(p => p.id === member.user_id) || null
-  })) as ClientCompanyMemberWithProfile[];
+  const combined = members.map(member => {
+    const p = profiles?.find((x: any) => x.user_id === member.user_id);
+    return {
+      ...member,
+      profile: p
+        ? { id: p.user_id, first_name: p.first_name, last_name: p.last_name, email: p.email, avatar_url: p.avatar_url }
+        : null,
+    };
+  }) as ClientCompanyMemberWithProfile[];
+
 
   return { data: combined, error: null };
 }
@@ -115,6 +121,11 @@ export async function getClientCompanyMembers(companyId: string) {
  * Get pending approval requests for account admins
  */
 export async function getClientPendingApprovals(companyId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data: members, error: membersError } = await supabase
     .from('client_company_members')
     .select('*')
@@ -126,20 +137,26 @@ export async function getClientPendingApprovals(companyId: string) {
     return { data: null, error: membersError };
   }
 
-  const userIds = members.map(m => m.user_id);
   const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, email, avatar_url')
-    .in('id', userIds);
+    .rpc('get_client_company_member_profiles', {
+      _company_id: companyId,
+      _requesting_user_id: user.id,
+    });
 
-  if (profilesError || !profiles) {
+  if (profilesError) {
     return { data: null, error: profilesError };
   }
 
-  const combined = members.map(member => ({
-    ...member,
-    profile: profiles.find(p => p.id === member.user_id) || null
-  })) as ClientCompanyMemberWithProfile[];
+  const combined = members.map(member => {
+    const p = profiles?.find((x: any) => x.user_id === member.user_id);
+    return {
+      ...member,
+      profile: p
+        ? { id: p.user_id, first_name: p.first_name, last_name: p.last_name, email: p.email, avatar_url: p.avatar_url }
+        : null,
+    };
+  }) as ClientCompanyMemberWithProfile[];
+
 
   return { data: combined, error: null };
 }
@@ -252,16 +269,24 @@ export async function getPendingClientTeamInvitations(companyId: string) {
     return { data: null, error };
   }
 
-  // Get inviter names
+  // Get inviter names via the security-definer RPC (profiles RLS hides other users)
   const inviterIds = invitations?.map(i => i.invited_by).filter(Boolean) || [];
   let profiles: any[] = [];
-  
+
   if (inviterIds.length > 0) {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .in('id', inviterIds);
-    profiles = profileData || [];
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profileData } = await supabase
+        .rpc('get_client_company_member_profiles', {
+          _company_id: companyId,
+          _requesting_user_id: user.id,
+        });
+      profiles = (profileData || []).map((p: any) => ({
+        id: p.user_id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+      }));
+    }
   }
 
   const invitationsWithNames = invitations?.map(inv => ({
@@ -270,6 +295,7 @@ export async function getPendingClientTeamInvitations(companyId: string) {
       ? `${profiles.find(p => p.id === inv.invited_by)?.first_name || ''} ${profiles.find(p => p.id === inv.invited_by)?.last_name || ''}`.trim()
       : 'Unknown'
   })) || [];
+
 
   return { data: invitationsWithNames, error: null };
 }
