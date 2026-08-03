@@ -40,13 +40,34 @@ export function ResourceUploadForm() {
     setFile(null);
   };
 
+  const handleFileChange = (selected: File | null) => {
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+
+    const result = validateKnowledgeHubFile(selected);
+    if (!result.valid) {
+      toast({ title: result.title, description: result.message, variant: 'destructive' });
+      setFile(null);
+      return;
+    }
+
+    setFile(selected);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !user) return;
 
+    const result = validateKnowledgeHubFile(file);
+    if (!result.valid) {
+      toast({ title: result.title, description: result.message, variant: 'destructive' });
+      return;
+    }
+
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
       const storagePath = `${category}/${Date.now()}_${file.name}`;
 
       const { error: uploadError } = await supabase.storage
@@ -72,12 +93,13 @@ export function ResourceUploadForm() {
 
       resetForm();
       setOpen(false);
-    } catch (error: any) {
-      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Upload failed', description: describeUploadError(error), variant: 'destructive' });
     } finally {
       setUploading(false);
     }
   };
+
 
   const categories = RESOURCE_CATEGORIES.filter(c => c.value !== 'all');
 
