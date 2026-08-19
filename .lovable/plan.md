@@ -1,55 +1,50 @@
-# Fix: dashboard loads signed-in but with no profile
+# Recaro / Greg Walton — why he can't sign
 
-## What the screenshot shows
+## What I checked in the live database
 
-You are signed in (the "successfully logged in" toast fired, `/logout` and login requests succeed), but the app has no profile data for you:
+**Greg's account (greg@killickwalton.co.za)**
+- Auth user exists, email confirmed 20 Jul 2026, not banned, not deleted.
+- **He signed in successfully today at 07:44 SAST.** Authentication itself is not broken.
+- Profile role: `client`. Role row in `user_roles`: `client`. Active member of the Supersolar client company.
 
-- Sidebar shows only "Sign Out" — every nav item is filtered by `profile.role`, which is empty.
-- Header says "DASHBOARD" instead of "ADMIN DASHBOARD" — `userRole` is undefined.
-- Avatar shows "?" — no profile initials.
-- Cards sit on skeletons / "No revenue data available" — role-dependent queries never resolve.
+**The Recaro proposal**
+- Status `delivered`, invitation sent 14 Aug, **viewed 14 Aug**, token valid until 24 Aug.
+- Correctly linked to his client record via `client_reference_id`, and that client record is linked to his user ID, so the access rules do let him open and see it.
+- No signed agreement exists yet.
 
-So the session is fine; the single `profiles` row fetch after login is what failed.
+So: he can log in, and he can reach the agreement. The blocker is at the signature step.
 
-## What I verified in the database (not guesses)
+## Root cause — his client record has corrupted name fields
 
-- `profiles` RLS: `SELECT` policy is `auth.uid() = id OR is_current_user_admin()` — correct, and `anon` is blocked.
-- Table privileges on `profiles` are intact for `authenticated`, `anon`, `service_role`.
-- Every column the app selects exists (including `super_partner_status`, `can_create_proposals`).
-- `is_current_user_admin()` → `has_role()` → `user_roles` (273 rows) is healthy, and your account resolves as `admin`.
+His row in `clients` is:
 
-Conclusion: the backend is not rejecting the read. The failure is on the client side, in how the profile fetch is performed and recovered from — and today that failure is completely invisible, which is why it looks like "the site is down".
+```text
+first_name = "358.8"
+last_name  = "kWp"
+company    = "Supersolar"
+email      = greg@killickwalton.co.za
+```
 
-## Root cause in the code (`src/contexts/auth/AuthContext.tsx`)
+The system size (358.8 kWp) was written into the name fields.
 
-Three design flaws make a single failed fetch permanent and silent:
+The signing page pulls the **live** client record (it deliberately prefers live data over the proposal snapshot) and uses that as the client name. The "Type Name" signature box then validates that what he types matches the client name — so the only string that would let him sign is literally "358.8 kWp". Everything he types shows "Name doesn't match the client name (358.8 kWp)". That is the wall he's hitting.
 
-1. **Errors are swallowed.** Both the `error` branch and the `catch` set the profile to `null` with no log, no toast, no error state.
-2. **Failures are cached.** A failed load writes `{ data: null }` into `profileCache`, so subsequent calls return the failure instead of retrying.
-3. **No retry and no recovery path.** Nothing re-attempts on `TOKEN_REFRESHED`, on reconnect, or via any user action. Once null, it stays null until a full reload — and even a reload can land on the same transient failure.
+This is a one-off: only 1 of 574 client records has this corruption.
 
-A transient network blip, a cold start, or a slow first request after login is therefore enough to leave the app in exactly the broken-looking state in your screenshot.
+## The fix
 
-## The fix (root-level rewrite of profile loading, not a patch)
+1. **Correct the data.** Set his client record to `first_name = "Greg"`, `last_name = "Walton"` (company stays "Supersolar", email and phone unchanged). Once corrected, the signature name check accepts "Greg Walton" and he can sign — no new invitation needed, his link is valid until 24 Aug.
 
-Rewrite the profile-loading path in `AuthContext.tsx`:
+2. **Stop the name box being a dead end.** In the signature section, when the typed name doesn't match, also accept the client's company name and the proposal-snapshot contact name, and change the hard block into a clear message. Drawing a signature is already accepted, so no one should ever be locked out solely because a stale name string doesn't match.
 
-- **Never cache failures.** Only successful loads go into the cache; a failure clears it so the next attempt actually hits the network.
-- **Retry with backoff.** Up to 3 attempts (roughly 0s / 400ms / 1.2s) before giving up, so transient failures self-heal.
-- **Track a real state.** Add `profileError` alongside `authError`, and expose `refreshUser()` as the retry action.
-- **Re-load on auth events.** Reload the profile on `SIGNED_IN` and `TOKEN_REFRESHED`, and on `window` regaining focus when the profile is missing but a session exists.
-- **Log the real error.** Report the Supabase error code/message through the existing `authLogger` (and Sentry in production) so a repeat is diagnosable instead of invisible.
+3. **Guard the source of the corruption.** Add validation where client records are created/updated from proposal data so numeric or unit-like values ("358.8", "kWp") can never be written into `first_name` / `last_name`; fall back to the contact name on the proposal instead.
 
-Then add a visible recovery surface instead of a half-empty dashboard:
+## About "can't log in"
 
-- In `DashboardLayout`, when there is a valid session but no profile after retries, render a small "We couldn't load your account details" panel with a **Retry** button (calls `refreshUser`) and a **Sign out** link — rather than a broken sidebar and permanent skeletons.
+Nothing in his auth record blocks login, and he authenticated successfully this morning. If he still reports a login problem, it is the same post-login symptom you saw yesterday — the app signs you in but the profile fetch fails silently, leaving an empty sidebar and blank cards. That resilience fix (retry, no caching of failures, visible retry action) is still outstanding and I'd recommend doing it alongside this.
 
 ## Technical notes
 
-- Files touched: `src/contexts/auth/AuthContext.tsx` (retry/cache/error logic, new `profileError` in the context type in `src/contexts/auth/types.ts` if needed) and `src/components/layout/DashboardLayout.tsx` (recovery panel).
-- No database changes — RLS, grants, functions and roles all check out.
-- `DashboardSidebar` needs no change; once `profile.role` is populated it renders correctly.
-
-## If it still happens after this
-
-The retry logging will name the exact failure (401 vs network vs RLS). At that point the fix is targeted rather than speculative.
+- Data correction: single `UPDATE` on `public.clients` for id `f9d3e5d1-63e6-4410-a408-1a4083db7d92`.
+- Code: `src/pages/ProposalAcceptance/components/SignatureSection.tsx` (name-match acceptance), `src/utils/proposals/resolveClientInfo.ts` (ignore junk live names and fall back to the snapshot), and the client create/update path in `src/services/unified/clients` (input guard).
+- No schema or RLS changes — access rules already permit him.
