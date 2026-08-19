@@ -42,3 +42,10 @@ Deleted (by stage, one-line reason each) · Flagged not deleted (with risk and r
 ## Improvements noticed but not made
 
 - **Bundle size (29.0 MB build output) — separate performance pass required.** Unchanged by this cleanup, as expected (all removals were already tree-shaken). 29 MB is far above normal for a Vite/React app; likely causes are unoptimised static assets (raw PNG/video in `src/assets` and `public`) and/or a heavy dependency graph (recharts, framer-motion, mapbox, xlsx, pdf tooling). Needs its own audit with `rollup-plugin-visualizer`, asset compression, and route-level code splitting. Not part of the dead-code work.
+
+## Amendments (agreed 2026-08-19)
+
+- Clean revert point: commit `8174b649` (plan archived, immediately before stage 1). Baseline: 1291 tracked files repo-wide / 768 under `src`. Current HEAD: 1137 / 625.
+- Orphaned tests are deleted in the same commit as their subject, never ahead of it.
+- Stage 5 is deletions only: no rewrites, renames or signature changes. Anything requiring a change beyond the export line is flagged, not done.
+- Error-handling modules require an explicit dependency check (ErrorBoundary components, `window.onerror`, `unhandledrejection`) before removal; zero importers alone is not sufficient evidence.
