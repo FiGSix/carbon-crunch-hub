@@ -38,3 +38,7 @@ Sign up / sign in / sign out / password reset / refresh persistence; all four ro
 ## Report at the end
 
 Deleted (by stage, one-line reason each) · Flagged not deleted (with risk and recommendation) · Duplicate pairs resolved (which is live, how it was proven) · Uncertain (what a human must check) · Metrics (file count and bundle size before vs after) · Improvements noticed but not made.
+
+## Improvements noticed but not made
+
+- **Bundle size (29.0 MB build output) — separate performance pass required.** Unchanged by this cleanup, as expected (all removals were already tree-shaken). 29 MB is far above normal for a Vite/React app; likely causes are unoptimised static assets (raw PNG/video in `src/assets` and `public`) and/or a heavy dependency graph (recharts, framer-motion, mapbox, xlsx, pdf tooling). Needs its own audit with `rollup-plugin-visualizer`, asset compression, and route-level code splitting. Not part of the dead-code work.
