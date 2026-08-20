@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { BroadcastAttachment } from "@/lib/broadcasts/documents";
 
 export type BroadcastCategory = "operational" | "opportunity" | "newsletter";
 
@@ -40,6 +41,7 @@ export interface BroadcastCampaign {
   from_email: string;
   reply_to: string;
   audience: AudienceDefinition;
+  attachments: BroadcastAttachment[];
   status: "draft" | "sending" | "sent" | "cancelled" | "failed";
   total_recipients: number;
   sent_count: number;
@@ -126,6 +128,7 @@ export function useSaveCampaign() {
         body_html: input.body_html ?? "",
         category: input.category,
         audience: input.audience ?? {},
+        attachments: input.attachments ?? [],
         // Sender identity is fixed platform-wide — written on every save so a
         // legacy row can never keep an old From address.
         from_name: FROM_NAME,
