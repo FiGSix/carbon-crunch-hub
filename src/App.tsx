@@ -503,6 +503,18 @@ function App() {
                     } 
                   />
                   <Route
+                    path="/admin/broadcasts"
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Broadcasts">
+                          <Suspense fallback={<PageLoader />}>
+                            <Broadcasts />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
                     path="/admin/blocked-emails"
                     element={
                       <PrivateRoute allowedRoles={['admin']}>
