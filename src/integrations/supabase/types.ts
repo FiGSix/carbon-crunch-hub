@@ -395,6 +395,38 @@ export type Database = {
           },
         ]
       }
+      broadcast_excluded_addresses: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          email: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          email: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          email?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_excluded_addresses_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       broadcast_preferences: {
         Row: {
           campaign_id: string | null
@@ -4365,7 +4397,21 @@ export type Database = {
           client_id: string
           context: Json
           email: string
+          excluded_by_default: boolean
+          flags: Json
           recipient_name: string
+          user_id: string
+        }[]
+      }
+      resolve_broadcast_audience_raw: {
+        Args: { p_audience: Json }
+        Returns: {
+          client_id: string
+          context: Json
+          email: string
+          recipient_name: string
+          self_authored: boolean
+          source: string
           user_id: string
         }[]
       }
