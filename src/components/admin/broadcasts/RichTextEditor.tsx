@@ -1,18 +1,36 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Bold, Italic, Link2, List, ListOrdered, Heading2, Undo2 } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  Heading2,
+  Undo2,
+  ImagePlus,
+  Loader2,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
 }
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 /**
  * Minimal dependency-free rich text editor. Produces inline-safe HTML suitable
- * for email bodies; merge tags are typed as plain text ({{name}}, {{projects}}).
+ * for email bodies; merge tags are typed as plain text ({{name}}, {{projects_list}}).
+ * Images are uploaded to Supabase Storage first — email clients cannot render
+ * blob: or data: URLs, so only absolute public HTTPS URLs are embedded.
  */
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (ref.current && ref.current.innerHTML !== value) {
@@ -33,6 +51,41 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     if (url) exec("createLink", url);
   };
 
+  const uploadImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files can be inserted");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Image must be 5 MB or smaller");
+      return;
+    }
+    const alt = window.prompt("Alt text (shown when images are blocked)", file.name) || "";
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("broadcast-assets")
+        .upload(path, file, { cacheControl: "31536000", contentType: file.type });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from("broadcast-assets").getPublicUrl(path);
+      const escAlt = alt.replace(/"/g, "&quot;");
+      exec(
+        "insertHTML",
+        `<img src="${data.publicUrl}" alt="${escAlt}" width="560" style="display:block;width:100%;max-width:560px;height:auto;border:0;margin:12px 0" />`,
+      );
+      toast.success("Image uploaded and inserted");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Image upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   const tools = [
     { icon: Bold, label: "Bold", action: () => exec("bold") },
     { icon: Italic, label: "Italic", action: () => exec("italic") },
@@ -40,6 +93,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     { icon: List, label: "Bullet list", action: () => exec("insertUnorderedList") },
     { icon: ListOrdered, label: "Numbered list", action: () => exec("insertOrderedList") },
     { icon: Link2, label: "Link", action: addLink },
+    {
+      icon: uploading ? Loader2 : ImagePlus,
+      label: "Insert image",
+      action: () => fileRef.current?.click(),
+    },
     { icon: Undo2, label: "Undo", action: () => exec("undo") },
   ];
 
