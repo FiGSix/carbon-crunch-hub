@@ -1,12 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import {
-  buildUnsubscribe,
-  policyFor,
-  renderMergeTags,
-  withUnsubscribeFooter,
-} from "../_shared/broadcast.ts";
+import { buildUnsubscribe, policyFor, renderMergeTags } from "../_shared/broadcast.ts";
+import { renderBroadcastEmail } from "../_shared/broadcast-template.ts";
 
 // Broadcast sender.
 //  - Resolves the audience at send time (never a frozen list).
