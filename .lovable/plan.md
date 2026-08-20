@@ -80,16 +80,19 @@ Net effect: the three channels — proposal automation, weekly roundup, broadcas
 **New tables (all with GRANTs, RLS, admin-only policies):**
 - `broadcast_campaigns` — name, subject, html/body, from-identity, audience definition (a stored filter, not a stored list), status (`draft`/`scheduled`/`sending`/`sent`/`cancelled`), schedule, counts, created_by.
 - `broadcast_recipients` — one row per resolved address per campaign: campaign_id, email, resolved user/client/agent id, `status` (`pending`/`skipped_suppressed`/`sent`/`failed`), `message_id`, `skip_reason`, timestamps. Unique on (campaign_id, lower(email)).
-- `broadcast_unsubscribe_tokens` — or a signed HMAC token derived from email + campaign, avoiding a table. Prefer the HMAC: no extra state.
+- `broadcast_preferences` — per-email, per-category opt-out state. Roundup is deliberately not a category here.
+- Unsubscribe links use a signed HMAC token derived from email + campaign + mode, so no token table is needed.
 
 **Changed:**
 - `email_events.proposal_id` → nullable, plus nullable `broadcast_recipient_id` FK. Existing proposal rows and the proposal-status path are untouched.
+- `can_send_client_email` — cooldown lookup restricted to `broadcast_recipient_id IS NULL` so broadcast sends never throttle proposal follow-ups. Suppression behaviour unchanged.
 - `resend-webhook` — add a third resolution branch: if `email_id` matches a `broadcast_recipients.message_id`, write the `email_events` row against the broadcast recipient and skip proposal-status logic entirely. Existing branches unchanged.
+- `send-weekly-roundup` — **not modified**.
 
 **New edge functions:**
 - `resolve-broadcast-audience` — takes the campaign's audience filter, runs it against the live DB (roles, client/partner status, company, activity), returns the recipient set. Called for preview and again at send time, so the list is never stale.
-- `send-broadcast` — resolves the audience, writes `broadcast_recipients`, then sends in batches. Each address passes `can_send_client_email` (with a configurable cooldown, defaulting to 0 for broadcasts so weekly-roundup fatigue rules don't silently drop announcements — surfaced as a per-campaign toggle). Sets `List-Unsubscribe` headers. Records `message_id` per recipient. Resumable: re-invocation only processes `pending` rows.
-- `broadcast-unsubscribe` — public GET/POST, verifies the HMAC token, inserts into `client_email_suppressions`, renders a confirmation page.
+- `send-broadcast` — resolves the audience, writes `broadcast_recipients`, then sends in batches. Each address is gated by `is_client_email_suppressed` plus the campaign's category preference — **never** by `can_send_client_email`, so proposal and roundup traffic cannot drop a broadcast. Sets `List-Unsubscribe` / `List-Unsubscribe-Post` headers. Records `message_id` per recipient. Resumable: re-invocation only processes `pending` rows.
+- `broadcast-unsubscribe` — public GET/POST, verifies the HMAC token. Category mode (the one-click header target) writes `broadcast_preferences`; all-mail mode requires a deliberate second click and writes `client_email_suppressions`.
 
 **Frontend (admin only):** campaign list, composer with audience builder and live recipient count, test-send to self, schedule/send, and a per-campaign report reading from `broadcast_recipients` joined to `email_events`.
 
