@@ -38,17 +38,39 @@ serve(async (req) => {
   const email = payload.e.toLowerCase();
   const policy = policyFor(payload.k);
 
+  // The unique indexes on these tables are expression indexes, so ON CONFLICT
+  // cannot target them — check first, then insert.
   const optOutCategory = async () => {
-    await admin.from("broadcast_preferences").upsert(
-      {
-        email,
-        category: payload.k,
-        source: "unsubscribe_link",
-        campaign_id: payload.c,
-        opted_out_at: new Date().toISOString(),
-      },
-      { onConflict: "email,category" },
-    );
+    const { data: existing } = await admin
+      .from("broadcast_preferences")
+      .select("id")
+      .ilike("email", email)
+      .eq("category", payload.k)
+      .maybeSingle();
+    if (existing) return;
+    await admin.from("broadcast_preferences").insert({
+      email,
+      category: payload.k,
+      source: "unsubscribe_link",
+      campaign_id: payload.c,
+      opted_out_at: new Date().toISOString(),
+    });
+  };
+
+  const suppressAll = async () => {
+    const { data: existing } = await admin
+      .from("client_email_suppressions")
+      .select("id")
+      .ilike("email", email)
+      .eq("reason", "unsubscribe")
+      .maybeSingle();
+    if (existing) return;
+    await admin.from("client_email_suppressions").insert({
+      email,
+      reason: "unsubscribe",
+      source: "broadcast_unsubscribe",
+      notes: `campaign ${payload.c}`,
+    });
   };
 
   if (req.method === "POST") {
@@ -56,10 +78,7 @@ serve(async (req) => {
     const mode = (form?.get("mode") as string) ?? url.searchParams.get("mode") ?? "category";
 
     if (mode === "all") {
-      await admin.from("client_email_suppressions").upsert(
-        { email, reason: "unsubscribe", source: "broadcast_unsubscribe", notes: `campaign ${payload.c}` },
-        { onConflict: "email" },
-      );
+      await suppressAll();
       await optOutCategory();
       return new Response(
         html(

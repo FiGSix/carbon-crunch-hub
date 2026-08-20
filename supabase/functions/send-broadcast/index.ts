@@ -367,8 +367,6 @@ serve(async (req) => {
     );
   } catch (error: any) {
     console.error("[send-broadcast] error", error?.message);
-    const body = await Promise.resolve(null);
-    void body;
     return new Response(JSON.stringify({ error: error?.message ?? "Unexpected error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
