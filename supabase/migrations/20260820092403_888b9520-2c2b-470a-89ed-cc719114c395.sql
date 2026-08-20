@@ -1,0 +1,2 @@
+ALTER FUNCTION public.broadcast_project_stage(boolean, boolean, boolean, boolean, boolean) SET search_path = public;
+REVOKE EXECUTE ON FUNCTION public.resolve_broadcast_audience(jsonb) FROM anon, public;
