@@ -155,7 +155,16 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         aria-multiline="true"
         aria-label="Email body"
         className="min-h-[240px] w-full px-3 py-2 text-sm outline-none [&_a]:underline [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_img]:max-w-full [&_li]:ml-4 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc"
-        onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
+        onInput={(e) => {
+          const el = e.target as HTMLDivElement;
+          // Pasted blob:/data: images never render in an email client — drop them.
+          const bad = el.querySelectorAll('img[src^="data:"], img[src^="blob:"]');
+          if (bad.length) {
+            bad.forEach((n) => n.remove());
+            toast.error("Pasted images aren't supported — use the image button to upload");
+          }
+          onChange(el.innerHTML);
+        }}
         suppressContentEditableWarning
       />
       <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
