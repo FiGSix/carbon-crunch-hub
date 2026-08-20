@@ -104,6 +104,16 @@ serve(async (req) => {
 
     const policy = policyFor(campaign.category);
 
+    // Canonical broadcast identity. Legacy partners@ rows are corrected here so a
+    // stale draft can never send from the wrong address.
+    const fromName = campaign.from_name || "Crunch Carbon";
+    const fromEmail = String(campaign.from_email || "").toLowerCase().startsWith("partners@")
+      ? "hello@updates.crunchcarbon.com"
+      : campaign.from_email;
+    const replyTo = String(campaign.reply_to || "").toLowerCase().startsWith("partners@")
+      ? "hello@crunchcarbon.com"
+      : campaign.reply_to;
+
     const buildPayload = async (r: {
       email: string;
       recipient_name: string | null;
@@ -112,11 +122,17 @@ serve(async (req) => {
       const unsub = await buildUnsubscribe(campaign.category, campaign.id, r.email);
       const merged = renderMergeTags(campaign.body_html, r);
       return {
-        from: `${campaign.from_name} <${campaign.from_email}>`,
+        from: `${fromName} <${fromEmail}>`,
         to: [r.email],
-        reply_to: campaign.reply_to,
+        reply_to: replyTo,
         subject: renderMergeTags(campaign.subject, r),
-        html: withUnsubscribeFooter(merged, unsub.url),
+        // Every send — test and real — goes through the same branded wrapper.
+        html: renderBroadcastEmail({
+          subject: renderMergeTags(campaign.subject, r),
+          preheader: campaign.preheader,
+          bodyHtml: merged,
+          unsubscribeUrl: unsub.url,
+        }),
         headers: unsub.headers,
       };
     };
