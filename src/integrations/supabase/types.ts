@@ -312,6 +312,186 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_campaigns: {
+        Row: {
+          audience: Json
+          body_html: string
+          cancelled_at: string | null
+          category: Database["public"]["Enums"]["broadcast_category"]
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          from_email: string
+          from_name: string
+          id: string
+          last_error: string | null
+          name: string
+          preheader: string | null
+          reply_to: string
+          sent_count: number
+          skipped_count: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["broadcast_status"]
+          subject: string
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          audience?: Json
+          body_html?: string
+          cancelled_at?: string | null
+          category: Database["public"]["Enums"]["broadcast_category"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          from_email?: string
+          from_name?: string
+          id?: string
+          last_error?: string | null
+          name: string
+          preheader?: string | null
+          reply_to?: string
+          sent_count?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["broadcast_status"]
+          subject: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          audience?: Json
+          body_html?: string
+          cancelled_at?: string | null
+          category?: Database["public"]["Enums"]["broadcast_category"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          from_email?: string
+          from_name?: string
+          id?: string
+          last_error?: string | null
+          name?: string
+          preheader?: string | null
+          reply_to?: string
+          sent_count?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["broadcast_status"]
+          subject?: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcast_preferences: {
+        Row: {
+          campaign_id: string | null
+          category: Database["public"]["Enums"]["broadcast_category"]
+          created_at: string
+          email: string
+          id: string
+          opted_out_at: string
+          source: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          category: Database["public"]["Enums"]["broadcast_category"]
+          created_at?: string
+          email: string
+          id?: string
+          opted_out_at?: string
+          source?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          category?: Database["public"]["Enums"]["broadcast_category"]
+          created_at?: string
+          email?: string
+          id?: string
+          opted_out_at?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_preferences_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcast_recipients: {
+        Row: {
+          campaign_id: string
+          client_id: string | null
+          context: Json
+          created_at: string
+          email: string
+          error: string | null
+          id: string
+          message_id: string | null
+          recipient_name: string | null
+          sent_at: string | null
+          skip_reason: string | null
+          status: Database["public"]["Enums"]["broadcast_recipient_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          client_id?: string | null
+          context?: Json
+          created_at?: string
+          email: string
+          error?: string | null
+          id?: string
+          message_id?: string | null
+          recipient_name?: string | null
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: Database["public"]["Enums"]["broadcast_recipient_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          client_id?: string | null
+          context?: Json
+          created_at?: string
+          email?: string
+          error?: string | null
+          id?: string
+          message_id?: string | null
+          recipient_name?: string | null
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: Database["public"]["Enums"]["broadcast_recipient_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_notes: {
         Row: {
           author_id: string | null
@@ -1073,6 +1253,7 @@ export type Database = {
       email_events: {
         Row: {
           bounce_reason: string | null
+          broadcast_recipient_id: string | null
           click_url: string | null
           created_at: string
           event_type: string
@@ -1081,7 +1262,7 @@ export type Database = {
           message_id: string
           occurred_at: string
           processed_at: string | null
-          proposal_id: string
+          proposal_id: string | null
           raw_payload: Json
           recipient_email: string
           status_update_triggered: boolean | null
@@ -1090,6 +1271,7 @@ export type Database = {
         }
         Insert: {
           bounce_reason?: string | null
+          broadcast_recipient_id?: string | null
           click_url?: string | null
           created_at?: string
           event_type: string
@@ -1098,7 +1280,7 @@ export type Database = {
           message_id: string
           occurred_at: string
           processed_at?: string | null
-          proposal_id: string
+          proposal_id?: string | null
           raw_payload?: Json
           recipient_email: string
           status_update_triggered?: boolean | null
@@ -1107,6 +1289,7 @@ export type Database = {
         }
         Update: {
           bounce_reason?: string | null
+          broadcast_recipient_id?: string | null
           click_url?: string | null
           created_at?: string
           event_type?: string
@@ -1115,7 +1298,7 @@ export type Database = {
           message_id?: string
           occurred_at?: string
           processed_at?: string | null
-          proposal_id?: string
+          proposal_id?: string | null
           raw_payload?: Json
           recipient_email?: string
           status_update_triggered?: boolean | null
@@ -1123,6 +1306,13 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "email_events_broadcast_recipient_id_fkey"
+            columns: ["broadcast_recipient_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_recipients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_events_proposal_id_fkey"
             columns: ["proposal_id"]
@@ -3597,6 +3787,16 @@ export type Database = {
         Args: { p_super_partner_id: string }
         Returns: number
       }
+      broadcast_project_stage: {
+        Args: {
+          p_admin_validated: boolean
+          p_audit_ready: boolean
+          p_data_access_verified: boolean
+          p_onboarding_complete: boolean
+          p_submitted_for_review: boolean
+        }
+        Returns: string
+      }
       can_send_client_email: {
         Args: { p_cooldown_days?: number; p_email: string }
         Returns: boolean
@@ -4159,6 +4359,16 @@ export type Database = {
         }[]
       }
       request_company_link: { Args: { p_company_id: string }; Returns: string }
+      resolve_broadcast_audience: {
+        Args: { p_audience: Json }
+        Returns: {
+          client_id: string
+          context: Json
+          email: string
+          recipient_name: string
+          user_id: string
+        }[]
+      }
       search_clients: {
         Args: { search_term: string }
         Returns: {
@@ -4293,6 +4503,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "agent" | "client" | "super_partner"
+      broadcast_category: "operational" | "opportunity" | "newsletter"
+      broadcast_recipient_status:
+        | "pending"
+        | "sent"
+        | "failed"
+        | "skipped_suppressed"
+        | "skipped_opted_out"
+      broadcast_status: "draft" | "sending" | "sent" | "cancelled" | "failed"
       client_suppression_reason:
         | "manual"
         | "bounce"
@@ -4433,6 +4651,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "agent", "client", "super_partner"],
+      broadcast_category: ["operational", "opportunity", "newsletter"],
+      broadcast_recipient_status: [
+        "pending",
+        "sent",
+        "failed",
+        "skipped_suppressed",
+        "skipped_opted_out",
+      ],
+      broadcast_status: ["draft", "sending", "sent", "cancelled", "failed"],
       client_suppression_reason: [
         "manual",
         "bounce",
