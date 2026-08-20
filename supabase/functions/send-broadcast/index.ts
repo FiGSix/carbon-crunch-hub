@@ -114,6 +114,38 @@ serve(async (req) => {
       ? "hello@crunchcarbon.com"
       : campaign.reply_to;
 
+    // ------------------------------------------------------------- attachments
+    // Opt-in escape hatch. Files live in the PRIVATE broadcast-documents bucket and
+    // are downloaded once here with the service role, then reused for every send.
+    const MAX_ATTACHMENT_TOTAL_BYTES = 5 * 1024 * 1024;
+    const attachmentSpecs: Array<{ path: string; name: string; size?: number }> = Array.isArray(
+      campaign.attachments,
+    )
+      ? campaign.attachments
+      : [];
+
+    let resendAttachments: Array<{ filename: string; content: string }> | undefined;
+
+    if (attachmentSpecs.length > 0) {
+      const declared = attachmentSpecs.reduce((s, a) => s + Number(a.size ?? 0), 0);
+      if (declared > MAX_ATTACHMENT_TOTAL_BYTES) {
+        throw new Error("Attachments exceed the 5 MB total limit");
+      }
+      resendAttachments = [];
+      for (const spec of attachmentSpecs) {
+        const { data: blob, error: dlError } = await admin.storage
+          .from("broadcast-documents")
+          .download(spec.path);
+        if (dlError || !blob) throw new Error(`Attachment missing in storage: ${spec.name}`);
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 8192) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        }
+        resendAttachments.push({ filename: spec.name, content: btoa(binary) });
+      }
+    }
+
     const buildPayload = async (r: {
       email: string;
       recipient_name: string | null;
@@ -134,6 +166,7 @@ serve(async (req) => {
           unsubscribeUrl: unsub.url,
         }),
         headers: unsub.headers,
+        ...(resendAttachments?.length ? { attachments: resendAttachments } : {}),
       };
     };
 

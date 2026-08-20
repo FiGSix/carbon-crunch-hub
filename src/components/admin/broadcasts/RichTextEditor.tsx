@@ -9,10 +9,19 @@ import {
   Heading2,
   Undo2,
   ImagePlus,
+  Paperclip,
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  ASSETS_BUCKET,
+  MAX_DOCUMENT_BYTES,
+  documentLinkExpiry,
+  formatBytes,
+  signBroadcastDocument,
+  uploadBroadcastDocument,
+} from "@/lib/broadcasts/documents";
 
 interface RichTextEditorProps {
   value: string;
@@ -26,11 +35,14 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
  * for email bodies; merge tags are typed as plain text ({{name}}, {{projects_list}}).
  * Images are uploaded to Supabase Storage first — email clients cannot render
  * blob: or data: URLs, so only absolute public HTTPS URLs are embedded.
+ * Documents go to the PRIVATE bucket and are embedded as one-year signed URLs.
  */
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const docRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   useEffect(() => {
     if (ref.current && ref.current.innerHTML !== value) {
@@ -67,11 +79,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
       const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage
-        .from("broadcast-assets")
+        .from(ASSETS_BUCKET)
         .upload(path, file, { cacheControl: "31536000", contentType: file.type });
       if (error) throw error;
 
-      const { data } = supabase.storage.from("broadcast-assets").getPublicUrl(path);
+      const { data } = supabase.storage.from(ASSETS_BUCKET).getPublicUrl(path);
       const escAlt = alt.replace(/"/g, "&quot;");
       exec(
         "insertHTML",
@@ -86,6 +98,31 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     }
   };
 
+  const uploadDocument = async (file: File) => {
+    if (file.size > MAX_DOCUMENT_BYTES) {
+      toast.error(`Document must be ${formatBytes(MAX_DOCUMENT_BYTES)} or smaller`);
+      return;
+    }
+    const label = window.prompt("Link text", file.name) || file.name;
+
+    setUploadingDoc(true);
+    try {
+      const meta = await uploadBroadcastDocument(file);
+      const signedUrl = await signBroadcastDocument(meta.path);
+      const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+      exec(
+        "insertHTML",
+        `<p style="margin:16px 0"><a href="${signedUrl}" style="display:inline-block;padding:12px 20px;background:#FFCC03;color:#1A1A1A;font-weight:700;text-decoration:none;border-radius:6px">${esc(label)}</a> <span style="font-size:12px;color:#5C5C5C">${esc(file.name.split(".").pop()?.toUpperCase() ?? "FILE")} · ${formatBytes(file.size)}</span></p>`,
+      );
+      toast.success(`Document linked — link valid until ${documentLinkExpiry()}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Document upload failed");
+    } finally {
+      setUploadingDoc(false);
+      if (docRef.current) docRef.current.value = "";
+    }
+  };
+
   const tools = [
     { icon: Bold, label: "Bold", action: () => exec("bold") },
     { icon: Italic, label: "Italic", action: () => exec("italic") },
@@ -97,6 +134,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       icon: uploading ? Loader2 : ImagePlus,
       label: "Insert image",
       action: () => fileRef.current?.click(),
+    },
+    {
+      icon: uploadingDoc ? Loader2 : Paperclip,
+      label: "Link a document (private, signed link)",
+      action: () => docRef.current?.click(),
     },
     { icon: Undo2, label: "Undo", action: () => exec("undo") },
   ];
@@ -131,6 +173,15 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void uploadImage(f);
+          }}
+        />
+        <input
+          ref={docRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void uploadDocument(f);
           }}
         />
         <span className="mx-1 h-5 w-px bg-border" />
@@ -170,7 +221,9 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
         {"{{projects_inline}}"} reads inside a sentence (“Project A and Project B”);{" "}
         {"{{projects_list}}"} renders a standalone bullet list. Both cap at 5 titles then “and N
-        more”. Images are uploaded and embedded as public URLs — never pasted.
+        more”. Images are uploaded to the public assets bucket (email clients fetch them
+        anonymously). Documents go to a private bucket and are linked with a signed URL valid for
+        one year.
       </p>
     </div>
   );

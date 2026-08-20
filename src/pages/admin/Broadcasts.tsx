@@ -44,6 +44,8 @@ import { ArrowLeft, Megaphone, Plus, RefreshCw, Send, Users, Ban } from "lucide-
 import { RichTextEditor } from "@/components/admin/broadcasts/RichTextEditor";
 import { AudienceBuilder, AUDIENCE_LABEL } from "@/components/admin/broadcasts/AudienceBuilder";
 import { RecipientPreview } from "@/components/admin/broadcasts/RecipientPreview";
+import { AttachmentsCard } from "@/components/admin/broadcasts/AttachmentsCard";
+import type { BroadcastAttachment } from "@/lib/broadcasts/documents";
 import { useAuth } from "@/contexts/auth";
 import {
   AudienceDefinition,
@@ -207,6 +209,7 @@ function Composer({ campaignId, onClose, defaultTestEmail }: ComposerProps) {
   const [category, setCategory] = useState<BroadcastCategory>("opportunity");
   const [bodyHtml, setBodyHtml] = useState("");
   const [audience, setAudience] = useState<AudienceDefinition>({ type: "onboarding_stage" });
+  const [attachments, setAttachments] = useState<BroadcastAttachment[]>([]);
   const [preview, setPreview] = useState<AudiencePreview | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [testEmail, setTestEmail] = useState(defaultTestEmail);
@@ -227,6 +230,7 @@ function Composer({ campaignId, onClose, defaultTestEmail }: ComposerProps) {
       setCategory(existing.category);
       setBodyHtml(existing.body_html ?? "");
       setAudience((existing.audience as AudienceDefinition) ?? { type: "onboarding_stage" });
+      setAttachments((existing.attachments as BroadcastAttachment[]) ?? []);
       setLoaded(true);
     }
   }, [existing, loaded]);
@@ -247,6 +251,7 @@ function Composer({ campaignId, onClose, defaultTestEmail }: ComposerProps) {
         body_html: bodyHtml,
         category,
         audience,
+        attachments,
       });
       setId(saved.id);
       return saved;
@@ -459,6 +464,12 @@ function Composer({ campaignId, onClose, defaultTestEmail }: ComposerProps) {
             </div>
           </CardContent>
         </Card>
+
+        <AttachmentsCard
+          attachments={attachments}
+          onChange={setAttachments}
+          readOnly={readOnly}
+        />
 
         <Card>
           <CardHeader>
