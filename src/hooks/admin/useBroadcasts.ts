@@ -9,9 +9,9 @@ export const CATEGORY_LABELS: Record<BroadcastCategory, string> = {
   newsletter: "Newsletter (unsubscribable)",
 };
 
-export const FROM_EMAIL = "partners@updates.crunchcarbon.com";
+export const FROM_EMAIL = "hello@updates.crunchcarbon.com";
 export const FROM_NAME = "Crunch Carbon";
-export const REPLY_TO = "partners@crunchcarbon.com";
+export const REPLY_TO = "hello@crunchcarbon.com";
 
 export interface AudienceDefinition {
   type:
