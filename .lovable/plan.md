@@ -21,7 +21,7 @@ I queried every non-system schema. There are **no** `discovery_*`, `outreach_*`,
 
 **Recommendation: build alongside, do not extend.** There is no "who did we email and what happened" system in those tables to duplicate — the risk you are guarding against does not exist here. The real duplication risk is with `email_events`, and the plan below avoids it by reusing that table rather than adding a second one.
 
-Separately: `agent_leads` / `inbound_messages` / `candidate_notes` / `meetings` are dead weight in the schema with zero code behind them. Flagging, not touching — a decision for a later cleanup pass.
+Correction to my earlier note: `agent_leads` / `inbound_messages` / `candidate_notes` / `meetings` are **real business data — a live prospect list**, not cleanup fodder. They are out of scope and will not be touched, now or in any later cleanup pass.
 
 ## 2. Current email plumbing — how it is wired
 
