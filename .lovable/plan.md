@@ -21,7 +21,7 @@ I queried every non-system schema. There are **no** `discovery_*`, `outreach_*`,
 
 **Recommendation: build alongside, do not extend.** There is no "who did we email and what happened" system in those tables to duplicate — the risk you are guarding against does not exist here. The real duplication risk is with `email_events`, and the plan below avoids it by reusing that table rather than adding a second one.
 
-Separately: `agent_leads` / `inbound_messages` / `candidate_notes` / `meetings` are dead weight in the schema with zero code behind them. Flagging, not touching — a decision for a later cleanup pass.
+Correction to my earlier note: `agent_leads` / `inbound_messages` / `candidate_notes` / `meetings` are **real business data — a live prospect list**, not cleanup fodder. They are out of scope and will not be touched, now or in any later cleanup pass.
 
 ## 2. Current email plumbing — how it is wired
 
@@ -75,25 +75,91 @@ Net effect: the three channels — proposal automation, weekly roundup, broadcas
 - The unsubscribe endpoint has two distinct modes: a **category** unsubscribe (default from the `List-Unsubscribe` header on a broadcast — turns off that one category) and an explicit **all-mail** opt-out (writes to `client_email_suppressions`, which stops everything including transactional flows). The one-click header link only ever hits the category mode; the all-mail option requires a deliberate second click on the confirmation page.
 - If you later want a roundup opt-out, it should be its own preference on the agent's profile with its own copy — not a broadcast category. Out of scope here.
 
-## Technical plan
+## 5. Day-one segments
+
+Built in this order, each as a named resolver behind one `resolve-broadcast-audience` function. The audience is stored as a filter definition, never as a frozen list, and is re-resolved at send time.
+
+1. **Clients with a project at a given onboarding stage** — the primary case, built first and built robustly. Filter over `project_onboarding` (status, plus the `audit_ready` flag) joined out to the client contacts on the project. Supports multi-select stages. Preview shows the resolved projects behind the count, not just a number, so an audit-window send can be eyeballed before it goes.
+2. **Partner hierarchy** — partners of a given super partner (via the SP link/recruit relationship), and clients of a given partner (via `proposals.agent_id` / client ownership).
+3. **Role buckets** — all partners, all clients, all admins, all users.
+4. **Manual pasted list** — free-text addresses, normalised and de-duplicated, still passed through suppression.
+5. **Company filter** — by `companies` / `client_companies`.
+6. **Newsletter subscribers** — category defined, audience **not built**.
+
+**No newsletter opt-in field on `profiles`.** That audience includes non-users, so it needs its own subscriber table with double opt-in and stored consent proof. Separate piece of work, later.
+
+## 6. Categories — fixed at three, enforced in the sender
+
+| Category | Opt-out-able | Unsubscribe link | `List-Unsubscribe` header | Consults `broadcast_preferences` |
+|---|---|---|---|---|
+| `operational` — audit windows, project milestones | No | Never rendered | Never set | No |
+| `opportunity` — partner benefits, deals, programme changes | Yes | Always rendered | Always set | Yes |
+| `newsletter` — defined now, no audience or signup yet | Yes | Always rendered | Always set | Yes |
+
+`operational` still respects hard bounces/complaints and all-mail suppressions via `is_client_email_suppressed`. It concerns a service the recipient has contracted for — a client must not miss an audit window because of an unsubscribe click months ago.
+
+**Structural enforcement, not UI convention.** A single `CATEGORY_POLICY` map in `_shared/` is the only source of these rules. The sender derives headers, footer and gating from it:
+
+- The unsubscribe token is only minted when `policy.unsubscribable` is true; the template receives `unsubscribeUrl: null` for operational and renders no link — there is no token to render, so it cannot be forced from the UI or the campaign record.
+- `List-Unsubscribe` / `List-Unsubscribe-Post` headers are built from the same nullable token, so they are structurally absent on operational mail.
+- Preference gating is not an `if` the caller can skip: recipients pass through one `applyCategoryGate(category, emails)` that returns everyone for `operational` and filters against `broadcast_preferences` for the other two. There is no code path to the send call that bypasses it.
+- `broadcast_campaigns.category` is a Postgres enum, so no fourth category can be introduced by data alone.
+
+## 7. Pre-migration audit — `email_events.proposal_id`
+
+Checked before proposing the `NOT NULL` drop. Everything that reads the column:
+
+| Dependency | Reads `proposal_id` how | Safe with nulls? |
+|---|---|---|
+| RLS `Agents can view email events for their proposals` | `EXISTS (SELECT 1 FROM proposals p WHERE p.id = email_events.proposal_id ...)` | Yes — a null yields no match, so broadcast rows are simply invisible to that policy. **Needs a companion admin-visibility policy** for broadcast rows, or admins see nothing. |
+| RLS `System can insert email events` | `WITH CHECK true` | Yes |
+| FK `email_events_proposal_id_fkey` → `proposals(id) ON DELETE CASCADE` | — | Yes, nullable FKs are unenforced on null |
+| `EmailActivityTimeline.tsx` | `.eq('proposal_id', proposalId)` | Yes — nulls excluded |
+| `send-weekly-roundup/funnel.ts` | `.in('proposal_id', proposalIds)` | Yes — nulls excluded |
+| `resend-webhook` | Only inserts after resolving a proposal; returns early otherwise | Yes |
+| `classify_proposal_engagement()` | Joins through `proposal_id` | Yes |
+| `can_send_client_email()` / `is_client_email_suppressed()` | Match on `recipient_email`, **not** `proposal_id` | **No — see below** |
+| View `portfolio_reminder_candidates` | Aggregates `email_events` by `lower(recipient_email)`, and calls `can_send_client_email` | **No — see below** |
+
+**No `.single()` call anywhere reads `email_events`**, so there is no query that would newly break on a null.
+
+**Two real cross-contamination points found, both by `recipient_email` rather than `proposal_id`:**
+
+1. `can_send_client_email` — the cooldown fix in section 4 handles it (`broadcast_recipient_id IS NULL` predicate).
+2. `portfolio_reminder_candidates` — its `last_portfolio_send` CTE matches any `email_events` row whose subject is `ILIKE '%portfolio%'`. A broadcast with "portfolio" in the subject line would suppress genuine portfolio reminders for 14 days. Same fix: add `broadcast_recipient_id IS NULL` to that CTE. The view also calls `can_send_client_email`, so it inherits fix 1 automatically.
+
+That second one would not have surfaced from a `proposal_id` search — worth flagging as the actual risk in this migration.
+
+**Migration order:** add `broadcast_recipient_id` first, then drop `NOT NULL`, then patch `can_send_client_email` and recreate the view in the same migration, so no window exists where broadcast rows can be written but the guards are not yet in place.
+
+## 8. Technical plan
 
 **New tables (all with GRANTs, RLS, admin-only policies):**
-- `broadcast_campaigns` — name, subject, html/body, from-identity, audience definition (a stored filter, not a stored list), status (`draft`/`scheduled`/`sending`/`sent`/`cancelled`), schedule, counts, created_by.
-- `broadcast_recipients` — one row per resolved address per campaign: campaign_id, email, resolved user/client/agent id, `status` (`pending`/`skipped_suppressed`/`sent`/`failed`), `message_id`, `skip_reason`, timestamps. Unique on (campaign_id, lower(email)).
-- `broadcast_preferences` — per-email, per-category opt-out state. Roundup is deliberately not a category here.
+- `broadcast_campaigns` — name, subject, html/body, from-identity, `category` (enum: `operational`/`opportunity`/`newsletter`), audience definition (a stored filter, not a stored list), status (`draft`/`sending`/`sent`/`cancelled`/`failed`), counts, created_by.
+- `broadcast_recipients` — one row per resolved address per campaign: campaign_id, email, resolved user/client/agent id, `status` (`pending`/`skipped_suppressed`/`skipped_opted_out`/`sent`/`failed`), `message_id`, `skip_reason`, timestamps. Unique on (campaign_id, lower(email)).
+- `broadcast_preferences` — per-email, per-category opt-out state. No rows are ever written for `operational`; the roundup is deliberately not a category here.
 - Unsubscribe links use a signed HMAC token derived from email + campaign + mode, so no token table is needed.
 
 **Changed:**
-- `email_events.proposal_id` → nullable, plus nullable `broadcast_recipient_id` FK. Existing proposal rows and the proposal-status path are untouched.
-- `can_send_client_email` — cooldown lookup restricted to `broadcast_recipient_id IS NULL` so broadcast sends never throttle proposal follow-ups. Suppression behaviour unchanged.
-- `resend-webhook` — add a third resolution branch: if `email_id` matches a `broadcast_recipients.message_id`, write the `email_events` row against the broadcast recipient and skip proposal-status logic entirely. Existing branches unchanged.
+- `email_events.proposal_id` → nullable, plus nullable `broadcast_recipient_id` FK, plus an admin-visibility RLS policy for broadcast rows.
+- `can_send_client_email` — cooldown lookup restricted to `broadcast_recipient_id IS NULL`. Suppression behaviour unchanged.
+- `portfolio_reminder_candidates` — same predicate added to its `last_portfolio_send` CTE.
 - `send-weekly-roundup` — **not modified**.
+- `resend-webhook` — **not modified in the first version** (the broadcast roll-up is deferred, per scope below).
 
 **New edge functions:**
-- `resolve-broadcast-audience` — takes the campaign's audience filter, runs it against the live DB (roles, client/partner status, company, activity), returns the recipient set. Called for preview and again at send time, so the list is never stale.
-- `send-broadcast` — resolves the audience, writes `broadcast_recipients`, then sends in batches. Each address is gated by `is_client_email_suppressed` plus the campaign's category preference — **never** by `can_send_client_email`, so proposal and roundup traffic cannot drop a broadcast. Sets `List-Unsubscribe` / `List-Unsubscribe-Post` headers. Records `message_id` per recipient. Resumable: re-invocation only processes `pending` rows.
-- `broadcast-unsubscribe` — public GET/POST, verifies the HMAC token. Category mode (the one-click header target) writes `broadcast_preferences`; all-mail mode requires a deliberate second click and writes `client_email_suppressions`.
+- `resolve-broadcast-audience` — runs the campaign's filter against the live DB, returns the recipient set with enough context to preview. Called for preview and again at send time, so the list is never stale.
+- `send-broadcast` — resolves the audience, writes `broadcast_recipients`, then sends in batches. Gated by `is_client_email_suppressed` plus `applyCategoryGate` — **never** by `can_send_client_email`. Records `message_id` per recipient. Resumable (re-invocation processes only `pending` rows) and cancellable (checks campaign status between batches).
+- `broadcast-unsubscribe` — public GET/POST, verifies the HMAC token. Category mode (the one-click header target) writes `broadcast_preferences`; all-mail mode requires a deliberate second click and writes `client_email_suppressions`. Rejects any token bearing an operational campaign.
 
-**Frontend (admin only):** campaign list, composer with audience builder and live recipient count, test-send to self, schedule/send, and a per-campaign report reading from `broadcast_recipients` joined to `email_events`.
+**Frontend (admin only):** campaign list, composer with category selector, audience builder with live recipient count and resolved-project preview, test-send to self, and the send flow with a confirmation showing the final count.
 
-**Open item to confirm before building:** the audience segments you want on day one — I would start with All partners, All clients, All admins, Newsletter subscribers, and a company filter, but subscription state for a "newsletter" audience does not exist yet and would need an opt-in field on `profiles`.
+## 9. Build order and scope
+
+Ship after step 3 — the goal is a real audit-comms send as early as possible.
+
+1. Migration (tables, enum, `email_events` changes, cooldown and view fixes), `resolve-broadcast-audience` with the onboarding-stage and partner-hierarchy segments, `broadcast_preferences`, `broadcast-unsubscribe`.
+2. `send-broadcast` — batching, suppression and category gating, cancellation, resumability.
+3. Admin composer, audience builder with live count, test-send to self, send flow.
+
+**Explicitly deferred until after real use:** scheduled sends, campaign duplication, the full per-campaign reporting UI, the `resend-webhook` broadcast roll-up, the remaining segments (role buckets, manual list, company filter can follow quickly if needed), and the public newsletter signup with its subscriber table and double opt-in.
