@@ -8,7 +8,7 @@ export const BROADCAST_BRAND = {
   border: "#E6E6E6",
   footerBg: "#1A1A1A",
   footerInk: "#FFFFFF",
-  logoUrl: "https://crunchcarbon.com/crunch-carbon-logo-new.png",
+  logoUrl: "https://crunchcarbon.com/lovable-uploads/c818a4d4-97db-4b88-bd74-801376152ebc.png",
   siteUrl: "https://crunchcarbon.com",
   companyName: "Crunch Carbon (Pty) Ltd",
   companyAddress: "Sunny South Africa",
@@ -62,7 +62,7 @@ export function renderBroadcastEmail(opts: BroadcastEmailOptions): string {
               <tr>
                 <td align="left" style="font-family:Arial,Helvetica,sans-serif">
                   <a href="${B.siteUrl}" target="_blank" style="text-decoration:none;color:${B.ink}">
-                    <img src="${B.logoUrl}" width="150" alt="Crunch Carbon" style="display:block;border:0;outline:none;text-decoration:none;width:150px;max-width:150px;height:auto" />
+                    <img src="${B.logoUrl}" width="220" alt="Crunch Carbon" style="display:block;border:0;outline:none;text-decoration:none;width:220px;max-width:220px;height:auto" />
                   </a>
                 </td>
                 <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;color:${B.inkMuted};letter-spacing:1px;text-transform:uppercase">
