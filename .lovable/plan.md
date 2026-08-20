@@ -145,7 +145,7 @@ That second one would not have surfaced from a `proposal_id` search — worth fl
 - `can_send_client_email` — cooldown lookup restricted to `broadcast_recipient_id IS NULL`. Suppression behaviour unchanged.
 - `portfolio_reminder_candidates` — same predicate added to its `last_portfolio_send` CTE.
 - `send-weekly-roundup` — **not modified**.
-- `resend-webhook` — **not modified in the first version** (the broadcast roll-up is deferred, per scope below).
+- `resend-webhook` — **bounce/complaint half of the broadcast branch ships in v1.** Today the function returns early with `proposal_not_found` for any unmatched `email_id`, which would silently drop every broadcast bounce and leave `is_client_email_suppressed` blind — on a new sending subdomain that is the fastest route to a wrecked reputation. Before that early return, add: if `event.type` is `email.bounced` or `email.complained`, look up `broadcast_recipients.message_id`; on a match, write the `email_events` row with `broadcast_recipient_id` set and `proposal_id` null, mark the recipient row `failed` with the bounce reason, and upsert `client_email_suppressions` with reason `bounce` / `complaint`. All other event types (`opened`, `clicked`, `delivered`) keep hitting the existing early return until the reporting roll-up is built. Proposal branches unchanged.
 
 **New edge functions:**
 - `resolve-broadcast-audience` — runs the campaign's filter against the live DB, returns the recipient set with enough context to preview. Called for preview and again at send time, so the list is never stale.
