@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.resolve_broadcast_audience(jsonb) TO postgres;
