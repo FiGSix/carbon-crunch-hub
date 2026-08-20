@@ -159,7 +159,7 @@ That second one would not have surfaced from a `proposal_id` search — worth fl
 Ship after step 3 — the goal is a real audit-comms send as early as possible.
 
 1. Migration (tables, enum, `email_events` changes, cooldown and view fixes), `resolve-broadcast-audience` with the onboarding-stage and partner-hierarchy segments, `broadcast_preferences`, `broadcast-unsubscribe`.
-2. `send-broadcast` — batching, suppression and category gating, cancellation, resumability.
+2. `send-broadcast` — batching, suppression and category gating, cancellation, resumability — plus the `resend-webhook` bounce/complaint branch, shipped alongside it so no broadcast goes out before bounces are being captured.
 3. Admin composer, audience builder with live count, test-send to self, send flow.
 
-**Explicitly deferred until after real use:** scheduled sends, campaign duplication, the full per-campaign reporting UI, the `resend-webhook` broadcast roll-up, the remaining segments (role buckets, manual list, company filter can follow quickly if needed), and the public newsletter signup with its subscriber table and double opt-in.
+**Explicitly deferred until after real use:** scheduled sends, campaign duplication, the full per-campaign reporting UI, the open/click half of the `resend-webhook` roll-up, the remaining segments (role buckets, manual list, company filter can follow quickly if needed), and the public newsletter signup with its subscriber table and double opt-in.
