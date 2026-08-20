@@ -142,7 +142,7 @@ export function useSaveCampaign() {
       const { data: userData } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("broadcast_campaigns")
-        .insert({ ...payload, created_by: userData.user?.id ?? null })
+        .insert({ ...payload, created_by: userData.user?.id ?? null } as any)
         .select("*")
         .single();
       if (error) throw error;
