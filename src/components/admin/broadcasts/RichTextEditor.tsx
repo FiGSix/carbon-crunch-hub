@@ -175,6 +175,15 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
             if (f) void uploadImage(f);
           }}
         />
+        <input
+          ref={docRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void uploadDocument(f);
+          }}
+        />
         <span className="mx-1 h-5 w-px bg-border" />
         {["{{name}}", "{{projects_inline}}", "{{projects_list}}", "{{project_count}}"].map((tag) => (
           <Button
