@@ -78,6 +78,7 @@ const SubmitProject = createOptimizedLazyComponent(() => import("./pages/SubmitP
 const KnowledgeHub = createOptimizedLazyComponent(() => import("./pages/KnowledgeHub"), "KnowledgeHub");
 const KnowledgeHubAdmin = createOptimizedLazyComponent(() => import("./pages/admin/KnowledgeHubAdmin"), "KnowledgeHubAdmin");
 const BlockedEmails = createOptimizedLazyComponent(() => import("./pages/admin/BlockedEmails"), "BlockedEmails");
+const Broadcasts = createOptimizedLazyComponent(() => import("./pages/admin/Broadcasts"), "Broadcasts");
 const AdminSuperPartnerManagement = createOptimizedLazyComponent(() => import("./pages/AdminSuperPartnerManagement"), "AdminSuperPartnerManagement");
 const SuperPartnerDashboard = createOptimizedLazyComponent(() => import("./pages/SuperPartnerDashboard"), "SuperPartnerDashboard");
 const SuperPartnerMyCompanies = createOptimizedLazyComponent(() => import("./pages/SuperPartnerMyCompanies"), "SuperPartnerMyCompanies");
