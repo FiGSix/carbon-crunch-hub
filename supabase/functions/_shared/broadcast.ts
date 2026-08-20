@@ -144,38 +144,41 @@ function escapeHtml(s: string): string {
   );
 }
 
-export function renderProjectList(context: Record<string, any>): string {
+function projectTitles(context: Record<string, any>): { shown: string[]; rest: number } {
   const projects: Array<Record<string, any>> = Array.isArray(context?.projects)
     ? context.projects
     : [];
-  if (projects.length === 0) return "";
-  const shown = projects.slice(0, PROJECT_LIST_CAP);
-  const rest = projects.length - shown.length;
+  const shown = projects
+    .slice(0, PROJECT_LIST_CAP)
+    .map((p) => String(p?.title ?? "Untitled project"));
+  return { shown, rest: Math.max(projects.length - shown.length, 0) };
+}
+
+/** Block-level bullet list — {{projects_list}}. */
+export function renderProjectList(context: Record<string, any>): string {
+  const { shown, rest } = projectTitles(context);
+  if (shown.length === 0) return "";
   const items = shown
-    .map((p) => `<li style="margin:0 0 4px 0">${escapeHtml(p.title ?? "Untitled project")}</li>`)
+    .map(
+      (t) =>
+        `<li style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif">${escapeHtml(t)}</li>`,
+    )
     .join("");
   const more =
     rest > 0
-      ? `<li style="margin:0;color:#5C5C5C">…and ${rest} more project${rest === 1 ? "" : "s"}</li>`
+      ? `<li style="margin:0;color:#5C5C5C;font-family:Arial,Helvetica,sans-serif">and ${rest} more project${rest === 1 ? "" : "s"}</li>`
       : "";
-  return `<ul style="margin:8px 0 0 0;padding-left:20px">${items}${more}</ul>`;
+  return `<ul style="margin:8px 0 12px 0;padding-left:20px">${items}${more}</ul>`;
 }
 
-/**
- * Substitutes merge tags in campaign HTML.
- * Supported: {{name}}, {{email}}, {{projects}}, {{project_count}}
- */
-export function renderMergeTags(
-  html: string,
-  recipient: { email: string; recipient_name?: string | null; context?: Record<string, any> },
-): string {
-  const ctx = recipient.context ?? {};
-  const projectCount = Array.isArray(ctx.projects) ? ctx.projects.length : 0;
-  return html
-    .replace(/\{\{\s*name\s*\}\}/g, escapeHtml(recipient.recipient_name || "there"))
-    .replace(/\{\{\s*email\s*\}\}/g, escapeHtml(recipient.email))
-    .replace(/\{\{\s*projects\s*\}\}/g, renderProjectList(ctx))
-    .replace(/\{\{\s*project_count\s*\}\}/g, String(projectCount));
+/** Inline, sentence-safe — {{projects_inline}} → "A, B and C" (+ "and N more"). */
+export function renderProjectsInline(context: Record<string, any>): string {
+  const { shown, rest } = projectTitles(context);
+  if (shown.length === 0) return "your projects";
+  const parts = shown.map(escapeHtml);
+  if (rest > 0) parts.push(`${rest} more project${rest === 1 ? "" : "s"}`);
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
 export function withUnsubscribeFooter(html: string, unsubscribeUrl: string | null): string {
