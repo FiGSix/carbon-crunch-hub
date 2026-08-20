@@ -221,7 +221,9 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
         {"{{projects_inline}}"} reads inside a sentence (“Project A and Project B”);{" "}
         {"{{projects_list}}"} renders a standalone bullet list. Both cap at 5 titles then “and N
-        more”. Images are uploaded and embedded as public URLs — never pasted.
+        more”. Images are uploaded to the public assets bucket (email clients fetch them
+        anonymously). Documents go to a private bucket and are linked with a signed URL valid for
+        one year.
       </p>
     </div>
   );
