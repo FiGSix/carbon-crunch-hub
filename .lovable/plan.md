@@ -53,6 +53,28 @@ So the trade you described resolves against Broadcasts: using them would require
 - **`List-Unsubscribe` / `List-Unsubscribe-Post` headers** — set per message via Resend's `headers` field on the standard send call. This is what mailbox providers require for bulk mail; we get parity, not a downgrade.
 - **Per-campaign reporting** — from our own recipient rows joined to `email_events`, which is richer than Resend's per-broadcast view because it sits next to proposal and partner data.
 
+## 4. The weekly roundup — isolation guarantees
+
+**Does `send-weekly-roundup` call `can_send_client_email`? No.** A search across the whole `send-weekly-roundup/` directory returns zero hits for `can_send_client_email`, `is_client_email_suppressed`, or any suppression check. It sends to every eligible agent unconditionally. Only three functions use the gate today: `proposal-automation` (full `can_send_client_email` with the 7-day cooldown), and `send-contact-email` / `send-eligibility-proposal` (suppression-only, no cooldown).
+
+So a broadcast cannot suppress that week's roundup — the roundup never asks. That direction is safe.
+
+**But the reverse direction is a real risk, and it is the one that bites.** `can_send_client_email` computes its cooldown from `email_events`. Today only `resend-webhook` writes that table, and only for proposal emails. The moment broadcast events start landing in `email_events` (as section 3 proposes), every broadcast recipient enters a 7-day cooldown that would silently block `proposal-automation` follow-ups — a live, revenue-relevant flow. Left unhandled, sending a broadcast would mute proposal chasers for a week.
+
+**Fixes, both required:**
+
+1. **Scope the cooldown to proposal mail.** `can_send_client_email` gets an added predicate so its `email_events` lookup counts only rows with `broadcast_recipient_id IS NULL`. Suppression (bounce/complaint/unsubscribe) stays global — a hard bounce on a broadcast should still stop proposal mail. Only the *fatigue* window becomes proposal-scoped.
+2. **Broadcasts do not consult the proposal cooldown.** `send-broadcast` calls `is_client_email_suppressed` (hard opt-outs only), never `can_send_client_email`. A proposal follow-up sent on Tuesday must not silently drop a Thursday announcement.
+
+Net effect: the three channels — proposal automation, weekly roundup, broadcasts — share one suppression list and nothing else. None throttles another.
+
+**Category opt-outs and the roundup.** The roundup is treated as its own channel, not a broadcast category:
+
+- Broadcast categories (newsletter, partner updates, client/audit notices, etc.) live in a `broadcast_preferences` table keyed by email, one row per category. `send-broadcast` checks the category the campaign is tagged with.
+- **The roundup is not one of these categories and `send-weekly-roundup` is not modified.** Opting out of every broadcast category leaves the roundup untouched.
+- The unsubscribe endpoint has two distinct modes: a **category** unsubscribe (default from the `List-Unsubscribe` header on a broadcast — turns off that one category) and an explicit **all-mail** opt-out (writes to `client_email_suppressions`, which stops everything including transactional flows). The one-click header link only ever hits the category mode; the all-mail option requires a deliberate second click on the confirmation page.
+- If you later want a roundup opt-out, it should be its own preference on the agent's profile with its own copy — not a broadcast category. Out of scope here.
+
 ## Technical plan
 
 **New tables (all with GRANTs, RLS, admin-only policies):**
