@@ -64,6 +64,17 @@ serve(async (req) => {
       event.data.to[0]
     );
 
+    // Broadcast bounces/complaints must be captured before the proposal early return,
+    // otherwise the suppression list goes blind on the new sending subdomain.
+    if (event.type === 'email.bounced' || event.type === 'email.complained') {
+      const handled = await handleBroadcastReputationEvent(supabaseAdmin, event);
+      if (handled) {
+        return new Response(JSON.stringify({ received: true, broadcast: true, type: event.type }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     if (!proposalId) {
       console.warn('⚠️  Could not find proposal for email:', event.data.email_id);
       return new Response(JSON.stringify({ received: true, warning: 'proposal_not_found' }), {
@@ -139,6 +150,72 @@ serve(async (req) => {
     );
   }
 });
+
+
+/**
+ * Broadcast bounce/complaint handling. Returns true when the event belonged to a
+ * broadcast (and has been fully recorded), false when it is not a broadcast event.
+ * Opens and clicks are deliberately not handled yet — reporting comes later.
+ */
+async function handleBroadcastReputationEvent(
+  supabase: any,
+  event: ResendWebhookEvent
+): Promise<boolean> {
+  const messageId = event.data.email_id;
+  if (!messageId) return false;
+
+  const { data: recipient } = await supabase
+    .from('broadcast_recipients')
+    .select('id, email, campaign_id')
+    .eq('message_id', messageId)
+    .maybeSingle();
+
+  if (!recipient) return false;
+
+  const reason = event.type === 'email.complained' ? 'complaint' : 'bounce';
+  const email = (event.data.to?.[0] || recipient.email || '').toLowerCase();
+
+  await supabase.from('email_events').insert({
+    proposal_id: null,
+    broadcast_recipient_id: recipient.id,
+    event_type: event.type,
+    message_id: messageId,
+    recipient_email: email,
+    subject: event.data.subject,
+    occurred_at: event.created_at,
+    bounce_reason: event.data.bounce?.reason,
+    raw_payload: event,
+    processed_at: new Date().toISOString()
+  });
+
+  await supabase
+    .from('broadcast_recipients')
+    .update({
+      status: 'failed',
+      error: `${reason}: ${event.data.bounce?.reason ?? 'reported by Resend'}`
+    })
+    .eq('id', recipient.id);
+
+  // Expression unique index on (lower(email), reason) — check before inserting.
+  const { data: existing } = await supabase
+    .from('client_email_suppressions')
+    .select('id')
+    .ilike('email', email)
+    .eq('reason', reason)
+    .maybeSingle();
+
+  if (!existing) {
+    await supabase.from('client_email_suppressions').insert({
+      email,
+      reason,
+      source: 'resend_webhook_broadcast',
+      notes: `broadcast campaign ${recipient.campaign_id}`
+    });
+  }
+
+  console.log(`[broadcast] recorded ${reason} for ${email}`);
+  return true;
+}
 
 async function updateWeeklyRoundupCtaEvent(supabase: any, event: ResendWebhookEvent): Promise<void> {
   const messageId = event.data.email_id;
