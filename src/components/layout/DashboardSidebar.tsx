@@ -193,6 +193,12 @@ export function DashboardSidebar() {
       roles: ["admin"]
     },
     {
+      name: "Broadcasts",
+      href: "/admin/broadcasts",
+      icon: Megaphone,
+      roles: ["admin"]
+    },
+    {
       name: "Blocked Emails",
       href: "/admin/blocked-emails",
       icon: ShieldOff,
