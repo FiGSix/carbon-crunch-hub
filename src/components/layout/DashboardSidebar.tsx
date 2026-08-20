@@ -19,7 +19,8 @@ import {
   Calculator,
   Code2,
   BookOpen,
-  ShieldOff
+  ShieldOff,
+  Megaphone
 
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
@@ -190,6 +191,12 @@ export function DashboardSidebar() {
       name: "Email Automation",
       href: "/admin/email-automation",
       icon: Mail,
+      roles: ["admin"]
+    },
+    {
+      name: "Broadcasts",
+      href: "/admin/broadcasts",
+      icon: Megaphone,
       roles: ["admin"]
     },
     {
