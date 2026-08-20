@@ -79,7 +79,7 @@ export function AudienceBuilder({ audience, onChange }: Props) {
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            One email per client — all matching projects are merged into {"{{projects}}"}.
+            One email per client — all matching projects are merged into {"{{projects_list}}"}.
           </p>
         </div>
       )}
