@@ -181,11 +181,22 @@ export function renderProjectsInline(context: Record<string, any>): string {
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
-export function withUnsubscribeFooter(html: string, unsubscribeUrl: string | null): string {
-  if (!unsubscribeUrl) return html;
-  return `${html}
-<div style="margin-top:24px;padding-top:16px;border-top:1px solid #E6E6E6;font-size:12px;color:#5C5C5C;font-family:Arial,Helvetica,sans-serif">
-  You are receiving this because you are part of the Crunch Carbon platform.
-  <a href="${unsubscribeUrl}" style="color:#5C5C5C">Unsubscribe from these emails</a>.
-</div>`;
+/**
+ * Substitutes merge tags in campaign HTML.
+ * Supported: {{name}}, {{email}}, {{projects_list}}, {{projects_inline}},
+ * {{project_count}}. Legacy {{projects}} maps to the block list.
+ */
+export function renderMergeTags(
+  html: string,
+  recipient: { email: string; recipient_name?: string | null; context?: Record<string, any> },
+): string {
+  const ctx = recipient.context ?? {};
+  const projectCount = Array.isArray(ctx.projects) ? ctx.projects.length : 0;
+  return html
+    .replace(/\{\{\s*name\s*\}\}/g, escapeHtml(recipient.recipient_name || "there"))
+    .replace(/\{\{\s*email\s*\}\}/g, escapeHtml(recipient.email))
+    .replace(/\{\{\s*projects_list\s*\}\}/g, renderProjectList(ctx))
+    .replace(/\{\{\s*projects_inline\s*\}\}/g, renderProjectsInline(ctx))
+    .replace(/\{\{\s*projects\s*\}\}/g, renderProjectList(ctx))
+    .replace(/\{\{\s*project_count\s*\}\}/g, String(projectCount));
 }
