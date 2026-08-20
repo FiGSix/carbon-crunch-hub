@@ -11,7 +11,7 @@ export const BROADCAST_BRAND = {
   logoUrl: "https://crunchcarbon.com/crunch-carbon-logo-new.png",
   siteUrl: "https://crunchcarbon.com",
   companyName: "Crunch Carbon (Pty) Ltd",
-  companyAddress: "Cape Town, South Africa",
+  companyAddress: "Sunny South Africa",
   supportEmail: "hello@crunchcarbon.com",
 };
 
@@ -57,7 +57,7 @@ export function renderBroadcastEmail(opts: BroadcastEmailOptions): string {
 
         <!-- Header -->
         <tr>
-          <td align="left" bgcolor="${B.accent}" style="background-color:${B.accent};padding:20px 28px;border-radius:12px 12px 0 0">
+          <td align="left" bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:20px 28px;border-radius:12px 12px 0 0">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td align="left" style="font-family:Arial,Helvetica,sans-serif">
@@ -65,7 +65,7 @@ export function renderBroadcastEmail(opts: BroadcastEmailOptions): string {
                     <img src="${B.logoUrl}" width="150" alt="Crunch Carbon" style="display:block;border:0;outline:none;text-decoration:none;width:150px;max-width:150px;height:auto" />
                   </a>
                 </td>
-                <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;color:${B.ink};letter-spacing:1px;text-transform:uppercase">
+                <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;color:${B.inkMuted};letter-spacing:1px;text-transform:uppercase">
                   Solar Carbon Credits
                 </td>
               </tr>
@@ -74,7 +74,7 @@ export function renderBroadcastEmail(opts: BroadcastEmailOptions): string {
         </tr>
 
         <!-- Accent rule -->
-        <tr><td style="height:4px;line-height:4px;font-size:0;background-color:${B.ink}">&nbsp;</td></tr>
+        <tr><td style="height:4px;line-height:4px;font-size:0;background-color:${B.accent}">&nbsp;</td></tr>
 
         <!-- Body -->
         <tr>
