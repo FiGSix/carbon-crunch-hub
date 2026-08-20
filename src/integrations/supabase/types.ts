@@ -314,6 +314,7 @@ export type Database = {
       }
       broadcast_campaigns: {
         Row: {
+          attachments: Json
           audience: Json
           body_html: string
           cancelled_at: string | null
@@ -338,6 +339,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachments?: Json
           audience?: Json
           body_html?: string
           cancelled_at?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachments?: Json
           audience?: Json
           body_html?: string
           cancelled_at?: string | null
