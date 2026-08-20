@@ -19,7 +19,8 @@ import {
   Calculator,
   Code2,
   BookOpen,
-  ShieldOff
+  ShieldOff,
+  Megaphone
 
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
