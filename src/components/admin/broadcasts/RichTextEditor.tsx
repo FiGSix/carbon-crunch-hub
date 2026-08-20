@@ -123,8 +123,18 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
             <Icon className="h-4 w-4" />
           </Button>
         ))}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void uploadImage(f);
+          }}
+        />
         <span className="mx-1 h-5 w-px bg-border" />
-        {["{{name}}", "{{projects}}", "{{project_count}}"].map((tag) => (
+        {["{{name}}", "{{projects_inline}}", "{{projects_list}}", "{{project_count}}"].map((tag) => (
           <Button
             key={tag}
             type="button"
@@ -144,12 +154,14 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         role="textbox"
         aria-multiline="true"
         aria-label="Email body"
-        className="min-h-[240px] w-full px-3 py-2 text-sm outline-none [&_a]:underline [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc"
+        className="min-h-[240px] w-full px-3 py-2 text-sm outline-none [&_a]:underline [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_img]:max-w-full [&_li]:ml-4 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc"
         onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
         suppressContentEditableWarning
       />
       <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
-        {"{{projects}}"} renders the first 5 project titles then “and N more” — never the full list.
+        {"{{projects_inline}}"} reads inside a sentence (“Project A and Project B”);{" "}
+        {"{{projects_list}}"} renders a standalone bullet list. Both cap at 5 titles then “and N
+        more”. Images are uploaded and embedded as public URLs — never pasted.
       </p>
     </div>
   );
