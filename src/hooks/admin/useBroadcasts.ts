@@ -126,6 +126,11 @@ export function useSaveCampaign() {
         body_html: input.body_html ?? "",
         category: input.category,
         audience: input.audience ?? {},
+        // Sender identity is fixed platform-wide — written on every save so a
+        // legacy row can never keep an old From address.
+        from_name: FROM_NAME,
+        from_email: FROM_EMAIL,
+        reply_to: REPLY_TO,
       };
 
       if (input.id) {
