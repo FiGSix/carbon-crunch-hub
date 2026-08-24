@@ -334,7 +334,7 @@ function resolveSignatoryName(proposal: any, agreement: any, masterSignature: an
 
 function addPartyDetailsPage(
   pdfDoc: any, font: any, bold: any, proposal: any, agreement: any,
-  legalTitle: string | null, legalVersion: number | null,
+  masterSignature: any, legalTitle: string | null, legalVersion: number | null,
 ) {
   const page = pdfDoc.addPage(A4);
   const { width, height } = page.getSize();
