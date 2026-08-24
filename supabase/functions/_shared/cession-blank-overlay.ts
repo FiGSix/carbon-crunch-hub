@@ -45,6 +45,8 @@ export interface CessionBlankMap {
   dateOfSignature: BlankField[];
   /** Entity/person the signature is given for ("FOR: ____"). */
   signedFor: BlankField[];
+  /** Natural person who signed on the owner's behalf, printed under the line. */
+  signatoryName?: BlankField[];
   /** Where the drawn signature image is stamped on the owner's signature line. */
   signatureImage?: { page: number; x: number; y: number; width: number; height: number };
 }
