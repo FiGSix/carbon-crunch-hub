@@ -293,6 +293,28 @@ function isoDate(value: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
+/** Timestamp -> YYYY-MM-DD as observed in South Africa. */
+function isoDateInZA(ts: unknown): string {
+  const d = new Date(String(ts ?? ""));
+  if (isNaN(d.getTime())) return "N/A";
+  // en-CA renders ISO-shaped dates; the time zone keeps the calendar day right.
+  return d.toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+}
+
+/** Timestamp -> YYYY-MM-DD HH:mm:ss SAST. */
+function isoDateTimeInZA(ts: unknown): string {
+  const d = new Date(String(ts ?? ""));
+  if (isNaN(d.getTime())) return "N/A";
+  const date = d.toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+  const time = d.toLocaleTimeString("en-GB", {
+    timeZone: "Africa/Johannesburg",
+    hour12: false,
+  });
+  return `${date} ${time} SAST`;
+}
+
+
+
 /**
  * The commissioning date lives in the proposal JSON — there is no
  * `proposals.commissioning_date` column, which is why this page previously
