@@ -69,7 +69,9 @@ const BLANK_MAPS: Record<string, CessionBlankMap> = {
     placeOfSignature: [{ page: 13, x: 213, y: 558, maxWidth: 92, size: 9 }],
     dateOfSignature: [{ page: 13, x: 388, y: 558, maxWidth: 98, size: 9 }],
     signedFor: [{ page: 13, x: 278, y: 392, maxWidth: 250, size: 9 }],
-    signatureImage: { page: 13, x: 90, y: 395, width: 150, height: 40 },
+    // Printed name of the natural person, just below the owner's signature line.
+    signatoryName: [{ page: 13, x: 90, y: 380, maxWidth: 200, size: 8 }],
+    signatureImage: { page: 13, x: 90, y: 397, width: 150, height: 40 },
   },
 };
 
