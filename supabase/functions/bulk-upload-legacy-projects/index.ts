@@ -119,6 +119,16 @@ serve(async (req) => {
 
         if (clientError) throw clientError;
 
+        // 2a. Block re-imports of the same project for the same client/site
+        const existingLegacy = await findExistingLegacyProject(supabase, {
+          clientId: clientId as string,
+          systemAddress: row.system_address,
+          projectTitle: row.project_title,
+        });
+        if (existingLegacy) {
+          throw duplicateLegacyProjectError(existingLegacy);
+        }
+
         // 2b. Validate commission date (must be on or after 2022-09-15)
         const minCommissionDate = new Date('2022-09-15');
         const commDate = new Date(row.commissioning_date);
