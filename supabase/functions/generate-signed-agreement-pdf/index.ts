@@ -213,7 +213,9 @@ async function assemble(args: {
   console.log(`[Signed PDF] Spliced ${legalPages.length} agreement pages verbatim`);
 
   // STEP 2 — party & site details (answers the blank fill-in lines).
-  addPartyDetailsPage(pdfDoc, font, bold, proposal, agreement, legalTitle, legalVersion);
+  addPartyDetailsPage(
+    pdfDoc, font, bold, proposal, agreement, masterSignature, legalTitle, legalVersion,
+  );
 
   // STEP 3 — Annexure A separator + proposal pages.
   const sep = pdfDoc.addPage(A4);
@@ -277,9 +279,84 @@ function resolveSiteAddress(proposal: any): string {
   );
 }
 
+/**
+ * Every date printed on a generated page is ISO 8601 (YYYY-MM-DD). Locale
+ * formats are ambiguous (3/15/2024) and this is a signed legal document.
+ */
+function isoDate(value: unknown): string | null {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+/** Timestamp -> YYYY-MM-DD as observed in South Africa. */
+function isoDateInZA(ts: unknown): string {
+  const d = new Date(String(ts ?? ""));
+  if (isNaN(d.getTime())) return "N/A";
+  // en-CA renders ISO-shaped dates; the time zone keeps the calendar day right.
+  return d.toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+}
+
+/** Timestamp -> YYYY-MM-DD HH:mm:ss SAST. */
+function isoDateTimeInZA(ts: unknown): string {
+  const d = new Date(String(ts ?? ""));
+  if (isNaN(d.getTime())) return "N/A";
+  const date = d.toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+  const time = d.toLocaleTimeString("en-GB", {
+    timeZone: "Africa/Johannesburg",
+    hour12: false,
+  });
+  return `${date} ${time} SAST`;
+}
+
+
+
+/**
+ * The commissioning date lives in the proposal JSON — there is no
+ * `proposals.commissioning_date` column, which is why this page previously
+ * always fell back to the placeholder string.
+ */
+function resolveCommissioningDate(proposal: any): string | null {
+  const c = proposal.content ?? {};
+  const pi = proposal.project_info ?? {};
+  return (
+    isoDate(proposal.commissioning_date) ??
+    isoDate(pi.commission_date) ??
+    isoDate(pi.commissionDate) ??
+    isoDate(c?.projectInfo?.commissionDate) ??
+    isoDate(c?.projectInfo?.commission_date) ??
+    isoDate(c?.projectInformation?.commissionDate) ??
+    isoDate(Array.isArray(c?.projectInfo?.phases) ? c.projectInfo.phases[0]?.commissionDate : null)
+  );
+}
+
+/**
+ * A company cannot sign — a natural person signs for it. The signatory name is
+ * captured at signing time and stored on the agreement/master signature
+ * metadata; individual cedents fall back to their own name.
+ */
+function resolveSignatoryName(proposal: any, agreement: any, masterSignature: any): string {
+  const client = proposal.client ?? {};
+  const personName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim();
+  return (
+    agreement?.metadata?.signatory_name ||
+    masterSignature?.metadata?.signatory_name ||
+    masterSignature?.typed_name ||
+    agreement?.typed_name ||
+    personName ||
+    proposal.content?.clientInfo?.name ||
+    "N/A"
+  );
+}
+
+
 function addPartyDetailsPage(
   pdfDoc: any, font: any, bold: any, proposal: any, agreement: any,
-  legalTitle: string | null, legalVersion: number | null,
+  masterSignature: any, legalTitle: string | null, legalVersion: number | null,
 ) {
   const page = pdfDoc.addPage(A4);
   const { width, height } = page.getSize();
@@ -324,7 +401,7 @@ function addPartyDetailsPage(
 
   row("Owner / Entity Name:", ownerName);
   row("Registration Number:", client.registration_number || "Not applicable");
-  row("Signatory:", agreement.typed_name || "N/A");
+  row("Signatory:", resolveSignatoryName(proposal, agreement, masterSignature));
   row("Email Address:", client.email || "N/A");
   row("Physical Address:", resolveSiteAddress(proposal));
 
@@ -340,12 +417,7 @@ function addPartyDetailsPage(
     "System Size:",
     proposal.system_size_kwp ? `${Number(proposal.system_size_kwp).toLocaleString()} kWp` : "N/A",
   );
-  row(
-    "Commissioning Date:",
-    proposal.commissioning_date
-      ? new Date(proposal.commissioning_date).toLocaleDateString("en-ZA")
-      : "As recorded on the Portal",
-  );
+  row("Commissioning Date:", resolveCommissioningDate(proposal) ?? "Not recorded");
 
   y -= 10;
   page.drawText("Signing", {
@@ -354,13 +426,8 @@ function addPartyDetailsPage(
   y -= 26;
 
   row("Place of Signature:", "South Africa");
-  row(
-    "Date of Signature:",
-    new Date(agreement.signed_at).toLocaleDateString("en-ZA", {
-      dateStyle: "long",
-      timeZone: "Africa/Johannesburg",
-    } as any),
-  );
+  row("Date of Signature:", isoDateInZA(agreement.signed_at));
+
   row(
     "Agreement Revision:",
     legalTitle ? `${legalTitle}${legalVersion ? ` (v${legalVersion})` : ""}` : "N/A",
@@ -441,12 +508,7 @@ async function addSignaturePage(
   }
 
   row("Typed Name:", typedName || "N/A");
-  row(
-    "Date & Time:",
-    new Date(signedAt).toLocaleString("en-ZA", {
-      dateStyle: "long", timeStyle: "medium", timeZone: "Africa/Johannesburg",
-    } as any),
-  );
+  row("Date & Time:", isoDateTimeInZA(signedAt));
   row("IP Address:", masterSignature?.ip_address ?? agreement.ip_address ?? "N/A");
 
   const ua = (masterSignature?.user_agent ?? agreement.user_agent ?? "N/A") as string;

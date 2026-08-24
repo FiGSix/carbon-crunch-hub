@@ -33,6 +33,7 @@ export default function ProposalAcceptance() {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [typedName, setTypedName] = useState("");
+  const [signatoryName, setSignatoryName] = useState("");
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -250,6 +251,24 @@ export default function ProposalAcceptance() {
     return resolved.name || "";
   };
 
+  /** Company cedents must name the natural person signing on their behalf. */
+  const getCompanyName = (): string => {
+    if (!proposal) return "";
+    const resolved = resolveClientInfo(proposal.content?.clientInfo || {}, clientRecord);
+    return (resolved.companyName || "").trim();
+  };
+  const isCompanyCedent = getCompanyName().length > 0;
+
+  // Prefill with the contact person on record; the client can correct it.
+  useEffect(() => {
+    if (!signatoryName) {
+      const name = getClientName();
+      if (name) setSignatoryName(name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposal, clientRecord]);
+
+
   const validateTypedName = (): boolean => {
     // Normalize: lowercase, strip diacritics, replace punctuation with spaces,
     // collapse whitespace. This makes the check tolerant of initials ("R."),
@@ -280,10 +299,13 @@ export default function ProposalAcceptance() {
   );
   const projectDetailsOk = !isReferralProposal || projectDetailsValid(projectDetails);
 
+  const signatoryOk = !isCompanyCedent || signatoryName.trim().length >= 2;
+
   const canSubmit =
     hasScrolledToBottom &&
     hasAgreed &&
     projectDetailsOk &&
+    signatoryOk &&
     (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
 
   const handleSubmit = async () => {
@@ -310,6 +332,8 @@ export default function ProposalAcceptance() {
           token: token || undefined,
           proposalId: !token ? proposal.id : undefined,
           typedName,
+          signatoryName: (signatoryName || typedName || getClientName()).trim() || undefined,
+          isCompanyCedent,
           signatureImage: signatureImage || undefined,
           signatureType: signatureImage ? 'canvas' : 'typed_name',
           ipAddress,
@@ -545,6 +569,9 @@ export default function ProposalAcceptance() {
               signatureImage={signatureImage}
               onSignatureImageChange={setSignatureImage}
               clientName={getClientName()}
+              companyName={isCompanyCedent ? getCompanyName() : null}
+              signatoryName={signatoryName}
+              onSignatoryNameChange={setSignatoryName}
               isValid={validateTypedName()}
               canSubmit={canSubmit}
               isSubmitting={isSubmitting}

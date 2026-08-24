@@ -19,6 +19,9 @@ interface AcceptProposalRequest {
   token?: string;
   proposalId?: string;
   typedName: string;
+  /** Natural person signing; mandatory when the cedent is a company. */
+  signatoryName?: string;
+  isCompanyCedent?: boolean;
   signatureImage?: string;
   signatureType?: 'canvas' | 'typed_name';
   ipAddress?: string;
@@ -42,6 +45,8 @@ serve(async (req) => {
       token,
       proposalId,
       typedName,
+      signatoryName,
+      isCompanyCedent,
       signatureImage,
       signatureType = 'typed_name',
       ipAddress,
@@ -194,6 +199,18 @@ serve(async (req) => {
       );
     }
     
+    // 4a. A company cannot sign — a natural person must be named for it.
+    const resolvedSignatory = (signatoryName || typedName || '').trim();
+    if (isCompanyCedent && resolvedSignatory.length < 2) {
+      return new Response(
+        JSON.stringify({
+          error: 'Please provide the full name of the person signing on behalf of the company',
+          validation: 'signatoryName',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // For canvas signatures, typed name is optional
     console.log(`✅ Signature validation passed for ${signatureType} signature`);
 
@@ -366,6 +383,8 @@ serve(async (req) => {
             metadata: {
               signed_via: token ? 'acceptance_link' : 'authenticated_user',
               signing_location: 'South Africa',
+              signatory_name: resolvedSignatory || null,
+              cedent_is_company: Boolean(isCompanyCedent),
             },
           })
           .select('id')
@@ -423,6 +442,8 @@ serve(async (req) => {
             proposal_id_used: proposalId || null,
             timestamp: new Date().toISOString(),
             signing_location: 'South Africa',
+            signatory_name: resolvedSignatory || null,
+            cedent_is_company: Boolean(isCompanyCedent),
             witness_info: {
               method: 'automatic_system',
               witness_1: 'DIGITAL WITNESS 1',
