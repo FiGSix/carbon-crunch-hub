@@ -135,7 +135,15 @@ serve(async (req) => {
         if (pdfBuffer) {
           const filename = `Cession_Agreement_${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
           const uint8Array = new Uint8Array(pdfBuffer);
-          const base64String = btoa(String.fromCharCode(...uint8Array));
+          // Encode in chunks: spreading a whole multi-hundred-KB PDF into
+          // String.fromCharCode blows the call stack and silently drops the
+          // attachment.
+          let binary = '';
+          const CHUNK = 8192;
+          for (let i = 0; i < uint8Array.length; i += CHUNK) {
+            binary += String.fromCharCode(...uint8Array.subarray(i, i + CHUNK));
+          }
+          const base64String = btoa(binary);
           pdfAttachment = { filename, content: base64String };
           console.log(`[Cession Email] PDF fetched, size: ${pdfBuffer.byteLength} bytes`);
         } else {
