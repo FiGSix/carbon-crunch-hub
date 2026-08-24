@@ -40,7 +40,14 @@ export function policyFor(category: string): CategoryPolicy {
 // ---------------------------------------------------------------------------
 
 function b64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
+  // Chunked: spreading a large byte array into String.fromCharCode blows the
+  // call stack (same bug class that dropped PDF email attachments).
+  let binary = "";
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
