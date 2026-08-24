@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Eye, Archive } from "lucide-react";
+import { Plus, Edit, Eye, Archive, Radio, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { LegalDocumentDialog } from "@/components/Admin/LegalDocumentDialog";
@@ -56,6 +56,39 @@ export default function LegalDocuments() {
       toast.error(`Failed to archive document: ${error.message}`);
     },
   });
+
+  const setLiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc("set_legal_document_live", {
+        p_document_id: id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["legal-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["live-legal-document"] });
+      toast.success("This revision is now live and will be used for all new signatures");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to set live: ${error.message}`);
+    },
+  });
+
+  const handleSetLive = (doc: LegalDocument) => {
+    if (!doc.file_path) {
+      toast.error("Upload the agreement file on this revision before setting it live");
+      return;
+    }
+    if (
+      confirm(
+        `Set "${doc.title}" (v${doc.current_version}) as the LIVE ${getDocumentTypeLabel(
+          doc.document_type,
+        )}?\n\nEvery client who has not yet signed will read and sign this revision. Clients who already signed keep the revision they signed.`,
+      )
+    ) {
+      setLiveMutation.mutate(doc.id);
+    }
+  };
 
   const handleCreate = () => {
     setSelectedDocument(null);
@@ -127,6 +160,7 @@ export default function LegalDocuments() {
               <TableHead>Title</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>File</TableHead>
               <TableHead>Effective Date</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -140,7 +174,25 @@ export default function LegalDocuments() {
                 </TableCell>
                 <TableCell>{doc.title}</TableCell>
                 <TableCell>{doc.current_version}</TableCell>
-                <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                <TableCell className="space-x-1">
+                  {doc.is_live && (
+                    <Badge className="bg-green-600 hover:bg-green-600">
+                      <Radio className="h-3 w-3 mr-1" />
+                      Live
+                    </Badge>
+                  )}
+                  {getStatusBadge(doc.status)}
+                </TableCell>
+                <TableCell>
+                  {doc.file_path ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                      <FileCheck2 className="h-3.5 w-3.5" />
+                      Attached
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">None</span>
+                  )}
+                </TableCell>
                 <TableCell>{format(new Date(doc.effective_date), "PP")}</TableCell>
                 <TableCell>{format(new Date(doc.created_at), "PP")}</TableCell>
                 <TableCell className="text-right space-x-2">
@@ -151,6 +203,16 @@ export default function LegalDocuments() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
+                  {doc.status !== "archived" && !doc.is_live && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSetLive(doc)}
+                      disabled={setLiveMutation.isPending}
+                    >
+                      Set as live
+                    </Button>
+                  )}
                   {doc.status !== "archived" && (
                     <>
                       <Button

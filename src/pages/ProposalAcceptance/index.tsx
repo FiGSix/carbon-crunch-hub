@@ -100,7 +100,7 @@ export default function ProposalAcceptance() {
       if (rawProposal.client_reference_id) {
         await Promise.all([
           fetchClientRecord(rawProposal.client_reference_id),
-          checkExistingAgreement(rawProposal.client_reference_id),
+          resolveAgreementState(rawProposal.id),
         ]);
       }
     } catch (err) {
@@ -187,7 +187,7 @@ export default function ProposalAcceptance() {
       if (data.client_reference_id) {
         await Promise.all([
           fetchClientRecord(data.client_reference_id),
-          checkExistingAgreement(data.client_reference_id),
+          resolveAgreementState(data.id),
         ]);
       }
     } catch (err) {
@@ -198,8 +198,15 @@ export default function ProposalAcceptance() {
     }
   };
 
+  // Only authenticated viewers (admins/agents/the client) may read `clients`
+  // directly. Anonymous token visitors get their details from the proposal
+  // content returned by the token RPC — reading the table here just produced
+  // 406s on the public signing page.
   const fetchClientRecord = async (clientReferenceId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { data, error } = await supabase
         .from('clients')
         .select('first_name, last_name, email, phone, company_name, registration_number')
@@ -214,19 +221,26 @@ export default function ProposalAcceptance() {
     }
   };
 
-  const checkExistingAgreement = async (clientReferenceId: string) => {
+  /**
+   * Ask the backend what should happen with this proposal. If the client
+   * already holds a master cession signature, the backend inherits it,
+   * generates this proposal's own document and emails it — no second
+   * signing ceremony is ever shown.
+   */
+  const resolveAgreementState = async (proposalId: string) => {
     try {
-      const { data: client, error } = await supabase
-        .from('clients')
-        .select('cession_signed_at')
-        .eq('id', clientReferenceId)
-        .single();
-      
-      if (!error && client?.cession_signed_at) {
+      const { data, error } = await supabase.functions.invoke(
+        'ensure-proposal-agreement',
+        { body: { proposalId, token } },
+      );
+      if (error) throw error;
+
+      const state = (data as { state?: string } | null)?.state;
+      if (state === 'inherited' || state === 'existing') {
         setHasExistingAgreement(true);
       }
     } catch (err) {
-      console.error('Error checking for existing agreement:', err);
+      console.error('Error resolving agreement state:', err);
     }
   };
 

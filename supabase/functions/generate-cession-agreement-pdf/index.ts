@@ -1,7 +1,8 @@
-// Admin-only: produce the UNSIGNED cession agreement for a proposal.
+// Admin-only: produce an UNSIGNED preview of the cession agreement for a proposal.
 //
-// The wording comes from the live revision uploaded in Admin → Legal Documents
-// and is spliced verbatim; we only append a generated party & site details page.
+// Like the signed generator, this never re-typesets the legal wording. It splices
+// the live revision's own pages verbatim and appends a generated party & site
+// details page so the blanks are answered without touching the original pages.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
@@ -22,11 +23,10 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const CRUNCH_YELLOW = rgb(1, 0.804, 0.012);
-const CRUNCH_CHARCOAL = rgb(0.137, 0.122, 0.125);
-
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const admin = createClient(
@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
+    // --- admin auth gate --------------------------------------------------
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return json({ error: "Missing authorization header" }, 401);
@@ -50,79 +51,81 @@ Deno.serve(async (req) => {
     });
     if (!isAdmin) return json({ error: "Admin access required" }, 403);
 
-    const { proposalId } = await req.json();
+    const { proposalId } = await req.json().catch(() => ({}));
     if (!proposalId) return json({ error: "proposalId is required" }, 400);
 
     const { data: proposal, error: proposalError } = await admin
       .from("proposals")
       .select(`
         *,
-        client:clients!proposals_client_reference_id_fkey(first_name, last_name, email, company_name, registration_number)
+        client:clients!proposals_client_reference_id_fkey(first_name, last_name, email, company_name, registration_number, address)
       `)
       .eq("id", proposalId)
-      .single();
+      .maybeSingle();
+
     if (proposalError || !proposal) return json({ error: "Proposal not found" }, 404);
 
+    // --- the live revision is the only source of the legal wording --------
     const live = await getLiveLegalDocument(admin);
     if (!live?.file_path) {
       return json(
         {
           error:
-            "No live Cession Agreement file is configured. Upload the agreement in Admin → Legal Documents and set a revision live.",
+            "No live Cession Agreement with an uploaded file. Upload the agreement file in Admin → Legal Documents and set the revision live.",
         },
         409,
       );
     }
 
-    const legalBytes = await downloadLegalDocumentPdf(admin, live.file_path);
+    const sourceBytes = await downloadLegalDocumentPdf(admin, live.file_path);
 
-    const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const out = await PDFDocument.create();
+    const source = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
+    const pages = await out.copyPages(source, source.getPageIndices());
+    pages.forEach((p) => out.addPage(p));
 
-    const src = await PDFDocument.load(legalBytes, { ignoreEncryption: true });
-    const pages = await pdfDoc.copyPages(src, src.getPageIndices());
-    pages.forEach((p) => pdfDoc.addPage(p));
+    // --- generated party & site details page ------------------------------
+    const font = await out.embedFont(StandardFonts.Helvetica);
+    const bold = await out.embedFont(StandardFonts.HelveticaBold);
 
-    // Generated particulars page — the source wording is never altered.
-    const page = pdfDoc.addPage([595.28, 841.89]);
-    const { width, height } = page.getSize();
-    const left = 50;
-    page.drawRectangle({ x: 0, y: height - 100, width, height: 100, color: CRUNCH_YELLOW });
-    page.drawText("PARTY & SITE DETAILS", {
-      x: left, y: height - 60, size: 22, font: bold, color: CRUNCH_CHARCOAL,
+    const content = (proposal.content ?? {}) as Record<string, any>;
+    const client = (proposal as any).client ?? {};
+    const ownerName = [client.first_name, client.last_name].filter(Boolean).join(" ") ||
+      client.company_name || content?.clientInfo?.name || "";
+
+    const rows: Array<[string, string]> = [
+      ["Owner", ownerName],
+      ["Registration number", client.registration_number || content?.clientInfo?.registrationNumber || "Not applicable"],
+      ["Email", client.email || content?.clientInfo?.email || ""],
+      ["Registered address", client.address || content?.clientInfo?.address || ""],
+      ["Site / premises address", content?.projectInfo?.address || ""],
+      ["System size", content?.projectInfo?.size ? `${content.projectInfo.size} kWp` : ""],
+      ["Commissioning date", content?.projectInfo?.commissionDate || ""],
+      ["Owner share", proposal.client_share_percentage ? `${proposal.client_share_percentage}%` : ""],
+      ["Agreement revision", `${live.title} (v${live.version})`],
+    ];
+
+    const page = out.addPage([595.28, 841.89]);
+    let y = 780;
+    page.drawText("Party & Site Details", { x: 56, y, size: 16, font: bold, color: rgb(0, 0, 0) });
+    y -= 14;
+    page.drawText("UNSIGNED PREVIEW — not a executed agreement", {
+      x: 56, y, size: 9, font, color: rgb(0.55, 0.15, 0.15),
     });
+    y -= 30;
 
-    let y = height - 140;
-    const row = (label: string, value: string) => {
-      page.drawText(label, { x: left, y, size: 11, font: bold, color: rgb(0.4, 0.4, 0.4) });
-      page.drawText(String(value ?? "N/A").slice(0, 62), {
-        x: left + 190, y, size: 11, font, color: CRUNCH_CHARCOAL,
-      });
-      y -= 24;
-    };
+    for (const [label, value] of rows) {
+      page.drawText(`${label}:`, { x: 56, y, size: 10, font: bold });
+      page.drawText(String(value || "—").slice(0, 80), { x: 210, y, size: 10, font });
+      y -= 20;
+    }
 
-    const c = proposal.client ?? {};
-    const address = proposal.site_address || proposal.project_address ||
-      proposal.content?.projectInfo?.address || proposal.location ||
-      "As indicated on the electronic Portal";
+    y -= 20;
+    page.drawText("Signature of the Owner: ______________________________", { x: 56, y, size: 10, font });
+    y -= 26;
+    page.drawText("Place and date of signing: ____________________________", { x: 56, y, size: 10, font });
 
-    row("Owner / Entity Name:", c.company_name || [c.first_name, c.last_name].filter(Boolean).join(" ") || "N/A");
-    row("Registration Number:", c.registration_number || "Not applicable");
-    row("Email Address:", c.email || "N/A");
-    row("Project / Site Name:", proposal.title || "N/A");
-    row("Site Address:", address);
-    row(
-      "System Size:",
-      proposal.system_size_kwp ? `${Number(proposal.system_size_kwp).toLocaleString()} kWp` : "N/A",
-    );
-    row("Agreement Revision:", `${live.title} (v${live.version})`);
-
-    page.drawText("UNSIGNED COPY — for review only.", {
-      x: left, y: 60, size: 9, font, color: rgb(0.45, 0.45, 0.45),
-    });
-
-    const pdfBytes = await pdfDoc.save();
+    const pdfBytes = await out.save();
 
     const fileName = `cession-agreement-${proposalId}.pdf`;
     const { error: uploadError } = await admin.storage
