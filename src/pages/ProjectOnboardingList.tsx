@@ -86,7 +86,10 @@ export default function ProjectOnboardingList() {
             )
           )
         `)
-        .not('proposals.signed_at', 'is', null);
+        .not('proposals.signed_at', 'is', null)
+        // Never show archived or deleted proposals in the onboarding pipeline
+        .is('proposals.archived_at', null)
+        .is('proposals.deleted_at', null);
 
       // Apply role-based filtering
       if (userRole === 'agent') {

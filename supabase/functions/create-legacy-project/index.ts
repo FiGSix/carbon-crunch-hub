@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { findExistingLegacyProject, duplicateLegacyProjectError } from '../_shared/legacy-duplicate-check.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -98,6 +99,16 @@ Deno.serve(async (req) => {
 
     if (clientError || !clientId) {
       throw new Error('Failed to find or create client');
+    }
+
+    // Block re-imports of the same project for the same client/site
+    const existingLegacy = await findExistingLegacyProject(supabase, {
+      clientId: clientId as string,
+      systemAddress: body.system_address,
+      projectTitle: body.project_title,
+    });
+    if (existingLegacy) {
+      throw duplicateLegacyProjectError(existingLegacy);
     }
 
     // Calculate carbon credits (using standard 1000 kWh per kWp per year * 0.95 tCO2/MWh)

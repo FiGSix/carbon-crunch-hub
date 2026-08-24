@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { findExistingLegacyProject, duplicateLegacyProjectError } from "../_shared/legacy-duplicate-check.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,6 +119,16 @@ serve(async (req) => {
           });
 
         if (clientError) throw clientError;
+
+        // 2a. Block re-imports of the same project for the same client/site
+        const existingLegacy = await findExistingLegacyProject(supabase, {
+          clientId: clientId as string,
+          systemAddress: row.system_address,
+          projectTitle: row.project_title,
+        });
+        if (existingLegacy) {
+          throw duplicateLegacyProjectError(existingLegacy);
+        }
 
         // 2b. Validate commission date (must be on or after 2022-09-15)
         const minCommissionDate = new Date('2022-09-15');
