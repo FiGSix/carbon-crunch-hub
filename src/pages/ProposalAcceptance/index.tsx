@@ -32,7 +32,7 @@ export default function ProposalAcceptance() {
   const [hasExistingAgreement, setHasExistingAgreement] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
-  const [typedName, setTypedName] = useState("");
+  const [signatoryName, setSignatoryName] = useState("");
   const [signatoryName, setSignatoryName] = useState("");
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -309,11 +309,15 @@ export default function ProposalAcceptance() {
         body: {
           token: token || undefined,
           proposalId: !token ? proposal.id : undefined,
-          typedName,
-          signatoryName: (signatoryName || typedName || getClientName()).trim() || undefined,
+          // Typing a name is no longer a signing method. The name is still sent
+          // (and stored in typed_name) purely as the on-record signatory name,
+          // which the PDF, admin signature list and emails read.
+          typedName: (signatoryName || getClientName()).trim(),
+          signatoryName: (signatoryName || getClientName()).trim() || undefined,
           isCompanyCedent,
           signatureImage: signatureImage || undefined,
-          signatureType: signatureImage ? 'canvas' : 'typed_name',
+          signatureType: 'canvas',
+
           ipAddress,
           userAgent: navigator.userAgent,
           projectDetails: isReferralProposal ? projectDetails : undefined,
