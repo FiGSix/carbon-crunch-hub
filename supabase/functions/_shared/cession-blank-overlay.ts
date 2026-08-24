@@ -107,6 +107,7 @@ export interface CessionBlankValues {
   placeOfSignature?: string;
   dateOfSignature?: string;
   signedFor?: string;
+  signatoryName?: string;
 }
 
 /**
@@ -147,6 +148,7 @@ export function applyBlankOverlay(args: {
     [map.placeOfSignature, values.placeOfSignature],
     [map.dateOfSignature, values.dateOfSignature],
     [map.signedFor, values.signedFor],
+    [map.signatoryName ?? [], values.signatoryName],
   ];
   groups.forEach(([fields, value]) => fields.forEach((f) => draw(f, value)));
 
