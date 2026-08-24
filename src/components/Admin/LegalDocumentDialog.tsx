@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
+import { FileUp, Loader2, FileCheck2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type LegalDocument = Database["public"]["Tables"]["legal_documents"]["Row"];
@@ -57,6 +58,42 @@ export function LegalDocumentDialog({
   isViewMode = false,
 }: LegalDocumentDialogProps) {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    if (!document) return;
+    setIsUploading(true);
+    try {
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const sourcePath = `${document.document_type}/${document.id}/uploads/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("legal-documents")
+        .upload(sourcePath, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { data, error } = await supabase.functions.invoke("process-legal-document", {
+        body: { documentId: document.id, sourcePath, fileName: file.name },
+      });
+      if (error) throw error;
+
+      const extracted = (data as { text_length?: number } | null)?.text_length;
+      form.setValue("content", (data as { content?: string } | null)?.content ?? form.getValues("content"));
+      queryClient.invalidateQueries({ queryKey: ["legal-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["live-legal-document"] });
+      toast.success(
+        extracted
+          ? `File processed — ${extracted.toLocaleString()} characters extracted`
+          : "File processed",
+      );
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(`Upload failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const form = useForm<FormValues>({
     defaultValues: {
@@ -291,6 +328,60 @@ export function LegalDocumentDialog({
                 </FormItem>
               )}
             />
+
+            {document && (
+              <div className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-sm">Source file</p>
+                    <p className="text-xs text-muted-foreground">
+                      The uploaded file is the canonical legal text. Its pages are
+                      spliced verbatim into every signed agreement.
+                    </p>
+                  </div>
+                  {document.file_path && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-green-600 shrink-0">
+                      <FileCheck2 className="h-4 w-4" />
+                      File attached
+                    </span>
+                  )}
+                </div>
+
+                {!isViewMode && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileUp className="h-4 w-4 mr-2" />
+                      )}
+                      {isUploading ? "Processing..." : "Upload agreement file"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      PDF preserves the original layout exactly. Word files are
+                      converted to PDF and will lose their formatting.
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             {!isViewMode && (
               <DialogFooter>
