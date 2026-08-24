@@ -168,8 +168,9 @@ export function SignatureSection({
             )}
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-3">
-            Your signature is legally binding. You can either draw or type your name.
+            Your drawn signature is legally binding.
           </p>
+
         </div>
       </CardContent>
     </Card>
