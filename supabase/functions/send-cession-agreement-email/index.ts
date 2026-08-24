@@ -61,13 +61,14 @@ serve(async (req) => {
 
     console.log(`[Cession Email] Fetching signed agreement PDF for proposal: ${proposalId}`);
 
-    // Fetch the signed PDF URL from proposal_agreements, retrying briefly in case the
-    // upstream generate-signed-agreement-pdf write hasn't propagated yet.
-    let agreement: { signed_pdf_url: string | null } | null = null;
+    // Fetch the signed document reference from proposal_agreements, retrying briefly
+    // in case the upstream generate-signed-agreement-pdf write hasn't propagated yet.
+    // `signed-agreements` is a PRIVATE bucket, so what we store is a bare object path.
+    let agreement: { pdf_path: string | null; signed_pdf_url: string | null } | null = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       const { data, error } = await supabase
         .from('proposal_agreements')
-        .select('signed_pdf_url')
+        .select('pdf_path, signed_pdf_url')
         .eq('proposal_id', proposalId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -76,20 +77,20 @@ serve(async (req) => {
         console.error(`[Cession Email] Attempt ${attempt} - error fetching agreement:`, error);
       }
       agreement = data ?? null;
-      if (agreement?.signed_pdf_url) break;
+      if (agreement?.pdf_path || agreement?.signed_pdf_url) break;
       if (attempt < 3) {
-        console.log(`[Cession Email] signed_pdf_url not present on attempt ${attempt}, waiting 1500ms...`);
+        console.log(`[Cession Email] Signed document not present on attempt ${attempt}, waiting 1500ms...`);
         await new Promise((r) => setTimeout(r, 1500));
       }
     }
 
-    // Use signed PDF if available, otherwise fall back to unsigned proposal PDF
-    const pdfUrl = agreement?.signed_pdf_url || proposal.pdf_url;
+    const signedRef = agreement?.pdf_path || agreement?.signed_pdf_url || null;
+    const pdfUrl = signedRef || proposal.pdf_url;
 
-    if (!agreement?.signed_pdf_url) {
+    if (!signedRef) {
       console.warn('[Cession Email] ⚠️ Signed PDF still not available after retries — attaching UNSIGNED proposal PDF as fallback. Investigate generate-signed-agreement-pdf logs for this proposal.');
     } else {
-      console.log('[Cession Email] Using signed agreement PDF:', pdfUrl);
+      console.log('[Cession Email] Using signed agreement document:', signedRef);
     }
 
 
@@ -98,27 +99,38 @@ serve(async (req) => {
     // Fetch PDF via storage (private buckets) using service role
     if (pdfUrl) {
       try {
-        const signedMatch = (pdfUrl as string).match(/\/object\/(?:public|sign)\/signed-agreements\/([^?]+)/);
-        const proposalMatch = (pdfUrl as string).match(/\/object\/(?:public|sign)\/proposal-pdfs\/([^?]+)/);
+        // Accept a bare object path (current format) or a legacy public/signed URL.
+        const asPath = (value: string, bucket: string): string | null => {
+          const m = value.match(new RegExp(`/object/(?:public|sign|authenticated)/${bucket}/([^?]+)`));
+          if (m) return decodeURIComponent(m[1]);
+          return /^https?:\/\//i.test(value) ? null : value.replace(/^\/+/, '');
+        };
+
+        const url = pdfUrl as string;
+        const isSignedDoc = Boolean(signedRef) && url === signedRef;
+        const signedPath = isSignedDoc
+          ? asPath(url, 'signed-agreements')
+          : (url.includes('/signed-agreements/') ? asPath(url, 'signed-agreements') : null);
+        const proposalPath = signedPath ? null : asPath(url, 'proposal-pdfs');
+
         let pdfBuffer: ArrayBuffer | null = null;
 
-        if (signedMatch) {
-          const path = decodeURIComponent(signedMatch[1]);
-          console.log(`[Cession Email] Downloading from signed-agreements: ${path}`);
-          const { data: blob, error } = await supabase.storage.from('signed-agreements').download(path);
+        if (signedPath) {
+          console.log(`[Cession Email] Downloading from signed-agreements: ${signedPath}`);
+          const { data: blob, error } = await supabase.storage.from('signed-agreements').download(signedPath);
           if (error) throw error;
           pdfBuffer = await blob!.arrayBuffer();
-        } else if (proposalMatch) {
-          const path = decodeURIComponent(proposalMatch[1]);
-          console.log(`[Cession Email] Downloading from proposal-pdfs: ${path}`);
-          const { data: blob, error } = await supabase.storage.from('proposal-pdfs').download(path);
+        } else if (proposalPath) {
+          console.log(`[Cession Email] Downloading from proposal-pdfs: ${proposalPath}`);
+          const { data: blob, error } = await supabase.storage.from('proposal-pdfs').download(proposalPath);
           if (error) throw error;
           pdfBuffer = await blob!.arrayBuffer();
         } else {
-          // Legacy fallback
-          const r = await fetch(pdfUrl);
+          // Legacy fallback: an absolute URL we can't map to a known bucket.
+          const r = await fetch(url);
           if (r.ok) pdfBuffer = await r.arrayBuffer();
         }
+
 
         if (pdfBuffer) {
           const filename = `Cession_Agreement_${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
