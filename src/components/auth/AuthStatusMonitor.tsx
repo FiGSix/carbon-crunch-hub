@@ -18,10 +18,15 @@ export function AuthStatusMonitor() {
     }
   };
 
+  // Never render anything on the public signing page — clients must not see
+  // developer diagnostics or auth chrome while reviewing a legal agreement.
+  const isPublicSigningPage =
+    typeof window !== 'undefined' && /^\/proposals\/[^/]+\/accept/.test(window.location.pathname);
+
   // Only show debug info in development, but always show auth errors
   const showDebugInfo = import.meta.env.DEV;
-  
-  if (!authError && !showDebugInfo) {
+
+  if (isPublicSigningPage || (!authError && !showDebugInfo)) {
     return null;
   }
 
