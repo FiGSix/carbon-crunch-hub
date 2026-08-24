@@ -3,16 +3,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, AlertCircle, Loader2, PenTool } from "lucide-react";
+import { CheckCircle2, Loader2, PenTool } from "lucide-react";
 import { SignaturePad } from "@/components/proposals/signature/SignatureCanvas";
 
 interface SignatureSectionProps {
   hasScrolledToBottom: boolean;
   hasAgreed: boolean;
   onAgreeChange: (checked: boolean) => void;
-  typedName: string;
-  onTypedNameChange: (name: string) => void;
   signatureImage: string | null;
   onSignatureImageChange: (image: string | null) => void;
   clientName: string;
@@ -20,7 +17,6 @@ interface SignatureSectionProps {
   companyName?: string | null;
   signatoryName: string;
   onSignatoryNameChange: (name: string) => void;
-  isValid: boolean;
   canSubmit: boolean;
   isSubmitting: boolean;
   onSubmit: () => void;
@@ -30,20 +26,18 @@ export function SignatureSection({
   hasScrolledToBottom,
   hasAgreed,
   onAgreeChange,
-  typedName,
-  onTypedNameChange,
   signatureImage,
   onSignatureImageChange,
   clientName,
   companyName,
   signatoryName,
   onSignatoryNameChange,
-  isValid,
   canSubmit,
   isSubmitting,
   onSubmit,
 }: SignatureSectionProps) {
-  const hasSignature = signatureImage !== null || isValid;
+  const hasSignature = signatureImage !== null;
+
   
   return (
     <Card className="border-2 border-primary/20">
