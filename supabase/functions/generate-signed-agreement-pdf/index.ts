@@ -277,6 +277,59 @@ function resolveSiteAddress(proposal: any): string {
   );
 }
 
+/**
+ * Every date printed on a generated page is ISO 8601 (YYYY-MM-DD). Locale
+ * formats are ambiguous (3/15/2024) and this is a signed legal document.
+ */
+function isoDate(value: unknown): string | null {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * The commissioning date lives in the proposal JSON — there is no
+ * `proposals.commissioning_date` column, which is why this page previously
+ * always fell back to the placeholder string.
+ */
+function resolveCommissioningDate(proposal: any): string | null {
+  const c = proposal.content ?? {};
+  const pi = proposal.project_info ?? {};
+  return (
+    isoDate(proposal.commissioning_date) ??
+    isoDate(pi.commission_date) ??
+    isoDate(pi.commissionDate) ??
+    isoDate(c?.projectInfo?.commissionDate) ??
+    isoDate(c?.projectInfo?.commission_date) ??
+    isoDate(c?.projectInformation?.commissionDate) ??
+    isoDate(Array.isArray(c?.projectInfo?.phases) ? c.projectInfo.phases[0]?.commissionDate : null)
+  );
+}
+
+/**
+ * A company cannot sign — a natural person signs for it. The signatory name is
+ * captured at signing time and stored on the agreement/master signature
+ * metadata; individual cedents fall back to their own name.
+ */
+function resolveSignatoryName(proposal: any, agreement: any, masterSignature: any): string {
+  const client = proposal.client ?? {};
+  const personName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim();
+  return (
+    agreement?.metadata?.signatory_name ||
+    masterSignature?.metadata?.signatory_name ||
+    masterSignature?.typed_name ||
+    agreement?.typed_name ||
+    personName ||
+    proposal.content?.clientInfo?.name ||
+    "N/A"
+  );
+}
+
+
 function addPartyDetailsPage(
   pdfDoc: any, font: any, bold: any, proposal: any, agreement: any,
   legalTitle: string | null, legalVersion: number | null,
