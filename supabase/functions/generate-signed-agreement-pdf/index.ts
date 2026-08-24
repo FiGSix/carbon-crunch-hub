@@ -508,12 +508,7 @@ async function addSignaturePage(
   }
 
   row("Typed Name:", typedName || "N/A");
-  row(
-    "Date & Time:",
-    new Date(signedAt).toLocaleString("en-ZA", {
-      dateStyle: "long", timeStyle: "medium", timeZone: "Africa/Johannesburg",
-    } as any),
-  );
+  row("Date & Time:", isoDateTimeInZA(signedAt));
   row("IP Address:", masterSignature?.ip_address ?? agreement.ip_address ?? "N/A");
 
   const ua = (masterSignature?.user_agent ?? agreement.user_agent ?? "N/A") as string;
