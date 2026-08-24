@@ -27,10 +27,17 @@ Deno.serve(async (req) => {
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
 
-  const { bucket, path } = await req.json().catch(() => ({}));
+  const { bucket, path, op } = await req.json().catch(() => ({}));
   if (!bucket || !path) {
     return new Response(JSON.stringify({ error: "bucket and path are required" }), {
       status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (op === "delete") {
+    const { error } = await admin.storage.from(bucket).remove([path]);
+    return new Response(JSON.stringify({ deleted: !error, error: error?.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
