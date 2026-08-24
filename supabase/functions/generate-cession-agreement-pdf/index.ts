@@ -90,17 +90,35 @@ Deno.serve(async (req) => {
 
     const content = (proposal.content ?? {}) as Record<string, any>;
     const client = (proposal as any).client ?? {};
-    const ownerName = [client.first_name, client.last_name].filter(Boolean).join(" ") ||
-      client.company_name || content?.clientInfo?.name || "";
+    const personName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim();
+    const ownerName = client.company_name || personName || content?.clientInfo?.name || "";
+    const signatoryName = personName || content?.clientInfo?.name || "";
+
+    // Dates on generated pages are ISO 8601 — locale formats are ambiguous.
+    const isoDate = (value: unknown): string => {
+      if (!value) return "";
+      const raw = String(value).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    };
 
     const rows: Array<[string, string]> = [
       ["Owner", ownerName],
+      ["Signatory", signatoryName],
       ["Registration number", client.registration_number || content?.clientInfo?.registrationNumber || "Not applicable"],
       ["Email", client.email || content?.clientInfo?.email || ""],
       ["Registered address", client.address || content?.clientInfo?.address || ""],
       ["Site / premises address", content?.projectInfo?.address || ""],
       ["System size", content?.projectInfo?.size ? `${content.projectInfo.size} kWp` : ""],
-      ["Commissioning date", content?.projectInfo?.commissionDate || ""],
+      [
+        "Commissioning date",
+        isoDate(
+          (proposal as any).project_info?.commission_date ??
+            content?.projectInfo?.commissionDate ??
+            content?.projectInfo?.commission_date,
+        ),
+      ],
       ["Owner share", proposal.client_share_percentage ? `${proposal.client_share_percentage}%` : ""],
       ["Agreement revision", `${live.title} (v${live.version})`],
     ];
