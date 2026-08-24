@@ -55,30 +55,24 @@ export async function createClientContact(
       };
     }
     
-    // Resolve or create a client_companies row when a company name is provided
+    // Resolve or create the client_companies row through the single DB resolver:
+    // it matches on corporate email domain first, then on the normalised company
+    // name, so near-identical duplicates are never created.
     let resolvedCompanyId: string | null = null;
     const trimmedCompany = companyName?.trim();
     if (trimmedCompany) {
-      const { data: existingCompany } = await supabase
-        .from('client_companies')
-        .select('id')
-        .ilike('company_name', trimmedCompany)
-        .maybeSingle();
-      if (existingCompany?.id) {
-        resolvedCompanyId = existingCompany.id;
-      } else {
-        const { data: newCompany, error: companyErr } = await supabase
-          .from('client_companies')
-          .insert({ company_name: trimmedCompany, created_by: createdBy })
-          .select('id')
-          .single();
-        if (!companyErr && newCompany?.id) {
-          resolvedCompanyId = newCompany.id;
-        } else if (companyErr) {
-          console.error('Failed to create client_companies row:', companyErr);
-        }
+      const { data: companyId, error: companyErr } = await supabase.rpc('resolve_client_company', {
+        p_company_name: trimmedCompany,
+        p_email: normalizedEmail ?? null,
+        p_created_by: createdBy ?? null,
+      });
+      if (companyErr) {
+        console.error('Failed to resolve client_companies row:', companyErr);
+      } else if (companyId) {
+        resolvedCompanyId = companyId as string;
       }
     }
+
 
     // Create a new client contact record with validation
     const { data: newClient, error: insertError } = await supabase
