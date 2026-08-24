@@ -307,7 +307,79 @@ serve(async (req) => {
     
     // Map frontend signature type to database enum
     const dbSignatureType = signatureType === 'canvas' ? 'electronic_signature' : 'typed_name';
-    
+
+    // 5a. Resolve the LIVE cession revision. The wording the client just read and
+    //     signed is whatever Admin → Legal Documents currently has flagged live —
+    //     never a hardcoded copy.
+    const { data: liveDocRaw } = await supabase.rpc('get_live_legal_document', {
+      p_document_type: 'cession_agreement',
+    });
+    const liveDoc = Array.isArray(liveDocRaw) ? liveDocRaw[0] : liveDocRaw;
+    if (!liveDoc?.id) {
+      console.error('❌ No live cession agreement configured — refusing to record a signature');
+      return new Response(
+        JSON.stringify({
+          error: 'No live Cession Agreement is configured. Please contact support.',
+          validation: 'legal_document',
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 5b. Master signature: one per client, reused by every proposal they hold.
+    let masterSignatureId: string | null = null;
+    let masterDocId: string = liveDoc.id;
+    let masterDocVersion: number = liveDoc.current_version;
+    {
+      const { data: existingMaster } = await supabase
+        .from('client_cession_signatures')
+        .select('id, legal_document_id, legal_document_version')
+        .eq('client_id', signedBy)
+        .is('revoked_at', null)
+        .order('signed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingMaster) {
+        // Already signed: keep the revision they actually signed, never re-stamp.
+        masterSignatureId = existingMaster.id;
+        masterDocId = existingMaster.legal_document_id ?? liveDoc.id;
+        masterDocVersion = existingMaster.legal_document_version ?? liveDoc.current_version;
+        console.log(`ℹ️ Reusing existing master signature ${masterSignatureId}`);
+      } else {
+        const { data: createdMaster, error: masterError } = await supabase
+          .from('client_cession_signatures')
+          .insert({
+            client_id: signedBy,
+            legal_document_id: liveDoc.id,
+            legal_document_version: liveDoc.current_version,
+            legal_document_title: liveDoc.title,
+            legal_document_file_path: liveDoc.file_path,
+            signed_by: signedBy,
+            origin_proposal_id: proposal.id,
+            signature_type: dbSignatureType,
+            typed_name: typedName?.trim() || null,
+            signature_image_url: signatureImageUrl,
+            ip_address: safeIp,
+            user_agent: userAgent,
+            signed_at: witnessTimestamp,
+            metadata: {
+              signed_via: token ? 'acceptance_link' : 'authenticated_user',
+              signing_location: 'South Africa',
+            },
+          })
+          .select('id')
+          .single();
+
+        if (masterError || !createdMaster) {
+          console.error('❌ Failed to create master cession signature:', masterError);
+          throw new Error('Failed to record cession signature');
+        }
+        masterSignatureId = createdMaster.id;
+        console.log(`✅ Master cession signature created: ${masterSignatureId}`);
+      }
+    }
+
     // Check for existing agreement to prevent duplicates from retries
     const { data: existingAgreement } = await supabase
       .from('proposal_agreements')
@@ -328,12 +400,17 @@ serve(async (req) => {
           proposal_id: proposal.id,
           signed_by: signedBy,
           signature_type: dbSignatureType,
+          signature_type_used: dbSignatureType,
           signature_image_url: signatureImageUrl,
           typed_name: typedName?.trim() || null,
           ip_address: safeIp,
           user_agent: userAgent,
-          accepted_terms_version: '2.0',
+          client_cession_signature_id: masterSignatureId,
+          legal_document_id: masterDocId,
+          legal_document_version: masterDocVersion,
+          accepted_terms_version: String(masterDocVersion),
           witness_1_name: 'DIGITAL WITNESS 1',
+
           witness_1_verified_at: witnessTimestamp,
           witness_1_ip_address: safeIp,
           witness_2_name: 'DIGITAL WITNESS 2',
@@ -505,6 +582,20 @@ serve(async (req) => {
         } else {
           console.warn('⚠️ [post-sign] No client email found, skipping confirmation email');
         }
+
+        // Sibling proposals for the same client were approved and given their own
+        // agreement rows by the propagate_master_agreement() trigger. Each needs
+        // its own generated PDF + email — no manual intervention.
+        const { data: sweepResult, error: sweepError } = await supabase.functions.invoke(
+          'sweep-agreement-documents',
+          { body: { clientId: signedBy } }
+        );
+        if (sweepError) {
+          console.error('❌ [post-sign] Sibling document sweep failed:', sweepError);
+        } else if (sweepResult?.processed) {
+          console.log(`✅ [post-sign] Generated ${sweepResult.processed} inherited sibling document(s)`);
+        }
+
       } catch (err) {
         console.error('❌ [post-sign] Chain error:', err);
       }
