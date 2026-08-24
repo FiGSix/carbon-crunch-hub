@@ -4492,6 +4492,7 @@ export type Database = {
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_agent: { Args: never; Returns: boolean }
       is_current_user_client_account_admin: { Args: never; Returns: boolean }
+      is_placeholder_company_name: { Args: { _name: string }; Returns: boolean }
       is_project_stakeholder: {
         Args: { _project_id: string }
         Returns: boolean
@@ -4522,6 +4523,11 @@ export type Database = {
         Args: { token_param: string }
         Returns: undefined
       }
+      merge_client_companies: {
+        Args: { _drop_id: string; _keep_id: string }
+        Returns: undefined
+      }
+      normalize_company_name: { Args: { _name: string }; Returns: string }
       normalize_system_size_to_kwp: {
         Args: { size_value: number; unit_type?: string }
         Returns: number
@@ -4568,6 +4574,14 @@ export type Database = {
           source: string
           user_id: string
         }[]
+      }
+      resolve_client_company: {
+        Args: {
+          p_company_name: string
+          p_created_by?: string
+          p_email?: string
+        }
+        Returns: string
       }
       search_clients: {
         Args: { search_term: string }
