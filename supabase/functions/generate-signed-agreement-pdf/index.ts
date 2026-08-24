@@ -242,6 +242,7 @@ async function assemble(args: {
         placeOfSignature: "South Africa",
         dateOfSignature: isoDateInZA(agreement.signed_at),
         signedFor: resolveOwnerName(proposal, agreement),
+        signatoryName: `Signed by: ${resolveSignatoryName(proposal, agreement, masterSignature)}`,
       },
     });
     console.log(`[Signed PDF] Blank overlay applied (${blankMap.label}, ${fingerprint.slice(0, 12)})`);

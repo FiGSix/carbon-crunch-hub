@@ -45,6 +45,8 @@ export interface CessionBlankMap {
   dateOfSignature: BlankField[];
   /** Entity/person the signature is given for ("FOR: ____"). */
   signedFor: BlankField[];
+  /** Natural person who signed on the owner's behalf, printed under the line. */
+  signatoryName?: BlankField[];
   /** Where the drawn signature image is stamped on the owner's signature line. */
   signatureImage?: { page: number; x: number; y: number; width: number; height: number };
 }
@@ -67,7 +69,9 @@ const BLANK_MAPS: Record<string, CessionBlankMap> = {
     placeOfSignature: [{ page: 13, x: 213, y: 558, maxWidth: 92, size: 9 }],
     dateOfSignature: [{ page: 13, x: 388, y: 558, maxWidth: 98, size: 9 }],
     signedFor: [{ page: 13, x: 278, y: 392, maxWidth: 250, size: 9 }],
-    signatureImage: { page: 13, x: 90, y: 395, width: 150, height: 40 },
+    // Printed name of the natural person, just below the owner's signature line.
+    signatoryName: [{ page: 13, x: 90, y: 380, maxWidth: 200, size: 8 }],
+    signatureImage: { page: 13, x: 90, y: 397, width: 150, height: 40 },
   },
 };
 
@@ -103,6 +107,7 @@ export interface CessionBlankValues {
   placeOfSignature?: string;
   dateOfSignature?: string;
   signedFor?: string;
+  signatoryName?: string;
 }
 
 /**
@@ -143,6 +148,7 @@ export function applyBlankOverlay(args: {
     [map.placeOfSignature, values.placeOfSignature],
     [map.dateOfSignature, values.dateOfSignature],
     [map.signedFor, values.signedFor],
+    [map.signatoryName ?? [], values.signatoryName],
   ];
   groups.forEach(([fields, value]) => fields.forEach((f) => draw(f, value)));
 
