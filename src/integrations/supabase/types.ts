@@ -641,6 +641,84 @@ export type Database = {
         }
         Relationships: []
       }
+      client_cession_signatures: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          ip_address: unknown
+          legal_document_file_path: string | null
+          legal_document_id: string | null
+          legal_document_title: string | null
+          legal_document_version: number | null
+          metadata: Json
+          origin_proposal_id: string | null
+          revoked_at: string | null
+          signature_image_url: string | null
+          signature_type: string
+          signed_at: string
+          signed_by: string | null
+          typed_name: string | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          legal_document_file_path?: string | null
+          legal_document_id?: string | null
+          legal_document_title?: string | null
+          legal_document_version?: number | null
+          metadata?: Json
+          origin_proposal_id?: string | null
+          revoked_at?: string | null
+          signature_image_url?: string | null
+          signature_type?: string
+          signed_at?: string
+          signed_by?: string | null
+          typed_name?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          legal_document_file_path?: string | null
+          legal_document_id?: string | null
+          legal_document_title?: string | null
+          legal_document_version?: number | null
+          metadata?: Json
+          origin_proposal_id?: string | null
+          revoked_at?: string | null
+          signature_image_url?: string | null
+          signature_type?: string
+          signed_at?: string
+          signed_by?: string | null
+          typed_name?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_cession_signatures_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_cession_signatures_legal_document_id_fkey"
+            columns: ["legal_document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_companies: {
         Row: {
           company_name: string
@@ -1551,9 +1629,16 @@ export type Database = {
           current_version: number
           document_type: string
           effective_date: string
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
           id: string
           is_active: boolean
+          is_live: boolean
           metadata: Json | null
+          set_live_at: string | null
+          set_live_by: string | null
+          source_file_path: string | null
           status: string
           title: string
           updated_at: string
@@ -1565,9 +1650,16 @@ export type Database = {
           current_version?: number
           document_type: string
           effective_date: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
           id?: string
           is_active?: boolean
+          is_live?: boolean
           metadata?: Json | null
+          set_live_at?: string | null
+          set_live_by?: string | null
+          source_file_path?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1579,9 +1671,16 @@ export type Database = {
           current_version?: number
           document_type?: string
           effective_date?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
           id?: string
           is_active?: boolean
+          is_live?: boolean
           metadata?: Json | null
+          set_live_at?: string | null
+          set_live_by?: string | null
+          source_file_path?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -2732,10 +2831,15 @@ export type Database = {
       proposal_agreements: {
         Row: {
           accepted_terms_version: string
+          client_cession_signature_id: string | null
           created_at: string
+          generated_at: string | null
           id: string
           ip_address: unknown
+          legal_document_id: string | null
+          legal_document_version: number | null
           metadata: Json | null
+          pdf_path: string | null
           proposal_id: string
           signature_image_url: string | null
           signature_type: Database["public"]["Enums"]["signature_type"]
@@ -2755,10 +2859,15 @@ export type Database = {
         }
         Insert: {
           accepted_terms_version?: string
+          client_cession_signature_id?: string | null
           created_at?: string
+          generated_at?: string | null
           id?: string
           ip_address?: unknown
+          legal_document_id?: string | null
+          legal_document_version?: number | null
           metadata?: Json | null
+          pdf_path?: string | null
           proposal_id: string
           signature_image_url?: string | null
           signature_type?: Database["public"]["Enums"]["signature_type"]
@@ -2778,10 +2887,15 @@ export type Database = {
         }
         Update: {
           accepted_terms_version?: string
+          client_cession_signature_id?: string | null
           created_at?: string
+          generated_at?: string | null
           id?: string
           ip_address?: unknown
+          legal_document_id?: string | null
+          legal_document_version?: number | null
           metadata?: Json | null
+          pdf_path?: string | null
           proposal_id?: string
           signature_image_url?: string | null
           signature_type?: Database["public"]["Enums"]["signature_type"]
@@ -2800,6 +2914,20 @@ export type Database = {
           witness_method?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposal_agreements_client_cession_signature_id_fkey"
+            columns: ["client_cession_signature_id"]
+            isOneToOne: false
+            referencedRelation: "client_cession_signatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_agreements_legal_document_id_fkey"
+            columns: ["legal_document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposal_agreements_proposal_id_fkey"
             columns: ["proposal_id"]
@@ -4152,6 +4280,20 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_live_legal_document: {
+        Args: { p_document_type: string }
+        Returns: {
+          content: string
+          current_version: number
+          document_type: string
+          effective_date: string
+          file_mime: string
+          file_path: string
+          id: string
+          set_live_at: string
+          title: string
+        }[]
+      }
       get_minimum_vintage_year: { Args: never; Returns: number }
       get_partner_attribution: {
         Args: { p_partner_id: string }
@@ -4296,6 +4438,15 @@ export type Database = {
       get_super_partner_rate: {
         Args: { p_super_partner_id: string }
         Returns: number
+      }
+      get_unsigned_cession_clients: {
+        Args: never
+        Returns: {
+          client_email: string
+          client_id: string
+          client_name: string
+          proposal_count: number
+        }[]
       }
       get_user_client_company_client_ids: { Args: never; Returns: string[] }
       get_user_client_ids: { Args: never; Returns: string[] }
@@ -4465,6 +4616,36 @@ export type Database = {
           system_size_kwp: number
           title: string
         }[]
+      }
+      set_legal_document_live: {
+        Args: { p_document_id: string }
+        Returns: {
+          content: string
+          created_at: string
+          created_by: string | null
+          current_version: number
+          document_type: string
+          effective_date: string
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          is_active: boolean
+          is_live: boolean
+          metadata: Json | null
+          set_live_at: string | null
+          set_live_by: string | null
+          source_file_path: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "legal_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_request_invitation_token:
         | {
