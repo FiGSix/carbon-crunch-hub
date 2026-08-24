@@ -582,6 +582,20 @@ serve(async (req) => {
         } else {
           console.warn('⚠️ [post-sign] No client email found, skipping confirmation email');
         }
+
+        // Sibling proposals for the same client were approved and given their own
+        // agreement rows by the propagate_master_agreement() trigger. Each needs
+        // its own generated PDF + email — no manual intervention.
+        const { data: sweepResult, error: sweepError } = await supabase.functions.invoke(
+          'sweep-agreement-documents',
+          { body: { clientId: signedBy } }
+        );
+        if (sweepError) {
+          console.error('❌ [post-sign] Sibling document sweep failed:', sweepError);
+        } else if (sweepResult?.processed) {
+          console.log(`✅ [post-sign] Generated ${sweepResult.processed} inherited sibling document(s)`);
+        }
+
       } catch (err) {
         console.error('❌ [post-sign] Chain error:', err);
       }
