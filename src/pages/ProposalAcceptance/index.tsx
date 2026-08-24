@@ -33,7 +33,6 @@ export default function ProposalAcceptance() {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [signatoryName, setSignatoryName] = useState("");
-  const [signatoryName, setSignatoryName] = useState("");
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
