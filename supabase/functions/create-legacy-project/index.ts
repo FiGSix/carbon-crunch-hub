@@ -100,6 +100,16 @@ Deno.serve(async (req) => {
       throw new Error('Failed to find or create client');
     }
 
+    // Block re-imports of the same project for the same client/site
+    const existingLegacy = await findExistingLegacyProject(supabase, {
+      clientId: clientId as string,
+      systemAddress: body.system_address,
+      projectTitle: body.project_title,
+    });
+    if (existingLegacy) {
+      throw duplicateLegacyProjectError(existingLegacy);
+    }
+
     // Calculate carbon credits (using standard 1000 kWh per kWp per year * 0.95 tCO2/MWh)
     const annualEnergyKwh = body.system_size_kwp * 1000;
     const carbonCredits = (annualEnergyKwh / 1000) * 0.95;
