@@ -32,7 +32,6 @@ export default function ProposalAcceptance() {
   const [hasExistingAgreement, setHasExistingAgreement] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
-  const [typedName, setTypedName] = useState("");
   const [signatoryName, setSignatoryName] = useState("");
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -269,30 +268,6 @@ export default function ProposalAcceptance() {
   }, [proposal, clientRecord]);
 
 
-  const validateTypedName = (): boolean => {
-    // Normalize: lowercase, strip diacritics, replace punctuation with spaces,
-    // collapse whitespace. This makes the check tolerant of initials ("R."),
-    // titles ("Dr."), hyphens, and accents — so e.g. "R. Blake" matches
-    // "Robert Blake", and "Róbert" matches "Robert".
-    const normalize = (s: string) =>
-      s
-        .toLowerCase()
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\p{L}\p{N}\s]/gu, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-    const expected = normalize(getClientName());
-    const typed = normalize(typedName);
-
-    if (!expected) return typed.length >= 2;
-    return expected
-      .split(" ")
-      .filter((w) => w.length > 0)
-      .every((word) => typed.includes(word));
-  };
-
   // Referral-sourced proposals require pre-signature project details capture.
   const isReferralProposal = Boolean(
     (proposal?.content as { referral_created?: boolean } | undefined)?.referral_created,
@@ -301,12 +276,14 @@ export default function ProposalAcceptance() {
 
   const signatoryOk = !isCompanyCedent || signatoryName.trim().length >= 2;
 
+  // Drawing a signature is the only accepted signing method.
   const canSubmit =
     hasScrolledToBottom &&
     hasAgreed &&
     projectDetailsOk &&
     signatoryOk &&
-    (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
+    signatureImage !== null;
+
 
   const handleSubmit = async () => {
     if (!canSubmit || !proposal) return;
@@ -331,11 +308,15 @@ export default function ProposalAcceptance() {
         body: {
           token: token || undefined,
           proposalId: !token ? proposal.id : undefined,
-          typedName,
-          signatoryName: (signatoryName || typedName || getClientName()).trim() || undefined,
+          // Typing a name is no longer a signing method. The name is still sent
+          // (and stored in typed_name) purely as the on-record signatory name,
+          // which the PDF, admin signature list and emails read.
+          typedName: (signatoryName || getClientName()).trim(),
+          signatoryName: (signatoryName || getClientName()).trim() || undefined,
           isCompanyCedent,
           signatureImage: signatureImage || undefined,
-          signatureType: signatureImage ? 'canvas' : 'typed_name',
+          signatureType: 'canvas',
+
           ipAddress,
           userAgent: navigator.userAgent,
           projectDetails: isReferralProposal ? projectDetails : undefined,
@@ -564,19 +545,17 @@ export default function ProposalAcceptance() {
               hasScrolledToBottom={hasScrolledToBottom}
               hasAgreed={hasAgreed}
               onAgreeChange={setHasAgreed}
-              typedName={typedName}
-              onTypedNameChange={setTypedName}
               signatureImage={signatureImage}
               onSignatureImageChange={setSignatureImage}
               clientName={getClientName()}
               companyName={isCompanyCedent ? getCompanyName() : null}
               signatoryName={signatoryName}
               onSignatoryNameChange={setSignatoryName}
-              isValid={validateTypedName()}
               canSubmit={canSubmit}
               isSubmitting={isSubmitting}
               onSubmit={handleSubmit}
             />
+
           </div>
         </div>
 

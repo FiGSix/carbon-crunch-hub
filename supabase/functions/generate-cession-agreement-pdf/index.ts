@@ -10,6 +10,8 @@ import {
   downloadLegalDocumentPdf,
   getLiveLegalDocument,
 } from "../_shared/legal-document.ts";
+import { applyBlankOverlay, resolveBlankMap } from "../_shared/cession-blank-overlay.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,6 +95,28 @@ Deno.serve(async (req) => {
     const personName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim();
     const ownerName = client.company_name || personName || content?.clientInfo?.name || "";
     const signatoryName = personName || content?.clientInfo?.name || "";
+
+    // Fill the template's blank underlines on the canonical pages (draw-only —
+    // the legal wording is untouched). Skipped with a logged warning when this
+    // revision's layout has not been mapped.
+    const { map: blankMap } = await resolveBlankMap(sourceBytes);
+    if (blankMap) {
+      applyBlankOverlay({
+        pages,
+        font,
+        map: blankMap,
+        color: rgb(0, 0, 0),
+        values: {
+          ownerName,
+          registrationNumber: client.registration_number ||
+            content?.clientInfo?.registrationNumber || "N/A",
+          registeredOffices: content?.projectInfo?.address || client.address || "",
+          email: client.email || content?.clientInfo?.email || "",
+          signedFor: ownerName,
+        },
+      });
+    }
+
 
     // Dates on generated pages are ISO 8601 — locale formats are ambiguous.
     const isoDate = (value: unknown): string => {
