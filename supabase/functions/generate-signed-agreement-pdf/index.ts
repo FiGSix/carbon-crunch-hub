@@ -212,12 +212,48 @@ async function assemble(args: {
   legalPages.forEach((p) => pdfDoc.addPage(p));
   console.log(`[Signed PDF] Spliced ${legalPages.length} agreement pages verbatim`);
 
-  // STEP 2 — party & site details (answers the blank fill-in lines).
+  // The drawn signature is needed both for the canonical signature block and
+  // for the confirmation page, so embed it once.
+  const signatureImage = await loadSignatureImage(admin, pdfDoc, agreement, masterSignature);
+
+  // STEP 2 — fill in the template's blank underlines on the canonical pages.
+  // Nothing is re-typeset: values are drawn onto the blanks only.
+  const client = proposal.client ?? {};
+  const { map: blankMap, fingerprint } = await resolveBlankMap(legalPdfBytes);
+  if (blankMap) {
+    applyBlankOverlay({
+      pages: legalPages,
+      font,
+      map: blankMap,
+      color: CRUNCH_CHARCOAL,
+      signatureImage,
+      values: {
+        ownerName: resolveOwnerName(proposal, agreement),
+        registrationNumber: client.registration_number || "N/A",
+        // Signed off by the business: the site address is used for the
+        // "Registered Offices" blank (the template has no separate site field).
+        registeredOffices: resolveSiteAddress(proposal),
+        email: client.email || proposal.content?.clientInfo?.email || "",
+        placeOfSignature: "South Africa",
+        dateOfSignature: isoDateInZA(agreement.signed_at),
+        signedFor: resolveOwnerName(proposal, agreement),
+      },
+    });
+    console.log(`[Signed PDF] Blank overlay applied (${blankMap.label}, ${fingerprint.slice(0, 12)})`);
+  }
+
+  // STEP 3 — the signature evidence sits immediately after the legal text.
+  await addSignaturePage(
+    pdfDoc, font, bold, agreement, masterSignature, signatureImage,
+    legalTitle, legalVersion,
+  );
+
+  // STEP 4 — party & site details (a consolidated record of the particulars).
   addPartyDetailsPage(
     pdfDoc, font, bold, proposal, agreement, masterSignature, legalTitle, legalVersion,
   );
 
-  // STEP 3 — Annexure A separator + proposal pages.
+  // STEP 5 — Annexure A separator + proposal pages.
   const sep = pdfDoc.addPage(A4);
   const { width: sw, height: sh } = sep.getSize();
   sep.drawRectangle({ x: 0, y: sh - 100, width: sw, height: 100, color: CRUNCH_YELLOW });
@@ -232,10 +268,12 @@ async function assemble(args: {
   const basePages = await pdfDoc.copyPages(baseDoc, baseDoc.getPageIndices());
   basePages.forEach((p) => pdfDoc.addPage(p));
 
-  // STEP 4 — stamp every page, then append the signature confirmation page.
-  const initials = getInitials(agreement.typed_name);
+  // STEP 6 — stamp every page.
+  const initials = getInitials(
+    masterSignature?.typed_name ?? agreement.typed_name ?? resolveOwnerName(proposal, agreement),
+  );
   const pages = pdfDoc.getPages();
-  const totalPages = pages.length + 1;
+  const totalPages = pages.length;
 
   pages.forEach((page, index) => {
     const { width, height } = page.getSize();
@@ -251,13 +289,47 @@ async function assemble(args: {
     });
   });
 
-  await addSignaturePage(
-    admin, pdfDoc, font, bold, agreement, masterSignature, totalPages,
-    legalTitle, legalVersion,
-  );
-
   return await pdfDoc.save();
 }
+
+/** The cedent as named in the agreement: company if any, else the individual. */
+function resolveOwnerName(proposal: any, agreement: any): string {
+  const client = proposal.client ?? {};
+  return (
+    client.company_name ||
+    [client.first_name, client.last_name].filter(Boolean).join(" ").trim() ||
+    proposal.content?.clientInfo?.companyName ||
+    proposal.content?.clientInfo?.name ||
+    agreement.typed_name ||
+    "N/A"
+  );
+}
+
+/** Embed the client's drawn signature once for reuse across pages. */
+async function loadSignatureImage(
+  admin: any, pdfDoc: any, agreement: any, masterSignature: any,
+): Promise<any | null> {
+  const sigType = masterSignature?.signature_type ?? agreement.signature_type;
+  const sigUrl = masterSignature?.signature_image_url ?? agreement.signature_image_url;
+  if (!sigUrl || sigType !== "electronic_signature") return null;
+  try {
+    const sigPath = toStorageObjectPath(sigUrl, "signed-agreements");
+    let sigBytes: ArrayBuffer | null = null;
+    if (sigPath) {
+      const { data: blob } = await admin.storage.from("signed-agreements").download(sigPath);
+      if (blob) sigBytes = await blob.arrayBuffer();
+    }
+    if (!sigBytes && /^https?:\/\//i.test(sigUrl)) {
+      const r = await fetch(sigUrl);
+      if (r.ok) sigBytes = await r.arrayBuffer();
+    }
+    return sigBytes ? await pdfDoc.embedPng(new Uint8Array(sigBytes)) : null;
+  } catch (err) {
+    console.error("[Signed PDF] Signature image embed failed:", err);
+    return null;
+  }
+}
+
 
 function getInitials(name: string | null): string {
   if (!name || !name.trim()) return "CC";
