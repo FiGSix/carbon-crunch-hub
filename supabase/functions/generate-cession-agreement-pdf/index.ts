@@ -10,6 +10,8 @@ import {
   downloadLegalDocumentPdf,
   getLiveLegalDocument,
 } from "../_shared/legal-document.ts";
+import { applyBlankOverlay, resolveBlankMap } from "../_shared/cession-blank-overlay.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
