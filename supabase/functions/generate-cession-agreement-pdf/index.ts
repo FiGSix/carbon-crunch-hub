@@ -94,6 +94,28 @@ Deno.serve(async (req) => {
     const ownerName = client.company_name || personName || content?.clientInfo?.name || "";
     const signatoryName = personName || content?.clientInfo?.name || "";
 
+    // Fill the template's blank underlines on the canonical pages (draw-only —
+    // the legal wording is untouched). Skipped with a logged warning when this
+    // revision's layout has not been mapped.
+    const { map: blankMap } = await resolveBlankMap(sourceBytes);
+    if (blankMap) {
+      applyBlankOverlay({
+        pages,
+        font,
+        map: blankMap,
+        color: rgb(0, 0, 0),
+        values: {
+          ownerName,
+          registrationNumber: client.registration_number ||
+            content?.clientInfo?.registrationNumber || "N/A",
+          registeredOffices: content?.projectInfo?.address || client.address || "",
+          email: client.email || content?.clientInfo?.email || "",
+          signedFor: ownerName,
+        },
+      });
+    }
+
+
     // Dates on generated pages are ISO 8601 — locale formats are ambiguous.
     const isoDate = (value: unknown): string => {
       if (!value) return "";
