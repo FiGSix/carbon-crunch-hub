@@ -104,10 +104,11 @@ export function SignatureSection({
           )}
           <div className="flex-1 space-y-3">
             <div>
-              <p className="font-medium">Step 3: Sign with Your Signature</p>
+              <p className="font-medium">Step 3: Draw Your Signature</p>
               <p className="text-sm text-muted-foreground">
-                Draw your signature or type your name
+                Sign in the box below using your mouse, trackpad or touchscreen
               </p>
+
             </div>
 
             {companyName && (
@@ -130,55 +131,19 @@ export function SignatureSection({
                 </p>
               </div>
             )}
+            <div className={`space-y-2 ${!hasAgreed ? 'pointer-events-none opacity-50' : ''}`}>
+              <SignaturePad
+                onSignatureChange={onSignatureImageChange}
+                clientName={clientName}
+              />
+              {signatureImage && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Signature captured</span>
+                </div>
+              )}
+            </div>
 
-
-            
-            <Tabs defaultValue="draw" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="draw" disabled={!hasAgreed}>Draw Signature</TabsTrigger>
-                <TabsTrigger value="type" disabled={!hasAgreed}>Type Name</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="draw" className="space-y-2 mt-4">
-                <SignaturePad 
-                  onSignatureChange={onSignatureImageChange}
-                  clientName={clientName}
-                />
-                {signatureImage && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Signature captured</span>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="type" className="space-y-2 mt-4">
-                <Input
-                  type="text"
-                  placeholder="Type your full name"
-                  value={typedName}
-                  onChange={(e) => onTypedNameChange(e.target.value)}
-                  disabled={!hasAgreed}
-                  className={`${
-                    typedName.trim().length > 0 && !isValid
-                      ? 'border-destructive'
-                      : ''
-                  }`}
-                />
-                {typedName.trim().length > 0 && !isValid && (
-                  <div className="flex items-center gap-2 text-sm text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Name doesn't match the client name ({clientName})</span>
-                  </div>
-                )}
-                {isValid && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Name verified</span>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
           </div>
         </div>
 
