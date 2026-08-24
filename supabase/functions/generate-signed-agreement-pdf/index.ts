@@ -2,10 +2,13 @@
 //
 // Assembly order:
 //   1. The live/linked legal revision's own pages, spliced VERBATIM from the
-//      admin-uploaded PDF. Nothing here re-typesets the legal wording.
-//   2. A generated "Party & Site Details" page answering the fill-in blanks.
-//   3. An "ANNEXURE A" separator + the proposal's own PDF pages.
-//   4. A generated "Digital Signature Confirmation" page.
+//      admin-uploaded PDF, with the template's blank underlines filled in by a
+//      draw-only overlay. Nothing here re-typesets the legal wording.
+//   2. A generated "Digital Signature Confirmation" page (signature evidence
+//      sits immediately after the legal text it attests to).
+//   3. A generated "Party & Site Details" page.
+//   4. An "ANNEXURE A" separator + the proposal's own PDF pages.
+
 //
 // The result is stored in the private `signed-agreements` bucket and the bare
 // object path is written to proposal_agreements.pdf_path (and signed_pdf_url,
