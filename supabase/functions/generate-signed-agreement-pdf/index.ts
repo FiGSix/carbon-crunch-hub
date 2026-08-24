@@ -379,7 +379,7 @@ function addPartyDetailsPage(
 
   row("Owner / Entity Name:", ownerName);
   row("Registration Number:", client.registration_number || "Not applicable");
-  row("Signatory:", agreement.typed_name || "N/A");
+  row("Signatory:", resolveSignatoryName(proposal, agreement, masterSignature));
   row("Email Address:", client.email || "N/A");
   row("Physical Address:", resolveSiteAddress(proposal));
 
@@ -395,12 +395,7 @@ function addPartyDetailsPage(
     "System Size:",
     proposal.system_size_kwp ? `${Number(proposal.system_size_kwp).toLocaleString()} kWp` : "N/A",
   );
-  row(
-    "Commissioning Date:",
-    proposal.commissioning_date
-      ? new Date(proposal.commissioning_date).toLocaleDateString("en-ZA")
-      : "As recorded on the Portal",
-  );
+  row("Commissioning Date:", resolveCommissioningDate(proposal) ?? "Not recorded");
 
   y -= 10;
   page.drawText("Signing", {
@@ -409,13 +404,8 @@ function addPartyDetailsPage(
   y -= 26;
 
   row("Place of Signature:", "South Africa");
-  row(
-    "Date of Signature:",
-    new Date(agreement.signed_at).toLocaleDateString("en-ZA", {
-      dateStyle: "long",
-      timeZone: "Africa/Johannesburg",
-    } as any),
-  );
+  row("Date of Signature:", isoDateInZA(agreement.signed_at));
+
   row(
     "Agreement Revision:",
     legalTitle ? `${legalTitle}${legalVersion ? ` (v${legalVersion})` : ""}` : "N/A",
