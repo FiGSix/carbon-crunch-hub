@@ -16,6 +16,10 @@ interface SignatureSectionProps {
   signatureImage: string | null;
   onSignatureImageChange: (image: string | null) => void;
   clientName: string;
+  /** Set when the cedent is a company — a natural person must be named. */
+  companyName?: string | null;
+  signatoryName: string;
+  onSignatoryNameChange: (name: string) => void;
   isValid: boolean;
   canSubmit: boolean;
   isSubmitting: boolean;
@@ -31,6 +35,9 @@ export function SignatureSection({
   signatureImage,
   onSignatureImageChange,
   clientName,
+  companyName,
+  signatoryName,
+  onSignatoryNameChange,
   isValid,
   canSubmit,
   isSubmitting,
