@@ -115,6 +115,29 @@ export function SignatureSection({
                 Draw your signature or type your name
               </p>
             </div>
+
+            {companyName && (
+              <div className="space-y-2 rounded-md border border-border bg-background p-3">
+                <Label htmlFor="signatory-name">
+                  Full name of the person signing for {companyName}
+                  <span className="text-destructive"> *</span>
+                </Label>
+                <Input
+                  id="signatory-name"
+                  type="text"
+                  placeholder="e.g. Jane Ndlovu"
+                  value={signatoryName}
+                  onChange={(e) => onSignatoryNameChange(e.target.value)}
+                  disabled={!hasAgreed}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A company signs through a natural person. This name is printed on the
+                  agreement as the signatory.
+                </p>
+              </div>
+            )}
+
+
             
             <Tabs defaultValue="draw" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
