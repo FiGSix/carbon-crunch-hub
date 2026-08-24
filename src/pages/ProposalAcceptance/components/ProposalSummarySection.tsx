@@ -47,7 +47,11 @@ export function ProposalSummarySection({ proposal }: ProposalSummarySectionProps
                 <Zap className="h-5 w-5 text-primary mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">System Size</p>
-                  <p className="font-semibold">{projectInfo.size}</p>
+                  <p className="font-semibold">
+                    {/[a-zA-Z]/.test(String(projectInfo.size))
+                      ? projectInfo.size
+                      : `${projectInfo.size} kWp`}
+                  </p>
                 </div>
               </div>
             )}
