@@ -213,7 +213,9 @@ async function assemble(args: {
   console.log(`[Signed PDF] Spliced ${legalPages.length} agreement pages verbatim`);
 
   // STEP 2 — party & site details (answers the blank fill-in lines).
-  addPartyDetailsPage(pdfDoc, font, bold, proposal, agreement, legalTitle, legalVersion);
+  addPartyDetailsPage(
+    pdfDoc, font, bold, proposal, agreement, masterSignature, legalTitle, legalVersion,
+  );
 
   // STEP 3 — Annexure A separator + proposal pages.
   const sep = pdfDoc.addPage(A4);
