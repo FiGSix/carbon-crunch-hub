@@ -100,7 +100,7 @@ export default function ProposalAcceptance() {
       if (rawProposal.client_reference_id) {
         await Promise.all([
           fetchClientRecord(rawProposal.client_reference_id),
-          checkExistingAgreement(rawProposal.client_reference_id),
+          resolveAgreementState(rawProposal.id),
         ]);
       }
     } catch (err) {
@@ -187,7 +187,7 @@ export default function ProposalAcceptance() {
       if (data.client_reference_id) {
         await Promise.all([
           fetchClientRecord(data.client_reference_id),
-          checkExistingAgreement(data.client_reference_id),
+          resolveAgreementState(data.id),
         ]);
       }
     } catch (err) {
