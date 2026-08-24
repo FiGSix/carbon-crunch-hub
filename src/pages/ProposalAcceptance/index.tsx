@@ -251,6 +251,24 @@ export default function ProposalAcceptance() {
     return resolved.name || "";
   };
 
+  /** Company cedents must name the natural person signing on their behalf. */
+  const getCompanyName = (): string => {
+    if (!proposal) return "";
+    const resolved = resolveClientInfo(proposal.content?.clientInfo || {}, clientRecord);
+    return (resolved.companyName || "").trim();
+  };
+  const isCompanyCedent = getCompanyName().length > 0;
+
+  // Prefill with the contact person on record; the client can correct it.
+  useEffect(() => {
+    if (!signatoryName) {
+      const name = getClientName();
+      if (name) setSignatoryName(name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposal, clientRecord]);
+
+
   const validateTypedName = (): boolean => {
     // Normalize: lowercase, strip diacritics, replace punctuation with spaces,
     // collapse whitespace. This makes the check tolerant of initials ("R."),
