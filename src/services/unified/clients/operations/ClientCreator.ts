@@ -16,30 +16,25 @@ export class ClientCreator {
    */
   static async createClient(clientData: CreateClientData): Promise<{ success: boolean; client?: ClientRow; error?: string }> {
     try {
-      // Resolve / create client_companies row when a company name is provided
+      // Resolve / create the client_companies row through the single DB resolver.
+      // It matches on corporate email domain first, then on the normalised company
+      // name, so "Acme (Pty) Ltd" and "Acme" never become two separate companies.
       let resolvedCompanyId: string | undefined = clientData.parentCompanyId;
       const trimmedCompany = clientData.companyName?.trim();
       if (!resolvedCompanyId && trimmedCompany) {
         try {
-          const { data: existing } = await supabase
-            .from('client_companies')
-            .select('id')
-            .ilike('company_name', trimmedCompany)
-            .maybeSingle();
-          if (existing?.id) {
-            resolvedCompanyId = existing.id;
-          } else {
-            const { data: created, error: createErr } = await supabase
-              .from('client_companies')
-              .insert({ company_name: trimmedCompany })
-              .select('id')
-              .single();
-            if (!createErr && created?.id) resolvedCompanyId = created.id;
-          }
+          const { data: companyId, error: resolveErr } = await supabase.rpc('resolve_client_company', {
+            p_company_name: trimmedCompany,
+            p_email: clientData.email ?? null,
+            p_created_by: clientData.createdBy ?? null,
+          });
+          if (resolveErr) throw resolveErr;
+          if (companyId) resolvedCompanyId = companyId as string;
         } catch (e) {
           devLogger.clients.error('client_companies resolve failed:', e);
         }
       }
+
 
       const insertData = {
         first_name: clientData.firstName,
