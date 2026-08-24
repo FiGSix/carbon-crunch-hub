@@ -332,6 +332,8 @@ export default function ProposalAcceptance() {
           token: token || undefined,
           proposalId: !token ? proposal.id : undefined,
           typedName,
+          signatoryName: (signatoryName || typedName || getClientName()).trim() || undefined,
+          isCompanyCedent,
           signatureImage: signatureImage || undefined,
           signatureType: signatureImage ? 'canvas' : 'typed_name',
           ipAddress,
