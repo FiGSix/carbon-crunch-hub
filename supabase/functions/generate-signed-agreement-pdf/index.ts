@@ -1,484 +1,492 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Generate the per-proposal signed Cession Agreement document.
+//
+// Assembly order:
+//   1. The live/linked legal revision's own pages, spliced VERBATIM from the
+//      admin-uploaded PDF. Nothing here re-typesets the legal wording.
+//   2. A generated "Party & Site Details" page answering the fill-in blanks.
+//   3. An "ANNEXURE A" separator + the proposal's own PDF pages.
+//   4. A generated "Digital Signature Confirmation" page.
+//
+// The result is stored in the private `signed-agreements` bucket and the bare
+// object path is written to proposal_agreements.pdf_path (and signed_pdf_url,
+// kept in sync for legacy readers). Signed URLs are minted on demand elsewhere.
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { PDFDocument, StandardFonts, rgb, degrees } from "https://esm.sh/pdf-lib@1.17.1";
+import {
+  downloadLegalDocumentPdf,
+  getLegalDocumentById,
+  getLiveLegalDocument,
+  toStorageObjectPath,
+} from "../_shared/legal-document.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface SignedAgreementRequest {
-  proposalId: string;
-  agreementId: string;
-}
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+const CRUNCH_YELLOW = rgb(1, 0.804, 0.012);
+const CRUNCH_CHARCOAL = rgb(0.137, 0.122, 0.125);
+const A4: [number, number] = [595.28, 841.89];
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
 
-    const { proposalId, agreementId }: SignedAgreementRequest = await req.json();
+    const { proposalId, agreementId } = await req.json();
+    if (!proposalId || !agreementId) {
+      return json({ error: "proposalId and agreementId are required" }, 400);
+    }
 
-    console.log(`[Signed PDF] Generating signed agreement PDF for proposal: ${proposalId}, agreement: ${agreementId}`);
+    console.log(`[Signed PDF] proposal=${proposalId} agreement=${agreementId}`);
 
-    // 1. Fetch proposal data
-    const { data: proposal, error: proposalError } = await supabaseAdmin
-      .from('proposals')
+    // ---- 1. Load records -------------------------------------------------
+    const { data: proposal, error: proposalError } = await admin
+      .from("proposals")
       .select(`
         *,
         agent:profiles!proposals_agent_id_fkey(first_name, last_name, company_name, email),
-        client:clients!proposals_client_reference_id_fkey(first_name, last_name, email, company_name)
+        client:clients!proposals_client_reference_id_fkey(first_name, last_name, email, company_name, registration_number)
       `)
-      .eq('id', proposalId)
+      .eq("id", proposalId)
       .single();
+    if (proposalError || !proposal) return json({ error: "Proposal not found" }, 404);
 
-    if (proposalError || !proposal) {
-      console.error('[Signed PDF] Error fetching proposal:', proposalError);
-      return new Response(
-        JSON.stringify({ error: 'Proposal not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { data: agreement, error: agreementError } = await admin
+      .from("proposal_agreements")
+      .select("*")
+      .eq("id", agreementId)
+      .single();
+    if (agreementError || !agreement) return json({ error: "Agreement not found" }, 404);
+
+    // ---- 2. Resolve the legal revision this document must reproduce ------
+    // Priority: the revision recorded on the master signature (never changes
+    // retroactively) -> the revision stamped on the agreement row -> live.
+    let masterSignature: any = null;
+    if (agreement.client_cession_signature_id) {
+      const { data } = await admin
+        .from("client_cession_signatures")
+        .select("*")
+        .eq("id", agreement.client_cession_signature_id)
+        .maybeSingle();
+      masterSignature = data ?? null;
     }
 
-    // 2. Fetch agreement record
-    const { data: agreement, error: agreementError } = await supabaseAdmin
-      .from('proposal_agreements')
-      .select('*')
-      .eq('id', agreementId)
-      .single();
+    let legalFilePath: string | null = masterSignature?.legal_document_file_path ?? null;
+    let legalTitle: string | null = masterSignature?.legal_document_title ?? null;
+    let legalVersion: number | null = masterSignature?.legal_document_version ??
+      agreement.legal_document_version ?? null;
 
-    if (agreementError || !agreement) {
-      console.error('[Signed PDF] Error fetching agreement:', agreementError);
-      return new Response(
-        JSON.stringify({ error: 'Agreement not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`[Signed PDF] Agreement fetched: signed by ${agreement.typed_name}`);
-
-    // 3. Ensure base proposal PDF exists
-    if (!proposal.pdf_url) {
-      console.log('[Signed PDF] Base PDF does not exist, generating it first...');
-      const { data: pdfResult, error: pdfError } = await supabaseAdmin.functions.invoke(
-        'generate-proposal-pdf',
-        { body: { proposalId, forceRegenerate: false } }
-      );
-
-      if (pdfError || !pdfResult?.pdf_url) {
-        console.error('[Signed PDF] Failed to generate base PDF:', pdfError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to generate base proposal PDF' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    if (!legalFilePath) {
+      const docId = masterSignature?.legal_document_id ?? agreement.legal_document_id;
+      const doc = docId
+        ? await getLegalDocumentById(admin, docId)
+        : await getLiveLegalDocument(admin);
+      if (doc) {
+        legalFilePath = doc.file_path;
+        legalTitle = legalTitle ?? doc.title;
+        legalVersion = legalVersion ?? doc.version;
       }
+    }
 
+    if (!legalFilePath) {
+      return json(
+        {
+          error:
+            "No live Cession Agreement file is configured. Upload the agreement in Admin → Legal Documents and set a revision live.",
+        },
+        409,
+      );
+    }
+
+    const legalPdfBytes = await downloadLegalDocumentPdf(admin, legalFilePath);
+
+    // ---- 3. Ensure the base proposal PDF exists --------------------------
+    if (!proposal.pdf_url) {
+      console.log("[Signed PDF] Base proposal PDF missing — generating it first");
+      const { data: pdfResult, error: pdfError } = await admin.functions.invoke(
+        "generate-proposal-pdf",
+        { body: { proposalId, forceRegenerate: false } },
+      );
+      if (pdfError || !pdfResult?.pdf_url) {
+        return json({ error: "Failed to generate base proposal PDF" }, 500);
+      }
       proposal.pdf_url = pdfResult.pdf_url;
     }
 
-    // 4. Fetch the base PDF from storage (private bucket — use service role download)
-    const basePathMatch = (proposal.pdf_url as string).match(/\/object\/(?:public|sign)\/proposal-pdfs\/([^?]+)/);
-    const basePath = basePathMatch ? decodeURIComponent(basePathMatch[1]) : `proposal-${proposalId}-v${proposal.pdf_version || 1}.pdf`;
-    console.log(`[Signed PDF] Downloading base PDF from storage: ${basePath}`);
-    const { data: baseBlob, error: baseDlErr } = await supabaseAdmin.storage
-      .from('proposal-pdfs')
+    const basePath = toStorageObjectPath(proposal.pdf_url, "proposal-pdfs") ??
+      `proposal-${proposalId}-v${proposal.pdf_version || 1}.pdf`;
+    const { data: baseBlob, error: baseDlErr } = await admin.storage
+      .from("proposal-pdfs")
       .download(basePath);
     if (baseDlErr || !baseBlob) {
-      throw new Error(`Failed to download base PDF: ${baseDlErr?.message ?? 'unknown'}`);
+      throw new Error(`Failed to download base PDF: ${baseDlErr?.message ?? "unknown"}`);
     }
     const basePdfBytes = new Uint8Array(await baseBlob.arrayBuffer());
 
-    // 5. Generate signed PDF using pdf-lib
-    const signedPdfBytes = await generateSignedPdf(
-      basePdfBytes, 
-      proposal, 
+    // ---- 4. Assemble ------------------------------------------------------
+    const signedPdfBytes = await assemble({
+      admin,
+      legalPdfBytes,
+      basePdfBytes,
+      proposal,
       agreement,
-      agreement.signature_image_url
-    );
+      masterSignature,
+      legalTitle,
+      legalVersion,
+    });
 
-    // 6. Upload signed PDF to storage
-    const fileName = `signed_agreement_${proposalId}_${agreementId}.pdf`;
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('signed-agreements')
-      .upload(fileName, signedPdfBytes, {
-        contentType: 'application/pdf',
-        upsert: true
+    // ---- 5. Store ---------------------------------------------------------
+    const objectPath = `signed_agreement_${proposalId}_${agreementId}.pdf`;
+    const { error: uploadError } = await admin.storage
+      .from("signed-agreements")
+      .upload(objectPath, signedPdfBytes, {
+        contentType: "application/pdf",
+        upsert: true,
       });
-
     if (uploadError) {
-      console.error('[Signed PDF] Error uploading signed PDF:', uploadError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to upload signed PDF' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("[Signed PDF] Upload error:", uploadError);
+      return json({ error: "Failed to upload signed PDF" }, 500);
     }
 
-    // 7. Get public URL
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('signed-agreements')
-      .getPublicUrl(fileName);
+    const { error: updateError } = await admin
+      .from("proposal_agreements")
+      .update({
+        pdf_path: objectPath,
+        // signed-agreements is a PRIVATE bucket: store the bare object path,
+        // never a public URL. Signed URLs are minted on demand.
+        signed_pdf_url: objectPath,
+        generated_at: new Date().toISOString(),
+        legal_document_version: legalVersion,
+      })
+      .eq("id", agreementId);
+    if (updateError) console.error("[Signed PDF] Update error:", updateError);
 
-    console.log(`[Signed PDF] Signed PDF uploaded successfully: ${publicUrl}`);
-
-    // 8. Update agreement record with signed PDF URL
-    const { error: updateError } = await supabaseAdmin
-      .from('proposal_agreements')
-      .update({ signed_pdf_url: publicUrl })
-      .eq('id', agreementId);
-
-    if (updateError) {
-      console.error('[Signed PDF] Error updating agreement with PDF URL:', updateError);
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        signed_pdf_url: publicUrl
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    console.log(`[Signed PDF] Stored ${objectPath}`);
+    return json({ success: true, pdf_path: objectPath, signed_pdf_url: objectPath });
   } catch (error) {
-    console.error('[Signed PDF] Error in generate-signed-agreement-pdf:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to generate signed PDF' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    console.error("[Signed PDF] Error:", error);
+    return json(
+      { error: error instanceof Error ? error.message : "Failed to generate signed PDF" },
+      500,
     );
   }
 });
 
-async function generateSignedPdf(
-  basePdfBytes: Uint8Array, 
-  proposal: any, 
-  agreement: any,
-  signatureImageUrl?: string | null
-): Promise<Uint8Array> {
-  const { PDFDocument, StandardFonts, rgb, degrees } = await import('https://esm.sh/pdf-lib@1.17.1');
-  const { addCessionAgreementPages } = await import('../_shared/cession-agreement-pdf.ts');
+// ---------------------------------------------------------------------------
 
-  console.log('[Signed PDF] Creating new PDF document');
+async function assemble(args: {
+  admin: any;
+  legalPdfBytes: Uint8Array;
+  basePdfBytes: Uint8Array;
+  proposal: any;
+  agreement: any;
+  masterSignature: any;
+  legalTitle: string | null;
+  legalVersion: number | null;
+}): Promise<Uint8Array> {
+  const {
+    admin, legalPdfBytes, basePdfBytes, proposal, agreement,
+    masterSignature, legalTitle, legalVersion,
+  } = args;
+
   const pdfDoc = await PDFDocument.create();
-  
-  // Embed fonts
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const fonts = { regular: font, bold };
 
-  // STEP 1: Add Cession Agreement pages
-  console.log('[Signed PDF] Adding Cession Agreement pages');
-  await addCessionAgreementPages(pdfDoc, fonts, proposal);
+  // STEP 1 — the agreement's own pages, verbatim.
+  const legalDoc = await PDFDocument.load(legalPdfBytes, { ignoreEncryption: true });
+  const legalPages = await pdfDoc.copyPages(legalDoc, legalDoc.getPageIndices());
+  legalPages.forEach((p) => pdfDoc.addPage(p));
+  console.log(`[Signed PDF] Spliced ${legalPages.length} agreement pages verbatim`);
 
-  // STEP 2: Add "ANNEXURE A" separator page
-  console.log('[Signed PDF] Adding Annexure A separator');
-  const separatorPage = pdfDoc.addPage([595.28, 841.89]); // A4 size
-  const { width: sepWidth, height: sepHeight } = separatorPage.getSize();
-  
-  // Yellow header bar
-  separatorPage.drawRectangle({
-    x: 0,
-    y: sepHeight - 100,
-    width: sepWidth,
-    height: 100,
-    color: rgb(1, 0.804, 0.012), // Crunch yellow
+  // STEP 2 — party & site details (answers the blank fill-in lines).
+  addPartyDetailsPage(pdfDoc, font, bold, proposal, agreement, legalTitle, legalVersion);
+
+  // STEP 3 — Annexure A separator + proposal pages.
+  const sep = pdfDoc.addPage(A4);
+  const { width: sw, height: sh } = sep.getSize();
+  sep.drawRectangle({ x: 0, y: sh - 100, width: sw, height: 100, color: CRUNCH_YELLOW });
+  sep.drawText("ANNEXURE A", {
+    x: sw / 2 - 100, y: sh / 2 + 20, size: 32, font: bold, color: CRUNCH_CHARCOAL,
   });
-  
-  separatorPage.drawText('ANNEXURE A', {
-    x: sepWidth / 2 - 100,
-    y: sepHeight / 2 + 20,
-    size: 32,
-    font: bold,
-    color: rgb(0.137, 0.122, 0.125), // Crunch charcoal
-  });
-  
-  separatorPage.drawText('PROPOSAL', {
-    x: sepWidth / 2 - 70,
-    y: sepHeight / 2 - 20,
-    size: 28,
-    font: bold,
-    color: rgb(0.137, 0.122, 0.125),
+  sep.drawText("PROPOSAL", {
+    x: sw / 2 - 70, y: sh / 2 - 20, size: 28, font: bold, color: CRUNCH_CHARCOAL,
   });
 
-  // STEP 3: Merge base proposal PDF pages
-  console.log('[Signed PDF] Merging proposal PDF pages');
-  const basePdfDoc = await PDFDocument.load(basePdfBytes);
-  const copiedPages = await pdfDoc.copyPages(basePdfDoc, basePdfDoc.getPageIndices());
-  copiedPages.forEach(page => pdfDoc.addPage(page));
+  const baseDoc = await PDFDocument.load(basePdfBytes, { ignoreEncryption: true });
+  const basePages = await pdfDoc.copyPages(baseDoc, baseDoc.getPageIndices());
+  basePages.forEach((p) => pdfDoc.addPage(p));
 
-  // STEP 4: Add watermark and initials to ALL pages
-  const pages = pdfDoc.getPages();
-
-  const crunchYellow = rgb(1, 0.804, 0.012);
-  const crunchCharcoal = rgb(0.137, 0.122, 0.125);
-
-  // Extract initials from typed name (or use default if none)
-  const getInitials = (name: string | null): string => {
-    if (!name || !name.trim()) return 'CC'; // Default to "CC" (Crunch Carbon) if no name
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return parts.map(p => p[0]).join('').toUpperCase();
-  };
-
+  // STEP 4 — stamp every page, then append the signature confirmation page.
   const initials = getInitials(agreement.typed_name);
-  const totalPagesBeforeSig = pages.length;
+  const pages = pdfDoc.getPages();
+  const totalPages = pages.length + 1;
 
-  console.log(`[Signed PDF] Adding watermark and initials (${initials}) to ${pages.length} pages`);
-
-  // Add watermark and initials to all pages (including Cession Agreement and Proposal)
   pages.forEach((page, index) => {
     const { width, height } = page.getSize();
-
-    // Add "SIGNED COPY" watermark
-    page.drawText('SIGNED COPY', {
-      x: width / 2 - 100,
-      y: height / 2,
-      size: 60,
-      font: bold,
-      color: rgb(0.9, 0.9, 0.9),
-      rotate: degrees(45),
-      opacity: 0.3,
+    page.drawText("SIGNED COPY", {
+      x: width / 2 - 100, y: height / 2, size: 60, font: bold,
+      color: rgb(0.9, 0.9, 0.9), rotate: degrees(45), opacity: 0.3,
     });
-
-    // Add initials box at bottom right
     page.drawText(`Initials: ${initials}`, {
-      x: width - 150,
-      y: 30,
-      size: 10,
-      font,
-      color: crunchCharcoal,
+      x: width - 150, y: 30, size: 10, font, color: CRUNCH_CHARCOAL,
     });
-
-    // Add page number (pages before signature page)
-    page.drawText(`Page ${index + 1} of ${totalPagesBeforeSig + 1}`, {
-      x: width / 2 - 40,
-      y: 30,
-      size: 10,
-      font,
-      color: rgb(0.5, 0.5, 0.5),
+    page.drawText(`Page ${index + 1} of ${totalPages}`, {
+      x: width / 2 - 40, y: 30, size: 10, font, color: rgb(0.5, 0.5, 0.5),
     });
   });
 
-  // Update total pages count after adding signature page
-  const finalTotalPages = totalPagesBeforeSig + 1;
+  await addSignaturePage(
+    admin, pdfDoc, font, bold, agreement, masterSignature, totalPages,
+    legalTitle, legalVersion,
+  );
 
-  // STEP 5: Create signature page
-  console.log('[Signed PDF] Creating signature page');
-  const sigPage = pdfDoc.addPage([595.28, 841.89]); // A4 size
-  const { width, height } = sigPage.getSize();
+  return await pdfDoc.save();
+}
 
-  // Yellow header
-  sigPage.drawRectangle({
-    x: 0,
-    y: height - 100,
-    width,
-    height: 100,
-    color: crunchYellow,
+function getInitials(name: string | null): string {
+  if (!name || !name.trim()) return "CC";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return parts.map((p) => p[0]).join("").toUpperCase();
+}
+
+function resolveSiteAddress(proposal: any): string {
+  const c = proposal.content ?? {};
+  return (
+    proposal.site_address ||
+    proposal.project_address ||
+    c?.projectInfo?.address ||
+    c?.projectInfo?.siteAddress ||
+    c?.projectInformation?.address ||
+    proposal.location ||
+    "As indicated on the electronic Portal"
+  );
+}
+
+function addPartyDetailsPage(
+  pdfDoc: any, font: any, bold: any, proposal: any, agreement: any,
+  legalTitle: string | null, legalVersion: number | null,
+) {
+  const page = pdfDoc.addPage(A4);
+  const { width, height } = page.getSize();
+  const left = 50;
+
+  page.drawRectangle({ x: 0, y: height - 100, width, height: 100, color: CRUNCH_YELLOW });
+  page.drawText("PARTY & SITE DETAILS", {
+    x: left, y: height - 60, size: 22, font: bold, color: CRUNCH_CHARCOAL,
   });
 
-  sigPage.drawText('DIGITAL SIGNATURE CONFIRMATION', {
-    x: 50,
-    y: height - 60,
-    size: 24,
-    font: bold,
-    color: crunchCharcoal,
-  });
+  let y = height - 140;
+  const row = (label: string, value: string) => {
+    page.drawText(label, { x: left, y, size: 11, font: bold, color: rgb(0.4, 0.4, 0.4) });
+    const text = (value ?? "").toString();
+    const max = 62;
+    const lines: string[] = [];
+    let rest = text;
+    while (rest.length > max) {
+      let cut = rest.lastIndexOf(" ", max);
+      if (cut <= 0) cut = max;
+      lines.push(rest.slice(0, cut));
+      rest = rest.slice(cut).trim();
+    }
+    lines.push(rest);
+    lines.forEach((line, i) => {
+      page.drawText(line, {
+        x: left + 190, y: y - i * 14, size: 11, font, color: CRUNCH_CHARCOAL,
+      });
+    });
+    y -= 24 + (lines.length - 1) * 14;
+  };
 
-  // Add page number to signature page
-  sigPage.drawText(`Page ${finalTotalPages} of ${finalTotalPages}`, {
-    x: width / 2 - 40,
-    y: 30,
-    size: 10,
-    font,
-    color: rgb(0.5, 0.5, 0.5),
+  const client = proposal.client ?? {};
+  const ownerName = client.company_name ||
+    [client.first_name, client.last_name].filter(Boolean).join(" ") ||
+    agreement.typed_name || "N/A";
+
+  page.drawText("The Cedent (System Owner)", {
+    x: left, y, size: 14, font: bold, color: CRUNCH_CHARCOAL,
+  });
+  y -= 26;
+
+  row("Owner / Entity Name:", ownerName);
+  row("Registration Number:", client.registration_number || "Not applicable");
+  row("Signatory:", agreement.typed_name || "N/A");
+  row("Email Address:", client.email || "N/A");
+  row("Physical Address:", resolveSiteAddress(proposal));
+
+  y -= 10;
+  page.drawText("The System", {
+    x: left, y, size: 14, font: bold, color: CRUNCH_CHARCOAL,
+  });
+  y -= 26;
+
+  row("Project / Site Name:", proposal.title || "N/A");
+  row("Site Address:", resolveSiteAddress(proposal));
+  row(
+    "System Size:",
+    proposal.system_size_kwp ? `${Number(proposal.system_size_kwp).toLocaleString()} kWp` : "N/A",
+  );
+  row(
+    "Commissioning Date:",
+    proposal.commissioning_date
+      ? new Date(proposal.commissioning_date).toLocaleDateString("en-ZA")
+      : "As recorded on the Portal",
+  );
+
+  y -= 10;
+  page.drawText("Signing", {
+    x: left, y, size: 14, font: bold, color: CRUNCH_CHARCOAL,
+  });
+  y -= 26;
+
+  row("Place of Signature:", "South Africa");
+  row(
+    "Date of Signature:",
+    new Date(agreement.signed_at).toLocaleDateString("en-ZA", {
+      dateStyle: "long",
+      timeZone: "Africa/Johannesburg",
+    } as any),
+  );
+  row(
+    "Agreement Revision:",
+    legalTitle ? `${legalTitle}${legalVersion ? ` (v${legalVersion})` : ""}` : "N/A",
+  );
+
+  page.drawText(
+    "This page records the particulars referenced by the agreement above. The agreement wording is reproduced verbatim and unaltered.",
+    { x: left, y: 60, size: 8, font, color: rgb(0.45, 0.45, 0.45) },
+  );
+}
+
+async function addSignaturePage(
+  admin: any, pdfDoc: any, font: any, bold: any, agreement: any,
+  masterSignature: any, totalPages: number,
+  legalTitle: string | null, legalVersion: number | null,
+) {
+  const page = pdfDoc.addPage(A4);
+  const { width, height } = page.getSize();
+  const left = 50;
+  const lh = 25;
+
+  page.drawRectangle({ x: 0, y: height - 100, width, height: 100, color: CRUNCH_YELLOW });
+  page.drawText("DIGITAL SIGNATURE CONFIRMATION", {
+    x: left, y: height - 60, size: 22, font: bold, color: CRUNCH_CHARCOAL,
+  });
+  page.drawText(`Page ${totalPages} of ${totalPages}`, {
+    x: width / 2 - 40, y: 30, size: 10, font, color: rgb(0.5, 0.5, 0.5),
   });
 
   let y = height - 150;
-  const leftMargin = 50;
-  const lineHeight = 25;
-
-  // Helper for drawing labels and values
-  const drawLabelValue = (label: string, value: string, yPos: number) => {
-    sigPage.drawText(label, {
-      x: leftMargin,
-      y: yPos,
-      size: 11,
-      font: bold,
-      color: rgb(0.4, 0.4, 0.4),
+  const row = (label: string, value: string) => {
+    page.drawText(label, { x: left, y, size: 11, font: bold, color: rgb(0.4, 0.4, 0.4) });
+    page.drawText(value ?? "N/A", {
+      x: left + 200, y, size: 11, font, color: CRUNCH_CHARCOAL,
     });
-    sigPage.drawText(value, {
-      x: leftMargin + 200,
-      y: yPos,
-      size: 11,
-      font,
-      color: crunchCharcoal,
-    });
+    y -= lh;
   };
 
-  // Embed signature image if provided (download from private bucket via service role)
-  let signatureImage = null;
-  if (signatureImageUrl && agreement.signature_type === 'electronic_signature') {
+  const sigType = masterSignature?.signature_type ?? agreement.signature_type;
+  const sigUrl = masterSignature?.signature_image_url ?? agreement.signature_image_url;
+  const typedName = masterSignature?.typed_name ?? agreement.typed_name;
+  const signedAt = masterSignature?.signed_at ?? agreement.signed_at;
+
+  let signatureImage: any = null;
+  if (sigUrl && sigType === "electronic_signature") {
     try {
-      const sigUrl: string = signatureImageUrl;
-      // signature_image_url may be either a full URL (public/signed) or a raw storage path
-      // like "signatures/signature_<id>_<ts>.png" inside the signed-agreements bucket.
-      const m = sigUrl.match(/\/object\/(?:public|sign)\/signed-agreements\/([^?]+)/);
-      const sigPath = m
-        ? decodeURIComponent(m[1])
-        : (sigUrl.startsWith('http') ? null : sigUrl.replace(/^\/+/, ''));
-      const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey2 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const adminLocal = (await import("https://esm.sh/@supabase/supabase-js@2.38.4")).createClient(
-        supabaseUrl2, supabaseServiceKey2, { auth: { autoRefreshToken: false, persistSession: false } }
-      );
+      const sigPath = toStorageObjectPath(sigUrl, "signed-agreements");
       let sigBytes: ArrayBuffer | null = null;
       if (sigPath) {
-        console.log('[Signed PDF] Downloading signature image from storage:', sigPath);
-        const { data: blob, error: dlErr } = await adminLocal.storage.from('signed-agreements').download(sigPath);
-        if (!dlErr && blob) {
-          sigBytes = await blob.arrayBuffer();
-        } else if (dlErr) {
-          console.warn('[Signed PDF] signed-agreements download failed, trying signatures bucket:', dlErr.message);
-          const { data: blob2, error: dlErr2 } = await adminLocal.storage.from('signatures').download(sigPath.replace(/^signatures\//, ''));
-          if (!dlErr2 && blob2) sigBytes = await blob2.arrayBuffer();
-          else console.error('[Signed PDF] signatures bucket download also failed:', dlErr2?.message);
-        }
+        const { data: blob } = await admin.storage.from("signed-agreements").download(sigPath);
+        if (blob) sigBytes = await blob.arrayBuffer();
       }
-      if (!sigBytes && sigUrl.startsWith('http')) {
-        // Fallback: try direct fetch (works while bucket public)
+      if (!sigBytes && /^https?:\/\//i.test(sigUrl)) {
         const r = await fetch(sigUrl);
         if (r.ok) sigBytes = await r.arrayBuffer();
       }
-
-      if (sigBytes) {
-        signatureImage = await pdfDoc.embedPng(new Uint8Array(sigBytes));
-        console.log('[Signed PDF] Signature image embedded successfully');
-      }
+      if (sigBytes) signatureImage = await pdfDoc.embedPng(new Uint8Array(sigBytes));
     } catch (err) {
-      console.error('[Signed PDF] Error embedding signature image:', err);
+      console.error("[Signed PDF] Signature image embed failed:", err);
     }
   }
 
-  // Signature section
-  sigPage.drawText('SIGNATURE', {
-    x: leftMargin,
-    y: y,
-    size: 14,
-    font: bold,
-    color: crunchCharcoal,
-  });
-  y -= lineHeight + 10;
+  page.drawText("SIGNATURE", { x: left, y, size: 14, font: bold, color: CRUNCH_CHARCOAL });
+  y -= lh + 10;
 
-  // Draw signature (image or typed name)
-  if (signatureImage && agreement.signature_type === 'electronic_signature') {
-    sigPage.drawImage(signatureImage, {
-      x: leftMargin,
-      y: y - 60,
-      width: 200,
-      height: 50,
+  if (signatureImage) {
+    page.drawImage(signatureImage, { x: left, y: y - 60, width: 200, height: 50 });
+    page.drawLine({
+      start: { x: left, y: y - 65 }, end: { x: left + 200, y: y - 65 },
+      thickness: 1, color: rgb(0.3, 0.3, 0.3),
     });
-    
-    sigPage.drawLine({
-      start: { x: leftMargin, y: y - 65 },
-      end: { x: leftMargin + 200, y: y - 65 },
-      thickness: 1,
-      color: rgb(0.3, 0.3, 0.3),
+    page.drawText("(Drawn Signature)", {
+      x: left, y: y - 80, size: 9, font, color: rgb(0.4, 0.4, 0.4),
     });
-    
-    sigPage.drawText('(Drawn Signature)', {
-      x: leftMargin,
-      y: y - 80,
-      size: 9,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
-    
     y -= 95;
   } else {
-    drawLabelValue('Signed By:', agreement.typed_name || 'N/A', y);
-    y -= lineHeight;
+    row("Signed By:", typedName || "N/A");
   }
 
-  drawLabelValue('Typed Name:', agreement.typed_name || 'N/A', y);
-  y -= lineHeight;
+  row("Typed Name:", typedName || "N/A");
+  row(
+    "Date & Time:",
+    new Date(signedAt).toLocaleString("en-ZA", {
+      dateStyle: "long", timeStyle: "medium", timeZone: "Africa/Johannesburg",
+    } as any),
+  );
+  row("IP Address:", masterSignature?.ip_address ?? agreement.ip_address ?? "N/A");
 
-  const signedDate = new Date(agreement.signed_at).toLocaleString('en-ZA', {
-    dateStyle: 'long',
-    timeStyle: 'medium',
-    timeZone: 'Africa/Johannesburg'
+  const ua = (masterSignature?.user_agent ?? agreement.user_agent ?? "N/A") as string;
+  row("Device:", ua.length > 60 ? `${ua.substring(0, 60)}...` : ua);
+  row(
+    "Signing Method:",
+    agreement.metadata?.source === "master_agreement_propagation" ||
+      agreement.metadata?.source === "inherited_master_signature"
+      ? "Inherited from master signature"
+      : agreement.metadata?.signed_via === "acceptance_link"
+      ? "Invitation Link"
+      : "Authenticated User",
+  );
+  row(
+    "Agreement Revision:",
+    legalTitle ? `${legalTitle}${legalVersion ? ` (v${legalVersion})` : ""}` : "N/A",
+  );
+  if (masterSignature?.id) row("Master Signature ID:", masterSignature.id);
+  row("Document ID:", agreement.id);
+
+  y -= lh * 0.5;
+  page.drawText("Digital Witnesses", {
+    x: left, y, size: 14, font: bold, color: CRUNCH_CHARCOAL,
   });
-  drawLabelValue('Date & Time:', signedDate, y);
-  y -= lineHeight;
+  y -= lh;
+  row("Witness 1:", agreement.witness_1_name ?? "DIGITAL WITNESS 1");
+  y += lh - 18;
+  row("Witness 2:", agreement.witness_2_name ?? "DIGITAL WITNESS 2");
 
-  drawLabelValue('IP Address:', agreement.ip_address || 'N/A', y);
-  y -= lineHeight;
-
-  // Truncate user agent for readability
-  const userAgent = agreement.user_agent || 'N/A';
-  const shortUserAgent = userAgent.length > 60 ? userAgent.substring(0, 60) + '...' : userAgent;
-  drawLabelValue('Device:', shortUserAgent, y);
-  y -= lineHeight;
-
-  const signingMethod = agreement.metadata?.signed_via === 'acceptance_link' 
-    ? 'Invitation Link' 
-    : 'Authenticated User';
-  drawLabelValue('Signing Method:', signingMethod, y);
-  y -= lineHeight;
-
-  drawLabelValue('Agreement ID:', agreement.id, y);
-  y -= lineHeight * 1.5;
-
-  // Witnesses section
-  sigPage.drawText('Digital Witnesses', {
-    x: leftMargin,
-    y: y,
-    size: 14,
-    font: bold,
-    color: crunchCharcoal,
+  page.drawRectangle({
+    x: left - 10, y: y - 60, width: width - 2 * (left - 10), height: 80,
+    color: rgb(0.95, 0.95, 0.95), borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 1,
   });
-  y -= lineHeight;
-
-  drawLabelValue('Witness 1:', agreement.witness_1_name, y);
-  y -= 18;
-  drawLabelValue('Verified:', new Date(agreement.witness_1_verified_at).toLocaleString('en-ZA'), y);
-  y -= lineHeight * 1.2;
-
-  drawLabelValue('Witness 2:', agreement.witness_2_name, y);
-  y -= 18;
-  drawLabelValue('Verified:', new Date(agreement.witness_2_verified_at).toLocaleString('en-ZA'), y);
-  y -= lineHeight * 1.5;
-
-  // Legal notice
-  sigPage.drawRectangle({
-    x: leftMargin - 10,
-    y: y - 60,
-    width: width - 2 * (leftMargin - 10),
-    height: 80,
-    color: rgb(0.95, 0.95, 0.95),
-    borderColor: rgb(0.8, 0.8, 0.8),
-    borderWidth: 1,
-  });
-
-  const legalText = [
-    'This document constitutes a legally binding digital signature.',
-    'The signature metadata above provides verification of the signatory\'s',
-    'identity and intent to be bound by the terms of this agreement.'
-  ];
-
-  legalText.forEach((line, idx) => {
-    sigPage.drawText(line, {
-      x: leftMargin,
-      y: y - 20 - (idx * 15),
-      size: 9,
-      font,
-      color: rgb(0.3, 0.3, 0.3),
+  [
+    "This document constitutes a legally binding digital signature.",
+    "The signature metadata above provides verification of the signatory's",
+    "identity and intent to be bound by the terms of this agreement.",
+  ].forEach((line, i) => {
+    page.drawText(line, {
+      x: left, y: y - 20 - i * 15, size: 9, font, color: rgb(0.3, 0.3, 0.3),
     });
   });
-
-  console.log('[Signed PDF] Saving signed PDF');
-  return await pdfDoc.save();
 }
