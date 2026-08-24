@@ -299,10 +299,13 @@ export default function ProposalAcceptance() {
   );
   const projectDetailsOk = !isReferralProposal || projectDetailsValid(projectDetails);
 
+  const signatoryOk = !isCompanyCedent || signatoryName.trim().length >= 2;
+
   const canSubmit =
     hasScrolledToBottom &&
     hasAgreed &&
     projectDetailsOk &&
+    signatoryOk &&
     (signatureImage !== null || (typedName.trim().length > 0 && validateTypedName()));
 
   const handleSubmit = async () => {
