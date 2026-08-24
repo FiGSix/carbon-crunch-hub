@@ -569,6 +569,9 @@ export default function ProposalAcceptance() {
               signatureImage={signatureImage}
               onSignatureImageChange={setSignatureImage}
               clientName={getClientName()}
+              companyName={isCompanyCedent ? getCompanyName() : null}
+              signatoryName={signatoryName}
+              onSignatoryNameChange={setSignatoryName}
               isValid={validateTypedName()}
               canSubmit={canSubmit}
               isSubmitting={isSubmitting}
