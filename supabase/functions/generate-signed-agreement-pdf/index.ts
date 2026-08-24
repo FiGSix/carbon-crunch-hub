@@ -512,8 +512,8 @@ function addPartyDetailsPage(
 }
 
 async function addSignaturePage(
-  admin: any, pdfDoc: any, font: any, bold: any, agreement: any,
-  masterSignature: any, totalPages: number,
+  pdfDoc: any, font: any, bold: any, agreement: any,
+  masterSignature: any, signatureImage: any | null,
   legalTitle: string | null, legalVersion: number | null,
 ) {
   const page = pdfDoc.addPage(A4);
@@ -525,9 +525,6 @@ async function addSignaturePage(
   page.drawText("DIGITAL SIGNATURE CONFIRMATION", {
     x: left, y: height - 60, size: 22, font: bold, color: CRUNCH_CHARCOAL,
   });
-  page.drawText(`Page ${totalPages} of ${totalPages}`, {
-    x: width / 2 - 40, y: 30, size: 10, font, color: rgb(0.5, 0.5, 0.5),
-  });
 
   let y = height - 150;
   const row = (label: string, value: string) => {
@@ -538,29 +535,8 @@ async function addSignaturePage(
     y -= lh;
   };
 
-  const sigType = masterSignature?.signature_type ?? agreement.signature_type;
-  const sigUrl = masterSignature?.signature_image_url ?? agreement.signature_image_url;
   const typedName = masterSignature?.typed_name ?? agreement.typed_name;
   const signedAt = masterSignature?.signed_at ?? agreement.signed_at;
-
-  let signatureImage: any = null;
-  if (sigUrl && sigType === "electronic_signature") {
-    try {
-      const sigPath = toStorageObjectPath(sigUrl, "signed-agreements");
-      let sigBytes: ArrayBuffer | null = null;
-      if (sigPath) {
-        const { data: blob } = await admin.storage.from("signed-agreements").download(sigPath);
-        if (blob) sigBytes = await blob.arrayBuffer();
-      }
-      if (!sigBytes && /^https?:\/\//i.test(sigUrl)) {
-        const r = await fetch(sigUrl);
-        if (r.ok) sigBytes = await r.arrayBuffer();
-      }
-      if (sigBytes) signatureImage = await pdfDoc.embedPng(new Uint8Array(sigBytes));
-    } catch (err) {
-      console.error("[Signed PDF] Signature image embed failed:", err);
-    }
-  }
 
   page.drawText("SIGNATURE", { x: left, y, size: 14, font: bold, color: CRUNCH_CHARCOAL });
   y -= lh + 10;
@@ -579,9 +555,12 @@ async function addSignaturePage(
     row("Signed By:", typedName || "N/A");
   }
 
-  row("Typed Name:", typedName || "N/A");
+  // Retained for record-keeping: the signatory's name on record. Drawing is now
+  // the only signing method, so this is no longer a signing input.
+  row("Name of Signatory:", typedName || "N/A");
   row("Date & Time:", isoDateTimeInZA(signedAt));
   row("IP Address:", masterSignature?.ip_address ?? agreement.ip_address ?? "N/A");
+
 
   const ua = (masterSignature?.user_agent ?? agreement.user_agent ?? "N/A") as string;
   row("Device:", ua.length > 60 ? `${ua.substring(0, 60)}...` : ua);
