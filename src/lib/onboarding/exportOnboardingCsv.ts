@@ -1,4 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import { dynamicCarbonPricingService } from "@/lib/calculations/carbon/dynamicPricing";
+import { calculateCarbonCredits } from "@/services/calculations/carbon/calculations";
+import {
+  calculateRevenueByYearSync,
+  getAgentCommissionPercentage,
+  getClientSharePercentage,
+} from "@/services/calculations/carbon/pricing";
 
 /**
  * CSV export for the Project Onboarding section.
