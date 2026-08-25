@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Info, MapPin } from "lucide-react";
 import { OnboardingFileUpload } from "@/components/onboarding/OnboardingFileUpload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { OnboardingFields, OnboardingDocument, ProjectOnboarding, PhaseDetail } from "@/types/onboarding";
@@ -80,6 +80,15 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
       setFormData(fields);
     }
   }, [fields]);
+
+  // Pre-fill system name from the proposal title when it is missing
+  useEffect(() => {
+    const proposalName = proposal?.title || proposal?.project_name;
+    if (proposalName && !formData.system_name) {
+      setFormData(prev => (prev.system_name ? prev : { ...prev, system_name: proposalName }));
+    }
+  }, [proposal, formData.system_name]);
+
 
   // Auto-calculate total_capex from component costs
   useEffect(() => {
@@ -298,9 +307,32 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFieldBlur = (field: keyof OnboardingFields) => {
-    validateFieldOnBlur(field, formData[field], formData);
+  const handleFieldBlur = (field: keyof OnboardingFields, overrideValue?: unknown) => {
+    const value = overrideValue !== undefined ? overrideValue : formData[field];
+    validateFieldOnBlur(field, value, { ...formData, [field]: value });
   };
+
+  const handleLocateFromAddress = async () => {
+    const address = formData.system_address?.trim();
+    if (!address) return;
+    setGeocoding(true);
+    try {
+      const result = await searchAddress(address);
+      if (result) {
+        setFormData(prev => ({ ...prev, system_gps_lat: result.lat, system_gps_lng: result.lng }));
+        clearFieldError('system_gps_lat');
+        clearFieldError('system_gps_lng');
+        toast({ title: 'Coordinates found', description: `${result.lat.toFixed(6)}, ${result.lng.toFixed(6)}` });
+      } else {
+        toast({ title: 'No match found', description: 'Could not locate this address. Enter coordinates manually.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Lookup failed', description: 'Could not locate this address. Enter coordinates manually.', variant: 'destructive' });
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
 
   const handleInverterDetailChange = useCallback((index: number, field: keyof InverterDetail, value: string | number | null) => {
     setInverterDetails(prev => {
