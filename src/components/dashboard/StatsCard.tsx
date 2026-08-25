@@ -51,8 +51,10 @@ function StatsCardComponent({
   hoverDetail,
   actionLabel,
   sweep = false
-
 }: StatsCardProps) {
+  const reduced = useReducedMotion();
+
+
   
   const getIconColor = useMemo(() => {
     if (isLegacy) {
