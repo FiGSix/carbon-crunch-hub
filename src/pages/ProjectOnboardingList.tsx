@@ -301,6 +301,40 @@ export default function ProjectOnboardingList() {
     }
   };
 
+  const handleSendFollowup = async (
+    projectId: string,
+    recipients: Array<'client' | 'installer'>,
+  ) => {
+    try {
+      setFollowupSendingId(projectId);
+      const { data, error } = await supabase.functions.invoke('send-onboarding-followup', {
+        body: { projectOnboardingId: projectId, recipients },
+      });
+
+      if (error) throw error;
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Follow-up could not be sent');
+      }
+
+      const sent = (data?.sent || []).filter((s: any) => s.ok).map((s: any) => s.kind);
+      toast({
+        title: "Follow-up sent",
+        description: `${data?.outstanding_count ?? 0} outstanding item${data?.outstanding_count === 1 ? '' : 's'} emailed to ${sent.join(' and ') || 'recipients'}.`,
+      });
+      fetchProjects();
+    } catch (err: any) {
+      console.error('Follow-up send failed:', err);
+      toast({
+        title: "Could not send follow-up",
+        description: err?.message || "No email address on file, or the send failed.",
+        variant: "destructive",
+      });
+    } finally {
+      setFollowupSendingId(null);
+    }
+  };
+
+
   const handleProjectClick = (projectId: string) => {
     navigate(`/onboarding/${projectId}`);
   };
