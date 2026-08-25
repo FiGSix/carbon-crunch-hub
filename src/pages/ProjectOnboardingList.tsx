@@ -45,6 +45,7 @@ export default function ProjectOnboardingList() {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [followupSendingId, setFollowupSendingId] = useState<string | null>(null);
 
   // Lazy load carbon prices on mount
   useEffect(() => {
