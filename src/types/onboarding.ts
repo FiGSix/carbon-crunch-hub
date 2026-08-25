@@ -19,6 +19,10 @@ export interface ProjectOnboarding {
   admin_validated: boolean;
   admin_validated_at: string | null;
   admin_validated_by: string | null;
+  // Follow-up tracking
+  last_followup_at?: string | null;
+  last_followup_by?: string | null;
+  last_followup_recipients?: string[] | null;
 }
 
 export interface OnboardingFields {
