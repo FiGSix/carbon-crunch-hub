@@ -20,7 +20,9 @@ import {
   Code2,
   BookOpen,
   ShieldOff,
-  Megaphone
+  Megaphone,
+  TrendingUp,
+  BarChart3
 
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
@@ -113,6 +115,18 @@ export function DashboardSidebar() {
       href: "/submit-project",
       icon: FileText,
       roles: ["client"]
+    },
+    {
+      name: "Vintage & Revenue",
+      href: "/vintage-revenue",
+      icon: TrendingUp,
+      roles: ["admin", "agent", "client", "super_partner"]
+    },
+    {
+      name: "Pipeline Analytics",
+      href: "/admin/analytics",
+      icon: BarChart3,
+      roles: ["admin"]
     },
     {
       name: "Audit Status",
