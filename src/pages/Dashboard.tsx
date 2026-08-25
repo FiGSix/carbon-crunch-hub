@@ -48,6 +48,20 @@ export default function Dashboard() {
     skipVideo,
     closeModal
   } = useAgentIntroVideo();
+
+  // Milestones derived from metrics already on screen — no extra fetching.
+  const { milestone, dismiss } = useMilestones({
+    userId: user?.id,
+    portfolioMwp:
+      (metricsByStage?.auditReadyMwp ?? 0) +
+      (metricsByStage?.onboardingMwp ?? 0) +
+      (metricsByStage?.pendingApprovalMwp ?? 0),
+    auditReadyMwp: metricsByStage?.auditReadyMwp ?? 0,
+    signedMwp: metricsByStage?.onboardingMwp ?? 0,
+    ready: !isLoading && !!metricsByStage,
+  });
+
+
   
   // Phase 4: Add success message handler for post-registration redirect
   useEffect(() => {
