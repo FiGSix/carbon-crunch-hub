@@ -102,7 +102,7 @@ function StatsCardComponent({
   const cardClassName = useMemo(() => {
     const baseClass = isLegacy 
       ? "retro-card" 
-      : "overflow-hidden border border-crunch-black/5 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col";
+      : "group relative overflow-hidden border border-crunch-black/5 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-crunch-yellow/40 h-full flex flex-col";
     return onClick ? `${baseClass} cursor-pointer` : baseClass;
   }, [isLegacy, onClick]);
 
@@ -112,8 +112,8 @@ function StatsCardComponent({
     : "text-sm font-medium text-crunch-black/70",
     [isLegacy]
   );
-    
-  // For modern version, wrap in motion div, otherwise just render the Card directly
+
+  // Hover lift is deliberately slight — cards should not jump or bounce.
   const CardComponent = useMemo(() => isLegacy 
     ? ({ children }: { children: ReactNode }) => (
         <Card className={cn(cardClassName, className)} onClick={onClick}>
@@ -122,20 +122,26 @@ function StatsCardComponent({
       )
     : ({ children }: { children: ReactNode }) => (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={reduced ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          whileHover={reduced ? undefined : { y: -2, transition: { duration: 0.15 } }}
           className="h-full"
         >
           <Card className={cn(cardClassName, className)} onClick={onClick}>
             {children}
           </Card>
         </motion.div>
-      ), [isLegacy, cardClassName, className, onClick]);
+      ), [isLegacy, cardClassName, className, onClick, reduced]);
   
   return (
     <CardComponent>
+      {sweep && !reduced && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 animate-highlight-sweep bg-gradient-to-r from-transparent via-crunch-yellow/15 to-transparent"
+        />
+      )}
       <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
         <CardTitle className={cn(titleClassName, "line-clamp-3 flex-1")}>
           {title}
@@ -146,7 +152,13 @@ function StatsCardComponent({
       </CardHeader>
       <CardContent className={!isLegacy ? "flex-1 flex flex-col justify-between" : ""}>
         <div className={!isLegacy ? "space-y-1" : ""}>
-          <div className={cn("text-xl font-bold", getValueColor)}>{value}</div>
+          <div className={cn("text-xl font-bold", getValueColor)}>
+            {typeof numericValue === "number" ? (
+              <AnimatedNumber value={numericValue} format={formatValue} />
+            ) : (
+              value
+            )}
+          </div>
           {!isLegacy && trend && (
             <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${getTrendColor}`}>
               {trendDirection === 'up' ? (
@@ -158,12 +170,29 @@ function StatsCardComponent({
             </div>
           )}
         </div>
-        {/* Add extra space for non-legacy cards to match CommissionCard height */}
-        {!isLegacy && <div className="pt-4"></div>}
+        {/* Progressive disclosure: detail and action appear only on hover/focus. */}
+        {!isLegacy && (hoverDetail || actionLabel) ? (
+          <div className="pt-3 min-h-[2.25rem]">
+            <div className="opacity-0 translate-y-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0">
+              {hoverDetail && (
+                <p className="text-xs text-crunch-black/60">{hoverDetail}</p>
+              )}
+              {actionLabel && (
+                <p className="mt-0.5 text-xs font-medium text-crunch-black inline-flex items-center gap-1">
+                  {actionLabel}
+                  <ArrowRight className="h-3 w-3" />
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          !isLegacy && <div className="pt-4" />
+        )}
       </CardContent>
     </CardComponent>
   );
 }
+
 
 export const StatsCard = memo(StatsCardComponent);
 
