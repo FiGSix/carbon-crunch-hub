@@ -218,8 +218,29 @@ const COLUMNS: Array<{ header: string; value: (r: AnyRecord, ctx: ExportContext)
 ];
 
 function docs(r: AnyRecord): AnyRecord[] {
-  return r.onboarding_documents ?? [];
+  const value = r.onboarding_documents;
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
+
+/**
+ * `onboarding_fields` and `data_access_config` are UNIQUE on project_id, so
+ * PostgREST returns them as a single object rather than an array. Normalise
+ * both shapes.
+ */
+function one(value: unknown): AnyRecord | undefined {
+  if (!value) return undefined;
+  return Array.isArray(value) ? (value[0] as AnyRecord | undefined) : (value as AnyRecord);
+}
+
+function f(r: AnyRecord): AnyRecord | undefined {
+  return one(r.onboarding_fields);
+}
+
+function d(r: AnyRecord): AnyRecord | undefined {
+  return one(r.data_access_config);
+}
+
 
 function field(r: AnyRecord, key: string): string {
   return text(f(r)?.[key]);
