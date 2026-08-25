@@ -126,9 +126,25 @@ export default function Dashboard() {
         </Alert>
       )}
       
+      {/* Re-entry: what changed since the user was last here (nothing if no delta) */}
+      <SinceLastVisit metrics={metricsByStage} userId={user?.id} />
+
+      {/* Quiet achievement: one unseen milestone at a time, dismissible */}
+      {milestone && (
+        <MilestoneCard milestone={milestone} onDismiss={() => dismiss(milestone.id)} />
+      )}
+
+      {/* Client surface: calm status, one action only when something is required */}
+      {userRole === "client" && (
+        <ClientStatusPanel metrics={metricsByStage} loading={isLoading} />
+      )}
+
       {/* Agent Engine — flagship section */}
       {(userRole === "agent" || userRole === "admin") && (
         <>
+          {/* The single strongest CTA on the page: one ranked action */}
+          <NextBestAction />
+
           {/* Warm cards: full-width, the single most actionable surface */}
           <AgentWarmCards limit={5} />
 
@@ -149,6 +165,7 @@ export default function Dashboard() {
         metrics={metricsByStage}
         userRole={userRole}
       />
+
       
       {/* BOTTOM ROW: Metric Cards */}
       <DashboardMetricsByStageCards 
