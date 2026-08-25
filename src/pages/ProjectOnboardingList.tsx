@@ -191,6 +191,8 @@ export default function ProjectOnboardingList() {
           submitted_for_review: item.submitted_for_review,
           submitted_for_review_at: item.submitted_for_review_at,
           admin_validated: item.admin_validated,
+          last_followup_at: item.last_followup_at ?? null,
+          last_followup_recipients: item.last_followup_recipients ?? null,
           step_status: {
             cession_status: 'green' as const,
             onboarding_status: item.onboarding_complete ? 'green' as const : 'orange' as const,
