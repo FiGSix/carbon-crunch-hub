@@ -15,6 +15,7 @@ import {
 import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarmCards";
 import { toWaMeDigits } from "@/utils/phone/toWaMeDigits";
 import { useAuth } from "@/contexts/auth";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 
 /**
  * Agent warm cards — flagship of the v1 Agent Engine.
@@ -60,7 +61,7 @@ export function AgentWarmCards({ limit = 5 }: { limit?: number } = {}) {
           <EmptyState
             title="No proposals need a nudge"
             body="Everything is either signed or cooling on its own. Create a new client proposal to keep building your portfolio."
-            action={{ label: "Create proposal", to: "/proposals/new" }}
+            action={{ label: "Go to proposals", to: "/proposals" }}
           />
 
         ) : (

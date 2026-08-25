@@ -7,6 +7,7 @@ import { logManualAgentContact } from "@/services/proposals/agentContactLogger";
 import { isEmailSuppressed } from "@/services/proposals/emailSuppressionService";
 import { toast } from "sonner";
 import { Briefcase, ArrowRight, Phone, Mail } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import {
   usePortfolioReviewClusters,
   type PortfolioReviewCluster,

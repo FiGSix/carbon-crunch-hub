@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Archive, Mail, ArrowRight, Clock } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import {
   useCloseoutQueue,
   useArchiveProposal,
