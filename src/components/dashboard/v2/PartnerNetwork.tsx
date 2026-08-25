@@ -76,10 +76,13 @@ export function PartnerNetwork() {
               <Info className="h-3.5 w-3.5 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              Approved = partner account approved and enabled. This is account
-              status only, not commercial activity. Counts come from partner
-              management, so both screens always match.
+              Partner and agent accounts only — admin accounts are excluded.
+              Approved = account approved and enabled (account status, not
+              commercial activity). Commercially active = at least one proposal
+              created or sent, agreement signed, or onboarding progression in the
+              last 30 days. Logins and page views never count.
             </TooltipContent>
+
           </Tooltip>
         </CardTitle>
       </CardHeader>
