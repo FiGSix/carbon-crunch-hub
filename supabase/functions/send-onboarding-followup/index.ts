@@ -96,7 +96,7 @@ Deno.serve(async (req: Request) => {
       .order("created_at", { ascending: false })
       .limit(3);
 
-    const projectUrl = `${BROADCAST_BRAND.siteUrl}/project-onboarding/${project.id}`;
+    const projectUrl = `${BROADCAST_BRAND.siteUrl}/onboarding/${project.id}`;
     const commentsUrl = `${projectUrl}?tab=activity`;
     const projectTitle = proposal.title || "your solar project";
 
