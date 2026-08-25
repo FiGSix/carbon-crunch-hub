@@ -188,5 +188,7 @@ export interface ProjectOnboardingListItem {
   submitted_for_review?: boolean;
   submitted_for_review_at?: string | null;
   admin_validated?: boolean;
+  last_followup_at?: string | null;
+  last_followup_recipients?: string[] | null;
   step_status: ProjectStepStatus;
 }
