@@ -13,9 +13,15 @@ import { PortfolioReviewSection } from "@/components/dashboard/sections/Portfoli
 import { CloseoutQueueSection } from "@/components/dashboard/sections/CloseoutQueueSection";
 import { LearningDashboardSection } from "@/components/dashboard/sections/LearningDashboardSection";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
+import { SinceLastVisit } from "@/components/dashboard/SinceLastVisit";
+import { NextBestAction } from "@/components/dashboard/NextBestAction";
+import { ClientStatusPanel } from "@/components/dashboard/ClientStatusPanel";
+import { MilestoneCard } from "@/components/motion/MilestoneCard";
+import { useMilestones } from "@/hooks/useMilestones";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useToast } from "@/hooks/use-toast";
+
 
 export default function Dashboard() {
   const { user, userRole, profile } = useAuth();
