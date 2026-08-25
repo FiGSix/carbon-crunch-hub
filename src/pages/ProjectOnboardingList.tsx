@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Loader2, Upload, Plus } from "lucide-react";
+import { Search, Loader2, Upload, Plus, Download } from "lucide-react";
+import {
+  buildOnboardingCsv,
+  downloadCsv,
+  onboardingCsvFilename,
+} from "@/lib/onboarding/exportOnboardingCsv";
 import type { ProjectOnboardingListItem, ProjectStepStatus } from "@/types/onboarding";
 import { BulkLegacyProjectUpload } from "@/components/onboarding/BulkLegacyProjectUpload";
 import { AddLegacyProjectDialog } from "@/components/onboarding/AddLegacyProjectDialog";
@@ -33,6 +38,7 @@ export default function ProjectOnboardingList() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Lazy load carbon prices on mount
   useEffect(() => {
@@ -259,6 +265,38 @@ export default function ProjectOnboardingList() {
     return matchesSearch && matchesStatus;
   });
 
+  const handleExportCsv = async () => {
+    if (filteredProjects.length === 0) {
+      toast({
+        title: "Nothing to export",
+        description: "No projects match the current filters.",
+      });
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const csv = await buildOnboardingCsv({
+        projectIds: filteredProjects.map(p => p.id),
+        isAdmin: userRole === 'admin',
+      });
+      downloadCsv(csv, onboardingCsvFilename());
+      toast({
+        title: "Export ready",
+        description: `Exported ${filteredProjects.length} project${filteredProjects.length === 1 ? '' : 's'} to CSV.`,
+      });
+    } catch (error) {
+      console.error('CSV export failed:', error);
+      toast({
+        title: "Export failed",
+        description: "Could not build the CSV. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleProjectClick = (projectId: string) => {
     navigate(`/onboarding/${projectId}`);
   };
@@ -285,7 +323,19 @@ export default function ProjectOnboardingList() {
             </div>
             
             {userRole === 'admin' && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap justify-end">
+                <Button
+                  onClick={handleExportCsv}
+                  variant="outline"
+                  disabled={isExporting || isLoading}
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-5 w-5 mr-2" />
+                  )}
+                  Export CSV
+                </Button>
                 <Button onClick={() => setShowBulkUpload(true)} variant="outline">
                   <Upload className="h-5 w-5 mr-2" />
                   Import Legacy Projects
