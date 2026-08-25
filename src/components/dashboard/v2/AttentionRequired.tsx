@@ -9,21 +9,29 @@ import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarm
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { DetailDrawer, type DrawerRow } from "@/components/dashboard/DetailDrawer";
 import { toWaMeDigits } from "@/utils/phone/toWaMeDigits";
+import {
+  ATTENTION_SORT_LABEL,
+  DEFAULT_ATTENTION_SORT,
+  type AttentionSort,
+} from "@/config/dashboardRules";
 
 const rand = (n: number) => `R ${Math.round(n).toLocaleString("en-ZA")}`;
 
-/** Value weighted by how long it has been waiting; hot engagement outranks warm. */
-function score(card: WarmCard): number {
-  const bucketWeight = card.bucket === "hot" ? 1.6 : 1;
-  const waiting = Math.max(card.days_since_sent ?? 0, 1);
-  const value = Math.max(card.estimated_client_revenue ?? 0, 1);
-  return value * Math.log10(waiting + 1) * bucketWeight;
+/**
+ * Plain factual ordering only — no weighted score. Crunch Carbon has not yet
+ * defined a prioritisation rule, so the list must be explainable from the data
+ * shown on each row. See src/config/dashboardRules.ts.
+ */
+function compare(sort: AttentionSort) {
+  return (a: WarmCard, b: WarmCard) => {
+    if (sort === "value") {
+      return (b.estimated_client_revenue ?? 0) - (a.estimated_client_revenue ?? 0);
+    }
+    return (b.days_since_sent ?? -1) - (a.days_since_sent ?? -1);
+  };
 }
 
 function why(card: WarmCard): string {
-  if (card.bucket === "hot") {
-    return "Opened and engaged, still unsigned — a short call now is what closes it.";
-  }
   if (card.days_since_sent == null) {
     return "Created but not yet sent to the client.";
   }
