@@ -21,6 +21,7 @@ import { AdminExceptions } from "@/components/dashboard/v2/AdminExceptions";
 import { MilestoneCard } from "@/components/motion/MilestoneCard";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useDashboardMetricsByStage } from "@/hooks/dashboard/useDashboardMetricsByStage";
+import { useClientOnboardingActions } from "@/hooks/dashboard/useClientOnboardingActions";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +38,11 @@ export default function Dashboard() {
     isError,
     refetch,
   } = useDashboardMetricsByStage();
+
+  const {
+    data: clientOnboardingState,
+    isLoading: isClientOnboardingLoading,
+  } = useClientOnboardingActions();
 
   const { getWelcomeMessage, getUserDisplayName, formatUserRole } =
     useDashboardHelpers(() => refetch());
@@ -166,7 +172,12 @@ export default function Dashboard() {
       {/* CLIENT — status, progress, value. Nothing commercial or partner-facing. */}
       {isClient && (
         <>
-          <ClientStatusPanel metrics={metricsByStage} loading={isLoading} />
+          <ClientStatusPanel
+            metrics={metricsByStage}
+            loading={isLoading}
+            onboardingState={clientOnboardingState}
+            onboardingLoading={isClientOnboardingLoading}
+          />
           <SinceLastVisit metrics={metricsByStage} userId={user?.id} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <VintageProgressDisplayCard />

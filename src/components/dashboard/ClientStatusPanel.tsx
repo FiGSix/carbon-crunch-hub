@@ -9,10 +9,14 @@ import { AnimatedProgress } from "@/components/motion/AnimatedProgress";
 import { StageBadge } from "@/components/motion/StageBadge";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { DashboardMetricsByStage } from "@/hooks/dashboard/types";
+import type { ClientOnboardingDashboardState } from "@/hooks/dashboard/useClientOnboardingActions";
+import { cn } from "@/lib/utils";
 
 interface ClientStatusPanelProps {
   metrics?: DashboardMetricsByStage;
   loading?: boolean;
+  onboardingState?: ClientOnboardingDashboardState;
+  onboardingLoading?: boolean;
 }
 
 const mwp = (n: number) => `${n.toFixed(2)} MWp`;
@@ -23,10 +27,15 @@ const mwp = (n: number) => `${n.toFixed(2)} MWp`;
  * client, and how close their capacity is to Audit Ready. When nothing is
  * required, it deliberately goes quiet rather than inventing tasks.
  */
-export function ClientStatusPanel({ metrics, loading }: ClientStatusPanelProps) {
+export function ClientStatusPanel({
+  metrics,
+  loading,
+  onboardingState,
+  onboardingLoading,
+}: ClientStatusPanelProps) {
   const reduced = useReducedMotion();
 
-  if (loading || !metrics) {
+  if (loading || onboardingLoading || !metrics) {
     return <Skeleton className="mb-6 h-48 w-full" />;
   }
 
@@ -36,15 +45,28 @@ export function ClientStatusPanel({ metrics, loading }: ClientStatusPanelProps) 
   const total = awaiting + onboarding + auditReady;
   const progress = total > 0 ? (auditReady / total) * 100 : 0;
 
-  const stage =
-    awaiting > 0 ? "action-required" : onboarding > 0 ? "in-progress" : "complete";
+  const onboardingAction = onboardingState?.actionProject ?? null;
+  const processingProject = onboardingState?.processingProject ?? null;
+  const hasProcessing = !!processingProject || (onboarding > 0 && !onboardingAction);
+
+  const stage = awaiting > 0
+    ? "agreement-action-required"
+    : onboardingAction
+      ? "onboarding-action-required"
+      : hasProcessing
+        ? "processing"
+        : auditReady > 0
+          ? "audit-ready"
+          : "up-to-date";
 
   const stageLabel =
-    stage === "action-required"
+    stage === "agreement-action-required" || stage === "onboarding-action-required"
       ? "Action required"
-      : stage === "in-progress"
-        ? "In progress with Crunch Carbon"
-        : "Up to date";
+      : stage === "processing"
+        ? "With Crunch Carbon"
+        : stage === "audit-ready"
+          ? "Audit Ready"
+          : "Up to date";
 
   return (
     <motion.div
@@ -64,7 +86,7 @@ export function ClientStatusPanel({ metrics, loading }: ClientStatusPanelProps) 
           <StageBadge
             stage={stage}
             label={stageLabel}
-            variant={stage === "action-required" ? "default" : "secondary"}
+            variant={stage.includes("action-required") ? "default" : "secondary"}
           />
         </CardHeader>
 
@@ -81,10 +103,10 @@ export function ClientStatusPanel({ metrics, loading }: ClientStatusPanelProps) 
             showValue
           />
 
-          {stage === "action-required" ? (
+          {stage === "agreement-action-required" ? (
             <div className="flex flex-col gap-3 rounded-lg border border-crunch-yellow/50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold">Review and sign your agreement</p>
+                <p className="text-sm font-semibold">Agreement action required</p>
                 <p className="text-sm text-muted-foreground">
                   {mwp(awaiting)} is waiting on your signature before onboarding can start.
                 </p>
@@ -96,26 +118,65 @@ export function ClientStatusPanel({ metrics, loading }: ClientStatusPanelProps) 
                 </Link>
               </Button>
             </div>
-          ) : stage === "in-progress" ? (
+          ) : stage === "onboarding-action-required" && onboardingAction ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-crunch-yellow/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">Onboarding action required</p>
+                  <p className="text-sm text-muted-foreground">
+                    {onboardingAction.title} needs {onboardingAction.outstandingCount} remaining onboarding item{onboardingAction.outstandingCount === 1 ? "" : "s"} before it can become Audit Ready.
+                  </p>
+                </div>
+                {onboardingAction.previewItems.length > 0 && (
+                  <ul className="space-y-1.5 text-sm text-muted-foreground">
+                    {onboardingAction.previewItems.map((item) => (
+                      <li key={`${item.section}-${item.label}`} className="flex gap-2">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        <span>{item.label}</span>
+                      </li>
+                    ))}
+                    {onboardingAction.outstandingCount > onboardingAction.previewItems.length && (
+                      <li className="pl-3.5 text-xs">
+                        +{onboardingAction.outstandingCount - onboardingAction.previewItems.length} more in onboarding
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+              <Button asChild className="shrink-0">
+                <Link to={onboardingAction.href}>
+                  Complete onboarding
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          ) : stage === "processing" ? (
             <div className="flex items-start gap-3 rounded-lg border p-4">
               <Loader2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-semibold">Nothing needed from you right now</p>
                 <p className="text-sm text-muted-foreground">
-                  We're completing onboarding on {mwp(onboarding)}. We'll email you if
-                  anything is required.
+                  Your information has been submitted and Crunch Carbon is completing the remaining onboarding process.
+                </p>
+              </div>
+            </div>
+          ) : stage === "audit-ready" ? (
+            <div className="flex items-start gap-3 rounded-lg border p-4">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Audit Ready</p>
+                <p className="text-sm text-muted-foreground">
+                  Your onboarding requirements are complete. No action is currently required from you.
                 </p>
               </div>
             </div>
           ) : (
             <div className="flex items-start gap-3 rounded-lg border p-4">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#8ED973]" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
               <div>
-                <p className="text-sm font-semibold">You're up to date</p>
+                <p className="text-sm font-semibold">Nothing needed from you right now</p>
                 <p className="text-sm text-muted-foreground">
-                  {auditReady > 0
-                    ? `${mwp(auditReady)} has completed onboarding and is ready for audit.`
-                    : "There's nothing outstanding on your account."}
+                  There are no outstanding onboarding actions on your account.
                 </p>
               </div>
             </div>
@@ -123,7 +184,7 @@ export function ClientStatusPanel({ metrics, loading }: ClientStatusPanelProps) 
 
           {auditReady > 0 && (
             <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Check className="h-3.5 w-3.5 text-[#8ED973]" />
+              <Check className="h-3.5 w-3.5 text-primary" />
               Onboarding complete on {mwp(auditReady)}
             </p>
           )}
@@ -145,7 +206,7 @@ function Metric({
   return (
     <div className="rounded-lg border bg-card p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${accent ? "text-[#8ED973]" : ""}`}>
+      <p className={cn("mt-1 text-2xl font-bold", accent && "text-primary")}>
         <AnimatedNumber value={value} format={(n) => n.toFixed(2)} />
         <span className="ml-1 text-sm font-medium text-muted-foreground">MWp</span>
       </p>

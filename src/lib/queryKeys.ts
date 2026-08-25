@@ -29,6 +29,8 @@ export const queryKeys = {
     // Phase 2: New metrics by stage query key
     metricsByStage: (userId: string, userRole: string) => 
       [...queryKeys.dashboard.all, 'metrics-by-stage', userId, userRole] as const,
+    clientOnboardingActions: (userId: string) =>
+      [...queryKeys.dashboard.all, 'client-onboarding-actions', userId] as const,
     vintageRevenue: (userId: string) =>
       [...queryKeys.dashboard.all, 'vintage-revenue', userId] as const,
     agentVintageRevenue: (userId: string) =>
