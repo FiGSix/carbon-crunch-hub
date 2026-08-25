@@ -95,7 +95,7 @@ const COLUMNS: Array<{ header: string; value: (r: AnyRecord, ctx: ExportContext)
   { header: "Client Name", value: (r) => clientField(r, "name") },
   { header: "Client Email", value: (r) => clientField(r, "email") },
   { header: "Client Company", value: (r) => clientField(r, "company") },
-  { header: "Site Address", value: (r) => text(r.onboarding_fields?.[0]?.system_address ?? r.proposals?.content?.clientInfo?.address) },
+  { header: "Site Address", value: (r) => text(f(r)?.system_address ?? r.proposals?.content?.clientInfo?.address) },
   { header: "Partner / Agent Name", value: (r, ctx) => ctx.userName(r.proposals?.agent_id) },
   { header: "Partner / Agent Email", value: (r, ctx) => ctx.userEmail(r.proposals?.agent_id) },
   { header: "Proposal Status", value: (r) => text(r.proposals?.status) },
@@ -127,7 +127,7 @@ const COLUMNS: Array<{ header: string; value: (r: AnyRecord, ctx: ExportContext)
   { header: "System Name", value: (r) => field(r, "system_name") },
   { header: "GPS Latitude", value: (r) => field(r, "system_gps_lat") },
   { header: "GPS Longitude", value: (r) => field(r, "system_gps_lng") },
-  { header: "Commissioning Date", value: (r) => isoDate(r.onboarding_fields?.[0]?.commissioning_date) },
+  { header: "Commissioning Date", value: (r) => isoDate(f(r)?.commissioning_date) },
   { header: "Ownership Type", value: (r) => field(r, "ownership_type") },
   { header: "Connection Type", value: (r) => field(r, "connection_type") },
   { header: "Alternative Power Source", value: (r) => field(r, "alternative_power_source") },
@@ -142,26 +142,26 @@ const COLUMNS: Array<{ header: string; value: (r: AnyRecord, ctx: ExportContext)
   { header: "Panel Quantity", value: (r) => field(r, "panel_quantity") },
   { header: "Panel Total (kWp)", value: (r) => field(r, "panel_total_kwp") },
   { header: "Panel Cost", value: (r) => field(r, "panel_cost") },
-  { header: "Has Battery", value: (r) => yesNo(r.onboarding_fields?.[0]?.has_battery) },
+  { header: "Has Battery", value: (r) => yesNo(f(r)?.has_battery) },
   { header: "Battery Brand", value: (r) => field(r, "battery_brand") },
   { header: "Battery Model", value: (r) => field(r, "battery_model") },
   { header: "Battery Capacity (kWh)", value: (r) => field(r, "battery_capacity_kwh") },
   { header: "Battery Serial", value: (r) => field(r, "battery_serial") },
   { header: "Battery Cost", value: (r) => field(r, "battery_cost") },
-  { header: "Data Collector Present", value: (r) => yesNo(r.onboarding_fields?.[0]?.data_collector_present) },
+  { header: "Data Collector Present", value: (r) => yesNo(f(r)?.data_collector_present) },
   { header: "Data Collector Serial", value: (r) => field(r, "data_collector_serial") },
   { header: "Meter Type", value: (r) => field(r, "meter_type") },
   { header: "Meter Serial", value: (r) => field(r, "meter_serial") },
-  { header: "Phases", value: (r) => summarisePhases(r.onboarding_fields?.[0]?.phases_json) },
+  { header: "Phases", value: (r) => summarisePhases(f(r)?.phases_json) },
   { header: "Total CAPEX", value: (r) => field(r, "total_capex") },
   { header: "Labour Cost", value: (r) => field(r, "labor_cost") },
-  { header: "Has Maintenance Agreement", value: (r) => yesNo(r.onboarding_fields?.[0]?.has_maintenance_agreement) },
+  { header: "Has Maintenance Agreement", value: (r) => yesNo(f(r)?.has_maintenance_agreement) },
   { header: "Maintenance Term (years)", value: (r) => field(r, "maintenance_agreement_term_years") },
   { header: "Maintenance Cost (annual)", value: (r) => field(r, "maintenance_cost_annual") },
   { header: "Installer Company", value: (r) => field(r, "installer_company_name") },
   { header: "Installer Email", value: (r) => field(r, "installer_email") },
-  { header: "Fields Validated At", value: (r) => isoDate(r.onboarding_fields?.[0]?.validated_at) },
-  { header: "Fields Validated By", value: (r, ctx) => ctx.userName(r.onboarding_fields?.[0]?.validated_by) },
+  { header: "Fields Validated At", value: (r) => isoDate(f(r)?.validated_at) },
+  { header: "Fields Validated By", value: (r, ctx) => ctx.userName(f(r)?.validated_by) },
 
   // --- Data access configuration (no credentials) ---
   { header: "Data Provider", value: (r) => access(r, "provider") },
@@ -172,9 +172,9 @@ const COLUMNS: Array<{ header: string; value: (r: AnyRecord, ctx: ExportContext)
   { header: "Granted By Email", value: (r, ctx) => (ctx.isAdmin ? access(r, "granted_by_email") : "") },
   { header: "Granted By Role", value: (r) => access(r, "granted_by_role") },
   { header: "Last Test Status", value: (r) => access(r, "last_test_status") },
-  { header: "Last Test At", value: (r) => isoDate(r.data_access_config?.[0]?.last_test_at) },
+  { header: "Last Test At", value: (r) => isoDate(d(r)?.last_test_at) },
   { header: "Last Test Error", value: (r) => access(r, "last_test_error") },
-  { header: "First Data Ingested At", value: (r) => isoDate(r.data_access_config?.[0]?.first_data_ingested_at) },
+  { header: "First Data Ingested At", value: (r) => isoDate(d(r)?.first_data_ingested_at) },
 
   // --- Documents ---
   { header: "Documents Uploaded", value: (r) => String(docs(r).length) },
@@ -200,11 +200,11 @@ function docs(r: AnyRecord): AnyRecord[] {
 }
 
 function field(r: AnyRecord, key: string): string {
-  return text(r.onboarding_fields?.[0]?.[key]);
+  return text(f(r)?.[key]);
 }
 
 function access(r: AnyRecord, key: string): string {
-  return text(r.data_access_config?.[0]?.[key]);
+  return text(d(r)?.[key]);
 }
 
 function clientField(r: AnyRecord, kind: "name" | "email" | "company"): string {
@@ -271,7 +271,7 @@ async function buildUserLookup(rows: AnyRecord[]) {
     add(r.admin_validated_by);
     add(r.assigned_epc_id);
     add(r.last_modified_by);
-    add(r.onboarding_fields?.[0]?.validated_by);
+    add(f(r)?.validated_by);
   });
 
   const lookup = new Map<string, { name: string; email: string }>();
