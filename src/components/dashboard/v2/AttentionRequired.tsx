@@ -197,7 +197,7 @@ export function AttentionRequired({
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Proposals awaiting client action"
-        description="Ranked by value and how long each has been outstanding."
+        description={ATTENTION_SORT_LABEL[sort]}
         rows={rows}
         emptyTitle="You're all caught up"
         emptyBody="No proposals are waiting on a client right now."
