@@ -100,7 +100,10 @@ export const validateField = (fieldName: string, value: any, formData?: any): st
   try {
     switch (fieldName) {
       case "system_name":
-        if (value && typeof value === "string" && value.length > 100) {
+        if (!value || (typeof value === "string" && value.trim().length === 0)) {
+          return "System name is required";
+        }
+        if (typeof value === "string" && value.length > 100) {
           return "System name must be less than 100 characters";
         }
         break;
@@ -108,6 +111,30 @@ export const validateField = (fieldName: string, value: any, formData?: any): st
       case "system_address":
         if (!value || (typeof value === "string" && value.trim().length < 5)) {
           return "Address must be at least 5 characters";
+        }
+        break;
+      
+      case "ownership_type":
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          return "Ownership type is required";
+        }
+        break;
+      
+      case "connection_type":
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          return "Connection type is required";
+        }
+        break;
+      
+      case "alternative_power_source":
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          return "Select an alternative power source (or 'None / Not applicable')";
+        }
+        break;
+      
+      case "meter_type":
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          return "Meter type is required";
         }
         break;
       
@@ -127,19 +154,20 @@ export const validateField = (fieldName: string, value: any, formData?: any): st
         }
         break;
       
-      case "system_gps_lat":
-        if (value !== null && value !== undefined && value !== "") {
-          const lat = Number(value);
-          if (isNaN(lat) || lat < -90 || lat > 90) return "Latitude must be between -90 and 90";
-        }
+      case "system_gps_lat": {
+        if (value === null || value === undefined || value === "") return "GPS latitude is required";
+        const lat = Number(value);
+        if (isNaN(lat) || lat < -90 || lat > 90) return "Latitude must be between -90 and 90";
         break;
+      }
       
-      case "system_gps_lng":
-        if (value !== null && value !== undefined && value !== "") {
-          const lng = Number(value);
-          if (isNaN(lng) || lng < -180 || lng > 180) return "Longitude must be between -180 and 180";
-        }
+      case "system_gps_lng": {
+        if (value === null || value === undefined || value === "") return "GPS longitude is required";
+        const lng = Number(value);
+        if (isNaN(lng) || lng < -180 || lng > 180) return "Longitude must be between -180 and 180";
         break;
+      }
+
       
       case "inverter_quantity":
         if (value === null || value === undefined || value === "") return "Number of inverters is required";

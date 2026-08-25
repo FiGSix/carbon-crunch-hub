@@ -94,9 +94,19 @@ export function useOnboardingValidation(): UseOnboardingValidationResult {
     const isMultiPhase = Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
     
     // System details validation
+    const systemRequiredFields = [
+      "system_name",
+      "system_address",
+      "ownership_type",
+      "connection_type",
+      "alternative_power_source",
+      "meter_type",
+      "system_gps_lat",
+      "system_gps_lng",
+    ];
     const requiredFields = isMultiPhase
-      ? ["system_address"]
-      : ["system_address", "commissioning_date"];
+      ? systemRequiredFields
+      : [...systemRequiredFields, "commissioning_date"];
     requiredFields.forEach(field => {
       const error = validateField(field, formData[field as keyof OnboardingFields], formData);
       if (error) allErrors[field] = error;
@@ -111,12 +121,13 @@ export function useOnboardingValidation(): UseOnboardingValidationResult {
       });
     }
     
-    // Optional fields validation
-    const optionalFields = ["system_name", "installer_email", "system_gps_lat", "system_gps_lng"];
+    // Optional fields validation (format-only)
+    const optionalFields = ["installer_email"];
     optionalFields.forEach(field => {
       const error = validateField(field, formData[field as keyof OnboardingFields], formData);
       if (error) allErrors[field] = error;
     });
+
     
     // Inverter validation
     const inverterQtyError = validateField("inverter_quantity", formData.inverter_quantity, formData);
