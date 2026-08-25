@@ -143,7 +143,8 @@ export function groupOutstanding(items: OutstandingItem[]): Array<{ section: str
       map.set(item.section, []);
       order.push(item.section);
     }
-    map.get(item.section)!.push(item.label);
+    const labels = map.get(item.section);
+    if (labels) labels.push(item.label);
   }
-  return order.map((section) => ({ section, labels: map.get(section)! }));
+  return order.map((section) => ({ section, labels: map.get(section) ?? [] }));
 }
