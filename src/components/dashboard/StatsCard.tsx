@@ -6,9 +6,12 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+
 
 interface StatsCardProps {
   title: string;
