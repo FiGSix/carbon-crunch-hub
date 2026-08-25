@@ -10,8 +10,8 @@ import { usePendingAgentApprovals } from "@/hooks/dashboard/usePendingAgentAppro
 import { DetailDrawer, type DrawerRow } from "@/components/dashboard/DetailDrawer";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { DashboardMetricsByStage } from "@/hooks/dashboard/types";
+import { NO_MOVEMENT_DAYS } from "@/config/dashboardRules";
 
-const STALLED_DAYS = 21;
 const rand = (n: number) => `R ${Math.round(n).toLocaleString("en-ZA")}`;
 
 interface AdminExceptionsProps {
@@ -22,7 +22,8 @@ interface AdminExceptionsProps {
  * The one admin exception layer. Each row states what is wrong, why it matters
  * and what admin can do, and every rule is defined against real records:
  *
- *  - Stalled proposals: sent 21+ days ago, unsigned, no engagement since.
+ *  - No movement: sent NO_MOVEMENT_DAYS+ days ago, unsigned. Provisional
+ *    operational threshold, configurable in src/config/dashboardRules.ts.
  *  - Audit review requests: projects submitted for audit review.
  *  - Partner approvals: accounts awaiting an admin decision.
  */
@@ -37,7 +38,7 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
       (warm ?? [])
         .filter(
           (c) =>
-            (c.days_since_sent ?? 0) >= STALLED_DAYS &&
+            (c.days_since_sent ?? 0) >= NO_MOVEMENT_DAYS &&
             (c.bucket === "cold" || c.bucket === "dead" || c.bucket === "warm")
         )
         .sort(
@@ -78,7 +79,7 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
     items.push({
       id: "stalled",
       what: `${stalled.length} proposal${stalled.length === 1 ? "" : "s"} stalled at proposal stage`,
-      why: `${rand(stalledValue)} of estimated client value with no movement for ${STALLED_DAYS}+ days.`,
+      why: `${rand(stalledValue)} of estimated client value with no movement for ${NO_MOVEMENT_DAYS}+ days.`,
       action: (
         <Button size="sm" variant="outline" onClick={() => setDrawerOpen(true)}>
           Review
@@ -179,7 +180,7 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Stalled proposals"
-        description={`Sent ${STALLED_DAYS}+ days ago, still unsigned, ordered by value.`}
+        description={`Sent ${NO_MOVEMENT_DAYS}+ days ago, still unsigned, ordered by value.`}
         rows={rows}
         emptyTitle="Nothing stalled"
         emptyBody="Every active proposal has moved recently."
