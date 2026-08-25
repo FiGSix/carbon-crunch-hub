@@ -80,16 +80,25 @@ export default function Dashboard() {
     }
   }, [toast]);
 
-  // Loading state
+  // Loading state — a skeleton shaped like the real dashboard, so the layout
+  // stays stable and nothing jumps when data arrives.
   if (isLoading && !metricsByStage) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          <Skeleton className="h-16 w-full max-w-md" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-[168px] w-full rounded-lg" />
+            ))}
+          </div>
         </div>
       </DashboardLayout>
     );
   }
+
 
   // Error state
   if (isError && !metricsByStage) {
