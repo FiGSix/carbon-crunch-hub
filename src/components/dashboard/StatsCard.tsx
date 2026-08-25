@@ -20,7 +20,18 @@ interface StatsCardProps {
   className?: string;
   isLegacy?: boolean;
   onClick?: () => void;
+  /** When provided, the figure counts to this value instead of rendering `value` statically. */
+  numericValue?: number;
+  /** Formats the animated figure. */
+  formatValue?: (n: number) => string;
+  /** Extra context revealed on hover — keeps the card clean at rest. */
+  hoverDetail?: string;
+  /** Action affordance revealed on hover when the card is clickable. */
+  actionLabel?: string;
+  /** Emphasises the card once — used for the Audit Ready moment. */
+  sweep?: boolean;
 }
+
 
 function StatsCardComponent({ 
   title, 
