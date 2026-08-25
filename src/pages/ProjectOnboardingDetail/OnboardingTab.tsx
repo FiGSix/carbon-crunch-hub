@@ -835,22 +835,35 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="system_name">System Name</Label>
+              <Label htmlFor="system_name">
+                System Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="system_name"
                 value={formData.system_name || ''}
                 onChange={(e) => handleInputChange('system_name', e.target.value)}
+                onBlur={() => handleFieldBlur('system_name')}
                 placeholder="e.g., Main Building Solar Array"
+                className={cn(touched.system_name && errors.system_name && "border-destructive")}
               />
+              <FormError message={touched.system_name ? errors.system_name : undefined} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ownership_type">Ownership Type</Label>
+              <Label htmlFor="ownership_type">
+                Ownership Type <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={formData.ownership_type || ''}
-                onValueChange={(value) => handleInputChange('ownership_type', value)}
+                onValueChange={(value) => {
+                  handleInputChange('ownership_type', value);
+                  handleFieldBlur('ownership_type', value);
+                }}
               >
-                <SelectTrigger id="ownership_type">
+                <SelectTrigger
+                  id="ownership_type"
+                  className={cn(touched.ownership_type && errors.ownership_type && "border-destructive")}
+                >
                   <SelectValue placeholder="Select ownership type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -859,7 +872,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                   <SelectItem value="Financed">Financed</SelectItem>
                 </SelectContent>
               </Select>
+              <FormError message={touched.ownership_type ? errors.ownership_type : undefined} />
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="system_address">
@@ -1019,13 +1034,28 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="system_gps_lat">GPS Latitude</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="system_gps_lat">
+                  GPS Latitude <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  disabled={geocoding || !formData.system_address}
+                  onClick={handleLocateFromAddress}
+                >
+                  {geocoding ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
+                  Locate from address
+                </Button>
+              </div>
               <Input
                 id="system_gps_lat"
                 type="number"
                 step="0.000001"
-                value={formData.system_gps_lat || ''}
-                onChange={(e) => handleInputChange('system_gps_lat', parseFloat(e.target.value))}
+                value={formData.system_gps_lat ?? ''}
+                onChange={(e) => handleInputChange('system_gps_lat', e.target.value === '' ? null : parseFloat(e.target.value))}
                 onBlur={() => handleFieldBlur('system_gps_lat')}
                 placeholder="-26.2041"
                 className={cn(touched.system_gps_lat && errors.system_gps_lat && "border-destructive")}
@@ -1034,13 +1064,15 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="system_gps_lng">GPS Longitude</Label>
+              <Label htmlFor="system_gps_lng">
+                GPS Longitude <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="system_gps_lng"
                 type="number"
                 step="0.000001"
-                value={formData.system_gps_lng || ''}
-                onChange={(e) => handleInputChange('system_gps_lng', parseFloat(e.target.value))}
+                value={formData.system_gps_lng ?? ''}
+                onChange={(e) => handleInputChange('system_gps_lng', e.target.value === '' ? null : parseFloat(e.target.value))}
                 onBlur={() => handleFieldBlur('system_gps_lng')}
                 placeholder="28.0473"
                 className={cn(touched.system_gps_lng && errors.system_gps_lng && "border-destructive")}
@@ -1048,13 +1080,22 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               <FormError message={touched.system_gps_lng ? errors.system_gps_lng : undefined} />
             </div>
 
+
             <div className="space-y-2">
-              <Label htmlFor="connection_type">Connection Type</Label>
+              <Label htmlFor="connection_type">
+                Connection Type <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={formData.connection_type || ''}
-                onValueChange={(value) => handleInputChange('connection_type', value)}
+                onValueChange={(value) => {
+                  handleInputChange('connection_type', value);
+                  handleFieldBlur('connection_type', value);
+                }}
               >
-                <SelectTrigger id="connection_type">
+                <SelectTrigger
+                  id="connection_type"
+                  className={cn(touched.connection_type && errors.connection_type && "border-destructive")}
+                >
                   <SelectValue placeholder="Select connection type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1064,27 +1105,42 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                   <SelectItem value="Industrial">Industrial</SelectItem>
                 </SelectContent>
               </Select>
+              <FormError message={touched.connection_type ? errors.connection_type : undefined} />
             </div>
 
+
             <div className="space-y-2">
-              <Label htmlFor="alternative_power_source">Alternative Power Source</Label>
+              <Label htmlFor="alternative_power_source">
+                Alternative Power Source <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={formData.alternative_power_source || ''}
-                onValueChange={(value) => handleInputChange('alternative_power_source', value)}
+                onValueChange={(value) => {
+                  handleInputChange('alternative_power_source', value);
+                  handleFieldBlur('alternative_power_source', value);
+                }}
               >
-                <SelectTrigger id="alternative_power_source">
+                <SelectTrigger
+                  id="alternative_power_source"
+                  className={cn(touched.alternative_power_source && errors.alternative_power_source && "border-destructive")}
+                >
                   <SelectValue placeholder="Select power source" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Eskom">Eskom</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="None">None / Not applicable</SelectItem>
                 </SelectContent>
               </Select>
+              <FormError message={touched.alternative_power_source ? errors.alternative_power_source : undefined} />
             </div>
+
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label htmlFor="meter_type">Meter Type</Label>
+                <Label htmlFor="meter_type">
+                  Meter Type <span className="text-destructive">*</span>
+                </Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1098,9 +1154,15 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
               </div>
               <Select
                 value={formData.meter_type || ''}
-                onValueChange={(value) => handleInputChange('meter_type', value)}
+                onValueChange={(value) => {
+                  handleInputChange('meter_type', value);
+                  handleFieldBlur('meter_type', value);
+                }}
               >
-                <SelectTrigger id="meter_type">
+                <SelectTrigger
+                  id="meter_type"
+                  className={cn(touched.meter_type && errors.meter_type && "border-destructive")}
+                >
                   <SelectValue placeholder="Select meter type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1108,7 +1170,9 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
                   <SelectItem value="Discrete">Dedicated Meter</SelectItem>
                 </SelectContent>
               </Select>
+              <FormError message={touched.meter_type ? errors.meter_type : undefined} />
             </div>
+
           </div>
 
           {formData.meter_type === "Discrete" && (
