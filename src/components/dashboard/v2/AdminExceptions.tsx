@@ -1,36 +1,38 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useAgentWarmCards } from "@/hooks/dashboard/useAgentWarmCards";
 import { usePendingAgentApprovals } from "@/hooks/dashboard/usePendingAgentApprovals";
+import {
+  useAdminAuditReviewBlocked,
+  useProposalsMwp,
+} from "@/hooks/dashboard/useAdminAuditReviewBlocked";
 import { DetailDrawer, type DrawerRow } from "@/components/dashboard/DetailDrawer";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import type { DashboardMetricsByStage } from "@/hooks/dashboard/types";
 import { NO_MOVEMENT_DAYS } from "@/config/dashboardRules";
 
 const rand = (n: number) => `R ${Math.round(n).toLocaleString("en-ZA")}`;
-
-interface AdminExceptionsProps {
-  metrics?: DashboardMetricsByStage;
-}
+const mwp = (n: number) => `${n.toFixed(2)} MWp`;
 
 /**
- * The one admin exception layer. Each row states what is wrong, why it matters
- * and what admin can do, and every rule is defined against real records:
+ * The one admin exception layer, as a compact action strip rather than a large
+ * card. Each row states what is affected, how much MWp it holds up, and the one
+ * action admin can take. Every rule is defined against real records:
  *
  *  - No movement: sent NO_MOVEMENT_DAYS+ days ago, unsigned. Provisional
  *    operational threshold, configurable in src/config/dashboardRules.ts.
- *  - Audit review requests: projects submitted for audit review.
+ *  - Audit review: submitted_for_review AND NOT admin_validated — the same rule
+ *    as the dashboard metric.
  *  - Partner approvals: accounts awaiting an admin decision.
  */
-export function AdminExceptions({ metrics }: AdminExceptionsProps) {
+export function AdminExceptions() {
   const reduced = useReducedMotion();
   const { data: warm, isLoading } = useAgentWarmCards(50);
   const { data: pendingPartners } = usePendingAgentApprovals(true);
+  const { data: auditReview } = useAdminAuditReviewBlocked(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const stalled = useMemo(
@@ -47,6 +49,9 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
         ),
     [warm]
   );
+
+  const stalledIds = useMemo(() => stalled.map((c) => c.proposal_id), [stalled]);
+  const { data: stalledMwp } = useProposalsMwp(stalledIds, stalled.length > 0);
 
   const stalledValue = stalled.reduce(
     (s, c) => s + (c.estimated_client_revenue ?? 0),
@@ -71,15 +76,37 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
   const items: {
     id: string;
     what: string;
+    impact: string;
     why: string;
     action: JSX.Element;
   }[] = [];
 
+  if ((auditReview?.count ?? 0) > 0) {
+    items.push({
+      id: "audit-review",
+      what: `${auditReview!.count} project${auditReview!.count === 1 ? "" : "s"} awaiting audit review`,
+      impact: `${mwp(auditReview!.mwp)} blocked from Audit Ready`,
+      why: "Crunch Carbon review required before these can progress.",
+      action: (
+        <Button asChild size="sm" variant="outline">
+          <Link to="/onboarding">
+            Review onboarding
+            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      ),
+    });
+  }
+
   if (stalled.length > 0) {
     items.push({
       id: "stalled",
-      what: `${stalled.length} proposal${stalled.length === 1 ? "" : "s"} stalled at proposal stage`,
-      why: `${rand(stalledValue)} of estimated client value with no movement for ${NO_MOVEMENT_DAYS}+ days.`,
+      what: `${stalled.length} proposal${stalled.length === 1 ? "" : "s"} with no movement`,
+      impact:
+        stalledMwp != null
+          ? `${mwp(stalledMwp)} · ${rand(stalledValue)} est. client value`
+          : `${rand(stalledValue)} est. client value`,
+      why: `Unsigned for ${NO_MOVEMENT_DAYS}+ days since being sent.`,
       action: (
         <Button size="sm" variant="outline" onClick={() => setDrawerOpen(true)}>
           Review
@@ -89,27 +116,12 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
     });
   }
 
-  if ((metrics?.auditReviewRequests ?? 0) > 0) {
-    items.push({
-      id: "audit-review",
-      what: `${metrics!.auditReviewRequests} project${metrics!.auditReviewRequests === 1 ? "" : "s"} awaiting audit review`,
-      why: "These cannot reach Audit Ready until Crunch Carbon reviews them.",
-      action: (
-        <Button asChild size="sm" variant="outline">
-          <Link to="/onboarding">
-            Open onboarding
-            <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Link>
-        </Button>
-      ),
-    });
-  }
-
   if ((pendingPartners ?? 0) > 0) {
     items.push({
       id: "partner-approvals",
       what: `${pendingPartners} partner account${pendingPartners === 1 ? "" : "s"} awaiting approval`,
-      why: "Unapproved partners cannot create proposals, so distribution stalls.",
+      impact: "Distribution held up",
+      why: "Unapproved partners cannot create proposals.",
       action: (
         <Button asChild size="sm" variant="outline">
           <Link to="/admin/agents">
@@ -122,69 +134,62 @@ export function AdminExceptions({ metrics }: AdminExceptionsProps) {
   }
 
   if (isLoading) {
-    return <Skeleton className="mb-6 h-40 w-full" />;
+    return <Skeleton className="mb-6 h-24 w-full" />;
   }
 
   return (
     <>
-      <motion.div
-        initial={reduced ? false : { opacity: 0, y: 8 }}
+      <motion.section
+        initial={reduced ? false : { opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: reduced ? 0 : 0.05, ease: "easeOut" }}
+        transition={{ duration: 0.28, delay: reduced ? 0 : 0.08, ease: "easeOut" }}
+        className="mb-6 rounded-lg border border-crunch-yellow/50 bg-card px-4 py-3"
       >
-        <Card className="mb-6 border-crunch-yellow/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-crunch-yellow" />
-              Attention required
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              Only exceptions that need a Crunch Carbon decision.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {items.length === 0 ? (
-              <div className="flex items-start gap-3 py-2">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 text-[#8ED973]" />
-                <div>
-                  <p className="font-medium">Nothing requires intervention</p>
-                  <p className="text-sm text-muted-foreground">
-                    No stalled proposals, audit reviews or partner approvals outstanding.
+        <div className="flex items-center gap-2">
+          {items.length === 0 ? (
+            <CheckCircle2 className="h-4 w-4 text-[#8ED973]" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-crunch-yellow" />
+          )}
+          <p className="text-sm font-semibold">
+            {items.length === 0 ? "Nothing requires intervention" : "Attention required"}
+          </p>
+        </div>
+
+        {items.length === 0 ? (
+          <p className="mt-1 pl-6 text-xs text-muted-foreground">
+            No audit reviews, stalled proposals or partner approvals outstanding.
+          </p>
+        ) : (
+          <ul className="mt-1 divide-y">
+            {items.map((item, i) => (
+              <motion.li
+                key={item.id}
+                initial={reduced ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.24, delay: reduced ? 0 : 0.12 + i * 0.04 }}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm">
+                    <span className="font-medium">{item.what}</span>
+                    <span className="text-muted-foreground"> · {item.impact}</span>
                   </p>
+                  <p className="text-xs text-muted-foreground">{item.why}</p>
                 </div>
-              </div>
-            ) : (
-              <ul className="divide-y">
-                {items.map((item, i) => (
-                  <motion.li
-                    key={item.id}
-                    initial={reduced ? false : { opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, delay: reduced ? 0 : 0.08 + i * 0.04 }}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium">{item.what}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{item.why}</p>
-                    </div>
-                    {item.action}
-                  </motion.li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+                {item.action}
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </motion.section>
 
       <DetailDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        title="Stalled proposals"
-        description={`Sent ${NO_MOVEMENT_DAYS}+ days ago, still unsigned, ordered by value.`}
+        title="Proposals with no movement"
+        description={`Unsigned for ${NO_MOVEMENT_DAYS}+ days since being sent, highest estimated client value first.`}
         rows={rows}
-        emptyTitle="Nothing stalled"
-        emptyBody="Every active proposal has moved recently."
-        footer={{ label: "View all proposals", to: "/proposals" }}
       />
     </>
   );
