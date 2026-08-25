@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Loader2, Upload, Plus } from "lucide-react";
+import { Search, Loader2, Upload, Plus, Download } from "lucide-react";
+import {
+  buildOnboardingCsv,
+  downloadCsv,
+  onboardingCsvFilename,
+} from "@/lib/onboarding/exportOnboardingCsv";
 import type { ProjectOnboardingListItem, ProjectStepStatus } from "@/types/onboarding";
 import { BulkLegacyProjectUpload } from "@/components/onboarding/BulkLegacyProjectUpload";
 import { AddLegacyProjectDialog } from "@/components/onboarding/AddLegacyProjectDialog";
