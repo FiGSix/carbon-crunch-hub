@@ -70,6 +70,8 @@ export default function ProjectOnboardingList() {
           submitted_for_review,
           submitted_for_review_at,
           admin_validated,
+          last_followup_at,
+          last_followup_recipients,
           proposals!inner(
             id,
             title,
