@@ -43,6 +43,8 @@ interface AttentionRequiredProps {
   limit?: number;
   title?: string;
   subtitle?: string;
+  /** Provisional ordering; see src/config/dashboardRules.ts. */
+  sort?: AttentionSort;
 }
 
 /**
@@ -50,20 +52,22 @@ interface AttentionRequiredProps {
  * (next best action, warm cards, portfolio review, close-out queue).
  *
  * Data: proposal_engagement_buckets — real engagement, value and age fields.
- * Rule: unsigned, active proposal ranked by value x time waiting.
+ * Order: factual only (longest waiting, or highest value), stated in the copy.
  */
 export function AttentionRequired({
   limit = 3,
   title = "What needs your attention",
-  subtitle = "Ranked by value at stake and how long it has been waiting.",
+  subtitle,
+  sort = DEFAULT_ATTENTION_SORT,
 }: AttentionRequiredProps) {
   const { data, isLoading, isError } = useAgentWarmCards(25);
   const reduced = useReducedMotion();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const caption = subtitle ?? ATTENTION_SORT_LABEL[sort];
 
   const ranked = useMemo(
-    () => [...(data ?? [])].sort((a, b) => score(b) - score(a)),
-    [data]
+    () => [...(data ?? [])].sort(compare(sort)),
+    [data, sort]
   );
   const visible = ranked.slice(0, limit);
   const hidden = ranked.length - visible.length;
