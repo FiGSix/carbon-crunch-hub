@@ -7,7 +7,7 @@ export interface OutstandingItem {
   label: string;
 }
 
-interface FieldsRow = never; // placeholder to keep type imports minimal
+
 
 export type AnyRecord = Record<string, unknown>;
 

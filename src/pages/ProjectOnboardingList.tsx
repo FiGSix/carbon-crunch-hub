@@ -14,9 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Loader2, Upload, Plus, Download } from "lucide-react";
+import { Search, Loader2, Upload, Plus, Download, Mail } from "lucide-react";
 import {
   buildOnboardingCsv,
   downloadCsv,
@@ -39,6 +45,7 @@ export default function ProjectOnboardingList() {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [followupSendingId, setFollowupSendingId] = useState<string | null>(null);
 
   // Lazy load carbon prices on mount
   useEffect(() => {
@@ -70,6 +77,8 @@ export default function ProjectOnboardingList() {
           submitted_for_review,
           submitted_for_review_at,
           admin_validated,
+          last_followup_at,
+          last_followup_recipients,
           proposals!inner(
             id,
             title,
@@ -189,6 +198,8 @@ export default function ProjectOnboardingList() {
           submitted_for_review: item.submitted_for_review,
           submitted_for_review_at: item.submitted_for_review_at,
           admin_validated: item.admin_validated,
+          last_followup_at: item.last_followup_at ?? null,
+          last_followup_recipients: item.last_followup_recipients ?? null,
           step_status: {
             cession_status: 'green' as const,
             onboarding_status: item.onboarding_complete ? 'green' as const : 'orange' as const,
@@ -297,6 +308,40 @@ export default function ProjectOnboardingList() {
     }
   };
 
+  const handleSendFollowup = async (
+    projectId: string,
+    recipients: Array<'client' | 'installer'>,
+  ) => {
+    try {
+      setFollowupSendingId(projectId);
+      const { data, error } = await supabase.functions.invoke('send-onboarding-followup', {
+        body: { projectOnboardingId: projectId, recipients },
+      });
+
+      if (error) throw error;
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Follow-up could not be sent');
+      }
+
+      const sent = (data?.sent || []).filter((s: any) => s.ok).map((s: any) => s.kind);
+      toast({
+        title: "Follow-up sent",
+        description: `${data?.outstanding_count ?? 0} outstanding item${data?.outstanding_count === 1 ? '' : 's'} emailed to ${sent.join(' and ') || 'recipients'}.`,
+      });
+      fetchProjects();
+    } catch (err: any) {
+      console.error('Follow-up send failed:', err);
+      toast({
+        title: "Could not send follow-up",
+        description: err?.message || "No email address on file, or the send failed.",
+        variant: "destructive",
+      });
+    } finally {
+      setFollowupSendingId(null);
+    }
+  };
+
+
   const handleProjectClick = (projectId: string) => {
     navigate(`/onboarding/${projectId}`);
   };
@@ -397,6 +442,9 @@ export default function ProjectOnboardingList() {
                     <th className="text-left p-4 font-medium">Client</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">Last Updated</th>
+                    {userRole === 'admin' && (
+                      <th className="text-left p-4 font-medium">Last Follow-up</th>
+                    )}
                     <th className="text-left p-4 font-medium">Steps</th>
                   </tr>
                 </thead>
@@ -427,6 +475,53 @@ export default function ProjectOnboardingList() {
                       <td className="p-4 text-muted-foreground">
                         {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
                       </td>
+                      {userRole === 'admin' && (
+                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm text-muted-foreground min-w-[110px]">
+                              {project.last_followup_at ? (
+                                <>
+                                  <div>{formatDistanceToNow(new Date(project.last_followup_at), { addSuffix: true })}</div>
+                                  {project.last_followup_recipients?.length ? (
+                                    <div className="text-xs capitalize">
+                                      {project.last_followup_recipients.join(' & ')}
+                                    </div>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <span className="text-xs">Never</span>
+                              )}
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={followupSendingId === project.id}
+                                >
+                                  {followupSendingId === project.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Mail className="h-4 w-4" />
+                                  )}
+                                  <span className="ml-2 hidden lg:inline">Follow up</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleSendFollowup(project.id, ['client', 'installer'])}>
+                                  Email client &amp; installer
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSendFollowup(project.id, ['client'])}>
+                                  Email client only
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSendFollowup(project.id, ['installer'])}>
+                                  Email installer only
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      )}
                       <td className="p-4">
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <StepPill
