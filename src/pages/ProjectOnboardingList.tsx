@@ -14,9 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Loader2, Upload, Plus, Download } from "lucide-react";
+import { Search, Loader2, Upload, Plus, Download, Mail } from "lucide-react";
 import {
   buildOnboardingCsv,
   downloadCsv,
