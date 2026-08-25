@@ -265,6 +265,38 @@ export default function ProjectOnboardingList() {
     return matchesSearch && matchesStatus;
   });
 
+  const handleExportCsv = async () => {
+    if (filteredProjects.length === 0) {
+      toast({
+        title: "Nothing to export",
+        description: "No projects match the current filters.",
+      });
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const csv = await buildOnboardingCsv({
+        projectIds: filteredProjects.map(p => p.id),
+        isAdmin: userRole === 'admin',
+      });
+      downloadCsv(csv, onboardingCsvFilename());
+      toast({
+        title: "Export ready",
+        description: `Exported ${filteredProjects.length} project${filteredProjects.length === 1 ? '' : 's'} to CSV.`,
+      });
+    } catch (error) {
+      console.error('CSV export failed:', error);
+      toast({
+        title: "Export failed",
+        description: "Could not build the CSV. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleProjectClick = (projectId: string) => {
     navigate(`/onboarding/${projectId}`);
   };
