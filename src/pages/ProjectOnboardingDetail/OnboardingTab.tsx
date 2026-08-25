@@ -18,6 +18,8 @@ import { logger } from "@/lib/logger";
 import { InverterDetailsRow, type InverterDetail } from "@/components/onboarding/InverterDetailsRow";
 import { PanelArrayDetailsRow, type PanelArrayDetail } from "@/components/onboarding/PanelArrayDetailsRow";
 import { useOnboardingValidation } from "@/hooks/useOnboardingValidation";
+import { useMapboxGeocoding } from "@/hooks/useMapboxGeocoding";
+
 import { FormError } from "@/components/ui/form-error";
 import { ValidationSummary } from "@/components/onboarding/ValidationSummary";
 import { cn } from "@/lib/utils";
@@ -61,7 +63,11 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     getAllErrors,
     hasErrors,
     setFieldTouched,
+    clearFieldError,
   } = useOnboardingValidation();
+  const { searchAddress } = useMapboxGeocoding();
+  const [geocoding, setGeocoding] = useState(false);
+
 
   // Ref to expose DataAccessTab save/submit actions to page-level footer buttons
   const dataAccessActionsRef = useRef<{
