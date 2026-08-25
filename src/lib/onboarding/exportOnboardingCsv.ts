@@ -342,6 +342,149 @@ export function onboardingCsvHeaders(): string[] {
   return COLUMNS.map((c) => c.header);
 }
 
+// ---------------------------------------------------------------------------
+// Revenue projection — same engine the Revenue tab renders from
+// ---------------------------------------------------------------------------
+
+interface RevenueBreakdown {
+  credits: number;
+  clientPct: number;
+  agentPct: number;
+  platformPct: number;
+  client: Record<string, number>;
+  agent: Record<string, number>;
+  platform: Record<string, number>;
+  total: Record<string, number>;
+}
+
+function pct(value: number): string {
+  return Number(value.toFixed(2)).toString();
+}
+
+/**
+ * Revenue is never stored on the project — it is derived from system size,
+ * commissioning date, share percentages and the client's carbon rate set.
+ * Recompute it here so the export matches the Revenue tab exactly.
+ */
+async function buildRevenueLookup(rows: AnyRecord[]) {
+  const priceCache = new Map<string, Record<string, number>>();
+  const byProject = new Map<string, RevenueBreakdown>();
+  const years = new Set<string>();
+
+  for (const r of rows) {
+    const p = r.proposals ?? {};
+    const clientId: string | null = p.client_reference_id ?? null;
+    const cacheKey = clientId ?? "__default__";
+
+    if (!priceCache.has(cacheKey)) {
+      priceCache.set(cacheKey, await dynamicCarbonPricingService.getCarbonPricesForClient(clientId));
+    }
+    const prices = priceCache.get(cacheKey)!;
+
+    const sizeKwp = Number(p.system_size_kwp) || 0;
+    const credits = Number(p.carbon_credits) || calculateCarbonCredits(sizeKwp);
+
+    const portfolioKwp = Number(p.agent_portfolio_kwp) || sizeKwp;
+    const clientPct = Number(p.client_share_percentage ?? getClientSharePercentage(portfolioKwp));
+    const agentPct = Number(
+      p.agent_commission_percentage ?? getAgentCommissionPercentage(portfolioKwp, !!p.agent_id)
+    );
+    const platformPct = Number((100 - clientPct - agentPct).toFixed(2));
+
+    const commissionDate =
+      p.content?.projectInfo?.commissionDate || f(r)?.commissioning_date || undefined;
+
+    const client = calculateRevenueByYearSync(credits, clientPct, prices, commissionDate);
+    const agent: Record<string, number> = {};
+    const platform: Record<string, number> = {};
+    const total: Record<string, number> = {};
+
+    Object.entries(client).forEach(([year, clientRevenue]) => {
+      const gross = clientPct > 0 ? clientRevenue / (clientPct / 100) : 0;
+      total[year] = Math.round(gross);
+      agent[year] = Math.round(gross * (agentPct / 100));
+      platform[year] = Math.round(gross * (platformPct / 100));
+      years.add(year);
+    });
+
+    byProject.set(r.id, {
+      credits,
+      clientPct,
+      agentPct,
+      platformPct,
+      client,
+      agent,
+      platform,
+      total,
+    });
+  }
+
+  return { byProject, years: [...years].sort() };
+}
+
+function sum(map: Record<string, number>): number {
+  return Object.values(map).reduce((acc, v) => acc + v, 0);
+}
+
+function revenueColumns(
+  years: string[],
+  byProject: Map<string, RevenueBreakdown>,
+  isAdmin: boolean
+): Array<{ header: string; value: (r: AnyRecord) => string }> {
+  const get = (r: AnyRecord) => byProject.get(r.id);
+  const cols: Array<{ header: string; value: (r: AnyRecord) => string }> = [
+    { header: "Carbon Credits (tCO2e/yr)", value: (r) => (get(r) ? get(r)!.credits.toFixed(2) : "") },
+    { header: "Client Share %", value: (r) => (get(r) ? pct(get(r)!.clientPct) : "") },
+    { header: "Agent Commission %", value: (r) => (get(r) ? pct(get(r)!.agentPct) : "") },
+  ];
+
+  if (isAdmin) {
+    cols.push({ header: "Platform Fee %", value: (r) => (get(r) ? pct(get(r)!.platformPct) : "") });
+  }
+
+  years.forEach((year) => {
+    cols.push({
+      header: `Client Revenue ${year} (ZAR)`,
+      value: (r) => num(get(r)?.client[year] ?? null),
+    });
+    cols.push({
+      header: `Agent Commission ${year} (ZAR)`,
+      value: (r) => num(get(r)?.agent[year] ?? null),
+    });
+    if (isAdmin) {
+      cols.push({
+        header: `Platform Fee ${year} (ZAR)`,
+        value: (r) => num(get(r)?.platform[year] ?? null),
+      });
+    }
+    cols.push({
+      header: `Total Revenue ${year} (ZAR)`,
+      value: (r) => num(get(r)?.total[year] ?? null),
+    });
+  });
+
+  cols.push({
+    header: "Total Client Revenue (ZAR)",
+    value: (r) => (get(r) ? String(sum(get(r)!.client)) : ""),
+  });
+  cols.push({
+    header: "Total Agent Commission (ZAR)",
+    value: (r) => (get(r) ? String(sum(get(r)!.agent)) : ""),
+  });
+  if (isAdmin) {
+    cols.push({
+      header: "Total Platform Revenue (ZAR)",
+      value: (r) => (get(r) ? String(sum(get(r)!.platform)) : ""),
+    });
+  }
+  cols.push({
+    header: "Total Revenue (ZAR)",
+    value: (r) => (get(r) ? String(sum(get(r)!.total)) : ""),
+  });
+
+  return cols;
+}
+
 export interface ExportOptions {
   projectIds: string[];
   isAdmin: boolean;
@@ -351,6 +494,8 @@ export interface ExportOptions {
 export async function buildOnboardingCsv({ projectIds, isAdmin }: ExportOptions): Promise<string> {
   const rows = await fetchRows(projectIds);
   const users = await buildUserLookup(rows);
+  const { byProject, years } = await buildRevenueLookup(rows);
+  const revenueCols = revenueColumns(years, byProject, isAdmin);
 
   const ctx: ExportContext = {
     isAdmin,
@@ -363,8 +508,15 @@ export async function buildOnboardingCsv({ projectIds, isAdmin }: ExportOptions)
   rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 
   const lines = [
-    COLUMNS.map((c) => csvCell(c.header)).join(","),
-    ...rows.map((r) => COLUMNS.map((c) => csvCell(c.value(r, ctx))).join(",")),
+    [...COLUMNS.map((c) => c.header), ...revenueCols.map((c) => c.header)].map(csvCell).join(","),
+    ...rows.map((r) =>
+      [
+        ...COLUMNS.map((c) => c.value(r, ctx)),
+        ...revenueCols.map((c) => c.value(r)),
+      ]
+        .map(csvCell)
+        .join(",")
+    ),
   ];
 
   return lines.join("\r\n");
