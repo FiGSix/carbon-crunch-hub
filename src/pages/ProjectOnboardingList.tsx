@@ -442,6 +442,9 @@ export default function ProjectOnboardingList() {
                     <th className="text-left p-4 font-medium">Client</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">Last Updated</th>
+                    {userRole === 'admin' && (
+                      <th className="text-left p-4 font-medium">Last Follow-up</th>
+                    )}
                     <th className="text-left p-4 font-medium">Steps</th>
                   </tr>
                 </thead>
