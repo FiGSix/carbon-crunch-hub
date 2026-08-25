@@ -475,6 +475,53 @@ export default function ProjectOnboardingList() {
                       <td className="p-4 text-muted-foreground">
                         {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
                       </td>
+                      {userRole === 'admin' && (
+                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm text-muted-foreground min-w-[110px]">
+                              {project.last_followup_at ? (
+                                <>
+                                  <div>{formatDistanceToNow(new Date(project.last_followup_at), { addSuffix: true })}</div>
+                                  {project.last_followup_recipients?.length ? (
+                                    <div className="text-xs capitalize">
+                                      {project.last_followup_recipients.join(' & ')}
+                                    </div>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <span className="text-xs">Never</span>
+                              )}
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={followupSendingId === project.id}
+                                >
+                                  {followupSendingId === project.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Mail className="h-4 w-4" />
+                                  )}
+                                  <span className="ml-2 hidden lg:inline">Follow up</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleSendFollowup(project.id, ['client', 'installer'])}>
+                                  Email client &amp; installer
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSendFollowup(project.id, ['client'])}>
+                                  Email client only
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSendFollowup(project.id, ['installer'])}>
+                                  Email installer only
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      )}
                       <td className="p-4">
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <StepPill
