@@ -104,7 +104,7 @@ export function AttentionRequired({
                 <AlertTriangle className="h-4 w-4 text-crunch-yellow" />
                 {title}
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-xs text-muted-foreground mt-1">{caption}</p>
             </div>
             {hidden > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setDrawerOpen(true)}>
