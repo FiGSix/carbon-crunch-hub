@@ -42,7 +42,13 @@ function StatsCardComponent({
   color = 'yellow',
   className,
   isLegacy = false,
-  onClick
+  onClick,
+  numericValue,
+  formatValue,
+  hoverDetail,
+  actionLabel,
+  sweep = false
+
 }: StatsCardProps) {
   
   const getIconColor = useMemo(() => {
