@@ -16,7 +16,7 @@ import { VintageProgressDisplayCard } from "@/components/dashboard/VintageProgre
 import { PortfolioHero } from "@/components/dashboard/v2/PortfolioHero";
 import { PipelineFunnel } from "@/components/dashboard/v2/PipelineFunnel";
 import { AttentionRequired } from "@/components/dashboard/v2/AttentionRequired";
-import { DistributionEngine } from "@/components/dashboard/v2/DistributionEngine";
+import { PartnerNetwork } from "@/components/dashboard/v2/PartnerNetwork";
 import { AdminExceptions } from "@/components/dashboard/v2/AdminExceptions";
 import { MilestoneCard } from "@/components/motion/MilestoneCard";
 import { useMilestones } from "@/hooks/useMilestones";
@@ -113,14 +113,14 @@ export default function Dashboard() {
 
   const funnelStages = [
     {
-      label: "Proposals awaiting signature",
+      label: "Proposal — awaiting signature",
       mwp: pendingMwp,
       revenue: metricsByStage?.pendingApprovalRevenue,
       to: "/proposals",
       tone: "pending" as const,
     },
     {
-      label: "Signed, in onboarding",
+      label: "Signed / onboarding",
       mwp: onboardingMwp,
       revenue: metricsByStage?.onboardingRevenue,
       to: "/onboarding",
@@ -137,25 +137,20 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <DashboardHeader
-        title="Dashboard"
-        description={getWelcomeMessage()}
-        userName={getUserDisplayName()}
-        userRole={formatUserRole(userRole)}
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""} text-crunch-yellow`}
-            />
-            Refresh Data
-          </Button>
-        }
-      />
+      {isAdmin ? (
+        <DashboardHeader
+          title="Dashboard"
+          description="Platform performance and actions requiring attention."
+        />
+      ) : (
+        <DashboardHeader
+          title="Dashboard"
+          description={getWelcomeMessage()}
+          userName={getUserDisplayName()}
+          userRole={formatUserRole(userRole)}
+        />
+      )}
+
 
       {isAgent && profile?.agent_status === "pending_approval" && (
         <Alert className="mb-6">
@@ -254,30 +249,31 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* ADMIN — growth, distribution, funnel, exceptions. */}
+      {/* ADMIN — pipeline, exceptions, funnel, partner network. */}
       {isAdmin && (
         <>
           <PortfolioHero
-            label="Platform portfolio"
+            dense
+            label="Platform pipeline"
             mwp={portfolioMwp}
-            caption="Total MWp across every stage on Crunch Carbon."
+            caption="All qualifying MWp across proposal, signed/onboarding and Audit Ready. Proposal-stage MWp is not yet contracted."
             figures={[
               {
-                label: "Audit Ready",
-                value: `${fmtMwp2(auditReadyMwp)} MWp`,
-                numericValue: auditReadyMwp,
+                label: "Proposal",
+                value: `${fmtMwp2(pendingMwp)} MWp`,
+                numericValue: pendingMwp,
                 format: (n) => `${n.toFixed(2)} MWp`,
               },
               {
-                label: "Signed, onboarding",
+                label: "Signed / onboarding",
                 value: `${fmtMwp2(onboardingMwp)} MWp`,
                 numericValue: onboardingMwp,
                 format: (n) => `${n.toFixed(2)} MWp`,
               },
               {
-                label: "At proposal stage",
-                value: `${fmtMwp2(pendingMwp)} MWp`,
-                numericValue: pendingMwp,
+                label: "Audit Ready",
+                value: `${fmtMwp2(auditReadyMwp)} MWp`,
+                numericValue: auditReadyMwp,
                 format: (n) => `${n.toFixed(2)} MWp`,
               },
               {
@@ -289,27 +285,33 @@ export default function Dashboard() {
             ]}
           />
           <SinceLastVisit metrics={metricsByStage} userId={user?.id} />
-          <AdminExceptions metrics={metricsByStage} />
-          <DistributionEngine />
+          <AdminExceptions />
           <PipelineFunnel
             title="Commercial funnel"
             stages={funnelStages}
-            subtitle="Platform-wide MWp by stage. Hover for estimated revenue."
+            subtitle="Where platform MWp currently sits, and how much carries through to the next stage. Hover for estimated revenue; select a stage to open the records behind it."
           />
-          <div className="mb-8 flex flex-wrap gap-3">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/admin/analytics">
-                Pipeline analytics
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/onboarding">Project onboarding</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/admin/partners">Partner management</Link>
-            </Button>
-          </div>
+          <PartnerNetwork />
+          <nav className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-sm">
+            <Link
+              to="/admin/analytics"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Pipeline analytics
+            </Link>
+            <Link
+              to="/onboarding"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Project onboarding
+            </Link>
+            <Link
+              to="/admin/partners"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Partner management
+            </Link>
+          </nav>
         </>
       )}
 
