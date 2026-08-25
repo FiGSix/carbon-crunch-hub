@@ -113,14 +113,14 @@ export default function Dashboard() {
 
   const funnelStages = [
     {
-      label: "Proposals awaiting signature",
+      label: "Proposal — awaiting signature",
       mwp: pendingMwp,
       revenue: metricsByStage?.pendingApprovalRevenue,
       to: "/proposals",
       tone: "pending" as const,
     },
     {
-      label: "Signed, in onboarding",
+      label: "Signed / onboarding",
       mwp: onboardingMwp,
       revenue: metricsByStage?.onboardingRevenue,
       to: "/onboarding",
@@ -137,25 +137,20 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <DashboardHeader
-        title="Dashboard"
-        description={getWelcomeMessage()}
-        userName={getUserDisplayName()}
-        userRole={formatUserRole(userRole)}
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""} text-crunch-yellow`}
-            />
-            Refresh Data
-          </Button>
-        }
-      />
+      {isAdmin ? (
+        <DashboardHeader
+          title="Dashboard"
+          description="Platform performance and actions requiring attention."
+        />
+      ) : (
+        <DashboardHeader
+          title="Dashboard"
+          description={getWelcomeMessage()}
+          userName={getUserDisplayName()}
+          userRole={formatUserRole(userRole)}
+        />
+      )}
+
 
       {isAgent && profile?.agent_status === "pending_approval" && (
         <Alert className="mb-6">
