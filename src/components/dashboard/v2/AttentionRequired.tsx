@@ -9,21 +9,29 @@ import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarm
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { DetailDrawer, type DrawerRow } from "@/components/dashboard/DetailDrawer";
 import { toWaMeDigits } from "@/utils/phone/toWaMeDigits";
+import {
+  ATTENTION_SORT_LABEL,
+  DEFAULT_ATTENTION_SORT,
+  type AttentionSort,
+} from "@/config/dashboardRules";
 
 const rand = (n: number) => `R ${Math.round(n).toLocaleString("en-ZA")}`;
 
-/** Value weighted by how long it has been waiting; hot engagement outranks warm. */
-function score(card: WarmCard): number {
-  const bucketWeight = card.bucket === "hot" ? 1.6 : 1;
-  const waiting = Math.max(card.days_since_sent ?? 0, 1);
-  const value = Math.max(card.estimated_client_revenue ?? 0, 1);
-  return value * Math.log10(waiting + 1) * bucketWeight;
+/**
+ * Plain factual ordering only — no weighted score. Crunch Carbon has not yet
+ * defined a prioritisation rule, so the list must be explainable from the data
+ * shown on each row. See src/config/dashboardRules.ts.
+ */
+function compare(sort: AttentionSort) {
+  return (a: WarmCard, b: WarmCard) => {
+    if (sort === "value") {
+      return (b.estimated_client_revenue ?? 0) - (a.estimated_client_revenue ?? 0);
+    }
+    return (b.days_since_sent ?? -1) - (a.days_since_sent ?? -1);
+  };
 }
 
 function why(card: WarmCard): string {
-  if (card.bucket === "hot") {
-    return "Opened and engaged, still unsigned — a short call now is what closes it.";
-  }
   if (card.days_since_sent == null) {
     return "Created but not yet sent to the client.";
   }
@@ -35,6 +43,8 @@ interface AttentionRequiredProps {
   limit?: number;
   title?: string;
   subtitle?: string;
+  /** Provisional ordering; see src/config/dashboardRules.ts. */
+  sort?: AttentionSort;
 }
 
 /**
@@ -42,20 +52,22 @@ interface AttentionRequiredProps {
  * (next best action, warm cards, portfolio review, close-out queue).
  *
  * Data: proposal_engagement_buckets — real engagement, value and age fields.
- * Rule: unsigned, active proposal ranked by value x time waiting.
+ * Order: factual only (longest waiting, or highest value), stated in the copy.
  */
 export function AttentionRequired({
   limit = 3,
   title = "What needs your attention",
-  subtitle = "Ranked by value at stake and how long it has been waiting.",
+  subtitle,
+  sort = DEFAULT_ATTENTION_SORT,
 }: AttentionRequiredProps) {
   const { data, isLoading, isError } = useAgentWarmCards(25);
   const reduced = useReducedMotion();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const caption = subtitle ?? ATTENTION_SORT_LABEL[sort];
 
   const ranked = useMemo(
-    () => [...(data ?? [])].sort((a, b) => score(b) - score(a)),
-    [data]
+    () => [...(data ?? [])].sort(compare(sort)),
+    [data, sort]
   );
   const visible = ranked.slice(0, limit);
   const hidden = ranked.length - visible.length;
@@ -92,7 +104,7 @@ export function AttentionRequired({
                 <AlertTriangle className="h-4 w-4 text-crunch-yellow" />
                 {title}
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-xs text-muted-foreground mt-1">{caption}</p>
             </div>
             {hidden > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setDrawerOpen(true)}>
@@ -185,7 +197,7 @@ export function AttentionRequired({
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Proposals awaiting client action"
-        description="Ranked by value and how long each has been outstanding."
+        description={ATTENTION_SORT_LABEL[sort]}
         rows={rows}
         emptyTitle="You're all caught up"
         emptyBody="No proposals are waiting on a client right now."
