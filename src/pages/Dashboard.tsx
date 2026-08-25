@@ -16,7 +16,7 @@ import { VintageProgressDisplayCard } from "@/components/dashboard/VintageProgre
 import { PortfolioHero } from "@/components/dashboard/v2/PortfolioHero";
 import { PipelineFunnel } from "@/components/dashboard/v2/PipelineFunnel";
 import { AttentionRequired } from "@/components/dashboard/v2/AttentionRequired";
-import { DistributionEngine } from "@/components/dashboard/v2/DistributionEngine";
+import { PartnerNetwork } from "@/components/dashboard/v2/PartnerNetwork";
 import { AdminExceptions } from "@/components/dashboard/v2/AdminExceptions";
 import { MilestoneCard } from "@/components/motion/MilestoneCard";
 import { useMilestones } from "@/hooks/useMilestones";
