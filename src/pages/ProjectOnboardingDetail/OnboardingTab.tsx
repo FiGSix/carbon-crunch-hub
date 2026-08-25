@@ -680,19 +680,43 @@ export function OnboardingTab({ projectId, fields, project, proposal, onRefresh 
     switch (sectionKey) {
       case 'system': {
         const isMultiPhase = formData.phases_json && Array.isArray(formData.phases_json) && formData.phases_json.length > 0;
-        if (isMultiPhase) {
-          // For multi-phase: require system_address + all phases have valid dates
-          const phases = formData.phases_json as PhaseDetail[];
-          const phasesWithDates = phases.filter(p => p.commissionDate && p.commissionDate.trim() !== '');
-          const hasAddress = !!formData.system_address;
-          const total = 1 + phases.length; // address + each phase date
-          const filled = (hasAddress ? 1 : 0) + phasesWithDates.length;
-          return { complete: filled === total, remaining: total - filled, total };
+        // Shared required fields (installer company/email are intentionally optional)
+        const sharedRequired: Array<keyof OnboardingFields> = [
+          'system_name',
+          'system_address',
+          'ownership_type',
+          'connection_type',
+          'alternative_power_source',
+          'meter_type',
+          'system_gps_lat',
+          'system_gps_lng',
+        ];
+        const isFilled = (key: keyof OnboardingFields) => {
+          const v = formData[key];
+          if (typeof v === 'number') return !isNaN(v);
+          return v !== null && v !== undefined && String(v).trim() !== '';
+        };
+        let filled = sharedRequired.filter(isFilled).length;
+        let total = sharedRequired.length;
+
+        // Dedicated meter requires a calibration certificate
+        if (formData.meter_type === 'Discrete') {
+          total += 1;
+          if (documents.some(d => d.category === 'calibration_cert')) filled += 1;
         }
-        const requiredFields = ['system_address', 'commissioning_date'];
-        const filled = requiredFields.filter(f => formData[f as keyof OnboardingFields]);
-        return { complete: filled.length === requiredFields.length, remaining: requiredFields.length - filled.length, total: requiredFields.length };
+
+        if (isMultiPhase) {
+          const phases = formData.phases_json as PhaseDetail[];
+          total += phases.length;
+          filled += phases.filter(p => p.commissionDate && p.commissionDate.trim() !== '').length;
+        } else {
+          total += 1;
+          if (isFilled('commissioning_date')) filled += 1;
+        }
+
+        return { complete: filled === total, remaining: total - filled, total };
       }
+
       case 'inverter': {
         const fields = ['brand', 'model', 'capacity_kw', 'serial'] as const;
         const rowTotal = inverterDetails.length * fields.length;
