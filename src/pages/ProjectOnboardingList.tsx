@@ -41,7 +41,21 @@ export default function ProjectOnboardingList() {
   const [projects, setProjects] = useState<ProjectOnboardingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Deep-linkable status filter, e.g. /onboarding?status=audit_ready — lets
+  // dashboard cards and emails land the user directly on the right subset.
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const raw = new URLSearchParams(window.location.search).get("status");
+    if (!raw) return "all";
+    const map: Record<string, string> = {
+      not_started: "Not Started",
+      in_progress: "In Progress",
+      awaiting_review: "Awaiting Review",
+      under_review: "Under Review",
+      audit_ready: "Audit Ready",
+    };
+    return map[raw] ?? "all";
+  });
+
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
   const [isExporting, setIsExporting] = useState(false);

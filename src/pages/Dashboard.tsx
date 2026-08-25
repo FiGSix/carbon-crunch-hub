@@ -5,6 +5,8 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { RefreshCw, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { AgentIntroVideoModal } from "@/components/agent/AgentIntroVideoModal";
 import { useAgentIntroVideo } from "@/hooks/useAgentIntroVideo";
 import { DashboardMetricsByStageCards } from "@/components/dashboard/sections/DashboardMetricsByStageCards";
@@ -13,9 +15,15 @@ import { PortfolioReviewSection } from "@/components/dashboard/sections/Portfoli
 import { CloseoutQueueSection } from "@/components/dashboard/sections/CloseoutQueueSection";
 import { LearningDashboardSection } from "@/components/dashboard/sections/LearningDashboardSection";
 import { DashboardTopRow } from "@/components/dashboard/sections/DashboardTopRow";
+import { SinceLastVisit } from "@/components/dashboard/SinceLastVisit";
+import { NextBestAction } from "@/components/dashboard/NextBestAction";
+import { ClientStatusPanel } from "@/components/dashboard/ClientStatusPanel";
+import { MilestoneCard } from "@/components/motion/MilestoneCard";
+import { useMilestones } from "@/hooks/useMilestones";
 import { useDashboardMetricsByStage, getEmptyMetrics } from "@/hooks/dashboard/useDashboardMetricsByStage";
 import { useDashboardHelpers } from "@/hooks/dashboard/useDashboardHelpers";
 import { useToast } from "@/hooks/use-toast";
+
 
 export default function Dashboard() {
   const { user, userRole, profile } = useAuth();
@@ -42,6 +50,20 @@ export default function Dashboard() {
     skipVideo,
     closeModal
   } = useAgentIntroVideo();
+
+  // Milestones derived from metrics already on screen — no extra fetching.
+  const { milestone, dismiss } = useMilestones({
+    userId: user?.id,
+    portfolioMwp:
+      (metricsByStage?.auditReadyMwp ?? 0) +
+      (metricsByStage?.onboardingMwp ?? 0) +
+      (metricsByStage?.pendingApprovalMwp ?? 0),
+    auditReadyMwp: metricsByStage?.auditReadyMwp ?? 0,
+    signedMwp: metricsByStage?.onboardingMwp ?? 0,
+    ready: !isLoading && !!metricsByStage,
+  });
+
+
   
   // Phase 4: Add success message handler for post-registration redirect
   useEffect(() => {
@@ -60,16 +82,25 @@ export default function Dashboard() {
     }
   }, [toast]);
 
-  // Loading state
+  // Loading state — a skeleton shaped like the real dashboard, so the layout
+  // stays stable and nothing jumps when data arrives.
   if (isLoading && !metricsByStage) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          <Skeleton className="h-16 w-full max-w-md" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-[168px] w-full rounded-lg" />
+            ))}
+          </div>
         </div>
       </DashboardLayout>
     );
   }
+
 
   // Error state
   if (isError && !metricsByStage) {
@@ -126,9 +157,25 @@ export default function Dashboard() {
         </Alert>
       )}
       
+      {/* Re-entry: what changed since the user was last here (nothing if no delta) */}
+      <SinceLastVisit metrics={metricsByStage} userId={user?.id} />
+
+      {/* Quiet achievement: one unseen milestone at a time, dismissible */}
+      {milestone && (
+        <MilestoneCard milestone={milestone} onDismiss={() => dismiss(milestone.id)} />
+      )}
+
+      {/* Client surface: calm status, one action only when something is required */}
+      {userRole === "client" && (
+        <ClientStatusPanel metrics={metricsByStage} loading={isLoading} />
+      )}
+
       {/* Agent Engine — flagship section */}
       {(userRole === "agent" || userRole === "admin") && (
         <>
+          {/* The single strongest CTA on the page: one ranked action */}
+          <NextBestAction />
+
           {/* Warm cards: full-width, the single most actionable surface */}
           <AgentWarmCards limit={5} />
 
@@ -149,6 +196,7 @@ export default function Dashboard() {
         metrics={metricsByStage}
         userRole={userRole}
       />
+
       
       {/* BOTTOM ROW: Metric Cards */}
       <DashboardMetricsByStageCards 

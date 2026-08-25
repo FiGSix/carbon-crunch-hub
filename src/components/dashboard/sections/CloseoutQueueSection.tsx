@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Archive, Mail, ArrowRight, Clock } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import {
   useCloseoutQueue,
   useArchiveProposal,
@@ -67,9 +68,11 @@ export function CloseoutQueueSection({ limit = 5 }: { limit?: number } = {}) {
               Couldn't load close-out queue.
             </p>
           ) : !visible || visible.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nothing to close out — pipeline is clean.
-            </p>
+            <EmptyState
+              title="Nothing to close out"
+              body="Your pipeline is clean — no proposals have gone quiet for 30 days or more."
+            />
+
           ) : (
             <div className="space-y-2">
               {visible.map((item) => (

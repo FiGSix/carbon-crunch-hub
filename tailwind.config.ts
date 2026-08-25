@@ -108,12 +108,25 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				/* Milestone: a restrained line draws across the card top, once. */
+				'milestone-line': {
+					from: { transform: 'scaleX(0)' },
+					to: { transform: 'scaleX(1)' }
+				},
+				/* Audit Ready: a single quiet highlight sweep across the card. */
+				'highlight-sweep': {
+					from: { transform: 'translateX(-100%)' },
+					to: { transform: 'translateX(100%)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'milestone-line': 'milestone-line 0.7s ease-out both',
+				'highlight-sweep': 'highlight-sweep 1.1s ease-out both'
 			},
+
             fontFamily: {
                 'sans': ['Inter', 'system-ui', 'sans-serif'],
             },

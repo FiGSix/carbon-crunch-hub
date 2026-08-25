@@ -7,6 +7,7 @@ import { logManualAgentContact } from "@/services/proposals/agentContactLogger";
 import { isEmailSuppressed } from "@/services/proposals/emailSuppressionService";
 import { toast } from "sonner";
 import { Briefcase, ArrowRight, Phone, Mail } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import {
   usePortfolioReviewClusters,
   type PortfolioReviewCluster,
@@ -52,9 +53,11 @@ export function PortfolioReviewSection({ limit = 4 }: { limit?: number } = {}) {
             Couldn't load portfolio review clusters.
           </p>
         ) : !visible || visible.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No portfolio clusters need agent review right now.
-          </p>
+          <EmptyState
+            title="You're all caught up"
+            body="No client portfolios currently need your review."
+          />
+
         ) : (
           <div className="space-y-2">
             {visible.map((c) => (

@@ -15,6 +15,7 @@ import {
 import { useAgentWarmCards, type WarmCard } from "@/hooks/dashboard/useAgentWarmCards";
 import { toWaMeDigits } from "@/utils/phone/toWaMeDigits";
 import { useAuth } from "@/contexts/auth";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 
 /**
  * Agent warm cards — flagship of the v1 Agent Engine.
@@ -57,9 +58,12 @@ export function AgentWarmCards({ limit = 5 }: { limit?: number } = {}) {
             Couldn't load warm cards right now.
           </p>
         ) : !visible || visible.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No hot or warm proposals right now. Nice — your pipeline is either signed or cooling.
-          </p>
+          <EmptyState
+            title="No proposals need a nudge"
+            body="Everything is either signed or cooling on its own. Create a new client proposal to keep building your portfolio."
+            action={{ label: "Go to proposals", to: "/proposals" }}
+          />
+
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {visible.map((card) => (
