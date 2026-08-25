@@ -31,8 +31,14 @@ function isoDate(value: string | null | undefined): string {
   return d.toISOString().slice(0, 10);
 }
 
-function yesNo(value: boolean | null | undefined): string {
-  if (value === null || value === undefined) return "";
+function yesNo(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    if (["yes", "true", "y", "1"].includes(v)) return "Yes";
+    if (["no", "false", "n", "0"].includes(v)) return "No";
+    return value;
+  }
   return value ? "Yes" : "No";
 }
 
@@ -41,10 +47,26 @@ function num(value: number | null | undefined): string {
   return String(value);
 }
 
+/** Render a scalar, or flatten the JSON arrays some equipment columns hold. */
 function text(value: unknown): string {
   if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        item && typeof item === "object"
+          ? Object.entries(item as AnyRecord)
+              .filter(([, v]) => v !== null && v !== undefined && v !== "")
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(", ")
+          : String(item)
+      )
+      .filter(Boolean)
+      .join(" | ");
+  }
+  if (typeof value === "object") return text([value]);
   return String(value);
 }
+
 
 function csvCell(value: string): string {
   if (/[",\n\r]/.test(value)) {
