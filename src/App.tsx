@@ -85,6 +85,9 @@ const SuperPartnerMyCompanies = createOptimizedLazyComponent(() => import("./pag
 const PartnerReferralLandingPage = createOptimizedLazyComponent(() => import("./pages/PartnerReferralLandingPage"), "PartnerReferralLandingPage");
 const AdminReferralLinks = createOptimizedLazyComponent(() => import("./pages/admin/AdminReferralLinks"), "AdminReferralLinks");
 const SuperPartnerCommission = createOptimizedLazyComponent(() => import("./pages/SuperPartnerCommission"), "SuperPartnerCommission");
+const PipelineAnalytics = createOptimizedLazyComponent(() => import("./pages/admin/PipelineAnalytics"), "PipelineAnalytics");
+const VintageInsights = createOptimizedLazyComponent(() => import("./pages/VintageInsights"), "VintageInsights");
+
 // Import the standardized loading component
 import { PageLoading } from '@/components/ui/loading-states';
 
@@ -329,6 +332,31 @@ function App() {
                       </PrivateRoute>
                     } 
                   />
+                  <Route
+                    path="/admin/analytics"
+                    element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <PageErrorBoundary pageName="Pipeline Analytics">
+                          <Suspense fallback={<PageLoader />}>
+                            <PipelineAnalytics />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/vintage-revenue"
+                    element={
+                      <PrivateRoute>
+                        <PageErrorBoundary pageName="Vintage and Revenue">
+                          <Suspense fallback={<PageLoader />}>
+                            <VintageInsights />
+                          </Suspense>
+                        </PageErrorBoundary>
+                      </PrivateRoute>
+                    }
+                  />
+
                   <Route 
                     path="/profile" 
                     element={
