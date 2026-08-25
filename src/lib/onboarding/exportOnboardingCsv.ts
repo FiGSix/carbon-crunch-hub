@@ -283,6 +283,7 @@ async function fetchRows(projectIds: string[]): Promise<AnyRecord[]> {
         *,
         proposals!inner(
           id, title, status, signed_at, agent_id, client_id, client_reference_id, content,
+          system_size_kwp, carbon_credits, client_share_percentage, agent_commission_percentage, agent_portfolio_kwp,
           profiles:client_id ( first_name, last_name, email, company_name ),
           clients:client_reference_id ( first_name, last_name, email, company_name )
         ),
