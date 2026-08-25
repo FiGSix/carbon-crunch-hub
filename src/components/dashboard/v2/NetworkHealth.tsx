@@ -137,7 +137,7 @@ export function NetworkHealth({ companies, loading }: NetworkHealthProps) {
         rows={rows}
         emptyTitle="No partners in this segment"
         emptyBody="Nothing to review here right now."
-        footer={{ label: "Open my companies", to: "/super-partner/companies" }}
+        footer={{ label: "Open my companies", to: "/super-partner/my-companies" }}
       />
     </>
   );
