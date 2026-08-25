@@ -10,22 +10,27 @@ import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface Counts {
+  approved: number;
+  awaiting_approval: number;
+  invited_not_registered: number;
   total: number;
-  invited: number;
-  pending_approval: number;
-  active: number;
+  commercially_active_30d: number;
 }
 
 /**
  * Partner network status. Point-in-time counts only — no growth or trend claim
  * is made, because no historical partner series exists.
  *
- * Every figure comes from get_agents_management_counts, the same source as
- * Partner Management, so the two screens can never disagree.
+ * Source: get_partner_network_counts. Admin-only accounts are excluded; a row
+ * counts only when the user holds role 'agent' or 'super_partner'.
  *
- * "Approved" is the honest label for the underlying rule:
- * profiles.agent_status = 'active' (account approved and enabled). It carries no
- * commercial-activity requirement.
+ * "Approved" = profiles.agent_status = 'active' (account approved and enabled).
+ * It carries no commercial-activity requirement.
+ *
+ * "Commercially active" = an approved partner with at least one qualifying
+ * commercial or project-progression event in the rolling 30 days (proposal
+ * created / sent, agreement signed, onboarding progression). Logins, page views,
+ * email opens and profile edits never qualify.
  */
 export function PartnerNetwork() {
   const navigate = useNavigate();
@@ -35,22 +40,31 @@ export function PartnerNetwork() {
     queryKey: ["admin", "partner-network"],
     staleTime: 60_000,
     queryFn: async (): Promise<Counts> => {
-      const { data, error } = await supabase.rpc("get_agents_management_counts");
+      const { data, error } = await (supabase as any).rpc("get_partner_network_counts");
       if (error) throw error;
       const row = (data as any[])?.[0];
-      return (row ?? { total: 0, invited: 0, pending_approval: 0, active: 0 }) as Counts;
+      return (row ?? {
+        approved: 0,
+        awaiting_approval: 0,
+        invited_not_registered: 0,
+        total: 0,
+        commercially_active_30d: 0,
+      }) as Counts;
     },
   });
 
-  const total = data?.total ?? 0;
-  const approved = data?.active ?? 0;
-  const pending = data?.pending_approval ?? 0;
-  const invited = data?.invited ?? 0;
+  const total = Number(data?.total ?? 0);
+  const approved = Number(data?.approved ?? 0);
+  const pending = Number(data?.awaiting_approval ?? 0);
+  const invited = Number(data?.invited_not_registered ?? 0);
+  const commerciallyActive = Number(data?.commercially_active_30d ?? 0);
 
   const secondary = [
+    { label: "commercially active, last 30 days", value: commerciallyActive, filter: "active" },
     { label: "awaiting approval", value: pending, filter: "pending_approval" },
     { label: "awaiting signup", value: invited, filter: "invited" },
   ];
+
 
   return (
     <Card className="mb-6">
