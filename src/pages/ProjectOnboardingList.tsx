@@ -323,7 +323,19 @@ export default function ProjectOnboardingList() {
             </div>
             
             {userRole === 'admin' && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap justify-end">
+                <Button
+                  onClick={handleExportCsv}
+                  variant="outline"
+                  disabled={isExporting || isLoading}
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-5 w-5 mr-2" />
+                  )}
+                  Export CSV
+                </Button>
                 <Button onClick={() => setShowBulkUpload(true)} variant="outline">
                   <Upload className="h-5 w-5 mr-2" />
                   Import Legacy Projects
