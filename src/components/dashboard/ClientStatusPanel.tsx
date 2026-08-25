@@ -48,6 +48,7 @@ export function ClientStatusPanel({
   const onboardingAction = onboardingState?.actionProject ?? null;
   const processingProject = onboardingState?.processingProject ?? null;
   const hasProcessing = !!processingProject || (onboarding > 0 && !onboardingAction);
+  const hasAuditReady = auditReady > 0 || (onboardingState?.auditReadyProjectCount ?? 0) > 0;
 
   const stage = awaiting > 0
     ? "agreement-action-required"
@@ -55,7 +56,7 @@ export function ClientStatusPanel({
       ? "onboarding-action-required"
       : hasProcessing
         ? "processing"
-        : auditReady > 0
+        : hasAuditReady
           ? "audit-ready"
           : "up-to-date";
 
