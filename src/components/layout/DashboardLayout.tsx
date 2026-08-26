@@ -86,7 +86,7 @@ export function DashboardLayout({
   // Check role-based access
   if (!hasAccess) {
     componentLogger.warn('Insufficient role for dashboard access, redirecting');
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={roleLandingPath(userRole)} replace />;
   }
 
 
