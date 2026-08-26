@@ -76,7 +76,8 @@ export default function Dashboard() {
   }, [toast]);
 
   // Super Partners have their own dashboard — never render the generic one for them.
-  if (userRole === "super_partner") {
+  // Suspended Super Partners are blocked from SP routes, so they stay here.
+  if (userRole === "super_partner" && profile?.super_partner_status !== "suspended") {
     return <Navigate to="/super-partner/dashboard" replace />;
   }
 
