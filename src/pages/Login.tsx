@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { LoginLayout } from '@/components/auth/LoginLayout';
+import { roleLandingPath } from '@/lib/auth/roleLanding';
 import { LoginHeader } from '@/components/auth/LoginHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { Alert, AlertDescription } from '@/components/ui/alert';
