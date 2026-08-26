@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { LoginLayout } from '@/components/auth/LoginLayout';
+import { roleLandingPath } from '@/lib/auth/roleLanding';
 import { LoginHeader } from '@/components/auth/LoginHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,18 +28,32 @@ const Login = () => {
     window.scrollTo(0, 0);
   }, []);
 
+  // Allow a brief grace period for the profile (role) to resolve before redirecting,
+  // so a Super Partner never lands on the generic dashboard first.
+  const [roleWaitElapsed, setRoleWaitElapsed] = useState(false);
+  useEffect(() => {
+    if (!user || !session || profile) return;
+    const t = setTimeout(() => setRoleWaitElapsed(true), 2500);
+    return () => clearTimeout(t);
+  }, [user, session, profile]);
+
   useEffect(() => {
     // Prevent rapid redirect attempts
     const now = Date.now();
     const timeSinceLastAttempt = now - lastRedirectAttemptRef.current;
-    
+
     // Only redirect if we have valid session and auth is fully initialized
     if (isInitialized && !authLoading && user && session && !hasRedirectedRef.current) {
       // Rate limit redirect attempts to prevent loops
       if (timeSinceLastAttempt < 2000) {
         return;
       }
-      
+
+      // Wait for the role to resolve so the landing page is correct the first time
+      if (!profile && !roleWaitElapsed) {
+        return;
+      }
+
       // Validate session is not expired
       if (session.expires_at && new Date(session.expires_at * 1000) > new Date()) {
         hasRedirectedRef.current = true;
@@ -49,9 +64,7 @@ const Login = () => {
         const returnTo = searchParams.get('returnTo');
 
         // Resolve role-based default landing
-        const roleDefault = (profile?.role === 'super_partner')
-          ? '/super-partner/dashboard'
-          : '/dashboard';
+        const roleDefault = roleLandingPath(profile?.role);
 
         const from = returnTo || location.state?.from || roleDefault;
 
@@ -63,7 +76,8 @@ const Login = () => {
         }
       }
     }
-  }, [user, session, navigate, isInitialized, authLoading, location.state, location.search]);
+  }, [user, session, profile, roleWaitElapsed, navigate, isInitialized, authLoading, location.state, location.search]);
+
 
   const handleLoginAttempt = () => {
     setLoginAttempts(prev => prev + 1);

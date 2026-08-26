@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { UserRole } from '@/contexts/auth/types';
 import { authLogger } from '@/lib/logger';
+import { roleLandingPath } from '@/lib/auth/roleLanding';
 import { PageLoading } from '@/components/ui/loading-states';
 
 interface PrivateRouteProps {
@@ -115,8 +116,9 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
 
   // Check access permissions
   if (!accessCheck.hasAccess) {
-    authLogger.warn('Insufficient permissions, redirecting to dashboard', { from: location.pathname });
-    return <Navigate to="/dashboard" replace />;
+    const fallback = roleLandingPath(userRole);
+    authLogger.warn('Insufficient permissions, redirecting', { from: location.pathname, to: fallback });
+    return <Navigate to={fallback} replace />;
   }
 
   authLogger.debug('Access granted with fixed RLS', { path: location.pathname });

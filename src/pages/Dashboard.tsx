@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/auth";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -74,6 +74,12 @@ export default function Dashboard() {
       window.history.replaceState({}, "", "/dashboard");
     }
   }, [toast]);
+
+  // Super Partners have their own dashboard — never render the generic one for them.
+  // Suspended Super Partners are blocked from SP routes, so they stay here.
+  if (userRole === "super_partner" && profile?.super_partner_status !== "suspended") {
+    return <Navigate to="/super-partner/dashboard" replace />;
+  }
 
   if (isLoading && !metricsByStage) {
     return (

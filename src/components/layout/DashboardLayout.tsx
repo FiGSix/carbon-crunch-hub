@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { componentLogger } from '@/lib/logger';
+import { roleLandingPath } from '@/lib/auth/roleLanding';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -85,8 +86,11 @@ export function DashboardLayout({
 
   // Check role-based access
   if (!hasAccess) {
-    componentLogger.warn('Insufficient role for dashboard access, redirecting');
-    return <Navigate to="/dashboard" replace />;
+    // A suspended Super Partner is blocked from SP routes, so send them to the
+    // generic dashboard instead of looping back onto their own landing page.
+    const fallback = requiredRole === 'super_partner' ? '/dashboard' : roleLandingPath(userRole);
+    componentLogger.warn('Insufficient role for dashboard access, redirecting', { to: fallback });
+    return <Navigate to={fallback} replace />;
   }
 
 
