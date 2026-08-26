@@ -75,6 +75,11 @@ export default function Dashboard() {
     }
   }, [toast]);
 
+  // Super Partners have their own dashboard — never render the generic one for them.
+  if (userRole === "super_partner") {
+    return <Navigate to="/super-partner/dashboard" replace />;
+  }
+
   if (isLoading && !metricsByStage) {
     return (
       <DashboardLayout>
