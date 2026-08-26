@@ -115,8 +115,9 @@ export function PrivateRoute({ children, requiredRole, adminOnly, allowedRoles }
 
   // Check access permissions
   if (!accessCheck.hasAccess) {
-    authLogger.warn('Insufficient permissions, redirecting to dashboard', { from: location.pathname });
-    return <Navigate to="/dashboard" replace />;
+    const fallback = roleLandingPath(userRole);
+    authLogger.warn('Insufficient permissions, redirecting', { from: location.pathname, to: fallback });
+    return <Navigate to={fallback} replace />;
   }
 
   authLogger.debug('Access granted with fixed RLS', { path: location.pathname });
