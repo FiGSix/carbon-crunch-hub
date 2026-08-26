@@ -4,18 +4,23 @@ import { VintageProgressDisplayCard } from "@/components/dashboard/VintageProgre
 import { VintageBlendPipelineCard } from "@/components/dashboard/VintageBlendPipelineCard";
 import { VintageRevenueBreakdown } from "@/components/dashboard/sections/VintageRevenueBreakdown";
 import { VintageCountdown } from "@/components/dashboard/sections/VintageCountdown";
+import { RevenueYearlyBreakdown } from "@/components/dashboard/sections/RevenueYearlyBreakdown";
+import { useAuth } from "@/contexts/auth";
 
 /**
  * Vintage and revenue detail — moved off the dashboard home so the home screen
  * stays a decision screen. Same components, same data, one level deeper.
  */
 export default function VintageInsights() {
+  const { userRole } = useAuth();
+
   return (
     <DashboardLayout>
       <DashboardHeader
         title="Vintage & revenue"
         description="Vintage progress, blend pipeline and estimated revenue for your portfolio."
       />
+      {userRole === 'admin' && <RevenueYearlyBreakdown />}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <VintageProgressDisplayCard />
         <VintageBlendPipelineCard />

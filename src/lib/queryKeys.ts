@@ -37,6 +37,8 @@ export const queryKeys = {
       [...queryKeys.dashboard.all, 'agent-vintage-revenue', userId] as const,
     adminVintageRevenue: () =>
       [...queryKeys.dashboard.all, 'admin-vintage-revenue'] as const,
+    adminRevenueYearlyTable: (scope: string) =>
+      [...queryKeys.dashboard.all, 'admin-revenue-yearly-table', scope] as const,
   },
 
   // Proposals related queries
