@@ -1,19 +1,3 @@
--- Partner-network counts, Admin-only accounts excluded.
---
--- Approved Partner        : profiles.agent_status = 'active', deleted_at IS NULL,
---                           and the user holds role 'agent' or 'super_partner'.
---                           A user whose only role is 'admin' is never counted.
--- Awaiting Approval       : same role rule, agent_status = 'pending_approval'.
--- Invited, Not Registered : agent_invitations with status 'pending' and not expired,
---                           where no profile exists for that email yet.
--- Commercially Active     : an Approved Partner with at least one qualifying
---                           commercial/project-progression event in the rolling 30 days:
---                             * proposal created            (proposals.created_at)
---                             * proposal sent               (proposals.invitation_sent_at)
---                             * agreement signed            (proposals.signed_at)
---                             * onboarding progression      (onboarding_activity_log.actor_id)
---                           Logins, page views, email opens and profile edits are excluded.
-
 CREATE OR REPLACE FUNCTION public.get_partner_network_counts()
 RETURNS TABLE(
   approved bigint,

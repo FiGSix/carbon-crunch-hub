@@ -4312,6 +4312,16 @@ export type Database = {
           support_email: string
         }[]
       }
+      get_partner_network_counts: {
+        Args: never
+        Returns: {
+          approved: number
+          awaiting_approval: number
+          commercially_active_30d: number
+          invited_not_registered: number
+          total: number
+        }[]
+      }
       get_pending_team_invitations: {
         Args: { company_id_param: string }
         Returns: {
