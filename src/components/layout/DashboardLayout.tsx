@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { componentLogger } from '@/lib/logger';
+import { roleLandingPath } from '@/lib/auth/roleLanding';
 
 interface DashboardLayoutProps {
   children: ReactNode;

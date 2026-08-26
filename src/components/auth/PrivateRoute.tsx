@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { UserRole } from '@/contexts/auth/types';
 import { authLogger } from '@/lib/logger';
+import { roleLandingPath } from '@/lib/auth/roleLanding';
 import { PageLoading } from '@/components/ui/loading-states';
 
 interface PrivateRouteProps {
