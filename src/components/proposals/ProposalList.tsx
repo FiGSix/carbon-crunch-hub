@@ -150,32 +150,49 @@ export function ProposalList({ proposals, onProposalUpdate }: ProposalListProps)
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Project Name</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead>Status</TableHead>
-            {userRole === "admin" && <TableHead>Agent</TableHead>}
-            {userRole === "admin" && <TableHead>Client Share</TableHead>}
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {proposals.map(proposal => (
-            <MemoizedProposalRow 
-              key={proposal.id} 
-              proposal={proposal} 
-              userRole={userRole} 
-              isCurrentUser={proposal.agent_id === user?.id} 
-              onProposalUpdate={onProposalUpdate} 
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      {/* Mobile: card list */}
+      <div className="grid gap-3 md:hidden">
+        {proposals.map(proposal => (
+          <ProposalMobileCard
+            key={proposal.id}
+            proposal={proposal}
+            userRole={userRole}
+            isCurrentUser={proposal.agent_id === user?.id}
+            onProposalUpdate={onProposalUpdate}
+          />
+        ))}
+      </div>
+
+      {/* Tablet & up: table */}
+      <div className="hidden md:block overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Project Name</TableHead>
+              <TableHead>Client</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead>Status</TableHead>
+              {userRole === "admin" && <TableHead>Agent</TableHead>}
+              {userRole === "admin" && <TableHead>Client Share</TableHead>}
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {proposals.map(proposal => (
+              <MemoizedProposalRow 
+                key={proposal.id} 
+                proposal={proposal} 
+                userRole={userRole} 
+                isCurrentUser={proposal.agent_id === user?.id} 
+                onProposalUpdate={onProposalUpdate} 
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
+
 }
