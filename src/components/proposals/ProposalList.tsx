@@ -4,15 +4,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ProposalActionButtons } from "./components/ProposalActionButtons";
 import { ClientShareCell } from "./components/ClientShareCell";
-import { EmailEngagementBadge } from "./components/EmailEngagementBadge";
-import { ProposalEngagementBadge } from "./list/ProposalEngagementBadge";
+import { ProposalStatusBadge } from "./list/ProposalStatusBadge";
+import { ProposalMobileCard } from "./list/ProposalMobileCard";
 import { ProposalListProps, ProposalListItem } from "@/types/proposals";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
 import { UserRole } from "@/contexts/auth/types";
 import { formatSystemSizeForDisplay } from "@/lib/calculations/carbon";
-import { CheckCircle2, XCircle } from "lucide-react";
+
 
 // Define the props interface for the MemoizedProposalRow component
 interface ProposalRowProps {
