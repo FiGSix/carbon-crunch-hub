@@ -126,8 +126,8 @@ export function CarbonCreditTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table className={isPhaseTable ? 'text-sm' : ''}>
+    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <Table className={`min-w-[620px] ${isPhaseTable ? 'text-sm' : ''}`}>
         <TableHeader>
           <TableRow className={isPhaseTable ? 'bg-muted/50' : 'bg-carbon-gray-50'}>
             <TableHead className="text-center text-sm font-medium text-carbon-gray-700">Year</TableHead>

@@ -141,9 +141,10 @@ const CreateProposal = () => {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-carbon-gray-900">Create Proposal</h1>
-        <p className="text-carbon-gray-600">Generate a new carbon credit proposal for a client or project.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-carbon-gray-900">Create Proposal</h1>
+        <p className="text-sm sm:text-base text-carbon-gray-600">Generate a new carbon credit proposal for a client or project.</p>
       </div>
+
       
       <ProposalStepper currentStep={step} />
       

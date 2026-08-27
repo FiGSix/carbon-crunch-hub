@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,20 +12,20 @@ export function EligibilityStepActions({
   onNextStep
 }: EligibilityStepActionsProps) {
   const navigate = useNavigate();
-  
+
   return (
-    <div className="flex justify-between border-t pt-6">
-      <Button 
-        variant="outline" 
+    <div className="flex w-full flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-between sm:gap-2">
+      <Button
+        variant="outline"
         onClick={() => navigate("/proposals")}
-        className="retro-button"
+        className="retro-button w-full min-h-11 sm:w-auto"
       >
         <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
       </Button>
-      <Button 
-        onClick={onNextStep} 
+      <Button
+        onClick={onNextStep}
         disabled={!isEligible}
-        className="retro-button"
+        className="retro-button w-full min-h-11 sm:w-auto"
       >
         Next Step <ArrowRight className="ml-2 h-4 w-4" />
       </Button>

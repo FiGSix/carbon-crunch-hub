@@ -151,12 +151,13 @@ export function ProposalSubmitFormReliable({
         </Alert>
       )}
 
-      <div className="flex justify-between w-full">
+      <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-between sm:gap-2">
         <Button
           type="button"
           variant="outline"
           onClick={prevStep}
           disabled={isSubmitting || isCompleted}
+          className="w-full min-h-11 sm:w-auto"
         >
           Previous
         </Button>
@@ -164,7 +165,7 @@ export function ProposalSubmitFormReliable({
         <Button 
           type="submit" 
           disabled={isSubmitting || isCompleted}
-          className="min-w-[140px]"
+          className="w-full min-h-11 sm:w-auto sm:min-w-[140px]"
         >
           {isCompleted ? (
             <>

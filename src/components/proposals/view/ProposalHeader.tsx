@@ -86,8 +86,8 @@ export function ProposalHeader({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-      <div className="flex items-center space-x-4">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+      <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
         {showBackButton && (
           <Button 
             variant="outline" 
@@ -98,8 +98,8 @@ export function ProposalHeader({
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
         )}
-        <div>
-          <h1 className="text-3xl font-bold text-carbon-gray-900">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-carbon-gray-900 break-words">{title}</h1>
           <div className="flex flex-col">
             <p className="text-carbon-gray-600">Carbon Credit Proposal</p>
             {userRole === "agent" && (
@@ -110,7 +110,7 @@ export function ProposalHeader({
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto [&>button]:min-h-10 [&>button]:flex-1 sm:[&>button]:flex-none">
         {showInvitationBadge && (
           <div className="flex items-center bg-carbon-green-50 text-carbon-green-700 px-4 py-2 rounded-lg">
             <CheckCircle2 className="h-5 w-5 mr-2" />
