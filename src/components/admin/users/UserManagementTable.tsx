@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { RoleManagementDialog } from './RoleManagementDialog';
 import { CompanyManagementDialog } from '@/components/admin/companies/CompanyManagementDialog';
-import { LinkUserToCompanyDialog } from './LinkUserToCompanyDialog';
+import { ManageCompanyLinkDialog } from './ManageCompanyLinkDialog';
 import { DeleteUserDialog } from './DeleteUserDialog';
 import { ExportUsersButton } from './ExportUsersButton';
 import { useDeleteUser } from '@/hooks/admin/useDeleteUser';
@@ -159,6 +159,10 @@ const UserRow = memo(function UserRow({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onLinkToCompany(user)}>
+                <Building2 className="h-4 w-4 mr-2" />
+                {user.company_id ? 'Manage Company Link' : 'Link to Company'}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDeleteUser(user)}
                 className="text-destructive focus:text-destructive"
@@ -182,12 +186,10 @@ const UserRow = memo(function UserRow({
                 <UserCog className="h-4 w-4 mr-2" />
                 Manage Roles
               </DropdownMenuItem>
-              {!user.company_id && user.role !== 'client' && (
-                <DropdownMenuItem onClick={() => onLinkToCompany(user)}>
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Link to Company
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={() => onLinkToCompany(user)}>
+                <Building2 className="h-4 w-4 mr-2" />
+                {user.company_id ? 'Manage Company Link' : 'Link to Company'}
+              </DropdownMenuItem>
               {user.company_id && (
                 <DropdownMenuItem onClick={() => onViewCompany(user.company_id!)}>
                   <Building2 className="h-4 w-4 mr-2" />
@@ -340,7 +342,7 @@ export function UserManagementTable() {
       if (roleFilter === 'all' || roleFilter === 'potential_client') {
         const { data: unlinkedClients, error: clientError } = await supabase
           .from('clients')
-          .select('id, email, first_name, last_name, company_name, created_at')
+          .select('id, email, first_name, last_name, company_name, created_at, client_company_id, client_companies(company_name)')
           .is('user_id', null)
           .order('created_at', { ascending: false });
 
@@ -358,11 +360,11 @@ export function UserManagementTable() {
             role: 'potential_client',
             created_at: client.created_at,
             agent_status: null,
-            company_id: null,
-            company_name: client.company_name,
+            company_id: client.client_company_id,
+            company_name: (client as any).client_companies?.company_name || client.company_name,
             company_role: null,
             is_legacy_company: false,
-            company_type: null,
+            company_type: client.client_company_id ? ('client' as const) : null,
             source: 'client_record' as const,
           }));
       }
@@ -569,16 +571,19 @@ export function UserManagementTable() {
               setRoleDialogOpen(false);
             }}
           />
-          <LinkUserToCompanyDialog
-            open={linkDialogOpen}
-            onOpenChange={setLinkDialogOpen}
-            user={selectedUser}
-            onSuccess={() => {
-              refetch();
-              setLinkDialogOpen(false);
-            }}
-          />
         </>
+      )}
+
+      {selectedUser && (
+        <ManageCompanyLinkDialog
+          open={linkDialogOpen}
+          onOpenChange={setLinkDialogOpen}
+          user={selectedUser}
+          onSuccess={() => {
+            refetch();
+            setLinkDialogOpen(false);
+          }}
+        />
       )}
 
       {selectedUser && (
