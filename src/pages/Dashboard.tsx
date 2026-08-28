@@ -283,7 +283,7 @@ export default function Dashboard() {
                 format: (n) => `${n.toFixed(2)} MWp`,
               },
               {
-                label: "Audit Ready value",
+                label: "Audit Ready — Crunch Carbon share (2025–2030)",
                 value: fmtRand(metricsByStage?.auditReadyRevenue ?? 0),
                 numericValue: metricsByStage?.auditReadyRevenue ?? 0,
                 format: fmtRand,
