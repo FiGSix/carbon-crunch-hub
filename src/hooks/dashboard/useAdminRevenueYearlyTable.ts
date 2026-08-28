@@ -122,8 +122,7 @@ export function useAdminRevenueYearlyTable(scope: RevenueScope) {
       });
 
       // Proposals with onboarding audit flag and commissioning date
-      const { data: proposals, error } = await supabase
-        .from('proposals')
+      const { data: proposals, error } = await (supabase.from('proposals') as any)
         .select(`
           id,
           carbon_credits,
@@ -137,6 +136,7 @@ export function useAdminRevenueYearlyTable(scope: RevenueScope) {
         `)
         .is('deleted_at', null)
         .is('archived_at', null);
+
 
       if (error) {
         revenueLogger.error('Failed to fetch proposals for yearly revenue table', { error: error.message });
