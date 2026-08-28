@@ -3071,6 +3071,84 @@ export type Database = {
           },
         ]
       }
+      proposal_duplicate_reviews: {
+        Row: {
+          created_at: string
+          decision_reason: string | null
+          id: string
+          match_reasons: string[]
+          match_score: number
+          matched_proposal_id: string
+          proposed_address: string | null
+          proposed_client_id: string | null
+          proposed_commissioning_date: string | null
+          proposed_payload: Json
+          proposed_system_size_kwp: number | null
+          proposed_title: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_by: string
+          submitting_agent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decision_reason?: string | null
+          id?: string
+          match_reasons?: string[]
+          match_score?: number
+          matched_proposal_id: string
+          proposed_address?: string | null
+          proposed_client_id?: string | null
+          proposed_commissioning_date?: string | null
+          proposed_payload?: Json
+          proposed_system_size_kwp?: number | null
+          proposed_title: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by: string
+          submitting_agent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decision_reason?: string | null
+          id?: string
+          match_reasons?: string[]
+          match_score?: number
+          matched_proposal_id?: string
+          proposed_address?: string | null
+          proposed_client_id?: string | null
+          proposed_commissioning_date?: string | null
+          proposed_payload?: Json
+          proposed_system_size_kwp?: number | null
+          proposed_title?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string
+          submitting_agent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_duplicate_reviews_matched_proposal_id_fkey"
+            columns: ["matched_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_engagement_buckets"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "proposal_duplicate_reviews_matched_proposal_id_fkey"
+            columns: ["matched_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           agent_commission_percentage: number | null
@@ -3097,6 +3175,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
+          duplicate_review_id: string | null
           eligibility_criteria: Json
           engagement_count: number | null
           id: string
@@ -3153,6 +3232,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          duplicate_review_id?: string | null
           eligibility_criteria?: Json
           engagement_count?: number | null
           id?: string
@@ -3209,6 +3289,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          duplicate_review_id?: string | null
           eligibility_criteria?: Json
           engagement_count?: number | null
           id?: string
@@ -3274,6 +3355,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_duplicate_review_id_fkey"
+            columns: ["duplicate_review_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_duplicate_reviews"
             referencedColumns: ["id"]
           },
           {
@@ -4049,6 +4137,10 @@ export type Database = {
         }
         Returns: string
       }
+      decide_proposal_duplicate_review: {
+        Args: { p_decision: string; p_reason: string; p_review_id: string }
+        Returns: undefined
+      }
       delete_proposal: {
         Args: { proposal_id: string; user_id: string }
         Returns: boolean
@@ -4065,6 +4157,22 @@ export type Database = {
       extract_domain: {
         Args: { _email: string; _website: string }
         Returns: string
+      }
+      find_high_confidence_proposal_duplicate: {
+        Args: {
+          p_address: string
+          p_client_id: string
+          p_exclude_proposal_id?: string
+          p_latitude?: number
+          p_longitude?: number
+          p_system_size_kwp: number
+          p_title: string
+        }
+        Returns: {
+          match_reasons: string[]
+          match_score: number
+          proposal_id: string
+        }[]
       }
       find_or_create_client_by_email: {
         Args: {
@@ -4561,9 +4669,24 @@ export type Database = {
         Returns: undefined
       }
       normalize_company_name: { Args: { _name: string }; Returns: string }
+      normalize_project_identity: { Args: { value: string }; Returns: string }
       normalize_system_size_to_kwp: {
         Args: { size_value: number; unit_type?: string }
         Returns: number
+      }
+      queue_proposal_duplicate_review: {
+        Args: {
+          p_address: string
+          p_agent_id: string
+          p_client_id: string
+          p_commissioning_date: string
+          p_latitude?: number
+          p_longitude?: number
+          p_payload?: Json
+          p_system_size_kwp: number
+          p_title: string
+        }
+        Returns: Json
       }
       recalc_proposal_platform_fee: {
         Args: { p_proposal_id: string }
