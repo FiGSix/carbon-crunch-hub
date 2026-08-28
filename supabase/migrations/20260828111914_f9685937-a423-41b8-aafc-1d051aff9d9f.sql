@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.queue_proposal_duplicate_review(uuid,uuid,text,text,numeric,date,numeric,numeric,jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.queue_proposal_duplicate_review(uuid,uuid,text,text,numeric,date,numeric,numeric,jsonb) TO service_role;
