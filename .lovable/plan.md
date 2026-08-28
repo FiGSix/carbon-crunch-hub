@@ -27,6 +27,18 @@ Measured impact on the Audit Ready set (120 projects either way):
 
 So the headline: the numbers are not wrong so much as measuring different things — share vs total, pro-rated vs flat, signed-gated vs not.
 
+## Client-specific rate sets are NOT applied on either surface (verified)
+
+There are two rate sets: `Default` and `Large Clients` (about 6.7% higher, e.g. 2030 at R203.29 vs R190.55). Two clients are on `Large Clients`:
+
+- Dipula Income Fund Limited (Clayton McLean) — 25 proposals, 1 audit ready across the pair
+- MPower (Pty) Ltd (Hilton Hunkin) — 3 proposals
+
+Together 28 proposals, ~59,628 credits. Priced 2025-2030 that is R53.17m on default rates vs R56.72m on their real rates — a ~R3.55m understatement once those projects flow through, of which only the audit-ready one is currently visible in the Audit Ready figures.
+
+Neither surface uses the rate set: the dashboard function reads only `system_settings.carbon_prices`, and the yearly table uses the hard-coded `CARBON_PRICES` constant. Only the onboarding CSV export honours per-client rate sets today.
+
+
 ## Changes
 
 1. **Make the table's scopes match the funnel definitions** in `useAdminRevenueYearlyTable.ts`:
@@ -35,6 +47,8 @@ So the headline: the numbers are not wrong so much as measuring different things
    - Exclude `archived_at is not null` (add to the query alongside `deleted_at`).
 2. **Apply commission-date pro-rating in the table**, using the same rule as the RPC (0 before the commissioning year, day-count pro-rata in the commissioning year). Requires selecting `content->projectInfo->commissionDate` and reusing the existing pro-rating helper rather than writing new maths.
 3. **Use live prices, not the constant** — read `carbon_prices` from `system_settings` (via the existing pricing service) so an admin price edit moves both surfaces. Keep the 2031-2037 estimate as 5% p.a. on the live 2030 rate.
+3a. **Honour per-client rate sets on both surfaces** — resolve each proposal's client rate set (`clients.carbon_rate_set_id` -> `carbon_rate_sets.prices`, falling back to the default set) and price that proposal's years with it. In the table this means a price map per proposal instead of one map per row (the "SA price (R/t)" column then shows the default rate with a note that some projects price higher); in the RPC it means joining the rate set instead of reading `system_settings` alone. Estimated 2031-2037 years escalate 5% p.a. off each proposal's own 2030 rate.
+
 4. **Deduct Super Partner in the RPC too**, so "Crunch Carbon" means the same thing on both screens; the RPC's admin branch currently leaves SP inside the platform share.
 5. **Label the landing card honestly**: the admin "Audit Ready value" and funnel hover figures are the Crunch Carbon share, not total project revenue. Change the wording to "Crunch Carbon share, est. 2025-2030" (client and agent roles already see their own share, so their labels stay).
 6. **Add a note under the table** stating it shows total contract value with splits and includes Blend and estimated years, so the grand total is expected to exceed the landing card.
