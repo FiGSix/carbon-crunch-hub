@@ -27,6 +27,18 @@ Measured impact on the Audit Ready set (120 projects either way):
 
 So the headline: the numbers are not wrong so much as measuring different things — share vs total, pro-rated vs flat, signed-gated vs not.
 
+## Client-specific rate sets are NOT applied on either surface (verified)
+
+There are two rate sets: `Default` and `Large Clients` (about 6.7% higher, e.g. 2030 at R203.29 vs R190.55). Two clients are on `Large Clients`:
+
+- Dipula Income Fund Limited (Clayton McLean) — 25 proposals, 1 audit ready across the pair
+- MPower (Pty) Ltd (Hilton Hunkin) — 3 proposals
+
+Together 28 proposals, ~59,628 credits. Priced 2025-2030 that is R53.17m on default rates vs R56.72m on their real rates — a ~R3.55m understatement once those projects flow through, of which only the audit-ready one is currently visible in the Audit Ready figures.
+
+Neither surface uses the rate set: the dashboard function reads only `system_settings.carbon_prices`, and the yearly table uses the hard-coded `CARBON_PRICES` constant. Only the onboarding CSV export honours per-client rate sets today.
+
+
 ## Changes
 
 1. **Make the table's scopes match the funnel definitions** in `useAdminRevenueYearlyTable.ts`:
