@@ -88,11 +88,18 @@ export function RevenueYearlyBreakdown() {
         <div>
           <CardTitle className="text-lg">Revenue year-by-year breakdown</CardTitle>
           <CardDescription>
-            Carbon credit price per tonne escalates each year. 2031-2037 rates are estimates at 5% p.a.
-            escalation on the 2030 rate.
-            {data ? ` ${data.projectCount} project${data.projectCount === 1 ? "" : "s"} in scope.` : ""}
+            Total contract value with splits, pro-rated from each project's commissioning date.
+            2031-2037 rates are estimates at 5% p.a. escalation on the 2030 rate. Prices shown are the
+            default rate set; clients on a custom rate set are priced on theirs.
+            {data ? ` ${data.projectCount} project${data.projectCount === 1 ? "" : "s"} in scope` : ""}
+            {data && data.specialRateProjects > 0
+              ? `, ${data.specialRateProjects} on a custom rate set.`
+              : data
+                ? "."
+                : ""}
           </CardDescription>
         </div>
+
         <Select value={scope} onValueChange={(v) => setScope(v as RevenueScope)}>
           <SelectTrigger className="w-full sm:w-[280px]">
             <SelectValue placeholder="Select scope" />

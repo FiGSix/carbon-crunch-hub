@@ -283,7 +283,7 @@ export default function Dashboard() {
                 format: (n) => `${n.toFixed(2)} MWp`,
               },
               {
-                label: "Audit Ready value",
+                label: "Audit Ready — Crunch Carbon share (2025–2030)",
                 value: fmtRand(metricsByStage?.auditReadyRevenue ?? 0),
                 numericValue: metricsByStage?.auditReadyRevenue ?? 0,
                 format: fmtRand,
@@ -295,7 +295,7 @@ export default function Dashboard() {
           <PipelineFunnel
             title="Commercial funnel"
             stages={funnelStages}
-            subtitle="Where platform MWp currently sits, and how much carries through to the next stage. Hover for estimated revenue; select a stage to open the records behind it."
+            subtitle="Where platform MWp currently sits, and how much carries through to the next stage. Hover for the estimated Crunch Carbon share (2025–2030); select a stage to open the records behind it."
           />
           <PartnerNetwork />
           <nav className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-sm">
