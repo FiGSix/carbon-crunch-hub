@@ -3937,6 +3937,20 @@ export type Database = {
       }
     }
     Functions: {
+      admin_link_person_to_company: {
+        Args: {
+          _company_id: string
+          _company_kind: string
+          _is_client_record?: boolean
+          _person_id: string
+          _role?: string
+        }
+        Returns: Json
+      }
+      admin_unlink_person_from_company: {
+        Args: { _is_client_record?: boolean; _person_id: string }
+        Returns: Json
+      }
       agent_has_proposals_with_client: {
         Args: { client_id_param: string }
         Returns: boolean
@@ -4599,6 +4613,18 @@ export type Database = {
           p_company_name: string
           p_created_by?: string
           p_email?: string
+        }
+        Returns: string
+      }
+      resolve_client_company_id: {
+        Args: { _client_company_id: string; _user_id: string }
+        Returns: string
+      }
+      resolve_client_company_name: {
+        Args: {
+          _client_company_id: string
+          _fallback: string
+          _user_id: string
         }
         Returns: string
       }
