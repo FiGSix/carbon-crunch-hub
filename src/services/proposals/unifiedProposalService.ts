@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { devLogger } from '@/lib/performance/ConsoleReplacementUtility';
 import { UnifiedCarbonService } from '@/services/calculations/carbon';
 import type { SystemSpecs } from '@/services/calculations/carbon/types';
+import { checkProposalDuplicate } from './duplicateReviewService';
 
 type ProposalInsert = Database['public']['Tables']['proposals']['Insert'];
 
@@ -323,6 +324,14 @@ export async function createProposal(
 
     const totalClientRevenue = Object.values(revenueByYear).reduce((sum: number, val: number) => sum + val, 0);
 
+    const duplicateReviewId = await checkProposalDuplicate({
+      agentId,
+      clientId,
+      title: proposalTitle,
+      projectInfo,
+      systemSizeKwp: systemSizeKWp,
+    });
+
     // Step 6: Insert proposal (company_id anchors the proposal permanently)
     const proposalData = {
       title: proposalTitle,
@@ -349,6 +358,7 @@ export async function createProposal(
       client_share_percentage: clientSharePercentage,
       agent_commission_percentage: agentCommissionPercentage,
       agent_portfolio_kwp: totalCompanyPortfolio,
+      duplicate_review_id: duplicateReviewId,
       ...(portfolioClientShareOverride != null
         ? {
             client_share_override_enabled: true,

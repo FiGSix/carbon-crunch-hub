@@ -22,7 +22,8 @@ import {
   ShieldOff,
   Megaphone,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  SearchCheck
 
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
@@ -132,6 +133,12 @@ export function DashboardSidebar() {
       name: "Audit Status",
       href: "/admin/audit-status",
       icon: ClipboardCheck,
+      roles: ["admin"]
+    },
+    {
+      name: "Duplicate Reviews",
+      href: "/admin/duplicate-reviews",
+      icon: SearchCheck,
       roles: ["admin"]
     },
     {
