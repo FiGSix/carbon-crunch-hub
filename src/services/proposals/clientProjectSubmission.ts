@@ -13,6 +13,7 @@ import {
   getClientSharePercentage,
   calculateRevenueByYear,
 } from "@/services/calculations/carbon";
+import { checkProposalDuplicate } from "@/services/proposals/duplicateReviewService";
 
 interface ClientSubmissionResult {
   success: boolean;
@@ -118,6 +119,14 @@ export async function submitClientProject(
 
     const title = `${clientInfo.companyName || clientInfo.name} - ${projectInfo.name}`;
 
+    const duplicateReviewId = await checkProposalDuplicate({
+      agentId: userId,
+      clientId: clientRecord.id,
+      title,
+      projectInfo,
+      systemSizeKwp: systemSizeKWp,
+    });
+
     // 7. Resolve company anchor (auto-creates solo company if needed)
     const { data: companyIdResolved } = await supabase
       .rpc('ensure_agent_has_company', { p_agent_id: userId });
@@ -139,6 +148,7 @@ export async function submitClientProject(
       agent_commission_percentage: agentCommissionPercentage,
       agent_portfolio_kwp: 0,
       system_size_kwp: systemSizeKWp,
+      duplicate_review_id: duplicateReviewId,
       ...(portfolioClientShareOverride != null
         ? {
             client_share_override_enabled: true,

@@ -13,6 +13,8 @@ import {
 import { DetailDrawer, type DrawerRow } from "@/components/dashboard/DetailDrawer";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { NO_MOVEMENT_DAYS } from "@/config/dashboardRules";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const rand = (n: number) => `R ${Math.round(n).toLocaleString("en-ZA")}`;
 const mwp = (n: number) => `${n.toFixed(2)} MWp`;
@@ -34,6 +36,17 @@ export function AdminExceptions() {
   const { data: pendingPartners } = usePendingAgentApprovals(true);
   const { data: auditReview } = useAdminAuditReviewBlocked(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: duplicateReviewCount = 0 } = useQuery({
+    queryKey: ["proposal-duplicate-review-count"],
+    queryFn: async () => {
+      const { count, error } = await (supabase as any)
+        .from("proposal_duplicate_reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   const stalled = useMemo(
     () =>
@@ -80,6 +93,20 @@ export function AdminExceptions() {
     why: string;
     action: JSX.Element;
   }[] = [];
+
+  if (duplicateReviewCount > 0) {
+    items.push({
+      id: "duplicate-reviews",
+      what: `${duplicateReviewCount} duplicate project${duplicateReviewCount === 1 ? "" : "s"} awaiting review`,
+      impact: "Ownership and commission held",
+      why: "A second submission matched an existing installation.",
+      action: (
+        <Button asChild size="sm" variant="outline">
+          <Link to="/admin/duplicate-reviews">Review duplicates<ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+        </Button>
+      ),
+    });
+  }
 
   if ((auditReview?.count ?? 0) > 0) {
     items.push({
@@ -158,7 +185,7 @@ export function AdminExceptions() {
 
         {items.length === 0 ? (
           <p className="mt-1 pl-6 text-xs text-muted-foreground">
-            No audit reviews, stalled proposals or partner approvals outstanding.
+            No duplicate checks, audit reviews, stalled proposals or partner approvals outstanding.
           </p>
         ) : (
           <ul className="mt-1 divide-y">
