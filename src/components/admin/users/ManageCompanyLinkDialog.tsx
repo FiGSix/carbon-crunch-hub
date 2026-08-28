@@ -109,27 +109,11 @@ export function ManageCompanyLinkDialog({
   const handleUnlink = async () => {
     setIsSubmitting(true);
     try {
-      if (isContactRecord) {
-        const { error } = await supabase
-          .from('clients')
-          .update({ client_company_id: null })
-          .eq('id', user.id);
-        if (error) throw error;
-      } else if (user.company_type === 'client') {
-        const { error } = await supabase
-          .from('client_company_members')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('client_company_id', user.company_id!);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('company_members')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('company_id', user.company_id!);
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc('admin_unlink_person_from_company', {
+        _person_id: user.id,
+        _is_client_record: isContactRecord,
+      });
+      if (error) throw error;
       toast.success('Unlinked from company');
       onSuccess();
       onOpenChange(false);
@@ -185,39 +169,14 @@ export function ManageCompanyLinkDialog({
         return;
       }
 
-      if (isContactRecord) {
-        const { error } = await supabase
-          .from('clients')
-          .update({ client_company_id: companyId })
-          .eq('id', user.id);
-        if (error) throw error;
-      } else if (companyKind === 'client') {
-        const { error } = await supabase
-          .from('client_company_members')
-          .insert({
-            user_id: user.id,
-            client_company_id: companyId,
-            role: role === 'team_lead' ? 'account_admin' : 'member',
-            status: 'active',
-            approved_by: currentUser.id,
-            approved_at: new Date().toISOString(),
-            invited_by: currentUser.id,
-          });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('company_members')
-          .insert({
-            user_id: user.id,
-            company_id: companyId,
-            role,
-            status: 'active',
-            approved_by: currentUser.id,
-            approved_at: new Date().toISOString(),
-            invited_by: currentUser.id,
-          });
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc('admin_link_person_to_company', {
+        _person_id: user.id,
+        _company_id: companyId,
+        _company_kind: isContactRecord ? 'client' : companyKind,
+        _role: role,
+        _is_client_record: isContactRecord,
+      });
+      if (error) throw error;
 
       toast.success(mode === 'new' ? 'Company created and linked' : 'Linked to company');
       onSuccess();
@@ -229,6 +188,7 @@ export function ManageCompanyLinkDialog({
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

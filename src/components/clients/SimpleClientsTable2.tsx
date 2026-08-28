@@ -21,10 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2, MailCheck, Send } from 'lucide-react';
+import { MoreHorizontal, Pencil, Percent, UserCheck, Trash2, Loader2, MailCheck, Send, Building2 } from 'lucide-react';
 import { EditClientDialog } from './EditClientDialog';
 import { PortfolioClientShareDialog } from './PortfolioClientShareDialog';
 import { EditAssignedAgentDialog } from './EditAssignedAgentDialog';
+import { ManageCompanyLinkDialog } from '@/components/admin/users/ManageCompanyLinkDialog';
 import { ClientDeleter } from '@/services/unified/clients/operations/ClientDeleter';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +38,7 @@ const ClientRow2 = memo(function ClientRow2({
   onEdit,
   onPortfolio,
   onReassign,
+  onCompanyLink,
   onDelete,
   onVerifyEmail,
   onResendInvitation,
@@ -46,6 +48,7 @@ const ClientRow2 = memo(function ClientRow2({
   onEdit: (client: ClientData) => void;
   onPortfolio: (client: ClientData) => void;
   onReassign: (client: ClientData) => void;
+  onCompanyLink: (client: ClientData) => void;
   onDelete: (client: ClientData) => void;
   onVerifyEmail: (client: ClientData) => void;
   onResendInvitation: (client: ClientData) => void;
@@ -128,6 +131,12 @@ const ClientRow2 = memo(function ClientRow2({
                 </DropdownMenuItem>
               )}
               {isAdmin && (
+                <DropdownMenuItem onClick={() => onCompanyLink(client)}>
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Manage Company Link
+                </DropdownMenuItem>
+              )}
+              {isAdmin && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -185,6 +194,7 @@ export function SimpleClientsTable2({
   const [editingClient, setEditingClient] = useState<ClientData | null>(null);
   const [portfolioClient, setPortfolioClient] = useState<ClientData | null>(null);
   const [reassignClient, setReassignClient] = useState<ClientData | null>(null);
+  const [companyLinkClient, setCompanyLinkClient] = useState<ClientData | null>(null);
   const [deleteClient, setDeleteClient] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [verifyClient, setVerifyClient] = useState<ClientData | null>(null);
@@ -196,6 +206,7 @@ export function SimpleClientsTable2({
   const handleEdit = useCallback((client: ClientData) => setEditingClient(client), []);
   const handlePortfolio = useCallback((client: ClientData) => setPortfolioClient(client), []);
   const handleReassign = useCallback((client: ClientData) => setReassignClient(client), []);
+  const handleCompanyLink = useCallback((client: ClientData) => setCompanyLinkClient(client), []);
   const handleDelete = useCallback((client: ClientData) => setDeleteClient(client), []);
   const handleVerifyEmail = useCallback((client: ClientData) => setVerifyClient(client), []);
   const handleResendInvitation = useCallback((client: ClientData) => setResendClient(client), []);
@@ -303,6 +314,7 @@ export function SimpleClientsTable2({
                     onEdit={handleEdit}
                     onPortfolio={handlePortfolio}
                     onReassign={handleReassign}
+                    onCompanyLink={handleCompanyLink}
                     onDelete={handleDelete}
                     onVerifyEmail={handleVerifyEmail}
                     onResendInvitation={handleResendInvitation}
@@ -345,6 +357,25 @@ export function SimpleClientsTable2({
         client={portfolioClient}
         onSuccess={onRefresh}
       />
+
+      {companyLinkClient && (
+        <ManageCompanyLinkDialog
+          open={!!companyLinkClient}
+          onOpenChange={(open) => !open && setCompanyLinkClient(null)}
+          user={{
+            id: companyLinkClient.client_id,
+            email: companyLinkClient.client_email,
+            first_name: companyLinkClient.client_name?.split(' ')[0] ?? null,
+            last_name: companyLinkClient.client_name?.split(' ').slice(1).join(' ') || null,
+            company_name: companyLinkClient.company_name || null,
+            company_id: companyLinkClient.client_company_id || null,
+            company_type: 'client',
+            role: 'client',
+            source: 'client_record',
+          }}
+          onSuccess={onRefresh}
+        />
+      )}
 
       <EditAssignedAgentDialog
         open={!!reassignClient}
