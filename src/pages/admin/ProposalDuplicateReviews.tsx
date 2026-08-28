@@ -58,7 +58,7 @@ export default function ProposalDuplicateReviews() {
       <TableBody>{isLoading ? <TableRow><TableCell colSpan={5}>Loading reviews…</TableCell></TableRow> : pending.length === 0 ? <TableRow><TableCell colSpan={5} className="h-28 text-center text-muted-foreground">No duplicate projects are awaiting review.</TableCell></TableRow> : pending.map((row) => <TableRow key={row.id}>
         <TableCell className="whitespace-nowrap">{new Date(row.created_at).toLocaleDateString("en-ZA")}</TableCell>
         <TableCell><div className="font-medium">{row.proposed_title}</div><div className="max-w-xs text-xs text-muted-foreground">{row.proposed_address || "Address not supplied"} · {row.proposed_system_size_kwp?.toLocaleString() ?? "—"} kWp</div></TableCell>
-        <TableCell><div className="flex flex-wrap gap-1">{row.match_reasons.map((item) => <Badge key={item} variant="outline">{item.replaceAll("_", " ")}</Badge>)}</div></TableCell>
+        <TableCell><div className="flex flex-wrap gap-1">{row.match_reasons.map((item) => <Badge key={item} variant="outline">{item.replace(/_/g, " ")}</Badge>)}</div></TableCell>
         <TableCell><Button asChild size="sm" variant="ghost"><Link to={`/proposals/${row.matched_proposal_id}`}>Open <ExternalLink className="ml-1 h-3.5 w-3.5" /></Link></Button></TableCell>
         <TableCell><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setDecision({ row, value: "rejected_duplicate" })}>Confirm duplicate</Button><Button size="sm" onClick={() => setDecision({ row, value: "approved_separate" })}>Allow separate site</Button></div></TableCell>
       </TableRow>)}</TableBody></Table>
