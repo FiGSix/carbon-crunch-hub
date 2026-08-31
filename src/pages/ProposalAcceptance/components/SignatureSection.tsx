@@ -78,18 +78,20 @@ export function SignatureSection({
               <p className="font-medium">Step 2: Confirm Agreement</p>
               <p className="text-sm text-muted-foreground">Check the box to confirm you agree</p>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start space-x-2">
               <Checkbox
                 id="terms"
+                className="mt-0.5"
                 checked={hasAgreed}
                 onCheckedChange={(checked) => onAgreeChange(checked === true)}
                 disabled={!hasScrolledToBottom}
               />
               <Label
                 htmlFor="terms"
-                className={`text-sm cursor-pointer ${!hasScrolledToBottom ? 'opacity-50' : ''}`}
+                className={`text-sm leading-relaxed cursor-pointer ${!hasScrolledToBottom ? 'opacity-50' : ''}`}
               >
-                I have read and agree to the terms and conditions
+                I have read and agree to the Carbon Right Cession Agreement and confirm that I am
+                authorised to sign for the named party.
               </Label>
             </div>
           </div>
@@ -163,7 +165,7 @@ export function SignatureSection({
             ) : (
               <>
                 <PenTool className="mr-2 h-4 w-4" />
-                Sign and Accept Proposal
+                Sign and accept proposal
               </>
             )}
           </Button>

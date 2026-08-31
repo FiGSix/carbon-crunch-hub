@@ -62,6 +62,7 @@ const AdminUserManagement = createOptimizedLazyComponent(() => import("./pages/A
 const AdminCompanyDetail = createOptimizedLazyComponent(() => import("./pages/AdminCompanyDetail"), "AdminCompanyDetail");
 const ViewProposalPage = createOptimizedLazyComponent(() => import("./pages/ViewProposal/ViewProposalPage"), "ViewProposalPage");
 const ProposalAcceptance = createOptimizedLazyComponent(() => import("./pages/ProposalAcceptance/index"), "ProposalAcceptance");
+const ProposalDecline = createOptimizedLazyComponent(() => import("./pages/ProposalDecline"), "ProposalDecline");
 const AdminSignatures = createOptimizedLazyComponent(() => import("./pages/AdminSignatures"), "AdminSignatures");
 const DataDiagnostics = createOptimizedLazyComponent(() => import("./pages/admin/DataDiagnostics"), "DataDiagnostics");
 const EmailAutomation = createOptimizedLazyComponent(() => import("./pages/admin/EmailAutomation"), "EmailAutomation");
@@ -293,6 +294,16 @@ function App() {
                       </Suspense>
                     </PageErrorBoundary>
                   } />
+
+                  {/* Proposal decline - token-authorised confirmation */}
+                  <Route path="/proposals/:id/decline" element={
+                    <PageErrorBoundary pageName="Proposal Decline">
+                      <Suspense fallback={<PageLoader />}>
+                        <ProposalDecline />
+                      </Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  
                   
                   {/* Protected routes - wrapped with page error boundaries */}
                   <Route 

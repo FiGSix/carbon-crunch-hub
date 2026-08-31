@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.broadcast-unsubscribe]
 verify_jwt = false
+
+[functions.decline-proposal]
+verify_jwt = false

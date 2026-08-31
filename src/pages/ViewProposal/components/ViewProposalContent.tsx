@@ -85,8 +85,9 @@ export function ViewProposalContent({
     return <ProposalError errorMessage={error} onRetry={handleRetry} />;
   }
   
-  // If we need to show the auth form
-  if (showAuthForm && clientEmail && proposal) {
+  // If we need to show the auth form.
+  // Token holders never see this: they sign directly from the emailed link.
+  if (showAuthForm && clientEmail && proposal && !token) {
     return (
       <div className="container max-w-5xl mx-auto px-4 py-12">
         <h1 className="text-2xl font-bold text-center mb-4">
@@ -114,9 +115,22 @@ export function ViewProposalContent({
       </div>
     );
   }
+
+  // Token visitors are sent straight to the signing ceremony — no account required.
+  const tokenOnly = !user && !!token;
+  const goToSigning = () => {
+    window.location.href = `/proposals/${proposal.id}/accept?token=${token}`;
+  };
+  const goToDecline = () => {
+    window.location.href = `/proposals/${proposal.id}/decline?token=${token}`;
+  };
   
   // Action wrapper functions that handle authentication state
   const handleApproveWrapper = async (typedName: string) => {
+    if (tokenOnly) {
+      goToSigning();
+      return;
+    }
     if (!user) {
       handleSignInClick();
       return;
@@ -125,6 +139,10 @@ export function ViewProposalContent({
   };
   
   const handleRejectWrapper = async () => {
+    if (tokenOnly) {
+      goToDecline();
+      return;
+    }
     if (!user) {
       handleSignInClick();
       return;
@@ -145,15 +163,15 @@ export function ViewProposalContent({
       proposal={proposal}
       token={token}
       clientEmail={clientEmail}
-      canTakeAction={canTakeAction && !!user}
+      canTakeAction={canTakeAction && (!!user || tokenOnly)}
       isClient={isClient}
       handleApprove={handleApproveWrapper}
       handleReject={handleRejectWrapper}
       handleDelete={handleDeleteWrapper}
-      handleSignInClick={handleSignInClick}
+      handleSignInClick={tokenOnly ? goToSigning : handleSignInClick}
       deleteDialogOpen={deleteDialogOpen}
       setDeleteDialogOpen={setDeleteDialogOpen}
-      showSignInPrompt={showSignInPrompt}
+      showSignInPrompt={showSignInPrompt && !tokenOnly}
       onProposalUpdate={onProposalUpdate}
     />
   );

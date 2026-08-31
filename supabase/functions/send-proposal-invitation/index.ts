@@ -97,7 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch agent email and project details for the invitation
     const { data: proposalData } = await supabase
       .from('proposals')
-      .select('agent_id, system_size_kwp, carbon_credits')
+      .select('agent_id, system_size_kwp, carbon_credits, annual_energy, client_share_percentage, content')
       .eq('id', proposalId)
       .single();
     
@@ -126,30 +126,64 @@ const handler = async (req: Request): Promise<Response> => {
     // Get site URL from environment variable, with fallback
     const siteUrl = Deno.env.get('SITE_URL') || 'https://crunchcarbon.com';
 
-    // Use the VERIFIED token from the database to construct invitation link
-    // Direct clients to main proposal view page
+    // Use the VERIFIED token from the database to construct links.
+    // Primary CTA goes straight to the token-authorised signing ceremony.
+    const acceptLink = `${siteUrl}/proposals/${proposalId}/accept?token=${verifiedToken}`;
+    const declineLink = `${siteUrl}/proposals/${proposalId}/decline?token=${verifiedToken}`;
     const invitationLink = `${siteUrl}/proposals/${proposalId}?token=${verifiedToken}`;
 
     console.log(`Sending invitation email to ${clientEmail} for project ${projectName}`);
-    console.log(`Invitation link: ${invitationLink}`);
+    console.log(`Accept link: ${acceptLink}`);
     console.log(`Using verified token: ${verifiedToken.substring(0, 8)}...`);
 
     // Initialize email service and send email
     const emailService = new EmailService(Deno.env.get("RESEND_API_KEY")!);
-    
-    // Format system size for display
+
+    // Build the "30 seconds" summary from values already stored on the proposal.
+    // Nothing is invented: any field without a value is simply omitted.
+    const content: any = proposalData?.content || {};
+    const clientInfo: any = content.clientInfo || {};
+    const projectInfo: any = content.projectInfo || {};
+
     const systemSizeKwp = proposalData?.system_size_kwp;
     const carbonCredits = proposalData?.carbon_credits;
-    const formattedSystemSize = systemSizeKwp ? `${Math.round(systemSizeKwp)} kWp` : undefined;
-    
+    const annualEnergy = proposalData?.annual_energy;
+    const sharePct = proposalData?.client_share_percentage;
+    const totalClientRevenue = content?.financials?.totalClientRevenue;
+
+    const clientRevenueByYear: Record<string, number> | undefined = content?.clientSpecificRevenue;
+    const revenueYearCount = clientRevenueByYear
+      ? Object.values(clientRevenueByYear).filter((v) => typeof v === 'number' && v > 0).length
+      : 0;
+    const annualIncome =
+      typeof totalClientRevenue === 'number' && totalClientRevenue > 0 && revenueYearCount > 0
+        ? Math.round(totalClientRevenue / revenueYearCount)
+        : undefined;
+
+    const fmtRand = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
+
     const emailTemplateData: EmailTemplateData = {
       clientName,
       projectName,
-      invitationLink,
+      acceptLink,
+      declineLink,
+      viewLink: invitationLink,
       tokenPreview: verifiedToken.substring(0, 8) + "...",
       proposalId,
-      systemSize: formattedSystemSize,
-      carbonCredits: carbonCredits ? Math.round(carbonCredits) : undefined,
+      summary: {
+        clientOrCompany: clientInfo.companyName || clientInfo.name || clientName || undefined,
+        siteLocation: projectInfo.address || undefined,
+        capacity: systemSizeKwp ? `${Math.round(systemSizeKwp).toLocaleString('en-ZA')} kWp` : undefined,
+        annualGeneration: annualEnergy ? `${Math.round(annualEnergy).toLocaleString('en-ZA')} kWh` : undefined,
+        carbonCredits: carbonCredits ? `${Math.round(carbonCredits).toLocaleString('en-ZA')} tCO₂e` : undefined,
+        clientSharePercentage: typeof sharePct === 'number' ? sharePct : undefined,
+        annualIncome: annualIncome ? fmtRand(annualIncome) : undefined,
+        termIncome:
+          typeof totalClientRevenue === 'number' && totalClientRevenue > 0
+            ? fmtRand(totalClientRevenue)
+            : undefined,
+        reference: proposalId.substring(0, 8).toUpperCase(),
+      },
       agentFirstName,
       agentLastName,
       agentCompanyName,
@@ -157,13 +191,15 @@ const handler = async (req: Request): Promise<Response> => {
     };
     
     const emailTemplate = emailService.generateEmailTemplate(emailTemplateData);
+    const emailPlainText = emailService.generatePlainTextTemplate(emailTemplateData);
 
     try {
       const emailResponse = await emailService.sendInvitationEmail(
         clientEmail,
         projectName,
         emailTemplate,
-        agentEmail
+        agentEmail,
+        emailPlainText
       );
 
       // Store the Resend message_id for webhook tracking

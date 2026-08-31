@@ -13,7 +13,8 @@ import {
   ProjectDetailsValue,
   projectDetailsValid,
 } from "./components/ProjectDetailsStep";
-import { PostSignatureOnboardingModal } from "@/components/proposals/acceptance/PostSignatureOnboardingModal";
+import { AcceptingConfirmationStrip } from "./components/AcceptingConfirmationStrip";
+import { SignedSuccessScreen } from "./components/SignedSuccessScreen";
 import { useToast } from "@/hooks/use-toast";
 import { parseEdgeFunctionError } from "@/lib/errors/edgeFunctionErrors";
 import { AlertTriangle, PenLine } from "lucide-react";
@@ -35,7 +36,8 @@ export default function ProposalAcceptance() {
   const [signatoryName, setSignatoryName] = useState("");
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showSignedSuccess, setShowSignedSuccess] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tokenExpired, setTokenExpired] = useState(false);
   const [clientRecord, setClientRecord] = useState<LiveClientRecord | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetailsValue>({
@@ -46,6 +48,12 @@ export default function ProposalAcceptance() {
     installerCompanyName: "",
     installerEmail: "",
   });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthenticated(!!data.session);
+    });
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -352,8 +360,9 @@ export default function ProposalAcceptance() {
         throw new Error(data.error);
       }
 
-      // Show onboarding modal instead of toast and redirect
-      setShowOnboardingModal(true);
+      // Signature is recorded — show the completion screen.
+      setShowSignedSuccess(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
 
     } catch (err) {
       console.error("Error submitting agreement:", err);
@@ -412,6 +421,17 @@ export default function ProposalAcceptance() {
           <p className="text-muted-foreground">The proposal you're looking for could not be found.</p>
         </div>
       </div>
+    );
+  }
+
+  if (showSignedSuccess) {
+    const resolvedClient = resolveClientInfo(proposal.content?.clientInfo || {}, clientRecord);
+    return (
+      <SignedSuccessScreen
+        proposalId={proposal.id}
+        clientEmail={resolvedClient.email || null}
+        isAuthenticated={isAuthenticated}
+      />
     );
   }
 
@@ -479,6 +499,12 @@ export default function ProposalAcceptance() {
       {tokenExpired && <ExpiredTokenBanner />}
       <div className="container max-w-4xl mx-auto px-4 py-8 md:py-12 pb-24 md:pb-12">
         <div className="space-y-8">
+          <AcceptingConfirmationStrip
+            proposal={proposal}
+            clientName={getClientName()}
+            companyName={isCompanyCedent ? getCompanyName() : null}
+          />
+
           <ThirtySecondSummary
             proposal={proposal}
             clientName={getClientName()}
@@ -559,12 +585,6 @@ export default function ProposalAcceptance() {
           </div>
         </div>
 
-        <PostSignatureOnboardingModal
-          open={showOnboardingModal}
-          onOpenChange={setShowOnboardingModal}
-          proposalId={proposal.id}
-          token={token}
-        />
       </div>
 
       {/* Sticky mobile "jump to sign" bar — hidden on md+ and after signing */}
