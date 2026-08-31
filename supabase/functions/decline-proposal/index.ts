@@ -100,10 +100,12 @@ serve(async (req) => {
     }
 
     // Audit / engagement event — no schema change required.
-    await supabase.from('proposal_automation_log').insert({
+    const { error: logError } = await supabase.from('proposal_automation_log').insert({
       proposal_id: proposal.id,
-      automation_type: 'client_declined',
-      trigger_event: 'token_decline',
+      // 'status_update' is the allowed automation_type for status transitions;
+      // the decline specifics live in trigger_event + details.
+      automation_type: 'status_update',
+      trigger_event: 'client_decline_via_token',
       old_status: proposal.status,
       new_status: 'rejected',
       details: {
@@ -114,6 +116,10 @@ serve(async (req) => {
         declined_at: new Date().toISOString(),
       },
     });
+
+    if (logError) {
+      console.error('Failed to write decline audit event:', logError.message);
+    }
 
     if (proposal.agent_id) {
       const reasonText = reason ? ` Reason: ${REASON_LABELS[reason]}.` : '';
