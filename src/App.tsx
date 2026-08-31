@@ -293,6 +293,16 @@ function App() {
                       </Suspense>
                     </PageErrorBoundary>
                   } />
+
+                  {/* Proposal decline - token-authorised confirmation */}
+                  <Route path="/proposals/:id/decline" element={
+                    <PageErrorBoundary pageName="Proposal Decline">
+                      <Suspense fallback={<PageLoader />}>
+                        <ProposalDecline />
+                      </Suspense>
+                    </PageErrorBoundary>
+                  } />
+                  
                   
                   {/* Protected routes - wrapped with page error boundaries */}
                   <Route 
